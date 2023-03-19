@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="web-js">
+    <output-path>$PROJECT_DIR$/monitor/web/build/libs</output-path>
+    <root id="archive" name="web-js.jar">
+      <element id="module-output" name="mqtt.monitor.web.jsMain" />
+    </root>
+  </artifact>
+</component>

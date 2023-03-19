@@ -1,0 +1,25 @@
+CREATE TABLE IF NOT EXISTS SocketConnection (
+	id	INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+	broker_id	INTEGER NOT NULL,
+	type	TEXT NOT NULL DEFAULT 'tcp' CHECK(type LIKE "tcp" OR type LIKE "websocket"),
+	host	TEXT NOT NULL,
+	port	INTEGER NOT NULL CHECK(port BETWEEN 1 AND 65535),
+	tls	INTEGER NOT NULL CHECK(tls BETWEEN 0 AND 1),
+	connection_timeout_ms	INTEGER NOT NULL CHECK(connection_timeout_ms > 0),
+	read_timeout_ms	INTEGER NOT NULL CHECK(read_timeout_ms > 0),
+	write_timeout_ms	INTEGER NOT NULL CHECK(write_timeout_ms > 0),
+	websocket_endpoint	TEXT,
+	websocket_protocols	TEXT,
+	FOREIGN KEY(broker_id) REFERENCES Broker(id) ON DELETE CASCADE
+);
+
+
+insertConnection:
+INSERT INTO SocketConnection
+(id,broker_id,type,host,port,tls,connection_timeout_ms,read_timeout_ms,write_timeout_ms,websocket_endpoint,websocket_protocols)
+ VALUES
+  (NULL,?,?,?,?,?,?,?,?,?,?);
+
+
+connectionsByBrokerId:
+SELECT * FROM SocketConnection WHERE broker_id = :brokerId;

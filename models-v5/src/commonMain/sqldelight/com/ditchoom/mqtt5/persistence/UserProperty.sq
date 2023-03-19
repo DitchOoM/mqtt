@@ -1,0 +1,18 @@
+CREATE TABLE IF NOT EXISTS UserProperty(
+    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+	broker_id INTEGER NOT NULL,
+	incoming INTEGER NOT NULL DEFAULT 0 CHECK(incoming BETWEEN 0 AND 1),
+	packet_id INTEGER NOT NULL CHECK(packet_id BETWEEN -2 AND 65535),
+	key TEXT NOT NULL,
+    value TEXT NOT NULL,
+	FOREIGN KEY(broker_id) REFERENCES Broker(id) ON DELETE CASCADE,
+-- 	FOREIGN KEY(broker_id, incoming, packet_id) REFERENCES PublishMessage(broker_id, incoming, packet_id) ON DELETE CASCADE,
+	UNIQUE(id, broker_id, incoming, packet_id)
+);
+
+allProps:
+SELECT key, value FROM UserProperty WHERE broker_id = :brokerId AND incoming = :incoming AND packet_id = :packetId ORDER BY rowid ASC;
+
+addProp:
+INSERT INTO UserProperty (broker_id, incoming, packet_id, key, value)
+VALUES (?, ?, ?, ?, ?);

@@ -1,0 +1,37 @@
+CREATE TABLE IF NOT EXISTS Subscription (
+	broker_id	INTEGER NOT NULL,
+	subscribe_packet_id INTEGER NOT NULL CHECK(subscribe_packet_id  BETWEEN 0 AND 65535),
+	unsubscribe_packet_id INTEGER NOT NULL CHECK(unsubscribe_packet_id BETWEEN 0 AND 65535),
+	topic_filter TEXT NOT NULL,
+	qos	INTEGER NOT NULL DEFAULT 0 CHECK(qos BETWEEN 0 AND 2),
+	FOREIGN KEY(broker_id) REFERENCES Broker(id) ON DELETE CASCADE,
+	PRIMARY KEY (broker_id,subscribe_packet_id, topic_filter)
+);
+
+insertSubscription:
+INSERT INTO Subscription (broker_id, subscribe_packet_id,unsubscribe_packet_id, topic_filter, qos)
+VALUES (?, ?, 0,?, ?);
+
+allSubscriptions:
+SELECT * FROM Subscription WHERE broker_id = :brokerId;
+
+allSubscriptionsNotPendingUnsub:
+SELECT * FROM Subscription WHERE broker_id = :brokerId AND unsubscribe_packet_id = 0;
+
+addUnsubscriptionPacketId:
+UPDATE Subscription SET unsubscribe_packet_id = :unsubPacketId WHERE broker_id = :brokerId AND topic_filter = :topicFilter;
+
+deleteSubscription:
+DELETE FROM Subscription WHERE broker_id = :brokerId AND unsubscribe_packet_id = :unsubPacketId;
+
+deleteAll:
+DELETE FROM Subscription WHERE broker_id = :brokerId;
+
+queuedSubscriptions:
+SELECT * FROM Subscription WHERE broker_id = :brokerId AND subscribe_packet_id = :subPacketId AND unsubscribe_packet_id = 0;
+
+queuedUnsubscriptions:
+SELECT * FROM Subscription WHERE broker_id = :brokerId AND unsubscribe_packet_id = :unsubscribePacketId;
+
+queuedMessageCount:
+SELECT COUNT(broker_id) FROM Subscription WHERE broker_id = :brokerId;

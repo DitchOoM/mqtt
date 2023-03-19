@@ -1,0 +1,45 @@
+CREATE TABLE IF NOT EXISTS ConnectionRequest (
+	broker_id	INTEGER NOT NULL UNIQUE,
+	protocol_name TEXT NOT NULL DEFAULT 'MQTT',
+	protocol_version INTEGER NOT NULL DEFAULT 5 CHECK(protocol_version BETWEEN 0 AND 255),
+	will_retain	INTEGER NOT NULL DEFAULT 0 CHECK(will_retain BETWEEN 0 AND 1),
+	will_qos	INTEGER NOT NULL DEFAULT 0 CHECK(will_qos BETWEEN 0 AND 2),
+	will_flag	INTEGER NOT NULL DEFAULT 0 CHECK(will_flag BETWEEN 0 AND 1),
+	clean_start	INTEGER NOT NULL DEFAULT 0 CHECK(clean_start BETWEEN 0 AND 1),
+	keep_alive_seconds	INTEGER NOT NULL DEFAULT 3600 CHECK(keep_alive_seconds BETWEEN 0 AND 65535),
+	session_expiry_interval_seconds INTEGER,
+	receive_maximum INTEGER CHECK(IFNULL(receive_maximum, 0) BETWEEN 0 AND 65535),
+	maximum_packet_size INTEGER,
+	topic_alias_maximum INTEGER CHECK(IFNULL(topic_alias_maximum, 0) BETWEEN 0 AND 65535),
+	request_response_information INTEGER CHECK(IFNULL(request_response_information, 0) BETWEEN 0 AND 1),
+	request_problem_information INTEGER CHECK(IFNULL(request_problem_information, 0) BETWEEN 0 AND 1),
+	authentication_method TEXT,
+	authentication_data BLOB,
+	client_id	TEXT NOT NULL,
+	has_will_properties INTEGER NOT NULL DEFAULT 0 CHECK(has_will_properties BETWEEN 0 AND 1),
+	will_topic	TEXT,
+	will_payload	BLOB,
+	username	TEXT,
+	password	TEXT,
+	will_property_will_delay_interval_seconds INTEGER NOT NULL CHECK(will_property_will_delay_interval_seconds BETWEEN 0 AND 4294967295),
+	will_property_payload_format_indicator INTEGER CHECK(IFNULL(will_property_payload_format_indicator, 0) BETWEEN 0 AND 1),
+	will_property_message_expiry_interval_seconds INTEGER CHECK(IFNULL(will_property_message_expiry_interval_seconds, 0) BETWEEN 0 AND 4294967295),
+	will_property_content_type TEXT,
+	will_property_response_topic TEXT,
+	will_property_correlation_data BLOB,
+	FOREIGN KEY(broker_id) REFERENCES Broker(id) ON DELETE CASCADE
+);
+
+insertConnectionRequest:
+INSERT INTO ConnectionRequest
+(broker_id, protocol_name, protocol_version, will_retain, will_qos, will_flag, clean_start, keep_alive_seconds,
+session_expiry_interval_seconds, receive_maximum, maximum_packet_size, topic_alias_maximum,
+request_response_information, request_problem_information, authentication_method, authentication_data, client_id,
+has_will_properties, will_topic, will_payload, username, password,will_property_will_delay_interval_seconds,
+will_property_payload_format_indicator, will_property_message_expiry_interval_seconds, will_property_content_type,
+will_property_response_topic, will_property_correlation_data)
+VALUES
+(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+connectionRequestByBrokerId:
+SELECT * FROM ConnectionRequest WHERE broker_id = :brokerId LIMIT 1;

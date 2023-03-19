@@ -1,0 +1,25 @@
+CREATE TABLE IF NOT EXISTS ConnectionRequest (
+	broker_id	INTEGER NOT NULL UNIQUE,
+	protocol_name	TEXT NOT NULL DEFAULT 'MQTT',
+	protocol_level	INTEGER NOT NULL DEFAULT 4 CHECK(protocol_level BETWEEN 0 AND 255),
+	will_retain	INTEGER NOT NULL DEFAULT 0 CHECK(will_retain BETWEEN 0 AND 1),
+	will_qos	INTEGER NOT NULL DEFAULT 0 CHECK(will_qos BETWEEN 0 AND 2),
+	will_flag	INTEGER NOT NULL DEFAULT 0 CHECK(will_flag BETWEEN 0 AND 1),
+	clean_session	INTEGER NOT NULL DEFAULT 0 CHECK(clean_session BETWEEN 0 AND 1),
+	keep_alive_seconds	INTEGER NOT NULL DEFAULT 3600 CHECK(keep_alive_seconds BETWEEN 0 AND 65535),
+	client_id	TEXT NOT NULL,
+	will_topic	TEXT,
+	will_payload	BLOB,
+	username	TEXT,
+	password	TEXT,
+	FOREIGN KEY(broker_id) REFERENCES Broker(id) ON DELETE CASCADE
+);
+
+insertConnectionRequest:
+INSERT INTO ConnectionRequest
+(broker_id, protocol_name, protocol_level, will_retain, will_qos, will_flag, clean_session, keep_alive_seconds, client_id, will_topic, will_payload, username, password)
+VALUES
+(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+connectionRequestByBrokerId:
+SELECT * FROM ConnectionRequest WHERE broker_id = :brokerId LIMIT 1;

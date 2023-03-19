@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="base-models-jvm-10.0.0-SNAPSHOT">
+    <output-path>$PROJECT_DIR$/base-models/build/libs</output-path>
+    <root id="archive" name="base-models-jvm-10.0.0-SNAPSHOT.jar">
+      <element id="module-output" name="mqtt.base-models.jvmMain" />
+    </root>
+  </artifact>
+</component>

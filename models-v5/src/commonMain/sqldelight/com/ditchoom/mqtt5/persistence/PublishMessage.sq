@@ -1,0 +1,45 @@
+CREATE TABLE IF NOT EXISTS PublishMessage (
+	broker_id	INTEGER NOT NULL,
+	incoming INTEGER NOT NULL DEFAULT 0 CHECK(incoming BETWEEN 0 AND 1),
+-- 	fixed header
+	dup INTEGER NOT NULL DEFAULT 0 CHECK(dup BETWEEN 0 AND 1),
+	qos	INTEGER NOT NULL DEFAULT 1 CHECK(qos BETWEEN 0 AND 2), -- cannot be 0 if we are persisting
+	retain INTEGER NOT NULL DEFAULT 0 CHECK(retain BETWEEN 0 AND 1),
+-- 	variable header
+	topic_name TEXT NOT NULL,
+	packet_id INTEGER NOT NULL CHECK(packet_id BETWEEN 0 AND 65535),
+-- 	variable header props
+    payload_format_indicator INTEGER NOT NULL DEFAULT 0 CHECK(payload_format_indicator BETWEEN 0 AND 1),
+    message_expiry_interval INTEGER CHECK(IFNULL(message_expiry_interval, 0) BETWEEN 0 AND 4294967295),
+    topic_alias INTEGER CHECK(IFNULL(topic_alias, 0) BETWEEN 0 AND 65535),
+    response_topic TEXT,
+    correlation_data BLOB,
+    subscription_identifier TEXT,
+    content_type TEXT,
+-- 	payload
+	payload BLOB,
+	FOREIGN KEY(broker_id) REFERENCES Broker(id) ON DELETE CASCADE,
+	PRIMARY KEY (broker_id, incoming, packet_id)
+);
+
+insertPublishMessage:
+INSERT INTO PublishMessage
+(broker_id, incoming, dup, qos, retain, topic_name, packet_id, payload_format_indicator, message_expiry_interval, topic_alias, response_topic, correlation_data, subscription_identifier, content_type, payload)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+deletePublishMessage {
+    DELETE FROM PublishMessage WHERE broker_id = :brokerId AND incoming = :incoming AND packet_id = :packetId;
+    DELETE FROM UserProperty WHERE broker_id = :brokerId AND incoming = :incoming AND packet_id = :packetId;
+}
+
+deleteAll:
+DELETE FROM PublishMessage WHERE broker_id = :brokerId;
+
+queuedPubMessages:
+SELECT * FROM PublishMessage WHERE broker_id = :brokerId AND incoming = 0;
+
+publishMessageCount:
+SELECT COUNT(broker_id) FROM PublishMessage WHERE broker_id = :brokerId;
+
+allMessages:
+SELECT * FROM PublishMessage WHERE broker_id = :brokerId;

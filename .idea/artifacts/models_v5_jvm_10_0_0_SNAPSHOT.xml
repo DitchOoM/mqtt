@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="models-v5-jvm-10.0.0-SNAPSHOT">
+    <output-path>$PROJECT_DIR$/models-v5/build/libs</output-path>
+    <root id="archive" name="models-v5-jvm-10.0.0-SNAPSHOT.jar">
+      <element id="module-output" name="mqtt.models-v5.jvmMain" />
+    </root>
+  </artifact>
+</component>

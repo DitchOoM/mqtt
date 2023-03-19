@@ -1,0 +1,36 @@
+CREATE TABLE IF NOT EXISTS Qos2Messages (
+	broker_id	INTEGER NOT NULL,
+	incoming INTEGER NOT NULL DEFAULT 0 CHECK(incoming BETWEEN 0 AND 1),
+	packet_id INTEGER NOT NULL CHECK(packet_id BETWEEN 0 AND 65535),
+	reason_code INTEGER NOT NULL CHECK(reason_code BETWEEN 0 AND 162),
+	reason_string TEXT,
+	type  INTEGER NOT NULL CHECK(type  BETWEEN 5 AND 7),
+	FOREIGN KEY(broker_id) REFERENCES Broker(id) ON DELETE CASCADE,
+	PRIMARY KEY (broker_id, incoming, packet_id, type)
+);
+
+insertQos2Message:
+INSERT INTO Qos2Messages (broker_id, incoming, packet_id, reason_code, reason_string, type)
+VALUES (?, ?, ?, ?, ?, ?);
+
+updateQos2Message {
+    UPDATE Qos2Messages SET type = :type WHERE broker_id = :brokerId AND incoming = :incoming AND packet_id = :packetId;
+    DELETE FROM UserProperty WHERE broker_id = :brokerId AND incoming = :incoming AND packet_id = :packetId;
+}
+
+deleteQos2Message {
+    DELETE FROM Qos2Messages WHERE broker_id = :brokerId AND incoming = :incoming AND packet_id = :packetId;
+    DELETE FROM UserProperty WHERE broker_id = :brokerId AND incoming = :incoming AND packet_id = :packetId;
+}
+
+deleteAll:
+DELETE FROM Qos2Messages WHERE broker_id = :brokerId;
+
+queuedQos2Messages:
+SELECT * FROM Qos2Messages WHERE broker_id = :brokerId AND incoming = 0;
+
+queuedMessageCount:
+SELECT COUNT(broker_id) FROM Qos2Messages WHERE broker_id = :brokerId;
+
+allMessages:
+SELECT * FROM Qos2Messages WHERE broker_id = :brokerId;

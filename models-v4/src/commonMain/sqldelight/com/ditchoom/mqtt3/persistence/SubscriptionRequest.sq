@@ -1,0 +1,24 @@
+CREATE TABLE IF NOT EXISTS SubscribeRequest(
+    broker_id	INTEGER NOT NULL,
+	packet_id INTEGER NOT NULL CHECK(packet_id BETWEEN 0 AND 65535),
+	FOREIGN KEY(broker_id) REFERENCES Broker(id) ON DELETE CASCADE,
+	PRIMARY KEY (broker_id,packet_id)
+);
+
+
+insertSubscribeRequest:
+INSERT INTO SubscribeRequest (broker_id, packet_id)
+VALUES (?, ?);
+
+deleteSubscribeRequest:
+DELETE FROM SubscribeRequest
+WHERE broker_id = :brokerId AND packet_id = :packetId;
+
+queuedSubMessages:
+SELECT * FROM SubscribeRequest WHERE broker_id = :brokerId;
+
+deleteAll:
+DELETE FROM SubscribeRequest WHERE broker_id = :brokerId;
+
+queuedMessageCount:
+SELECT COUNT(broker_id) FROM SubscribeRequest WHERE broker_id = :brokerId;

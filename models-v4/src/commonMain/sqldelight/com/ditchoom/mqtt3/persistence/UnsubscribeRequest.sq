@@ -1,0 +1,23 @@
+CREATE TABLE IF NOT EXISTS UnsubscribeRequest(
+    broker_id	INTEGER NOT NULL,
+	packet_id INTEGER NOT NULL CHECK(packet_id BETWEEN 0 AND 65535),
+	FOREIGN KEY(broker_id) REFERENCES Broker(id) ON DELETE CASCADE,
+	PRIMARY KEY (broker_id,packet_id)
+);
+
+
+insertUnsubscribeRequest:
+INSERT INTO UnsubscribeRequest (broker_id, packet_id)
+VALUES (?, ?);
+
+deleteUnsubscribeRequest:
+DELETE FROM UnsubscribeRequest WHERE broker_id = :brokerId AND packet_id = :packetId;
+
+queuedUnsubMessages:
+SELECT * FROM UnsubscribeRequest WHERE broker_id = :brokerId;
+
+deleteAll:
+DELETE FROM UnsubscribeRequest WHERE broker_id = :brokerId;
+
+queuedMessageCount:
+SELECT COUNT(broker_id) FROM UnsubscribeRequest WHERE broker_id = :brokerId;

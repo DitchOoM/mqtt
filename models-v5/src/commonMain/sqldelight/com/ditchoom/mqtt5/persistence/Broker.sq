@@ -1,0 +1,22 @@
+CREATE TABLE IF NOT EXISTS Broker (
+	id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    next_packet_id INTEGER NOT NULL DEFAULT 1 CHECK(next_packet_id BETWEEN 0 AND 65535)
+);
+
+insertBroker:
+INSERT INTO Broker VALUES(NULL, 1);
+
+lastRowId:
+SELECT last_insert_rowid();
+
+deleteBroker:
+DELETE FROM Broker WHERE id = :id;
+
+allBrokers:
+SELECT * FROM Broker;
+
+incrementPacketId:
+UPDATE Broker SET next_packet_id = (next_packet_id % 65535) + 1 WHERE id = :id;
+
+nextPacketId:
+SELECT next_packet_id FROM Broker WHERE id = :id;

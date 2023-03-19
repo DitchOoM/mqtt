@@ -5,259 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="e8d504a0-dabd-42f6-b6be-1d45e41ce1b5" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/artifacts/base_models_jslegacy_10_0_0_SNAPSHOT.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/artifacts/base_models_jvm_10_0_0_SNAPSHOT.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/artifacts/common_desktop_1_0_SNAPSHOT.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/artifacts/desktop_jvm_1_0_SNAPSHOT.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/artifacts/models_base_jslegacy_10_0_0_SNAPSHOT.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/artifacts/models_base_jvm_10_0_0_SNAPSHOT.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/artifacts/models_v4_jslegacy_10_0_0_SNAPSHOT.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/artifacts/models_v4_jvm_10_0_0_SNAPSHOT.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/artifacts/models_v5_jslegacy_10_0_0_SNAPSHOT.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/artifacts/models_v5_jvm_10_0_0_SNAPSHOT.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/artifacts/mqtt_client_jslegacy_10_0_0_SNAPSHOT.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/artifacts/mqtt_client_jvm_10_0_0_SNAPSHOT.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/artifacts/web_js.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/gradle.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/kotlinc.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/build.gradle.kts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/gradle.properties" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/gradle/wrapper/gradle-wrapper.jar" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/gradle/wrapper/gradle-wrapper.properties" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/gradlew" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/gradlew.bat" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-base/build.gradle.kts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-base/src/androidMain/AndroidManifest.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-base/src/commonMain/kotlin/com/ditchoom/mqtt/Exception.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-base/src/commonMain/kotlin/com/ditchoom/mqtt/InMemoryPersistence.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-base/src/commonMain/kotlin/com/ditchoom/mqtt/MqttWarning.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-base/src/commonMain/kotlin/com/ditchoom/mqtt/Persistence.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-base/src/commonMain/kotlin/com/ditchoom/mqtt/connection/MqttBroker.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-base/src/commonMain/kotlin/com/ditchoom/mqtt/connection/MqttConnectionOptions.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-base/src/commonMain/kotlin/com/ditchoom/mqtt/controlpacket/ControlPacket.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-base/src/commonMain/kotlin/com/ditchoom/mqtt/controlpacket/ControlPacketFactory.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-base/src/commonMain/kotlin/com/ditchoom/mqtt/controlpacket/IConnectionAcknowledgment.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-base/src/commonMain/kotlin/com/ditchoom/mqtt/controlpacket/IConnectionRequest.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-base/src/commonMain/kotlin/com/ditchoom/mqtt/controlpacket/IDisconnectNotification.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-base/src/commonMain/kotlin/com/ditchoom/mqtt/controlpacket/IPingRequest.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-base/src/commonMain/kotlin/com/ditchoom/mqtt/controlpacket/IPingResponse.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-base/src/commonMain/kotlin/com/ditchoom/mqtt/controlpacket/IPublishAcknowledgment.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-base/src/commonMain/kotlin/com/ditchoom/mqtt/controlpacket/IPublishComplete.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-base/src/commonMain/kotlin/com/ditchoom/mqtt/controlpacket/IPublishMessage.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-base/src/commonMain/kotlin/com/ditchoom/mqtt/controlpacket/IPublishReceived.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-base/src/commonMain/kotlin/com/ditchoom/mqtt/controlpacket/IPublishRelease.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-base/src/commonMain/kotlin/com/ditchoom/mqtt/controlpacket/IReserved.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-base/src/commonMain/kotlin/com/ditchoom/mqtt/controlpacket/ISubscribeAcknowledgement.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-base/src/commonMain/kotlin/com/ditchoom/mqtt/controlpacket/ISubscribeRequest.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-base/src/commonMain/kotlin/com/ditchoom/mqtt/controlpacket/ISubscription.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-base/src/commonMain/kotlin/com/ditchoom/mqtt/controlpacket/IUnsubscribeAcknowledgment.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-base/src/commonMain/kotlin/com/ditchoom/mqtt/controlpacket/IUnsubscribeRequest.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-base/src/commonMain/kotlin/com/ditchoom/mqtt/controlpacket/Level.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-base/src/commonMain/kotlin/com/ditchoom/mqtt/controlpacket/PacketIdUtils.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-base/src/commonMain/kotlin/com/ditchoom/mqtt/controlpacket/QualityOfService.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-base/src/commonMain/kotlin/com/ditchoom/mqtt/controlpacket/String.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-base/src/commonMain/kotlin/com/ditchoom/mqtt/controlpacket/Topic.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-base/src/commonMain/kotlin/com/ditchoom/mqtt/controlpacket/Type.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-base/src/commonMain/kotlin/com/ditchoom/mqtt/controlpacket/format/ReasonCode.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-base/src/commonMain/kotlin/com/ditchoom/mqtt/controlpacket/format/fixed/DirectionOfFlow.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-base/src/commonMain/kotlin/com/ditchoom/mqtt/controlpacket/format/fixed/Flags.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-base/src/commonTest/kotlin/com/ditchoom/mqtt/controlpacket/StringTests.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-base/src/commonTest/kotlin/com/ditchoom/mqtt/controlpacket/TopicTests.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-base/src/commonTest/kotlin/com/ditchoom/mqtt/controlpacket/VariableByteIntegerTests.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/build.gradle.kts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/androidAndroidTest/kotlin/RunTest.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/androidMain/AndroidManifest.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/androidMain/kotlin/com/ditchoom/mqtt3/persistence/DefaultPersistence.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/androidMain/kotlin/com/ditchoom/mqtt3/persistence/SqlDriver.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/androidTest/kotlin/RunTest.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/appleMain/kotlin/com/ditchoom/mqtt3/persistence/DefaultPersistence.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/appleMain/kotlin/com/ditchoom/mqtt3/persistence/SqlDriver.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/appleTest/kotlin/RunTest.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/commonMain/kotlin/com/ditchoom/mqtt3/controlpacket/ConnectionAcknowledgment.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/commonMain/kotlin/com/ditchoom/mqtt3/controlpacket/ConnectionRequest.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/commonMain/kotlin/com/ditchoom/mqtt3/controlpacket/ControlPacketV4.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/commonMain/kotlin/com/ditchoom/mqtt3/controlpacket/ControlPacketV4Factory.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/commonMain/kotlin/com/ditchoom/mqtt3/controlpacket/DisconnectNotification.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/commonMain/kotlin/com/ditchoom/mqtt3/controlpacket/PingRequest.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/commonMain/kotlin/com/ditchoom/mqtt3/controlpacket/PingResponse.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/commonMain/kotlin/com/ditchoom/mqtt3/controlpacket/PublishAcknowledgment.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/commonMain/kotlin/com/ditchoom/mqtt3/controlpacket/PublishComplete.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/commonMain/kotlin/com/ditchoom/mqtt3/controlpacket/PublishMessage.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/commonMain/kotlin/com/ditchoom/mqtt3/controlpacket/PublishReceived.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/commonMain/kotlin/com/ditchoom/mqtt3/controlpacket/PublishRelease.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/commonMain/kotlin/com/ditchoom/mqtt3/controlpacket/Reserved.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/commonMain/kotlin/com/ditchoom/mqtt3/controlpacket/SubscribeAcknowledgement.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/commonMain/kotlin/com/ditchoom/mqtt3/controlpacket/SubscribeRequest.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/commonMain/kotlin/com/ditchoom/mqtt3/controlpacket/UnsubscribeAcknowledgment.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/commonMain/kotlin/com/ditchoom/mqtt3/controlpacket/UnsubscribeRequest.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/commonMain/kotlin/com/ditchoom/mqtt3/persistence/DefaultPersistence.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/commonMain/kotlin/com/ditchoom/mqtt3/persistence/SqlDatabasePersistence.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/commonMain/kotlin/com/ditchoom/mqtt3/persistence/SqlPersistence.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/commonMain/sqldelight/com/ditchoom/mqtt3/persistence/Broker.sq" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/commonMain/sqldelight/com/ditchoom/mqtt3/persistence/ConnectionRequest.sq" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/commonMain/sqldelight/com/ditchoom/mqtt3/persistence/PublishMessage.sq" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/commonMain/sqldelight/com/ditchoom/mqtt3/persistence/QoS2Messages.sq" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/commonMain/sqldelight/com/ditchoom/mqtt3/persistence/SocketConnection.sq" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/commonMain/sqldelight/com/ditchoom/mqtt3/persistence/Subscription.sq" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/commonMain/sqldelight/com/ditchoom/mqtt3/persistence/SubscriptionRequest.sq" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/commonMain/sqldelight/com/ditchoom/mqtt3/persistence/UnsubscribeRequest.sq" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/commonTest/kotlin/RunTestCommon.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/commonTest/kotlin/com/ditchoom/mqtt3/controlpacket/ConnectionAcknowledgmentTests.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/commonTest/kotlin/com/ditchoom/mqtt3/controlpacket/ConnectionRequestTests.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/commonTest/kotlin/com/ditchoom/mqtt3/controlpacket/DisconnectTests.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/commonTest/kotlin/com/ditchoom/mqtt3/controlpacket/PingRequestTests.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/commonTest/kotlin/com/ditchoom/mqtt3/controlpacket/PingResponseTests.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/commonTest/kotlin/com/ditchoom/mqtt3/controlpacket/PublishAcknowledgementTest.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/commonTest/kotlin/com/ditchoom/mqtt3/controlpacket/PublishCompleteTests.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/commonTest/kotlin/com/ditchoom/mqtt3/controlpacket/PublishMessageTests.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/commonTest/kotlin/com/ditchoom/mqtt3/controlpacket/PublishReceivedTests.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/commonTest/kotlin/com/ditchoom/mqtt3/controlpacket/PublishReleaseTests.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/commonTest/kotlin/com/ditchoom/mqtt3/controlpacket/SubscribeAcknowledgementTests.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/commonTest/kotlin/com/ditchoom/mqtt3/controlpacket/SubscribeRequestTests.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/commonTest/kotlin/com/ditchoom/mqtt3/controlpacket/UnsubscribeAcknowledgmentTests.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/commonTest/kotlin/com/ditchoom/mqtt3/controlpacket/UnsubscribeRequestTests.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/commonTest/kotlin/com/ditchoom/mqtt3/persistence/PersistenceTests.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/jsMain/kotlin/com/ditchoom/mqtt3/persistence/DefaultPersistence.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/jsMain/kotlin/com/ditchoom/mqtt3/persistence/IDBObjects.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/jsMain/kotlin/com/ditchoom/mqtt3/persistence/IDBPersistence.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/jsMain/kotlin/com/ditchoom/mqtt3/persistence/Qos2Message.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/jsMain/kotlin/com/ditchoom/mqtt3/persistence/SqlDriver.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/jsTest/kotlin/RunTest.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/jvmMain/kotlin/com/ditchoom/mqtt3/persistence/DefaultPersistence.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/jvmMain/kotlin/com/ditchoom/mqtt3/persistence/SqlDriver.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v4/src/jvmTest/kotlin/RunTest.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/build.gradle.kts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/androidAndroidTest/kotlin/RunTest.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/androidMain/AndroidManifest.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/androidMain/kotlin/com/ditchoom/mqtt5/persistence/DefaultPersistence.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/androidMain/kotlin/com/ditchoom/mqtt5/persistence/SqlDriver.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/androidTest/kotlin/RunTest.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/appleMain/kotlin/com/ditchoom/mqtt5/persistence/DefaultPersistence.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/appleMain/kotlin/com/ditchoom/mqtt5/persistence/SqlDriver.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/appleTest/kotlin/RunTest.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/kotlin/com/ditchoom/mqtt5/controlpacket/AuthenticationExchange.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/kotlin/com/ditchoom/mqtt5/controlpacket/ConnectionAcknowledgment.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/kotlin/com/ditchoom/mqtt5/controlpacket/ConnectionRequest.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/kotlin/com/ditchoom/mqtt5/controlpacket/ControlPacketV5.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/kotlin/com/ditchoom/mqtt5/controlpacket/ControlPacketV5Factory.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/kotlin/com/ditchoom/mqtt5/controlpacket/DisconnectNotification.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/kotlin/com/ditchoom/mqtt5/controlpacket/PingRequest.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/kotlin/com/ditchoom/mqtt5/controlpacket/PingResponse.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/kotlin/com/ditchoom/mqtt5/controlpacket/PublishAcknowledgment.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/kotlin/com/ditchoom/mqtt5/controlpacket/PublishComplete.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/kotlin/com/ditchoom/mqtt5/controlpacket/PublishMessage.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/kotlin/com/ditchoom/mqtt5/controlpacket/PublishReceived.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/kotlin/com/ditchoom/mqtt5/controlpacket/PublishRelease.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/kotlin/com/ditchoom/mqtt5/controlpacket/Reserved.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/kotlin/com/ditchoom/mqtt5/controlpacket/SubscribeAcknowledgement.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/kotlin/com/ditchoom/mqtt5/controlpacket/SubscribeRequest.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/kotlin/com/ditchoom/mqtt5/controlpacket/UnsubscribeAcknowledgment.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/kotlin/com/ditchoom/mqtt5/controlpacket/UnsubscribeRequest.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/kotlin/com/ditchoom/mqtt5/controlpacket/properties/AssignedClientIdentifier.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/kotlin/com/ditchoom/mqtt5/controlpacket/properties/Authentication.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/kotlin/com/ditchoom/mqtt5/controlpacket/properties/AuthenticationData.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/kotlin/com/ditchoom/mqtt5/controlpacket/properties/AuthenticationMethod.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/kotlin/com/ditchoom/mqtt5/controlpacket/properties/ContentType.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/kotlin/com/ditchoom/mqtt5/controlpacket/properties/CorrelationData.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/kotlin/com/ditchoom/mqtt5/controlpacket/properties/MaximumPacketSize.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/kotlin/com/ditchoom/mqtt5/controlpacket/properties/MaximumQos.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/kotlin/com/ditchoom/mqtt5/controlpacket/properties/MessageExpiryInterval.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/kotlin/com/ditchoom/mqtt5/controlpacket/properties/PayloadFormatIndicator.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/kotlin/com/ditchoom/mqtt5/controlpacket/properties/Property.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/kotlin/com/ditchoom/mqtt5/controlpacket/properties/ReasonString.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/kotlin/com/ditchoom/mqtt5/controlpacket/properties/ReceiveMaximum.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/kotlin/com/ditchoom/mqtt5/controlpacket/properties/RequestProblemInformation.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/kotlin/com/ditchoom/mqtt5/controlpacket/properties/RequestResponseInformation.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/kotlin/com/ditchoom/mqtt5/controlpacket/properties/ResponseInformation.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/kotlin/com/ditchoom/mqtt5/controlpacket/properties/ResponseTopic.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/kotlin/com/ditchoom/mqtt5/controlpacket/properties/RetainAvailable.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/kotlin/com/ditchoom/mqtt5/controlpacket/properties/ServerKeepAlive.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/kotlin/com/ditchoom/mqtt5/controlpacket/properties/ServerReference.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/kotlin/com/ditchoom/mqtt5/controlpacket/properties/SessionExpiryInterval.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/kotlin/com/ditchoom/mqtt5/controlpacket/properties/SharedSubscriptionAvailable.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/kotlin/com/ditchoom/mqtt5/controlpacket/properties/SubscriptionIdentifier.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/kotlin/com/ditchoom/mqtt5/controlpacket/properties/SubscriptionIdentifierAvailable.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/kotlin/com/ditchoom/mqtt5/controlpacket/properties/TopicAlias.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/kotlin/com/ditchoom/mqtt5/controlpacket/properties/TopicAliasMaximum.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/kotlin/com/ditchoom/mqtt5/controlpacket/properties/Type.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/kotlin/com/ditchoom/mqtt5/controlpacket/properties/UserProperty.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/kotlin/com/ditchoom/mqtt5/controlpacket/properties/WildcardSubscriptionAvailable.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/kotlin/com/ditchoom/mqtt5/controlpacket/properties/WillDelayInterval.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/kotlin/com/ditchoom/mqtt5/persistence/DefaultPersistence.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/kotlin/com/ditchoom/mqtt5/persistence/SqlDatabasePersistence.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/kotlin/com/ditchoom/mqtt5/persistence/SqlPersistence.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/sqldelight/com/ditchoom/mqtt5/persistence/Broker.sq" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/sqldelight/com/ditchoom/mqtt5/persistence/ConnectionRequest.sq" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/sqldelight/com/ditchoom/mqtt5/persistence/PublishMessage.sq" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/sqldelight/com/ditchoom/mqtt5/persistence/QoS2Messages.sq" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/sqldelight/com/ditchoom/mqtt5/persistence/SocketConnection.sq" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/sqldelight/com/ditchoom/mqtt5/persistence/Subscription.sq" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/sqldelight/com/ditchoom/mqtt5/persistence/SubscriptionRequest.sq" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/sqldelight/com/ditchoom/mqtt5/persistence/UnsubscribeRequest.sq" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonMain/sqldelight/com/ditchoom/mqtt5/persistence/UserProperty.sq" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonTest/kotlin/RunTestCommon.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonTest/kotlin/com/ditchoom/mqtt5/controlpacket/AuthenticationExchangeTests.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonTest/kotlin/com/ditchoom/mqtt5/controlpacket/ConnectionAcknowledgmentTests.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonTest/kotlin/com/ditchoom/mqtt5/controlpacket/ConnectionRequestTests.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonTest/kotlin/com/ditchoom/mqtt5/controlpacket/DisconnectTests.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonTest/kotlin/com/ditchoom/mqtt5/controlpacket/FlagTests.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonTest/kotlin/com/ditchoom/mqtt5/controlpacket/PingRequestTests.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonTest/kotlin/com/ditchoom/mqtt5/controlpacket/PingResponseTests.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonTest/kotlin/com/ditchoom/mqtt5/controlpacket/PublishAcknowledgementTest.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonTest/kotlin/com/ditchoom/mqtt5/controlpacket/PublishCompleteTests.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonTest/kotlin/com/ditchoom/mqtt5/controlpacket/PublishMessageTests.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonTest/kotlin/com/ditchoom/mqtt5/controlpacket/PublishReceivedTests.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonTest/kotlin/com/ditchoom/mqtt5/controlpacket/PublishReleaseTests.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonTest/kotlin/com/ditchoom/mqtt5/controlpacket/ReasonCodeTests.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonTest/kotlin/com/ditchoom/mqtt5/controlpacket/SubscribeAcknowledgementTests.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonTest/kotlin/com/ditchoom/mqtt5/controlpacket/SubscribeRequestTest.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonTest/kotlin/com/ditchoom/mqtt5/controlpacket/TypeTests.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonTest/kotlin/com/ditchoom/mqtt5/controlpacket/UnsubscribeAcknowledgmentTests.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonTest/kotlin/com/ditchoom/mqtt5/controlpacket/UnsubscribeRequestTests.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/commonTest/kotlin/com/ditchoom/mqtt5/persistence/PersistenceTests.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/jsMain/kotlin/com/ditchoom/mqtt5/persistence/DefaultPersistence.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/jsMain/kotlin/com/ditchoom/mqtt5/persistence/IDBObjects.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/jsMain/kotlin/com/ditchoom/mqtt5/persistence/IDBPersistence.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/jsMain/kotlin/com/ditchoom/mqtt5/persistence/Qos2Message.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/jsMain/kotlin/com/ditchoom/mqtt5/persistence/SqlDriver.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/jsTest/kotlin/RunTest.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/jvmMain/kotlin/com/ditchoom/mqtt5/persistence/DefaultPersistence.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/jvmMain/kotlin/com/ditchoom/mqtt5/persistence/SqlDriver.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models-v5/src/jvmTest/kotlin/RunTest.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/monitor/android/build.gradle.kts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/monitor/android/src/main/AndroidManifest.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/monitor/android/src/main/java/com/ditchoom/android/MainActivity.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/monitor/android/src/main/res/xml/network_security_config.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/monitor/common/build.gradle.kts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/monitor/common/src/androidMain/AndroidManifest.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/monitor/common/src/androidMain/kotlin/com/ditchoom/common/platform.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/monitor/common/src/commonMain/kotlin/com/ditchoom/common/App.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/monitor/common/src/commonMain/kotlin/com/ditchoom/common/ConnectionRequest4Builder.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/monitor/common/src/commonMain/kotlin/com/ditchoom/common/ConnectionRequest5Builder.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/monitor/common/src/commonMain/kotlin/com/ditchoom/common/LoggingObserver.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/monitor/common/src/commonMain/kotlin/com/ditchoom/common/MqttConnectionViewer.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/monitor/common/src/commonMain/kotlin/com/ditchoom/common/PublishButtonAndDialog.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/monitor/common/src/commonMain/kotlin/com/ditchoom/common/SubscriptionButtonAndDialog.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/monitor/common/src/commonMain/kotlin/com/ditchoom/common/UnsubscriptionButtonAndDialog.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/monitor/common/src/commonMain/kotlin/com/ditchoom/common/platform.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/monitor/common/src/desktopMain/kotlin/com/ditchoom/common/DesktopApp.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/monitor/common/src/desktopMain/kotlin/com/ditchoom/common/platform.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/monitor/common/src/jsMain/kotlin/com/ditchoom/common/platform.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/monitor/desktop/build.gradle.kts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/monitor/desktop/mqtt4.db" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/monitor/desktop/mqtt5.db" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/monitor/desktop/src/jvmMain/kotlin/Main.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/monitor/web/build.gradle.kts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/monitor/web/src/jsMain/kotlin/LoggingObserver.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/monitor/web/src/jsMain/kotlin/Main.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/monitor/web/src/jsMain/resources/index.html" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/monitor/web/webpack.config.d/patch.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/settings.gradle.kts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -299,6 +48,12 @@
                 <item name="" type="6a2764b6:ExternalProjectsStructure$RootNode" />
                 <item name="mqtt" type="f1a62948:ProjectNode" />
                 <item name="Tasks" type="e4a08cd1:TasksNode" />
+              </path>
+              <path>
+                <item name="" type="6a2764b6:ExternalProjectsStructure$RootNode" />
+                <item name="mqtt" type="f1a62948:ProjectNode" />
+                <item name="Tasks" type="e4a08cd1:TasksNode" />
+                <item name="formatting" type="c8890929:TasksNode$1" />
               </path>
               <path>
                 <item name="" type="6a2764b6:ExternalProjectsStructure$RootNode" />
@@ -349,7 +104,7 @@
       <command value="gradle kotlinUpgradeYarnLock" />
     </option>
   </component>
-  <component name="RunManager" selected="Gradle.mqtt [ktlintFormat]">
+  <component name="RunManager" selected="Gradle.mqtt [check]">
     <configuration name="monitor.android" type="AndroidRunConfigurationType" factoryName="Android App">
       <module name="mqtt.monitor.android.main" />
       <option name="DEPLOY" value="true" />
@@ -492,8 +247,8 @@
     </configuration>
     <recent_temporary>
       <list>
-        <item itemvalue="Gradle.mqtt [ktlintFormat]" />
         <item itemvalue="Gradle.mqtt [check]" />
+        <item itemvalue="Gradle.mqtt [ktlintFormat]" />
         <item itemvalue="Gradle.mqtt:monitor:web [jsBrowserDevelopmentRun]" />
         <item itemvalue="Gradle.mqtt:monitor:desktop [run]" />
         <item itemvalue="Gradle.mqtt [allTests]" />

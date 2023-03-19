@@ -24,7 +24,16 @@ sealed interface MqttConnectionOptions {
         protocols: List<String> = if (this is WebSocketConnectionOptions) this.protocols else emptyList()
     ): MqttConnectionOptions {
         return if (isWebsocket) {
-            WebSocketConnectionOptions(host, port, tls, connectionTimeout, readTimeout, writeTimeout, websocketEndpoint, protocols)
+            WebSocketConnectionOptions(
+                host,
+                port,
+                tls,
+                connectionTimeout,
+                readTimeout,
+                writeTimeout,
+                websocketEndpoint,
+                protocols
+            )
         } else {
             SocketConnection(host, port, tls, connectionTimeout, readTimeout, writeTimeout)
         }

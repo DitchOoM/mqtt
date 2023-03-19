@@ -63,7 +63,11 @@ class LoggingObserver(private val logCallback: (String) -> Unit) : Observer {
         buildItem("Reconnect and reset timer $endReason")
     }
 
-    override fun reconnectIn(brokerId: Int, currentDelay: Duration, endReason: ConnectivityManager.ConnectionEndReason) {
+    override fun reconnectIn(
+        brokerId: Int,
+        currentDelay: Duration,
+        endReason: ConnectivityManager.ConnectionEndReason
+    ) {
         buildItem("Reconnect in $currentDelay $endReason")
     }
 

@@ -33,6 +33,7 @@ class MqttClient(internal val connectivityManager: ConnectivityManager) {
             processor.observer = value
             field = value
         }
+
     fun currentConnectionAcknowledgment(): IConnectionAcknowledgment? = connectivityManager.currentConnack()
 
     suspend fun awaitConnectivity(): IConnectionAcknowledgment {

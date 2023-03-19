@@ -24,7 +24,6 @@ import com.ditchoom.mqtt.connection.MqttBroker
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt5.controlpacket.ConnectionRequest
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.random.Random
 import kotlin.random.nextUInt
@@ -43,7 +42,7 @@ fun App(androidContext: Any? = null) {
         LaunchedEffect(androidContext) {
             println("android context $androidContext")
             val serviceLocal = MqttService.buildService(androidContext)
-            serviceLocal.assignObservers(LoggingObserver{ brokerId, log ->
+            serviceLocal.assignObservers(LoggingObserver { brokerId, log ->
                 mqttLogs += "$log\r\n"
             })
             brokers = serviceLocal.allMqttBrokers().toList()
@@ -112,11 +111,13 @@ fun ConnectionBuilder(service: MqttService, mqttLogs: String, onBrokerSelected: 
         )
     }
     var connectionRequest5 by remember {
-        mutableStateOf(ConnectionRequest(
-            clientId = "meow${Random.nextUInt()}-$platformName",
-            cleanStart = true,
-            keepAliveSeconds = 15
-        ))
+        mutableStateOf(
+            ConnectionRequest(
+                clientId = "meow${Random.nextUInt()}-$platformName",
+                cleanStart = true,
+                keepAliveSeconds = 15
+            )
+        )
     }
     var connectionRequestComplete by remember { mutableStateOf(-1) }
     if (!mqttVersionPicked) {

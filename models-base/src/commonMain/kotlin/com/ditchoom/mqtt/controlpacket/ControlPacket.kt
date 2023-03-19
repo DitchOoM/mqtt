@@ -83,9 +83,12 @@ interface ControlPacket {
         }
 
         fun WriteBuffer.writeMqttUtf8String(string: String): WriteBuffer {
-            val size = string.utf8Length().toUShort()
-            writeUShort(size)
+            val sizePosition = position()
+            position(sizePosition + UShort.SIZE_BYTES)
+            val startStringPosition = position()
             writeString(string, Charset.UTF8)
+            val stringLength = (position() - startStringPosition).toUShort()
+            set(sizePosition, stringLength)
             return this
         }
 

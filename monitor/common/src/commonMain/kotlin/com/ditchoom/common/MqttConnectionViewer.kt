@@ -11,7 +11,11 @@ import com.ditchoom.mqtt.connection.MqttBroker
 import kotlinx.coroutines.launch
 
 @Composable
-fun MqttConnectionViewer(broker: Pair<MqttBroker, MqttService>, mqttLogs: String, onDisconnectButtonSelected: () -> Unit) {
+fun MqttConnectionViewer(
+    broker: Pair<MqttBroker, MqttService>,
+    mqttLogs: String,
+    onDisconnectButtonSelected: () -> Unit
+) {
     val (mqttBroker, service) = broker
     val client = service.getClient(mqttBroker) ?: return
     val scope = rememberCoroutineScope()

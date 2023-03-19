@@ -49,12 +49,12 @@ fun PublishButtonAndDialog(client: MqttClient) {
         AlertDialog(onDismissRequest = {
             openPublishDialog = false
         }, title = {
-            Text(text = "Subscribe")
+            Text(text = "Publish")
         },
             text = {
                 Column {
-                    inputTextField("Topic Name", topicName) {topicName = it}
-                    inputTextField("QoS", qosString){qosString = it}
+                    inputTextField("Topic Name", topicName) { topicName = it }
+                    inputTextField("QoS", qosString) { qosString = it }
                     checkBoxRow("Has Payload", hasPayload) { hasPayload = it }
                     if (hasPayload) {
                         inputTextField("Payload", payload) { payload = it }
@@ -62,9 +62,15 @@ fun PublishButtonAndDialog(client: MqttClient) {
                     if (client.controlPacketFactory().protocolVersion == 5) {
                         checkBoxRow("Show MQTT 5 Extra Props", showMqtt5Extras) { showMqtt5Extras = it }
                         if (showMqtt5Extras) {
-                            checkBoxRow("Has Message Expiry Interval", hasMessageExpiryInterval) { hasMessageExpiryInterval = it }
+                            checkBoxRow(
+                                "Has Message Expiry Interval",
+                                hasMessageExpiryInterval
+                            ) { hasMessageExpiryInterval = it }
                             if (hasMessageExpiryInterval) {
-                                inputTextField("Message Expiry Interval Seconds", messageExpiryInterval) { messageExpiryInterval = it }
+                                inputTextField(
+                                    "Message Expiry Interval Seconds",
+                                    messageExpiryInterval
+                                ) { messageExpiryInterval = it }
                             }
                             checkBoxRow("Has Topic Alias", hasTopicAlias) { hasTopicAlias = it }
                             if (hasTopicAlias) {

@@ -49,7 +49,7 @@ fun main() {
             console.log("NON EMPTY BROKER ${brokers.joinToString()}")
             brokers.forEach { broker ->
                 val child = document.create.button {
-                    p {+broker.toString() }
+                    p { +broker.toString() }
                     onClickFunction = {
                         loadLogsForClient(service, broker)
                     }
@@ -58,7 +58,7 @@ fun main() {
             }
             root.appendChild(document.create.button {
                 id = "deleteAllBrokers"
-                p {+"Delete All Brokers" }
+                p { +"Delete All Brokers" }
                 onClickFunction = {
                     service.allMqttBrokers {
                         it.forEach { service.removeBroker(it) }
@@ -86,7 +86,12 @@ fun doneButton(service: MqttService) = document.create.button {
         val endpoint = (document.getElementById("endpoint") as HTMLInputElement).value
 
         val options = MqttConnectionOptions.WebSocketConnectionOptions(
-            host, port, tls,connectionTimeoutSeconds.seconds, protocols = protocol.split(", "), websocketEndpoint = endpoint
+            host,
+            port,
+            tls,
+            connectionTimeoutSeconds.seconds,
+            protocols = protocol.split(", "),
+            websocketEndpoint = endpoint
         )
         val clientId = (document.getElementById("clientID") as HTMLInputElement).value
 
@@ -152,7 +157,12 @@ fun doneButton(service: MqttService) = document.create.button {
             ConnectionRequest(
                 clientId, keepAlive, cleanStart, username, password, willTopic, willPayload, willRetain, willQos,
                 props = ConnectionRequest.VariableHeader.Properties(
-                    sessionExpiryIntervalSeconds, receiveMaximum, maxPacketSize, topicAliasMax, requestResponseInformation, requestProblemInformation
+                    sessionExpiryIntervalSeconds,
+                    receiveMaximum,
+                    maxPacketSize,
+                    topicAliasMax,
+                    requestResponseInformation,
+                    requestProblemInformation
                 )
             )
         } else {
@@ -204,7 +214,7 @@ fun loadLogsForClient(service: MqttService, broker: MqttBroker) {
     root.append(publishUi(service, broker))
     root.append(unsubscribeUi(service, broker))
     root.append(document.create.button {
-        p {+"Disconnect" }
+        p { +"Disconnect" }
         onClickFunction = {
             val client = service.getClient(broker)!!
             GlobalScope.launch {
@@ -228,12 +238,12 @@ fun loadLogsForClient(service: MqttService, broker: MqttBroker) {
 }
 
 fun subscribeUi(service: MqttService, broker: MqttBroker) = document.create.div {
-    p{+"Subscribe Topic"}
+    p { +"Subscribe Topic" }
     input(InputType.text) {
         id = "subTopic"
         placeholder = "topic/test/#"
     }
-    p{+"Subscribe Max QoS"}
+    p { +"Subscribe Max QoS" }
     select {
         id = "subQos"
         option {
@@ -250,7 +260,7 @@ fun subscribeUi(service: MqttService, broker: MqttBroker) = document.create.div 
         }
     }
     button {
-        p {+"Subscribe" }
+        p { +"Subscribe" }
         onClickFunction = {
             val topicFilter = document.getElementById("subTopic") as HTMLInputElement
             val topic = Topic.fromOrNull(topicFilter.value, Topic.Type.Filter)
@@ -273,12 +283,12 @@ fun subscribeUi(service: MqttService, broker: MqttBroker) = document.create.div 
 }
 
 fun publishUi(service: MqttService, broker: MqttBroker) = document.create.div {
-    p{+"Publish Topic"}
+    p { +"Publish Topic" }
     input(InputType.text) {
         id = "publishTopic"
         placeholder = "topic/test"
     }
-    p{+"Publish QoS"}
+    p { +"Publish QoS" }
     select {
         id = "pubQos"
         option {
@@ -294,13 +304,13 @@ fun publishUi(service: MqttService, broker: MqttBroker) = document.create.div {
             value = "2"
         }
     }
-    p{+"Publish Payload"}
+    p { +"Publish Payload" }
     input(InputType.text) {
         id = "publishPayload"
         placeholder = "payload string"
     }
     button {
-        p {+"Publish" }
+        p { +"Publish" }
         onClickFunction = {
             val topicFilter = document.getElementById("publishTopic") as HTMLInputElement
             val topic = Topic.fromOrNull(topicFilter.value, Topic.Type.Name)
@@ -327,13 +337,13 @@ fun publishUi(service: MqttService, broker: MqttBroker) = document.create.div {
 
 
 fun unsubscribeUi(service: MqttService, broker: MqttBroker) = document.create.div {
-    p{+"Unsubscribe Topic"}
+    p { +"Unsubscribe Topic" }
     input(InputType.text) {
         id = "unsubTopic"
         placeholder = "topic/test/#"
     }
     button {
-        p {+"Unsubscribe" }
+        p { +"Unsubscribe" }
         onClickFunction = {
             val topicFilter = document.getElementById("unsubTopic") as HTMLInputElement
             val topic = Topic.fromOrNull(topicFilter.value, Topic.Type.Filter)
@@ -412,14 +422,14 @@ fun connectionOpNode(mqttService: MqttService) = document.create.div {
         }
     }
 
-    p{
+    p {
         +"Connection Timeout Seconds "
         input(InputType.number) {
             id = "connectionTimeout"
             value = "15"
         }
     }
-    p{
+    p {
         +"Protocol "
         input(InputType.text) {
             id = "protocol"
@@ -427,7 +437,7 @@ fun connectionOpNode(mqttService: MqttService) = document.create.div {
         }
     }
 
-    p{
+    p {
         +"Endpoint "
         input(InputType.text) {
             id = "endpoint"
@@ -737,11 +747,13 @@ fun connectionRequest5Node() = document.create.div {
                 println(document.getElementById("mqtt5Extras"))
                 val mqtt5Extras = document.getElementById("mqtt5Extras") as HTMLInputElement
                 println(mqtt5Extras.checked)
-                val sessionExpiryIntervalSeconds = document.getElementById("sessionExpiryIntervalSeconds") as HTMLInputElement
+                val sessionExpiryIntervalSeconds =
+                    document.getElementById("sessionExpiryIntervalSeconds") as HTMLInputElement
                 val receiveMaximum = document.getElementById("receiveMaximum") as HTMLInputElement
                 val maxPacketSize = document.getElementById("maxPacketSize") as HTMLInputElement
                 val topicAliasMax = document.getElementById("topicAliasMax") as HTMLInputElement
-                val requestResponseInformation = document.getElementById("requestResponseInformation") as HTMLInputElement
+                val requestResponseInformation =
+                    document.getElementById("requestResponseInformation") as HTMLInputElement
                 val requestProblemInformation = document.getElementById("requestProblemInformation") as HTMLInputElement
                 sessionExpiryIntervalSeconds.disabled = !mqtt5Extras.checked
                 if (sessionExpiryIntervalSeconds.disabled) {

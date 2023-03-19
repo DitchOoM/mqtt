@@ -14,8 +14,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import com.ditchoom.mqtt.client.MqttClient
-import com.ditchoom.mqtt.controlpacket.ISubscription
-import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.Topic
 import kotlinx.coroutines.launch
 
@@ -33,11 +31,11 @@ fun UnsubscriptionButtonAndDialog(client: MqttClient) {
         AlertDialog(onDismissRequest = {
             openSubDialog = false
         }, title = {
-            Text(text = "Subscribe")
+            Text(text = "Unsubscribe")
         },
             text = {
                 Column {
-                    inputTextField("Topic Filter", topicFilter) {topicFilter = it}
+                    inputTextField("Topic Filter", topicFilter) { topicFilter = it }
                 }
             },
             confirmButton = {

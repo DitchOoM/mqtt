@@ -24,14 +24,17 @@ class MqttService private constructor(
     fun assignObservers(observer: Observer?) {
         this.observer = observer
     }
+
     private fun getPersistence(broker: MqttBroker): Persistence =
         getPersistence(broker.connectionRequest)
+
     private fun getPersistence(connectionRequest: IConnectionRequest): Persistence =
         if (connectionRequest.protocolVersion == 5) {
             persistenceV5
         } else {
             persistenceV4
         }
+
     fun start(cb: (() -> Unit)? = null) = scope.launch {
         val allBrokers = allMqttBrokers()
         val newBrokers = allBrokers.map { it.identifier } - brokerClientMap.keys
@@ -85,6 +88,7 @@ class MqttService private constructor(
             cb(brokers)
         }
     }
+
     suspend fun allMqttBrokers(): Collection<MqttBroker> =
         persistenceV4.allBrokers() + persistenceV5.allBrokers()
 

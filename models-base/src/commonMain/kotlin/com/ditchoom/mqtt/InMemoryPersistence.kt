@@ -122,7 +122,8 @@ class InMemoryPersistence : Persistence {
     }
 
     override suspend fun ackUnsub(broker: MqttBroker, unsubAck: IUnsubscribeAcknowledgment) {
-        val unsub = clientMessages[broker.identifier]?.remove(unsubAck.packetIdentifier) as? IUnsubscribeRequest ?: return
+        val unsub =
+            clientMessages[broker.identifier]?.remove(unsubAck.packetIdentifier) as? IUnsubscribeRequest ?: return
         unsub.topics.forEach { activeSubscriptions[broker.identifier]?.remove(it) }
     }
 

@@ -102,7 +102,8 @@ class ConnectivityManager(
                 withTimeout(connectionOp.connectionTimeout) {
                     connectionAttempts++
                     observer?.openSocketSession(broker.connectionRequest, connectionOp)
-                    val socketSession = MqttSocketSession.open(broker.identifier, broker.connectionRequest, connectionOp, observer)
+                    val socketSession =
+                        MqttSocketSession.open(broker.identifier, broker.connectionRequest, connectionOp, observer)
                     if (socketSession.connectionAcknowledgement.isSuccessful) {
                         socketSession
                     } else {
@@ -257,5 +258,9 @@ class ConnectivityManager(
         socketSession?.close()
     }
 
-    data class ConnectionEndReason(val shouldContinueReconnecting: Boolean, val shouldResetTimer: Boolean, val msg: String?)
+    data class ConnectionEndReason(
+        val shouldContinueReconnecting: Boolean,
+        val shouldResetTimer: Boolean,
+        val msg: String?
+    )
 }

@@ -43,8 +43,8 @@ fun SubscriptionButtonAndDialog(client: MqttClient) {
         },
             text = {
                 Column {
-                    inputTextField("Topic Filter", topicFilter) {topicFilter = it}
-                    inputTextField("QoS", qosString){qosString = it}
+                    inputTextField("Topic Filter", topicFilter) { topicFilter = it }
+                    inputTextField("QoS", qosString) { qosString = it }
                     if (client.controlPacketFactory().protocolVersion == 5) {
                         checkBoxRow("Show MQTT 5 Extra Props", showMqtt5Extras) { showMqtt5Extras = it }
                         if (showMqtt5Extras) {

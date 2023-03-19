@@ -1,5 +1,6 @@
+val libraryVersionPrefix: String by project
 group "com.ditchoom"
-version "1.0-SNAPSHOT"
+version "$libraryVersionPrefix.0-SNAPSHOT"
 
 allprojects {
     repositories {

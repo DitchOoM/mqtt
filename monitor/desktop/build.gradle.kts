@@ -1,14 +1,19 @@
-import org.jetbrains.compose.compose
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     kotlin("multiplatform")
     id("org.jetbrains.compose")
 }
 
-group = "com.ditchoom"
-version = "1.0-SNAPSHOT"
+val libraryVersionPrefix: String by project
+val publishedGroupId: String by project
+group = publishedGroupId
+version = "${libraryVersionPrefix}0-SNAPSHOT"
+val libraryVersion = if (System.getenv("GITHUB_RUN_NUMBER") != null) {
+    "$libraryVersionPrefix${(Integer.parseInt(System.getenv("GITHUB_RUN_NUMBER")) + 0)}"
+} else {
+    "${libraryVersionPrefix}0-SNAPSHOT"
+}
 
 
 kotlin {

@@ -1,13 +1,18 @@
-import org.jetbrains.compose.compose
-
 plugins {
     kotlin("multiplatform")
     id("org.jetbrains.compose")
     id("com.android.library")
 }
 
-group = "com.ditchoom"
-version = "1.0-SNAPSHOT"
+val libraryVersionPrefix: String by project
+val publishedGroupId: String by project
+group = publishedGroupId
+version = "${libraryVersionPrefix}0-SNAPSHOT"
+val libraryVersion = if (System.getenv("GITHUB_RUN_NUMBER") != null) {
+    "$libraryVersionPrefix${(Integer.parseInt(System.getenv("GITHUB_RUN_NUMBER")) + 0)}"
+} else {
+    "${libraryVersionPrefix}0-SNAPSHOT"
+}
 
 kotlin {
     android()

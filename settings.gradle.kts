@@ -1,5 +1,3 @@
-import java.io.FileFilter
-
 pluginManagement {
     repositories {
         google()
@@ -38,10 +36,14 @@ gradleEnterprise {
     }
 }
 
-include("models-base", "models-v4", "models-v5", "mqtt-client", "monitor", "monitor:android", "monitor:common", "monitor:desktop", "monitor:web")
-//file("monitor")
-//    .listFiles(FileFilter { it.isDirectory })
-//    ?.forEach { dir ->
-//        include(dir.name)
-//        project(dir).projectDir = dir
-//    }
+include(
+    "models-base",
+    "models-v4",
+    "models-v5",
+    "mqtt-client",
+    "monitor",
+    "monitor:android",
+    "monitor:common",
+    "monitor:desktop",
+    "monitor:web"
+)

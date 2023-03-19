@@ -1,6 +1,6 @@
 Pod::Spec.new do |spec|
     spec.name                     = 'mqtt_client'
-    spec.version                  = '10.0.0-SNAPSHOT'
+    spec.version                  = '1.1.0-SNAPSHOT'
     spec.homepage                 = ''
     spec.source                   = { :http=> ''}
     spec.authors                  = ''
@@ -31,7 +31,7 @@ Pod::Spec.new do |spec|
                 fi
                 set -ev
                 REPO_ROOT="$PODS_TARGET_SRCROOT"
-                "$REPO_ROOT/../../../../../private/var/folders/pf/yv2h4kt547v0wlfdlclcwt300000gn/T/wrap38497loc/gradlew" -p "$REPO_ROOT" $KOTLIN_PROJECT_PATH:syncFramework \
+                "$REPO_ROOT/../../../../../private/var/folders/pf/yv2h4kt547v0wlfdlclcwt300000gn/T/wrap9251loc/gradlew" -p "$REPO_ROOT" $KOTLIN_PROJECT_PATH:syncFramework \
                     -Pkotlin.native.cocoapods.platform=$PLATFORM_NAME \
                     -Pkotlin.native.cocoapods.archs="$ARCHS" \
                     -Pkotlin.native.cocoapods.configuration="$CONFIGURATION"

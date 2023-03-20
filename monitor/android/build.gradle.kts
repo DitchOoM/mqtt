@@ -9,7 +9,7 @@ val publishedGroupId: String by project
 group = publishedGroupId
 version = "${libraryVersionPrefix}0-SNAPSHOT"
 val libraryVersion = if (System.getenv("GITHUB_RUN_NUMBER") != null) {
-    "$libraryVersionPrefix${(Integer.parseInt(System.getenv("GITHUB_RUN_NUMBER")) + 0)}"
+    "$libraryVersionPrefix${(Integer.parseInt(System.getenv("GITHUB_RUN_NUMBER")) - 2)}"
 } else {
     "${libraryVersionPrefix}0-SNAPSHOT"
 }

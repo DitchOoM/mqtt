@@ -4,6 +4,7 @@ import com.ditchoom.mqtt.InMemoryPersistence
 import com.ditchoom.mqtt.Persistence
 import com.ditchoom.mqtt.connection.MqttBroker
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
+import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.IConnectionRequest
 import com.ditchoom.mqtt3.controlpacket.ConnectionRequest
 import kotlinx.coroutines.CoroutineName
@@ -21,26 +22,42 @@ class MqttService private constructor(
     private val brokerClientMap = mutableMapOf<Int, MqttClient>()
     private var observer: Observer? = null
 
+    var incomingMessages: (MqttBroker, ControlPacket) -> Unit = { _, _ -> }
+    var sentMessages: (MqttBroker, Collection<ControlPacket>) -> Unit = { _, _ -> }
+
     fun assignObservers(observer: Observer?) {
         this.observer = observer
     }
 
-    private fun getPersistence(broker: MqttBroker): Persistence =
+    fun getPersistence(broker: MqttBroker): Persistence =
         getPersistence(broker.connectionRequest)
 
-    private fun getPersistence(connectionRequest: IConnectionRequest): Persistence =
-        if (connectionRequest.protocolVersion == 5) {
+    fun getPersistence(connectionRequest: IConnectionRequest): Persistence =
+        getPersistence(connectionRequest.protocolVersion)
+
+    fun getPersistence(protocolVersion: Int): Persistence {
+        return if (protocolVersion == 5) {
+            println("get persistence v5 $protocolVersion")
             persistenceV5
         } else {
+            println("get persistence v4 $protocolVersion")
             persistenceV4
         }
+    }
 
     fun start(cb: (() -> Unit)? = null) = scope.launch {
         val allBrokers = allMqttBrokers()
         val newBrokers = allBrokers.map { it.identifier } - brokerClientMap.keys
         brokerClientMap += newBrokers.associateWith { newBrokerId ->
             val broker = allBrokers.first { newBrokerId == it.identifier }
-            MqttClient.stayConnected(scope, broker, getPersistence(broker), observer)
+            val c = MqttClient.stayConnected(scope, broker, getPersistence(broker), observer)
+            c.incomingMessage = {
+                incomingMessages(broker, it)
+            }
+            c.sentMessage = {
+                sentMessages(broker, it)
+            }
+            c
         }
         cb?.invoke()
     }
@@ -58,6 +75,12 @@ class MqttService private constructor(
             return oldClient
         }
         val client = MqttClient.stayConnected(scope, broker, getPersistence(broker), observer)
+        client.incomingMessage = {
+            incomingMessages(broker, it)
+        }
+        client.sentMessage = {
+            sentMessages(broker, it)
+        }
         brokerClientMap[broker.identifier] = client
         return client
     }
@@ -80,7 +103,8 @@ class MqttService private constructor(
     suspend fun addMqttBroker(
         connectionOps: Collection<MqttConnectionOptions>,
         connectionRequest: IConnectionRequest
-    ): MqttBroker = getPersistence(connectionRequest).addBroker(connectionOps, connectionRequest)
+    ): MqttBroker = getPersistence(connectionRequest)
+        .addBroker(connectionOps, connectionRequest)
 
     fun allMqttBrokers(cb: (Collection<MqttBroker>) -> Unit) = scope.launch {
         val brokers = allMqttBrokers()
@@ -110,7 +134,7 @@ class MqttService private constructor(
                     println("Alloc $p")
                     p
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    println("Failed to allocate default persistence, using InMemory")
                     InMemoryPersistence()
                 }
                 val persistenceV5 = try {
@@ -119,7 +143,7 @@ class MqttService private constructor(
                     println("Alloc $p")
                     p
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    println("Failed to allocate default persistence, using InMemory")
                     InMemoryPersistence()
                 }
                 val service = MqttService(scope, persistenceV4, persistenceV5)

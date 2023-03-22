@@ -2,6 +2,7 @@ package com.ditchoom.mqtt.client
 
 import com.ditchoom.mqtt.Persistence
 import com.ditchoom.mqtt.connection.MqttBroker
+import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.IConnectionAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IPublishAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IPublishComplete
@@ -34,19 +35,50 @@ class MqttClient(internal val connectivityManager: ConnectivityManager) {
             field = value
         }
 
+    var incomingMessage: (ControlPacket) -> Unit
+        set(value) {
+            connectivityManager.incomingMessage = value
+        }
+        get() = connectivityManager.incomingMessage
+
+    var sentMessage: (Collection<ControlPacket>) -> Unit
+        set(value) {
+            connectivityManager.sentMessage = value
+        }
+        get() = connectivityManager.sentMessage
+
     fun currentConnectionAcknowledgment(): IConnectionAcknowledgment? = connectivityManager.currentConnack()
 
     suspend fun awaitConnectivity(): IConnectionAcknowledgment {
-        return currentConnectionAcknowledgment()
-            ?: connectivityManager.connectionBroadcastChannel.take(1).first()
+        var c = currentConnectionAcknowledgment()
+        println("await connectivity $c")
+        if (c == null) {
+            c = connectivityManager.connectionBroadcastChannel.take(1).first()
+        }
+        return c
     }
 
     fun controlPacketFactory() = connectivityManager.broker.connectionRequest.controlPacketFactory
     fun pingCount() = connectivityManager.processor.pingCount
     fun pingResponseCount() = connectivityManager.processor.pingResponseCount
+
+    suspend fun sendQueuedPublishMessage(packetId: Int, pubQos0: IPublishMessage?): PublishOperation? {
+        val pub = if (pubQos0 != null && pubQos0.qualityOfService == QualityOfService.AT_MOST_ONCE) {
+            pubQos0
+        } else {
+            connectivityManager.persistence.getPubWithPacketId(
+                connectivityManager.broker, packetId
+            )
+        } ?: return null
+        return observePub(processor.publish(pub, false))
+    }
+
     suspend fun publish(pub: IPublishMessage): PublishOperation {
-        val publishMessage = processor.publish(pub)
-        return when (pub.qualityOfService) {
+        return observePub(processor.publish(pub))
+    }
+
+    private fun observePub(publishMessage: IPublishMessage): PublishOperation {
+        return when (publishMessage.qualityOfService) {
             QualityOfService.AT_MOST_ONCE -> {
                 PublishOperation.QoSAtMostOnceComplete
             }
@@ -87,8 +119,15 @@ class MqttClient(internal val connectivityManager: ConnectivityManager) {
         }
     }
 
-    suspend fun subscribe(sub: ISubscribeRequest): SubscribeOperation {
-        val subscribeRequestSent = processor.subscribe(sub)
+    suspend fun sendQueuedSubscribeMessage(packetId: Int): SubscribeOperation? {
+        val sub =
+            connectivityManager.persistence.getSubWithPacketId(connectivityManager.broker, packetId) ?: return null
+        return observeSub(processor.subscribe(sub, false))
+    }
+
+    suspend fun subscribe(sub: ISubscribeRequest): SubscribeOperation = observeSub(processor.subscribe(sub))
+
+    private fun observeSub(subscribeRequestSent: ISubscribeRequest): SubscribeOperation {
         return SubscribeOperation(
             subscribeRequestSent.packetIdentifier,
             scope.async {
@@ -100,8 +139,17 @@ class MqttClient(internal val connectivityManager: ConnectivityManager) {
         )
     }
 
+    suspend fun sendQueuedUnsubscribeMessage(packetId: Int): UnsubscribeOperation? {
+        val unsub =
+            connectivityManager.persistence.getUnsubWithPacketId(connectivityManager.broker, packetId) ?: return null
+        return observeUnsubscribe(unsub)
+    }
+
     suspend fun unsubscribe(unsub: IUnsubscribeRequest): UnsubscribeOperation {
-        val unsubscribeRequestSent = processor.unsubscribe(unsub)
+        return observeUnsubscribe(processor.unsubscribe(unsub))
+    }
+
+    private fun observeUnsubscribe(unsubscribeRequestSent: IUnsubscribeRequest): UnsubscribeOperation {
         return UnsubscribeOperation(
             unsubscribeRequestSent.packetIdentifier,
             scope.async {

@@ -91,7 +91,6 @@ class MqttSocketSessionTest {
             socketSession.close()
             testCompleted = true
         } catch (e: Exception) {
-            e.printStackTrace()
             throw e
         } finally {
             check(testCompleted) { "Failed to complete test with error" }

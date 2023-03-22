@@ -17,7 +17,8 @@ import com.ditchoom.mqtt.controlpacket.utf8Length
 data class UnsubscribeRequest(
     override val packetIdentifier: Int,
     override val topics: Set<Topic>
-) : ControlPacketV4(10, DirectionOfFlow.CLIENT_TO_SERVER, 0b10), IUnsubscribeRequest {
+) : ControlPacketV4(IUnsubscribeRequest.controlPacketValue, DirectionOfFlow.CLIENT_TO_SERVER, 0b10),
+    IUnsubscribeRequest {
 
     constructor(packetIdentifier: Int, topicString: Collection<String>) :
         this(packetIdentifier, topicString.map { Topic.fromOrThrow(it, Topic.Type.Filter) }.toSet())

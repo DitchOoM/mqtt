@@ -46,8 +46,15 @@ class PersistenceTests {
         val (persistence, broker) = setupPersistence()
         val pub = PublishMessage("test", QualityOfService.AT_LEAST_ONCE, payload = buffer)
         val packetId = persistence.writePubGetPacketId(broker, pub)
-        val expectedPub = pub.copy(fixed = pub.fixed.copy(dup = true)).maybeCopyWithNewPacketIdentifier(packetId)
+        assertEquals(
+            pub.maybeCopyWithNewPacketIdentifier(packetId),
+            persistence.getPubWithPacketId(broker, packetId),
+            "get packet"
+        )
+        val expectedPub = pub.setDupFlagNewPubMessage().maybeCopyWithNewPacketIdentifier(packetId)
+        println("\r\ntesting expected pub")
         val queuedPackets = persistence.messagesToSendOnReconnect(broker)
+        println("\r\ntesting expected pub done")
         assertEquals(1, queuedPackets.size)
         val queuedPacket = queuedPackets.first()
         assertEquals(expectedPub, queuedPacket)
@@ -59,8 +66,12 @@ class PersistenceTests {
     fun pubQos2() = block {
         val (persistence, broker) = setupPersistence()
         val pub = PublishMessage("test", QualityOfService.EXACTLY_ONCE, payload = buffer)
-
         val packetId = persistence.writePubGetPacketId(broker, pub)
+        assertEquals(
+            pub.maybeCopyWithNewPacketIdentifier(packetId),
+            persistence.getPubWithPacketId(broker, packetId),
+            "get packet"
+        )
         val expectedPub = pub.copy(fixed = pub.fixed.copy(dup = true)).maybeCopyWithNewPacketIdentifier(packetId)
         var queuedPackets = persistence.messagesToSendOnReconnect(broker)
         assertEquals(1, queuedPackets.size, "queued pub")
@@ -119,6 +130,7 @@ class PersistenceTests {
 
         val subWithPacketId = persistence.writeSubUpdatePacketIdAndSimplifySubscriptions(broker, sub)
         var packetId = subWithPacketId.packetIdentifier
+        assertEquals(subWithPacketId, persistence.getSubWithPacketId(broker, packetId), "get sub")
         var queuedPackets = persistence.messagesToSendOnReconnect(broker)
         assertEquals(1, queuedPackets.size, "sub: ${queuedPackets.joinToString()}")
         var queuedPacket = queuedPackets.first()
@@ -142,8 +154,12 @@ class PersistenceTests {
         assertEquals(0, queuedPackets.size, "ackSub: ${queuedPackets.joinToString()}")
 
         val unsub = UnsubscribeRequest(NO_PACKET_ID, listOf("topic0", "topic1", "topic2"))
-
         packetId = persistence.writeUnsubGetPacketId(broker, unsub)
+        assertEquals(
+            unsub.copyWithNewPacketIdentifier(packetId),
+            persistence.getUnsubWithPacketId(broker, packetId),
+            "get unsub"
+        )
         queuedPackets = persistence.messagesToSendOnReconnect(broker)
         assertEquals(1, queuedPackets.size, "unsub: ${queuedPackets.joinToString()}")
         queuedPacket = queuedPackets.first()

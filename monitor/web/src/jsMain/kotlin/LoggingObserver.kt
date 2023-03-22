@@ -11,67 +11,80 @@ class LoggingObserver(private val logCallback: (String) -> Unit) : Observer {
         logCallback(text)
     }
 
-    override fun cancelPingTimer(brokerId: Int) {
+    override fun cancelPingTimer(brokerId: Int, protocolVersion: Byte) {
 //        buildItem("cancel ping timer")
     }
 
-    override fun connectOnceSocketSessionWriteException(brokerId: Int, e: Exception) {
+    override fun connectOnceSocketSessionWriteException(brokerId: Int, protocolVersion: Byte, e: Exception) {
         buildItem("connect once socket session write exception $e")
     }
 
-    override fun connectOnceWriteChannelReceiveException(brokerId: Int, e: Exception) {
+    override fun connectOnceWriteChannelReceiveException(brokerId: Int, protocolVersion: Byte, e: Exception) {
         buildItem("connect once write channel receive exception $e")
     }
 
-    override fun delayPing(brokerId: Int, delayDuration: Duration) {
+    override fun delayPing(brokerId: Int, protocolVersion: Byte, delayDuration: Duration) {
         buildItem("delay ping $delayDuration")
     }
 
-    override fun incomingPacket(brokerId: Int, packet: ControlPacket) {
+    override fun incomingPacket(brokerId: Int, protocolVersion: Byte, packet: ControlPacket) {
         buildItem("IN:  $packet")
     }
 
-    override fun onReaderClosed(brokerId: Int) {
+    override fun onReaderClosed(brokerId: Int, protocolVersion: Byte) {
         buildItem("reader closed")
     }
 
-    override fun openSocketSession(connectionRequest: IConnectionRequest, connectionOp: MqttConnectionOptions) {
+    override fun openSocketSession(
+        brokerId: Int,
+        protocolVersion: Byte,
+        connectionRequest: IConnectionRequest,
+        connectionOp: MqttConnectionOptions
+    ) {
         buildItem("OPEN: $connectionOp $connectionRequest")
     }
 
-    override fun readFirstByteFromStream(brokerId: Int) {
+    override fun readFirstByteFromStream(brokerId: Int, protocolVersion: Byte) {
 //        buildItem("read byte1")
     }
 
-    override fun resetPingTimer(brokerId: Int) {
+    override fun resetPingTimer(brokerId: Int, protocolVersion: Byte) {
         buildItem("reset ping timer")
     }
 
-    override fun sendingPing(brokerId: Int) {
+    override fun sendingPing(brokerId: Int, protocolVersion: Byte) {
         buildItem("sending ping")
     }
 
-    override fun shutdown() {
+    override fun shutdown(brokerId: Int, protocolVersion: Byte) {
         buildItem("shutdown")
     }
 
-    override fun wrotePackets(brokerId: Int, controlPackets: Collection<ControlPacket>) {
+    override fun wrotePackets(brokerId: Int, protocolVersion: Byte, controlPackets: Collection<ControlPacket>) {
         buildItem("OUT: ${controlPackets.joinToString()}")
     }
 
-    override fun reconnectAndResetTimer(brokerId: Int, endReason: ConnectivityManager.ConnectionEndReason) {
+    override fun reconnectAndResetTimer(
+        brokerId: Int,
+        protocolVersion: Byte,
+        endReason: ConnectivityManager.ConnectionEndReason
+    ) {
         buildItem("Reconnect and reset timer $endReason")
     }
 
     override fun reconnectIn(
-        brokerId: Int,
+        brokerId: Int, protocolVersion: Byte,
         currentDelay: Duration,
         endReason: ConnectivityManager.ConnectionEndReason
     ) {
         buildItem("Reconnect in $currentDelay $endReason")
     }
 
-    override fun stopReconnecting(brokerId: Int, endReason: ConnectivityManager.ConnectionEndReason) {
+    override fun stopReconnecting(
+        brokerId: Int,
+        protocolVersion: Byte,
+        endReason: ConnectivityManager.ConnectionEndReason
+    ) {
         buildItem("Stop Reconnecting $endReason")
     }
 }

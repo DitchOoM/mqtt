@@ -351,6 +351,21 @@ class SqlDatabasePersistence(driver: SqlDriver) : Persistence {
         return packetId
     }
 
+    override suspend fun getPubWithPacketId(broker: MqttBroker, packetId: Int): IPublishMessage? {
+        val pub = pubQueries.messageWithId(broker.identifier.toLong(), 0L, packetId.toLong())
+            .executeAsOneOrNull() ?: return null
+        val payload = if (pub.payload != null) {
+            PlatformBuffer.wrap(pub.payload, ByteOrder.BIG_ENDIAN)
+        } else {
+            null
+        }
+        return PublishMessage(
+            PublishMessage.FixedHeader(pub.dup == 1L, pub.qos.toQos(), pub.retain == 1L),
+            PublishMessage.VariableHeader(Topic.fromOrThrow(pub.topic_name, Topic.Type.Name), pub.packet_id.toInt()),
+            payload
+        )
+    }
+
     override suspend fun writeSubUpdatePacketIdAndSimplifySubscriptions(
         broker: MqttBroker,
         sub: ISubscribeRequest
@@ -376,6 +391,17 @@ class SqlDatabasePersistence(driver: SqlDriver) : Persistence {
         return sub.copyWithNewPacketIdentifier(packetId.toInt())
     }
 
+    override suspend fun getSubWithPacketId(broker: MqttBroker, packetId: Int): ISubscribeRequest? {
+        val subscribeRequest = subQueries.messageWithId(broker.identifier.toLong(), packetId.toLong())
+            .executeAsOneOrNull() ?: return null
+        val subs = subscriptionQueries
+            .queuedSubscriptions(subscribeRequest.broker_id, subscribeRequest.packet_id)
+            .executeAsList().map {
+                Subscription(Topic.fromOrThrow(it.topic_filter, Topic.Type.Filter), it.qos.toQos())
+            }.toSet()
+        return SubscribeRequest(subscribeRequest.packet_id.toInt(), subs)
+    }
+
     override suspend fun writeUnsubGetPacketId(broker: MqttBroker, unsub: IUnsubscribeRequest): Int {
         return withContext(dispatcher) {
             packetIdMutex.withLock {
@@ -393,6 +419,21 @@ class SqlDatabasePersistence(driver: SqlDriver) : Persistence {
                     packetId.toInt()
                 }
             }
+        }
+    }
+
+    override suspend fun getUnsubWithPacketId(broker: MqttBroker, packetId: Int): IUnsubscribeRequest? {
+        val unsubscribeRequest = unsubQueries.messageWithId(broker.identifier.toLong(), packetId.toLong())
+            .executeAsOneOrNull() ?: return null
+        val subscriptions = subscriptionQueries
+            .queuedUnsubscriptions(unsubscribeRequest.broker_id, unsubscribeRequest.packet_id)
+            .executeAsList().map {
+                Topic.fromOrThrow(it.topic_filter, Topic.Type.Filter)
+            }.toSet()
+        return if (subscriptions.isNotEmpty()) {
+            UnsubscribeRequest(unsubscribeRequest.packet_id.toInt(), subscriptions)
+        } else {
+            null
         }
     }
 

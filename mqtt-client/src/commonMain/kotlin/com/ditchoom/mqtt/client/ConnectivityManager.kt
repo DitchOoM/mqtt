@@ -19,7 +19,7 @@ import kotlin.time.Duration.Companion.seconds
 
 class ConnectivityManager(
     internal val scope: CoroutineScope,
-    private val persistence: Persistence,
+    internal val persistence: Persistence,
     internal val broker: MqttBroker
 ) {
     var connectionCount = 0L
@@ -32,6 +32,16 @@ class ConnectivityManager(
             currentSocketSession?.observer = value
             field = value
         }
+    var sentMessage: (Collection<ControlPacket>) -> Unit = {}
+        set(value) {
+            currentSocketSession?.sentMessage = value
+            field = value
+        }
+    var incomingMessage: (ControlPacket) -> Unit = {}
+        set(value) {
+            currentSocketSession?.incomingMessage = value
+            field = value
+        }
 
     private var incomingProcessingJob: Job? = null
     private var isStopped = false
@@ -42,7 +52,7 @@ class ConnectivityManager(
 
     private var currentConnectionJob: Job? = null
     val processor = ControlPacketProcessor(scope, broker, readChannel, writeChannel, persistence)
-    private var currentSocketSession: MqttSocketSession? = null
+    internal var currentSocketSession: MqttSocketSession? = null
 
     fun currentConnack(): IConnectionAcknowledgment? = currentSocketSession?.connectionAcknowledgement
 
@@ -59,14 +69,27 @@ class ConnectivityManager(
                 val result = buildConnectionShouldRetry(this)
                 processor.cancelPingTimer()
                 if (!result.shouldContinueReconnecting) {
-                    observer?.stopReconnecting(broker.identifier, result)
+                    observer?.stopReconnecting(
+                        broker.identifier,
+                        broker.connectionRequest.protocolVersion.toByte(),
+                        result
+                    )
                     break
                 }
                 currentDelay = if (result.shouldResetTimer || isStopped) {
-                    observer?.reconnectAndResetTimer(broker.identifier, result)
+                    observer?.reconnectAndResetTimer(
+                        broker.identifier,
+                        broker.connectionRequest.protocolVersion.toByte(),
+                        result
+                    )
                     initialDelay
                 } else {
-                    observer?.reconnectIn(broker.identifier, currentDelay, result)
+                    observer?.reconnectIn(
+                        broker.identifier,
+                        broker.connectionRequest.protocolVersion.toByte(),
+                        currentDelay,
+                        result
+                    )
                     delay(currentDelay)
                     (currentDelay * factor).coerceAtMost(maxDelay)
                 }
@@ -79,6 +102,7 @@ class ConnectivityManager(
     suspend fun shutdown(sendDisconnect: Boolean = true) {
         if (isStopped) return
         isStopped = true
+        println("shutdown $sendDisconnect")
         try {
             if (sendDisconnect) {
                 sendDisconnect()
@@ -91,7 +115,7 @@ class ConnectivityManager(
             writeChannel.close()
             currentConnectionJob?.cancel()
             currentConnectionJob = null
-            observer?.shutdown()
+            observer?.shutdown(broker.identifier, broker.connectionRequest.protocolVersion.toByte())
         }
     }
 
@@ -101,10 +125,22 @@ class ConnectivityManager(
             val session = try {
                 withTimeout(connectionOp.connectionTimeout) {
                     connectionAttempts++
-                    observer?.openSocketSession(broker.connectionRequest, connectionOp)
+                    observer?.openSocketSession(
+                        broker.identifier,
+                        broker.connectionRequest.protocolVersion.toByte(),
+                        broker.connectionRequest,
+                        connectionOp
+                    )
+                    println("open ss")
                     val socketSession =
                         MqttSocketSession.open(broker.identifier, broker.connectionRequest, connectionOp, observer)
+                    println("ss opened")
+                    socketSession.incomingMessage = incomingMessage
+                    socketSession.sentMessage = sentMessage
+                    sentMessage(listOf(broker.connectionRequest))
+                    incomingMessage(socketSession.connectionAcknowledgement)
                     if (socketSession.connectionAcknowledgement.isSuccessful) {
+                        connectionCount++
                         socketSession
                     } else {
                         null
@@ -116,13 +152,21 @@ class ConnectivityManager(
             } ?: continue
             return session
         }
-        throw UnavailableMqttServiceException(broker.connectionOps, lastException)
+        lastException?.printStackTrace()
+        println("last exception $lastException")
+        val s = broker.connectionOps.joinToString(
+            prefix = "Failed to connect to services:",
+            postfix = (" " + lastException?.message)
+        )
+        throw UnavailableMqttServiceException(
+            broker.connectionOps,
+            Exception("Failed to connect to services: $s " + lastException?.message)
+        )
     }
 
     suspend fun connectOnce() {
         val socketSession = connectMqttSocketSessionOrThrow()
         currentSocketSession = socketSession
-        connectionCount++
         prepareSocketSession(socketSession)
         incomingProcessingJob = scope.launch {
             processor.processIncomingMessages()
@@ -132,7 +176,11 @@ class ConnectivityManager(
                 val packetToWrite = try {
                     writeChannel.receive()
                 } catch (e: Exception) {
-                    observer?.connectOnceWriteChannelReceiveException(broker.identifier, e)
+                    observer?.connectOnceWriteChannelReceiveException(
+                        broker.identifier,
+                        broker.connectionRequest.protocolVersion.toByte(),
+                        e
+                    )
                     shutdown()
                     return@launch
                 }
@@ -140,7 +188,11 @@ class ConnectivityManager(
                     socketSession.write(packetToWrite)
                 } catch (e: Exception) {
                     // ignore
-                    observer?.connectOnceSocketSessionWriteException(broker.identifier, e)
+                    observer?.connectOnceSocketSessionWriteException(
+                        broker.identifier,
+                        broker.connectionRequest.protocolVersion.toByte(),
+                        e
+                    )
                     shutdown()
                     return@launch
                 }
@@ -199,7 +251,6 @@ class ConnectivityManager(
                     msg = e.message
                 )
             }
-            connectionCount++
             currentSocketSession = socketSession
             val endReason = prepareSocketSession(socketSession)
             if (endReason != null) {
@@ -248,6 +299,7 @@ class ConnectivityManager(
     suspend fun sendDisconnect() {
         val disconnect = broker.connectionRequest.controlPacketFactory.disconnect()
         val socketSession = currentSocketSession
+        currentSocketSession = null
         if (socketSession != null && socketSession.isOpen()) {
             try {
                 socketSession.write(listOf(disconnect))

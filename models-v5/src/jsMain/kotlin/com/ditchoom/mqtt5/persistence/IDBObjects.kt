@@ -110,6 +110,8 @@ fun toSubscription(s: PersistableSubscription) =
 data class PersistablePublishMessage(
     @JsName("brokerId")
     val brokerId: Int,
+    @JsName("incoming")
+    val incoming: Int,
     @JsName("dup")
     val dup: Boolean,
     @JsName("qos")
@@ -137,8 +139,9 @@ data class PersistablePublishMessage(
     @JsName("payload")
     val payload: Uint8Array?
 ) {
-    constructor(brokerId: Int, pub: PublishMessage) : this(
+    constructor(brokerId: Int, incoming: Boolean, pub: PublishMessage) : this(
         brokerId,
+        if (incoming) 1 else 0,
         pub.fixed.dup,
         pub.fixed.qos.integerValue,
         pub.fixed.retain,

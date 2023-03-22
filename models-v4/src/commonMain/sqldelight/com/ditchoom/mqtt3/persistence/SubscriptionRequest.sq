@@ -22,3 +22,6 @@ DELETE FROM SubscribeRequest WHERE broker_id = :brokerId;
 
 queuedMessageCount:
 SELECT COUNT(broker_id) FROM SubscribeRequest WHERE broker_id = :brokerId;
+
+messageWithId:
+SELECT * FROM SubscribeRequest WHERE broker_id = :brokerId AND packet_id = :packetId LIMIT 1;

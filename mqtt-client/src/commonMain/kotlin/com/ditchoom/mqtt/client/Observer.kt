@@ -6,21 +6,32 @@ import com.ditchoom.mqtt.controlpacket.IConnectionRequest
 import kotlin.time.Duration
 
 interface Observer {
-    fun readFirstByteFromStream(brokerId: Int)
-    fun incomingPacket(brokerId: Int, packet: ControlPacket)
+    fun readFirstByteFromStream(brokerId: Int, protocolVersion: Byte)
+    fun incomingPacket(brokerId: Int, protocolVersion: Byte, packet: ControlPacket)
 
-    fun wrotePackets(brokerId: Int, controlPackets: Collection<ControlPacket>)
+    fun wrotePackets(brokerId: Int, protocolVersion: Byte, controlPackets: Collection<ControlPacket>)
 
-    fun openSocketSession(connectionRequest: IConnectionRequest, connectionOp: MqttConnectionOptions)
-    fun shutdown()
-    fun connectOnceWriteChannelReceiveException(brokerId: Int, e: Exception)
-    fun connectOnceSocketSessionWriteException(brokerId: Int, e: Exception)
-    fun onReaderClosed(brokerId: Int)
-    fun resetPingTimer(brokerId: Int)
-    fun sendingPing(brokerId: Int)
-    fun delayPing(brokerId: Int, delayDuration: Duration)
-    fun cancelPingTimer(brokerId: Int)
-    fun stopReconnecting(brokerId: Int, endReason: ConnectivityManager.ConnectionEndReason)
-    fun reconnectAndResetTimer(brokerId: Int, endReason: ConnectivityManager.ConnectionEndReason)
-    fun reconnectIn(brokerId: Int, currentDelay: Duration, endReason: ConnectivityManager.ConnectionEndReason)
+    fun openSocketSession(
+        brokerId: Int,
+        protocolVersion: Byte,
+        connectionRequest: IConnectionRequest,
+        connectionOp: MqttConnectionOptions
+    )
+
+    fun shutdown(brokerId: Int, protocolVersion: Byte)
+    fun connectOnceWriteChannelReceiveException(brokerId: Int, protocolVersion: Byte, e: Exception)
+    fun connectOnceSocketSessionWriteException(brokerId: Int, protocolVersion: Byte, e: Exception)
+    fun onReaderClosed(brokerId: Int, protocolVersion: Byte)
+    fun resetPingTimer(brokerId: Int, protocolVersion: Byte)
+    fun sendingPing(brokerId: Int, protocolVersion: Byte)
+    fun delayPing(brokerId: Int, protocolVersion: Byte, delayDuration: Duration)
+    fun cancelPingTimer(brokerId: Int, protocolVersion: Byte)
+    fun stopReconnecting(brokerId: Int, protocolVersion: Byte, endReason: ConnectivityManager.ConnectionEndReason)
+    fun reconnectAndResetTimer(brokerId: Int, protocolVersion: Byte, endReason: ConnectivityManager.ConnectionEndReason)
+    fun reconnectIn(
+        brokerId: Int,
+        protocolVersion: Byte,
+        currentDelay: Duration,
+        endReason: ConnectivityManager.ConnectionEndReason
+    )
 }

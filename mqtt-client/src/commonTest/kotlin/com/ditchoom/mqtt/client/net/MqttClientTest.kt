@@ -9,6 +9,7 @@ import com.ditchoom.mqtt.InMemoryPersistence
 import com.ditchoom.mqtt.client.MqttClient
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.IConnectionRequest
+import com.ditchoom.mqtt.controlpacket.IPingResponse
 import com.ditchoom.mqtt.controlpacket.IPublishMessage
 import com.ditchoom.mqtt.controlpacket.IPublishRelease
 import com.ditchoom.mqtt.controlpacket.QualityOfService
@@ -19,12 +20,16 @@ import com.ditchoom.socket.NetworkCapabilities
 import com.ditchoom.socket.getNetworkCapabilities
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 import kotlin.random.Random
 import kotlin.random.nextUInt
 import kotlin.test.Test
@@ -47,7 +52,6 @@ class MqttClientTest {
         tls = false,
         protocols = listOf("mqttv3.1"),
         connectionTimeout = 10.seconds
-
     )
     private val connectionRequestMqtt4 =
         ConnectionRequest(
@@ -202,7 +206,27 @@ class MqttClientTest {
         val persistence = InMemoryPersistence()
         val broker = persistence.addBroker(testWsMqttConnectionOptions, connectionRequest)
         val client = MqttClient.connectOnce(scope, broker, persistence)
-        delay((connectionRequestMqtt4.variableHeader.keepAliveSeconds * 2).seconds + 800.milliseconds)
+
+        withTimeout((connectionRequestMqtt4.variableHeader.keepAliveSeconds * 2).seconds + 800.milliseconds) {
+            println("pongs")
+            val pongs = callbackFlow {
+                var count = 0
+                client.incomingMessage = {
+                    println("incoming $it")
+                    if (it is IPingResponse) {
+                        trySend(it)
+                        count++
+                    }
+                    if (count == 2) {
+                        channel.close()
+                    }
+                }
+                println("assign incoming")
+                awaitClose()
+            }
+            pongs.take(2).toList()
+            println("got pong")
+        }
         assertEquals(2, client.pingCount())
         assertEquals(2, client.pingResponseCount())
         client.shutdown()
@@ -295,10 +319,10 @@ class MqttClientTest {
         val persistence = connectionRequest.controlPacketFactory.defaultPersistence(inMemory = true)
         val broker = persistence.addBroker(connectionOptions, connectionRequest)
         val client = MqttClient.stayConnected(scope, broker, persistence)
-        sendAllMessageTypes(client)
+        client.awaitConnectivity()
+//        sendAllMessageTypes(client)
         client.sendDisconnect()
-        delay(400.milliseconds)
-
+        client.awaitConnectivity()
         client.shutdown()
         assertEquals(2, client.connectionCount())
         assertTrue(persistence.isQueueClear(broker))

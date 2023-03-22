@@ -20,26 +20,32 @@ class BufferedControlPacketReader(
 ) {
     private val inputStream = SuspendingSocketInputStream(readTimeout, reader)
 
+    var incomingMessage: (ControlPacket) -> Unit = {}
     val incomingControlPackets = flow {
-        while (reader.isOpen()) {
-            try {
-                val p = readControlPacket()
-                emit(p)
-                if (p is IDisconnectNotification) {
+        try {
+            while (reader.isOpen()) {
+                try {
+                    val p = readControlPacket()
+                    emit(p)
+                    if (p is IDisconnectNotification) {
+                        println("sent disconnect")
+                        return@flow
+                    }
+                } catch (e: Exception) {
+                    println("exception in flow $e")
                     return@flow
                 }
-            } catch (e: Exception) {
-                return@flow
             }
+        } finally {
+            observer?.onReaderClosed(brokerId, factory.protocolVersion.toByte())
         }
-        observer?.onReaderClosed(brokerId)
     }
 
     fun isOpen() = reader.isOpen()
 
     internal suspend fun readControlPacket(): ControlPacket {
         val byte1 = inputStream.readUnsignedByte()
-        observer?.readFirstByteFromStream(brokerId)
+        observer?.readFirstByteFromStream(brokerId, factory.protocolVersion.toByte())
         val remainingLength = readVariableByteInteger()
         val buffer = if (remainingLength < 1) {
             EMPTY_BUFFER
@@ -51,7 +57,8 @@ class BufferedControlPacketReader(
             byte1,
             remainingLength
         )
-        observer?.incomingPacket(brokerId, packet)
+        incomingMessage(packet)
+        observer?.incomingPacket(brokerId, factory.protocolVersion.toByte(), packet)
         return packet
     }
 

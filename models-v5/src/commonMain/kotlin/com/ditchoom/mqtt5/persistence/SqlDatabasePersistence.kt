@@ -576,6 +576,37 @@ class SqlDatabasePersistence(driver: SqlDriver) : Persistence {
         return packetId
     }
 
+    override suspend fun getPubWithPacketId(broker: MqttBroker, packetId: Int): IPublishMessage? {
+        val p = pubQueries.messageWithId(broker.identifier.toLong(), 0L, packetId.toLong())
+            .executeAsOneOrNull() ?: return null
+        val payload = if (p.payload != null) {
+            PlatformBuffer.wrap(p.payload, ByteOrder.BIG_ENDIAN)
+        } else {
+            null
+        }
+        val props = propertyQueries.allProps(p.broker_id, p.incoming, p.packet_id).executeAsList()
+            .map { (key, value) -> Pair(key, value) }
+        val properties = PublishMessage.VariableHeader.Properties(
+            p.payload_format_indicator == 1L,
+            p.message_expiry_interval,
+            p.topic_alias?.toInt(),
+            p.response_topic?.let { t -> Topic.fromOrThrow(t, Topic.Type.Name) },
+            p.correlation_data?.let { c -> PlatformBuffer.wrap(c) },
+            props,
+            p.subscription_identifier?.split(", ")?.map { i -> i.toLong() }?.toSet() ?: emptySet(),
+            p.content_type
+        )
+        return PublishMessage(
+            PublishMessage.FixedHeader(p.dup == 1L, p.qos.toQos(), p.retain == 1L),
+            PublishMessage.VariableHeader(
+                Topic.fromOrThrow(p.topic_name, Topic.Type.Name),
+                p.packet_id.toInt(),
+                properties
+            ),
+            payload
+        )
+    }
+
     override suspend fun writeSubUpdatePacketIdAndSimplifySubscriptions(
         broker: MqttBroker,
         sub: ISubscribeRequest
@@ -612,6 +643,38 @@ class SqlDatabasePersistence(driver: SqlDriver) : Persistence {
         return subscribeRequest.copyWithNewPacketIdentifier(packetId.toInt())
     }
 
+    override suspend fun getSubWithPacketId(broker: MqttBroker, packetId: Int): ISubscribeRequest? {
+        val subscribeRequest = subQueries.messageWithId(broker.identifier.toLong(), packetId.toLong())
+            .executeAsOneOrNull() ?: return null
+        val userProps = propertyQueries
+            .allProps(subscribeRequest.broker_id, 0L, subscribeRequest.packet_id) { k, v ->
+                Pair(k, v)
+            }
+            .executeAsList()
+        val subs = subscriptionQueries
+            .queuedSubscriptions(subscribeRequest.broker_id, subscribeRequest.packet_id)
+            .executeAsList().map {
+                Subscription(
+                    Topic.fromOrThrow(it.topic_filter, Topic.Type.Filter),
+                    it.qos.toQos(),
+                    it.no_local == 1L,
+                    it.retain_as_published == 1L,
+                    when (it.retain_handling) {
+                        1L -> ISubscription.RetainHandling.SEND_RETAINED_MESSAGES_AT_SUBSCRIBE_ONLY_IF_SUBSCRIBE_DOESNT_EXISTS
+                        2L -> ISubscription.RetainHandling.DO_NOT_SEND_RETAINED_MESSAGES
+                        else -> ISubscription.RetainHandling.SEND_RETAINED_MESSAGES_AT_TIME_OF_SUBSCRIBE
+                    }
+                )
+            }.toSet()
+        return SubscribeRequest(
+            SubscribeRequest.VariableHeader(
+                subscribeRequest.packet_id.toInt(),
+                SubscribeRequest.VariableHeader.Properties(subscribeRequest.reason_string, userProps)
+            ),
+            subs
+        )
+    }
+
     override suspend fun writeUnsubGetPacketId(broker: MqttBroker, unsub: IUnsubscribeRequest): Int {
         return withContext(dispatcher) {
             val unsubscribe = unsub as UnsubscribeRequest
@@ -633,6 +696,32 @@ class SqlDatabasePersistence(driver: SqlDriver) : Persistence {
                     packetId.toInt()
                 }
             }
+        }
+    }
+
+    override suspend fun getUnsubWithPacketId(broker: MqttBroker, packetId: Int): IUnsubscribeRequest? {
+        val unsubscribeRequest = unsubQueries.messageWithId(broker.identifier.toLong(), packetId.toLong())
+            .executeAsOneOrNull() ?: return null
+        val subscriptions = subscriptionQueries
+            .queuedUnsubscriptions(unsubscribeRequest.broker_id, unsubscribeRequest.packet_id)
+            .executeAsList().map {
+                Topic.fromOrThrow(it.topic_filter, Topic.Type.Filter)
+            }.toSet()
+        return if (subscriptions.isNotEmpty()) {
+            val userProps = propertyQueries
+                .allProps(unsubscribeRequest.broker_id, 0L, unsubscribeRequest.packet_id) { k, v ->
+                    Pair(k, v)
+                }
+                .executeAsList()
+            UnsubscribeRequest(
+                UnsubscribeRequest.VariableHeader(
+                    unsubscribeRequest.packet_id.toInt(),
+                    UnsubscribeRequest.VariableHeader.Properties(userProps)
+                ),
+                subscriptions
+            )
+        } else {
+            null
         }
     }
 

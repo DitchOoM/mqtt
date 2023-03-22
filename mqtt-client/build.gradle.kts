@@ -92,12 +92,19 @@ kotlin {
                 implementation(project(":models-v5"))
             }
         }
+        val commonJvmTest by sourceSets.creating {
+            kotlin.srcDir("src/commonJvmTest/kotlin")
+        }
 
         val jvmMain by getting {
             kotlin.srcDir("src/commonJvmMain/kotlin")
         }
+
         val jvmTest by getting {
-            kotlin.srcDir("src/commonJvmTest/kotlin")
+            dependsOn(commonJvmTest)
+            dependencies {
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-debug:$coroutinesVersion")
+            }
         }
 
         val androidMain by getting {
@@ -106,15 +113,14 @@ kotlin {
             dependsOn(jvmMain)
         }
         val androidTest by getting {
-            kotlin.srcDir("src/commonJvmTest/kotlin")
             dependsOn(commonTest)
-            dependsOn(jvmTest)
+            dependsOn(commonJvmTest)
         }
         val androidAndroidTest by getting {
             dependsOn(commonTest)
             kotlin.srcDir("src/commonJvmTest/kotlin")
             kotlin.srcDir("src/commonTest/kotlin")
-            dependsOn(jvmTest)
+            dependsOn(commonJvmTest)
         }
 
         val jsTest by getting {

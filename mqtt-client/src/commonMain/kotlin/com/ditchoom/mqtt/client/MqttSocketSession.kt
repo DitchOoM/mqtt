@@ -35,6 +35,12 @@ class MqttSocketSession private constructor(
             reader.observer = value
             field = value
         }
+    var sentMessage: (Collection<ControlPacket>) -> Unit = {}
+    var incomingMessage: (ControlPacket) -> Unit
+        set(value) {
+            reader.incomingMessage = value
+        }
+        get() = reader.incomingMessage
 
     private var isClosed = false
 
@@ -47,7 +53,8 @@ class MqttSocketSession private constructor(
         val b = controlPackets.toBuffer()
         b.resetForWrite()
         writer.write(b, writeTimeout)
-        observer?.wrotePackets(brokerId, controlPackets)
+        sentMessage(controlPackets)
+        observer?.wrotePackets(brokerId, connectionAcknowledgement.mqttVersion, controlPackets)
         if (controlPackets.filterIsInstance<IDisconnectNotification>().firstOrNull() != null) {
             close()
         }
@@ -81,6 +88,7 @@ class MqttSocketSession private constructor(
                 when (connectionOps) {
                     is MqttConnectionOptions.SocketConnection -> {
                         try {
+                            println("connect socket")
                             ClientSocket.connect(
                                 connectionOps.port,
                                 connectionOps.host,
@@ -88,7 +96,6 @@ class MqttSocketSession private constructor(
                                 connectionOps.connectionTimeout
                             )
                         } catch (e: Exception) {
-                            e.printStackTrace()
                             throw e
                         }
                     }
@@ -108,7 +115,8 @@ class MqttSocketSession private constructor(
                         val client = WebSocketClient.allocate(wsSocketConnectionOptions)
                         try {
                             client.connect()
-                        } catch (e: Exception) {
+                        } catch (e: Throwable) {
+                            println("ws failed to connect")
                             client.close()
                             throw e
                         }
@@ -118,7 +126,9 @@ class MqttSocketSession private constructor(
             }
             val connect = connectionRequest.toBuffer()
             connect.resetForWrite()
+            println("write $connectionRequest")
             socket.write(connect, connectionOps.writeTimeout)
+            println("wrote")
             messageSentListener?.emit(connectionRequest)
             val bufferedControlPacketReader =
                 BufferedControlPacketReader(
@@ -128,7 +138,9 @@ class MqttSocketSession private constructor(
                     socket,
                     observer
                 )
+            println("Reading")
             val response = bufferedControlPacketReader.readControlPacket()
+            println("read $response")
             if (response is IConnectionAcknowledgment && response.isSuccessful) {
                 val s = MqttSocketSession(
                     brokerId,

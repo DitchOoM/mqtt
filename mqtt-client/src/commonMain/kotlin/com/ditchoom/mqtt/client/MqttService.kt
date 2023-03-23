@@ -5,8 +5,11 @@ import com.ditchoom.mqtt.Persistence
 import com.ditchoom.mqtt.connection.MqttBroker
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.ControlPacket
+import com.ditchoom.mqtt.controlpacket.ControlPacketFactory
 import com.ditchoom.mqtt.controlpacket.IConnectionRequest
 import com.ditchoom.mqtt3.controlpacket.ConnectionRequest
+import com.ditchoom.mqtt3.controlpacket.ControlPacketV4Factory
+import com.ditchoom.mqtt5.controlpacket.ControlPacketV5Factory
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -15,7 +18,7 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
 class MqttService private constructor(
-    private val scope: CoroutineScope,
+    internal val scope: CoroutineScope,
     private val persistenceV4: Persistence,
     private val persistenceV5: Persistence,
 ) {
@@ -42,6 +45,19 @@ class MqttService private constructor(
         } else {
             println("get persistence v4 $protocolVersion")
             persistenceV4
+        }
+    }
+
+    fun start(broker: MqttBroker) {
+        if (!brokerClientMap.keys.contains(broker.identifier)) {
+            val c = MqttClient.stayConnected(scope, broker, getPersistence(broker), observer)
+            brokerClientMap[broker.identifier] = c
+            c.incomingMessage = {
+                incomingMessages(broker, it)
+            }
+            c.sentMessage = {
+                sentMessages(broker, it)
+            }
         }
     }
 
@@ -121,6 +137,12 @@ class MqttService private constructor(
     fun removeBroker(broker: MqttBroker) = scope.launch { getPersistence(broker).removeBroker(broker.identifier) }
 
     companion object {
+        fun getControlPacketFactory(protocolVersion: Int): ControlPacketFactory = if (protocolVersion == 5) {
+            ControlPacketV5Factory
+        } else {
+            ControlPacketV4Factory
+        }
+
         suspend fun buildService(androidContext: Any? = null): MqttService = suspendCoroutine { cont ->
             buildService(androidContext) { cont.resume(it) }
         }

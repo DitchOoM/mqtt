@@ -238,114 +238,122 @@ class SqlDatabasePersistence(driver: SqlDriver) : Persistence {
         return MqttBroker(brokerId.toInt(), connectionOps.toSet(), connectionRequest)
     }
 
-    override suspend fun allBrokers(): Collection<MqttBroker> {
-        return brokerQueries
-            .allBrokers()
-            .executeAsList()
-            .map { broker ->
-                val connectionRequestDatabaseRecord =
-                    connectionRequestQueries.connectionRequestByBrokerId(broker.id).executeAsOne()
-                val willPayload = if (connectionRequestDatabaseRecord.will_payload != null) {
-                    PlatformBuffer.wrap(connectionRequestDatabaseRecord.will_payload, ByteOrder.BIG_ENDIAN)
-                } else {
-                    null
-                }
-                val auth = if (connectionRequestDatabaseRecord.authentication_method != null &&
-                    connectionRequestDatabaseRecord.authentication_data != null
-                ) {
-                    Authentication(
-                        connectionRequestDatabaseRecord.authentication_method,
-                        PlatformBuffer.wrap(connectionRequestDatabaseRecord.authentication_data)
-                    )
-                } else {
-                    null
-                }
-                val userProps = propertyQueries.allProps(broker.id, 0L, -1) { k, v ->
-                    Pair(k, v)
-                }.executeAsList()
-                val willUserProps = propertyQueries.allProps(broker.id, 0L, -2) { k, v ->
-                    Pair(k, v)
-                }.executeAsList()
-                val variable = ConnectionRequest.VariableHeader(
-                    connectionRequestDatabaseRecord.protocol_name,
-                    connectionRequestDatabaseRecord.protocol_version.toUByte(),
-                    connectionRequestDatabaseRecord.username != null,
-                    connectionRequestDatabaseRecord.password != null,
-                    connectionRequestDatabaseRecord.will_retain == 1L,
-                    connectionRequestDatabaseRecord.will_qos.toQos(),
-                    connectionRequestDatabaseRecord.will_flag == 1L,
-                    connectionRequestDatabaseRecord.clean_start == 1L,
-                    connectionRequestDatabaseRecord.keep_alive_seconds.toInt(),
-                    ConnectionRequest.VariableHeader.Properties(
-                        connectionRequestDatabaseRecord.session_expiry_interval_seconds?.toULong(),
-                        connectionRequestDatabaseRecord.receive_maximum?.toInt(),
-                        connectionRequestDatabaseRecord.maximum_packet_size?.toULong(),
-                        connectionRequestDatabaseRecord.topic_alias_maximum?.toInt(),
-                        connectionRequestDatabaseRecord.request_response_information.toNullableBoolean(),
-                        connectionRequestDatabaseRecord.request_problem_information.toNullableBoolean(),
-                        userProps,
-                        auth
-                    )
-                )
-                val willProperties = if (connectionRequestDatabaseRecord.has_will_properties == 1L) {
-                    ConnectionRequest.Payload.WillProperties(
-                        connectionRequestDatabaseRecord.will_property_will_delay_interval_seconds,
-                        connectionRequestDatabaseRecord.will_property_payload_format_indicator == 1L,
-                        connectionRequestDatabaseRecord.will_property_message_expiry_interval_seconds,
-                        connectionRequestDatabaseRecord.will_property_content_type,
-                        connectionRequestDatabaseRecord.will_property_response_topic?.let {
-                            Topic.fromOrThrow(
-                                it,
-                                Topic.Type.Name
-                            )
-                        },
-                        connectionRequestDatabaseRecord.will_property_correlation_data?.let { PlatformBuffer.wrap(it) },
-                        willUserProps
-                    )
-                } else {
-                    null
-                }
-                val payload = ConnectionRequest.Payload(
-                    connectionRequestDatabaseRecord.client_id,
-                    willProperties,
-                    connectionRequestDatabaseRecord.will_topic?.let { Topic.fromOrThrow(it, Topic.Type.Name) },
-                    willPayload,
-                    connectionRequestDatabaseRecord.username,
-                    connectionRequestDatabaseRecord.password
-                )
-                val connectionRequest = ConnectionRequest(variable, payload)
-                val socketConnections = socketConnectionQueries.connectionsByBrokerId(broker.id)
-                val connectionOps = socketConnections.executeAsList()
-                    .map {
-                        if (it.type == "websocket") {
-                            MqttConnectionOptions.WebSocketConnectionOptions(
-                                it.host,
-                                it.port.toInt(),
-                                it.tls == 1L,
-                                it.connection_timeout_ms.milliseconds,
-                                it.read_timeout_ms.milliseconds,
-                                it.write_timeout_ms.milliseconds,
-                                checkNotNull(it.websocket_endpoint),
-                                if (!it.websocket_protocols.isNullOrEmpty()) {
-                                    it.websocket_protocols.split(",")
-                                } else {
-                                    listOf()
-                                },
-                            )
-                        } else {
-                            MqttConnectionOptions.SocketConnection(
-                                it.host,
-                                it.port.toInt(),
-                                it.tls == 1L,
-                                it.connection_timeout_ms.milliseconds,
-                                it.read_timeout_ms.milliseconds,
-                                it.write_timeout_ms.milliseconds
-                            )
-                        }
-                    }.toSet()
-                MqttBroker(broker.id.toInt(), connectionOps, connectionRequest)
-            }
+    override suspend fun brokerWithId(identifier: Int): MqttBroker? = connectionRequestQueries.transactionWithResult {
+        getBrokerById(identifier.toLong())
     }
+
+    private fun getBrokerById(id: Long): MqttBroker? {
+        val connectionRequestDatabaseRecord =
+            connectionRequestQueries.connectionRequestByBrokerId(id).executeAsOneOrNull() ?: return null
+        val willPayload = if (connectionRequestDatabaseRecord.will_payload != null) {
+            PlatformBuffer.wrap(connectionRequestDatabaseRecord.will_payload, ByteOrder.BIG_ENDIAN)
+        } else {
+            null
+        }
+        val auth = if (connectionRequestDatabaseRecord.authentication_method != null &&
+            connectionRequestDatabaseRecord.authentication_data != null
+        ) {
+            Authentication(
+                connectionRequestDatabaseRecord.authentication_method,
+                PlatformBuffer.wrap(connectionRequestDatabaseRecord.authentication_data)
+            )
+        } else {
+            null
+        }
+        val userProps = propertyQueries.allProps(id, 0L, -1) { k, v ->
+            Pair(k, v)
+        }.executeAsList()
+        val willUserProps = propertyQueries.allProps(id, 0L, -2) { k, v ->
+            Pair(k, v)
+        }.executeAsList()
+        val variable = ConnectionRequest.VariableHeader(
+            connectionRequestDatabaseRecord.protocol_name,
+            connectionRequestDatabaseRecord.protocol_version.toUByte(),
+            connectionRequestDatabaseRecord.username != null,
+            connectionRequestDatabaseRecord.password != null,
+            connectionRequestDatabaseRecord.will_retain == 1L,
+            connectionRequestDatabaseRecord.will_qos.toQos(),
+            connectionRequestDatabaseRecord.will_flag == 1L,
+            connectionRequestDatabaseRecord.clean_start == 1L,
+            connectionRequestDatabaseRecord.keep_alive_seconds.toInt(),
+            ConnectionRequest.VariableHeader.Properties(
+                connectionRequestDatabaseRecord.session_expiry_interval_seconds?.toULong(),
+                connectionRequestDatabaseRecord.receive_maximum?.toInt(),
+                connectionRequestDatabaseRecord.maximum_packet_size?.toULong(),
+                connectionRequestDatabaseRecord.topic_alias_maximum?.toInt(),
+                connectionRequestDatabaseRecord.request_response_information.toNullableBoolean(),
+                connectionRequestDatabaseRecord.request_problem_information.toNullableBoolean(),
+                userProps,
+                auth
+            )
+        )
+        val willProperties = if (connectionRequestDatabaseRecord.has_will_properties == 1L) {
+            ConnectionRequest.Payload.WillProperties(
+                connectionRequestDatabaseRecord.will_property_will_delay_interval_seconds,
+                connectionRequestDatabaseRecord.will_property_payload_format_indicator == 1L,
+                connectionRequestDatabaseRecord.will_property_message_expiry_interval_seconds,
+                connectionRequestDatabaseRecord.will_property_content_type,
+                connectionRequestDatabaseRecord.will_property_response_topic?.let {
+                    Topic.fromOrThrow(
+                        it,
+                        Topic.Type.Name
+                    )
+                },
+                connectionRequestDatabaseRecord.will_property_correlation_data?.let { PlatformBuffer.wrap(it) },
+                willUserProps
+            )
+        } else {
+            null
+        }
+        val payload = ConnectionRequest.Payload(
+            connectionRequestDatabaseRecord.client_id,
+            willProperties,
+            connectionRequestDatabaseRecord.will_topic?.let { Topic.fromOrThrow(it, Topic.Type.Name) },
+            willPayload,
+            connectionRequestDatabaseRecord.username,
+            connectionRequestDatabaseRecord.password
+        )
+        val connectionRequest = ConnectionRequest(variable, payload)
+        val socketConnections = socketConnectionQueries.connectionsByBrokerId(id)
+        val connectionOps = socketConnections.executeAsList()
+            .map {
+                if (it.type == "websocket") {
+                    MqttConnectionOptions.WebSocketConnectionOptions(
+                        it.host,
+                        it.port.toInt(),
+                        it.tls == 1L,
+                        it.connection_timeout_ms.milliseconds,
+                        it.read_timeout_ms.milliseconds,
+                        it.write_timeout_ms.milliseconds,
+                        checkNotNull(it.websocket_endpoint),
+                        if (!it.websocket_protocols.isNullOrEmpty()) {
+                            it.websocket_protocols.split(",")
+                        } else {
+                            listOf()
+                        },
+                    )
+                } else {
+                    MqttConnectionOptions.SocketConnection(
+                        it.host,
+                        it.port.toInt(),
+                        it.tls == 1L,
+                        it.connection_timeout_ms.milliseconds,
+                        it.read_timeout_ms.milliseconds,
+                        it.write_timeout_ms.milliseconds
+                    )
+                }
+            }.toSet()
+        if (connectionOps.isEmpty()) {
+            return null
+        }
+        return MqttBroker(id.toInt(), connectionOps, connectionRequest)
+    }
+    override suspend fun allBrokers(): Collection<MqttBroker> = brokerQueries
+        .allBrokers()
+        .executeAsList()
+        .mapNotNull { broker ->
+            getBrokerById(broker.id)
+        }
 
     override suspend fun clearMessages(broker: MqttBroker) = withContext(dispatcher) {
         qos2Messages.deleteAll(broker.identifier.toLong())

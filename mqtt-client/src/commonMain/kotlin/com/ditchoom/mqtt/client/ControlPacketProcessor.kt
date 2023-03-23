@@ -101,7 +101,6 @@ class ControlPacketProcessor(
 
     suspend fun processIncomingMessages() {
         readChannel.collect { packet ->
-            println("IN: $packet")
             when (packet) {
                 is IDisconnectNotification -> {
                 }

@@ -153,11 +153,11 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
     ): MqttBroker {
         val tx = db.transaction(Broker, IDBTransactionMode.readwrite)
         val store = tx.objectStore(Broker)
-        val countOp = request { store.count() }
         val connections = PersistableSocketConnection.from(connectionOps)
         val persistableRequest = PersistableConnectionRequest.from(connectionRequest as ConnectionRequest)
+        val countOp = request { store.count() }
         val broker = PersistableBroker(countOp, connections, persistableRequest)
-        store.put(broker, countOp)
+        store.put(broker)
         commitTransaction(tx, "addBroker")
         return MqttBroker(countOp.unsafeCast<Int>(), connectionOps, connectionRequest)
     }
@@ -197,6 +197,23 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
         }
     }
 
+    override suspend fun brokerWithId(identifier: Int): MqttBroker? {
+        val tx = db.transaction(Broker, IDBTransactionMode.readonly)
+        try {
+            val store = tx.objectStore(Broker)
+            val result = request { store.get(arrayOf(identifier)) } ?: return null
+            console.log("brokers result $identifier v4", result)
+            val d = result.asDynamic()
+            return MqttBroker(
+                d.id as Int,
+                (d.connectionOptions as Array<*>).map { toSocketConnection(it) }.toSet(),
+                toConnectionRequest(d.connectionRequest)
+            )
+        } finally {
+            commitTransaction(tx, "broker v4 $identifier")
+        }
+    }
+
     override suspend fun allBrokers(): Collection<MqttBroker> {
         console.log("get all brokers v4")
         val tx = db.transaction(Broker, IDBTransactionMode.readonly)
@@ -211,7 +228,7 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
                 val d = persistableBroker.asDynamic()
                 MqttBroker(
                     d.id as Int,
-                    (d.connectionOptions as Array<*>).map { toSocketConnection(it) }.toList(),
+                    (d.connectionOptions as Array<*>).map { toSocketConnection(it) }.toSet(),
                     toConnectionRequest(d.connectionRequest)
                 )
             }
@@ -326,7 +343,7 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
         val subStore = tx.objectStore(SubMsg)
         val unsubStore = tx.objectStore(UnsubMsg)
 
-        val key = IDBKeyRange.only(identifier)
+        val key = IDBKeyRange.only(arrayOf(identifier))
         packetIdStore.delete(key)
         queuedMsgStore.delete(key)
         subscriptionStore.delete(key)
@@ -491,7 +508,7 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
                 }
                 openRequest.onupgradeneeded = {
                     val db = openRequest.result
-                    db.createObjectStore(Broker)
+                    db.createObjectStore(Broker, js("{ keyPath: [\"id\"] }"))
                     db.createObjectStore(PacketId)
                     val pubStore =
                         db.createObjectStore(PubMsg, js("{ keyPath: [\"brokerId\", \"packetId\", \"incoming\"] }"))

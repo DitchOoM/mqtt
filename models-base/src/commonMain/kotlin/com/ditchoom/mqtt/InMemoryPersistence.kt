@@ -161,6 +161,10 @@ class InMemoryPersistence : Persistence {
         return brokers.values
     }
 
+    override suspend fun brokerWithId(identifier: Int): MqttBroker? {
+        return brokers[identifier]
+    }
+
     override suspend fun removeBroker(identifier: Int) {
         brokers.remove(identifier)
     }

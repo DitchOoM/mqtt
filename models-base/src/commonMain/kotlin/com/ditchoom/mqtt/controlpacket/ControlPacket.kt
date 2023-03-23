@@ -1,5 +1,6 @@
 package com.ditchoom.mqtt.controlpacket
 
+import com.ditchoom.buffer.AllocationZone
 import com.ditchoom.buffer.Charset
 import com.ditchoom.buffer.PlatformBuffer
 import com.ditchoom.buffer.ReadBuffer
@@ -51,9 +52,9 @@ interface ControlPacket {
     fun packetSize() = 2 + remainingLength()
     fun remainingLength() = 0
 
-    fun serialize(): PlatformBuffer {
+    fun serialize(allocationZone: AllocationZone = AllocationZone.Heap): PlatformBuffer {
         val size = packetSize()
-        val buffer = PlatformBuffer.allocate(size)
+        val buffer = PlatformBuffer.allocate(size, allocationZone)
         serialize(buffer)
         return buffer
     }

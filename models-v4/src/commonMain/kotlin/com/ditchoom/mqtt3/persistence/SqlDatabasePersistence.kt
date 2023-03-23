@@ -179,63 +179,72 @@ class SqlDatabasePersistence(driver: SqlDriver) : Persistence {
         return MqttBroker(brokerId.toInt(), connectionOps, connectionRequest)
     }
 
-    override suspend fun allBrokers(): Collection<MqttBroker> {
-        return brokerQueries
-            .allBrokers()
-            .executeAsList()
-            .map { broker ->
-                val connectionRequestDatabaseRecord =
-                    connectionRequestQueries.connectionRequestByBrokerId(broker.id).executeAsOne()
-                val willPayload = if (connectionRequestDatabaseRecord.will_payload != null) {
-                    PlatformBuffer.wrap(connectionRequestDatabaseRecord.will_payload, ByteOrder.BIG_ENDIAN)
-                } else {
-                    null
-                }
-                val connectionRequest = ConnectionRequest(
-                    connectionRequestDatabaseRecord.client_id,
-                    connectionRequestDatabaseRecord.keep_alive_seconds.toInt(),
-                    connectionRequestDatabaseRecord.clean_session == 1L,
-                    connectionRequestDatabaseRecord.username,
-                    connectionRequestDatabaseRecord.password,
-                    connectionRequestDatabaseRecord.will_topic,
-                    willPayload,
-                    connectionRequestDatabaseRecord.will_retain == 1L,
-                    connectionRequestDatabaseRecord.will_qos.toQos(),
-                    connectionRequestDatabaseRecord.protocol_name,
-                    connectionRequestDatabaseRecord.protocol_level.toUByte()
-                )
-                val socketConnections = socketConnectionQueries.connectionsByBrokerId(broker.id)
-                val connectionOps = socketConnections.executeAsList()
-                    .map {
-                        if (it.type == "websocket") {
-                            MqttConnectionOptions.WebSocketConnectionOptions(
-                                it.host,
-                                it.port.toInt(),
-                                it.tls == 1L,
-                                it.connection_timeout_ms.milliseconds,
-                                it.read_timeout_ms.milliseconds,
-                                it.write_timeout_ms.milliseconds,
-                                checkNotNull(it.websocket_endpoint),
-                                if (checkNotNull(it.websocket_protocols).isNotEmpty()) {
-                                    it.websocket_protocols.split(",")
-                                } else {
-                                    listOf()
-                                },
-                            )
-                        } else {
-                            MqttConnectionOptions.SocketConnection(
-                                it.host,
-                                it.port.toInt(),
-                                it.tls == 1L,
-                                it.connection_timeout_ms.milliseconds,
-                                it.read_timeout_ms.milliseconds,
-                                it.write_timeout_ms.milliseconds
-                            )
-                        }
-                    }.toSet()
-                MqttBroker(broker.id.toInt(), connectionOps, connectionRequest)
-            }
+    override suspend fun brokerWithId(identifier: Int): MqttBroker? = socketConnectionQueries.transactionWithResult {
+        getBrokerById(identifier.toLong())
     }
+
+    private fun getBrokerById(id: Long): MqttBroker? {
+        val socketConnections = socketConnectionQueries.connectionsByBrokerId(id)
+        val connectionRequestDatabaseRecord =
+            connectionRequestQueries.connectionRequestByBrokerId(id).executeAsOneOrNull() ?: return null
+        val willPayload = if (connectionRequestDatabaseRecord.will_payload != null) {
+            PlatformBuffer.wrap(connectionRequestDatabaseRecord.will_payload, ByteOrder.BIG_ENDIAN)
+        } else {
+            null
+        }
+        val connectionRequest = ConnectionRequest(
+            connectionRequestDatabaseRecord.client_id,
+            connectionRequestDatabaseRecord.keep_alive_seconds.toInt(),
+            connectionRequestDatabaseRecord.clean_session == 1L,
+            connectionRequestDatabaseRecord.username,
+            connectionRequestDatabaseRecord.password,
+            connectionRequestDatabaseRecord.will_topic,
+            willPayload,
+            connectionRequestDatabaseRecord.will_retain == 1L,
+            connectionRequestDatabaseRecord.will_qos.toQos(),
+            connectionRequestDatabaseRecord.protocol_name,
+            connectionRequestDatabaseRecord.protocol_level.toUByte()
+        )
+        val connectionOps = socketConnections.executeAsList()
+            .map {
+                if (it.type == "websocket") {
+                    MqttConnectionOptions.WebSocketConnectionOptions(
+                        it.host,
+                        it.port.toInt(),
+                        it.tls == 1L,
+                        it.connection_timeout_ms.milliseconds,
+                        it.read_timeout_ms.milliseconds,
+                        it.write_timeout_ms.milliseconds,
+                        checkNotNull(it.websocket_endpoint),
+                        if (checkNotNull(it.websocket_protocols).isNotEmpty()) {
+                            it.websocket_protocols.split(",")
+                        } else {
+                            listOf()
+                        },
+                    )
+                } else {
+                    MqttConnectionOptions.SocketConnection(
+                        it.host,
+                        it.port.toInt(),
+                        it.tls == 1L,
+                        it.connection_timeout_ms.milliseconds,
+                        it.read_timeout_ms.milliseconds,
+                        it.write_timeout_ms.milliseconds
+                    )
+                }
+            }.toSet()
+        if (connectionOps.isEmpty()) {
+            return null
+        }
+        return MqttBroker(id.toInt(), connectionOps, connectionRequest)
+    }
+
+    override suspend fun allBrokers(): Collection<MqttBroker> = brokerQueries
+        .allBrokers()
+        .executeAsList()
+        .mapNotNull { broker ->
+            getBrokerById(broker.id)
+        }
 
     override suspend fun clearMessages(broker: MqttBroker) = withContext(dispatcher) {
         qos2Messages.deleteAll(broker.identifier.toLong())

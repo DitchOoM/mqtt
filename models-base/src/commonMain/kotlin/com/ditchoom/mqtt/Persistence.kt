@@ -54,6 +54,9 @@ interface Persistence {
     ): MqttBroker
 
     suspend fun allBrokers(): Collection<MqttBroker>
+
+    suspend fun brokerWithId(identifier: Int): MqttBroker?
+
     suspend fun removeBroker(identifier: Int)
 
     suspend fun isQueueClear(broker: MqttBroker, includeSubscriptions: Boolean = true): Boolean

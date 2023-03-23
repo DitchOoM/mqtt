@@ -30,25 +30,18 @@ import kotlin.random.nextUInt
 import kotlin.time.Duration.Companion.seconds
 
 @Composable
-fun App(androidContext: Any? = null) {
-    var serviceVar by remember { mutableStateOf<MqttService?>(null) }
+fun App(service: MqttService) {
     var brokers by remember { mutableStateOf<List<MqttBroker>>(mutableListOf()) }
     var selectedBroker by remember { mutableStateOf<MqttBroker?>(null) }
     var mqttLogs by remember { mutableStateOf("") }
-    val service = serviceVar
     val selectedBrokerLocal = selectedBroker
-    if (service == null) {
-        Text("Loading")
-        LaunchedEffect(androidContext) {
-            println("android context $androidContext")
-            val serviceLocal = MqttService.buildService(androidContext)
-            serviceLocal.assignObservers(LoggingObserver { brokerId, log ->
-                mqttLogs += "$log\r\n"
-            })
-            brokers = serviceLocal.allMqttBrokers().toList()
-            serviceVar = serviceLocal
-        }
-    } else if (selectedBrokerLocal != null) {
+    LaunchedEffect(service) {
+        service.assignObservers(LoggingObserver { brokerId, log ->
+            mqttLogs += "$log\r\n"
+        })
+        brokers = service.allMqttBrokers().toList()
+    }
+    if (selectedBrokerLocal != null) {
         MqttConnectionViewer(Pair(selectedBrokerLocal, service), mqttLogs) {
             selectedBroker = null
         }
@@ -91,7 +84,7 @@ fun ConnectionBuilder(service: MqttService, mqttLogs: String, onBrokerSelected: 
     var connectionOptions by remember {
         mutableStateOf<MqttConnectionOptions>(
             MqttConnectionOptions.SocketConnection(
-                "localhost",
+                if (platformName == "Android") "10.0.2.2" else "localhost",
                 1883,
                 false,
                 5.seconds,

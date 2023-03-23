@@ -29,7 +29,6 @@ class IpcMqttService(val service: MqttService, val broadcastChannelMap: HashMap<
                 m.packetId,
                 m.qos0PubPayload
             )
-
             is MqttServiceWorkerMessage.Shutdown -> shutdown(m.brokerId, m.protocolVersion)
             else -> {}
         }
@@ -53,6 +52,7 @@ class IpcMqttService(val service: MqttService, val broadcastChannelMap: HashMap<
 
     fun removeAllBrokersAndStop() {
         GlobalScope.launch {
+
             val removeJobs = service.allMqttBrokers().map {
                 service.removeBroker(it).job
             }

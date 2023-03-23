@@ -102,7 +102,6 @@ class ConnectivityManager(
     suspend fun shutdown(sendDisconnect: Boolean = true) {
         if (isStopped) return
         isStopped = true
-        println("shutdown $sendDisconnect")
         try {
             if (sendDisconnect) {
                 sendDisconnect()
@@ -131,10 +130,8 @@ class ConnectivityManager(
                         broker.connectionRequest,
                         connectionOp
                     )
-                    println("open ss")
                     val socketSession =
                         MqttSocketSession.open(broker.identifier, broker.connectionRequest, connectionOp, observer)
-                    println("ss opened")
                     socketSession.incomingMessage = incomingMessage
                     socketSession.sentMessage = sentMessage
                     sentMessage(listOf(broker.connectionRequest))
@@ -152,8 +149,6 @@ class ConnectivityManager(
             } ?: continue
             return session
         }
-        lastException?.printStackTrace()
-        println("last exception $lastException")
         val s = broker.connectionOps.joinToString(
             prefix = "Failed to connect to services:",
             postfix = (" " + lastException?.message)

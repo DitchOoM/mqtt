@@ -86,7 +86,12 @@ fun buildLongMessage(messageType: String, long: Long): dynamic {
     return obj
 }
 
-fun buildBrokerIdProtocolVersionMessage(messageType: String, brokerId: Int, protocolVersion: Byte, optionalInt: Int? = null): dynamic {
+fun buildBrokerIdProtocolVersionMessage(
+    messageType: String,
+    brokerId: Int,
+    protocolVersion: Byte,
+    optionalInt: Int? = null
+): dynamic {
     val obj = js("({})")
     obj[MESSAGE_TYPE_KEY] = messageType
     obj[MESSAGE_BROKER_ID_KEY] = brokerId
@@ -106,7 +111,12 @@ fun readBrokerIdProtocolVersionMessage(data: dynamic): Pair<Int, Byte>? {
     return Pair(data[MESSAGE_BROKER_ID_KEY].unsafeCast<Int>(), data[MESSAGE_PROTOCOL_VERSION_KEY].unsafeCast<Byte>())
 }
 
-fun buildPacketIdMessage(messageType: String, packetId: Int, buffer: JsBuffer? = null, optionalInt: Int? = null): dynamic {
+fun buildPacketIdMessage(
+    messageType: String,
+    packetId: Int,
+    buffer: JsBuffer? = null,
+    optionalInt: Int? = null
+): dynamic {
     val obj = js("({})")
     obj[MESSAGE_TYPE_KEY] = messageType
     obj[MESSAGE_PACKET_ID_KEY] = packetId
@@ -139,7 +149,14 @@ fun readPacketIdMessage(factory: ControlPacketFactory, data: dynamic): Pair<Int,
         val limit = data[MESSAGE_LIMIT_KEY] as Int
         val buffer = if (data[MESSAGE_IS_SHARED_BUFFER_KEY] == true) {
             val sharedArrayBuffer = data[MESSAGE_IS_SHARED_BUFFER_KEY].unsafeCast<SharedArrayBuffer>()
-            JsBuffer(Uint8Array(sharedArrayBuffer as ArrayBuffer), false, position, limit, sharedArrayBuffer.byteLength, sharedArrayBuffer)
+            JsBuffer(
+                Uint8Array(sharedArrayBuffer as ArrayBuffer),
+                false,
+                position,
+                limit,
+                sharedArrayBuffer.byteLength,
+                sharedArrayBuffer
+            )
         } else {
             val arrayBuffer = data[MESSAGE_IS_SHARED_BUFFER_KEY].unsafeCast<ArrayBuffer>()
             JsBuffer(Uint8Array(arrayBuffer), false, position, limit, arrayBuffer.byteLength)
@@ -192,15 +209,23 @@ fun readControlPacketFromMessageEvent(factory: ControlPacketFactory, m: MessageE
     } else {
         return null
     }
-    val isSharedBuffer = if (obj.MESSAGE_IS_SHARED_BUFFER_KEY != undefined && obj.MESSAGE_IS_SHARED_BUFFER_KEY != null) {
-        obj.MESSAGE_IS_SHARED_BUFFER_KEY == true
-    } else {
-        return null
-    }
+    val isSharedBuffer =
+        if (obj.MESSAGE_IS_SHARED_BUFFER_KEY != undefined && obj.MESSAGE_IS_SHARED_BUFFER_KEY != null) {
+            obj.MESSAGE_IS_SHARED_BUFFER_KEY == true
+        } else {
+            return null
+        }
     val buffer = if (obj.MESSAGE_BUFFER_KEY != undefined && obj.MESSAGE_BUFFER_KEY != null) {
         if (isSharedBuffer) {
             val arrayBuffer = obj.MESSAGE_BUFFER_KEY.unsafeCast<SharedArrayBuffer>()
-            JsBuffer(Uint8Array(arrayBuffer as ArrayBuffer), false, position, limit, arrayBuffer.byteLength, arrayBuffer)
+            JsBuffer(
+                Uint8Array(arrayBuffer as ArrayBuffer),
+                false,
+                position,
+                limit,
+                arrayBuffer.byteLength,
+                arrayBuffer
+            )
         } else {
             val arrayBuffer = obj.MESSAGE_BUFFER_KEY.unsafeCast<ArrayBuffer>()
             JsBuffer(Uint8Array(arrayBuffer), false, position, limit, arrayBuffer.byteLength, null)

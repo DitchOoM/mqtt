@@ -6,9 +6,7 @@ import androidx.compose.material.Button
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
-import com.ditchoom.mqtt.client.LocalMqttService
 import com.ditchoom.mqtt.client.MqttClient
-import com.ditchoom.mqtt.connection.MqttBroker
 import kotlinx.coroutines.launch
 
 @Composable

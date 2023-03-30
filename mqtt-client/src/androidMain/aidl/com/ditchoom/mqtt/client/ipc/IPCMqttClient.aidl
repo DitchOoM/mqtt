@@ -1,18 +1,18 @@
-// MqttClientAidl.aidl
-package com.ditchoom.mqtt.client;
+// IPCMqttClient.aidl
+package com.ditchoom.mqtt.client.ipc;
 
-import com.ditchoom.mqtt.client.IpcMqttServerToClientMessage;
-import com.ditchoom.mqtt.client.OnMqttMessageCallback;
-import com.ditchoom.mqtt.client.OnMqttCompletionCallback;
+import com.ditchoom.mqtt.client.ipc.MqttMessageTransferredCallback;
+import com.ditchoom.mqtt.client.ipc.OnMqttMessageCallback;
+import com.ditchoom.mqtt.client.ipc.OnMqttCompletionCallback;
 import com.ditchoom.buffer.JvmBuffer;
 
-interface MqttClientAidl {
+interface IPCMqttClient {
     void subscribeQueued(int packetIdentifier, OnMqttCompletionCallback cb);
     void publishQueued(int packetIdentifier, in JvmBuffer nullablleQos0Buffer, OnMqttCompletionCallback cb);
     void unsubscribeQueued(int packetIdentifier, OnMqttCompletionCallback cb);
 
-    void registerObserver(IpcMqttServerToClientMessage observer);
-    void unregisterObserver(IpcMqttServerToClientMessage observer);
+    void registerObserver(MqttMessageTransferredCallback observer);
+    void unregisterObserver(MqttMessageTransferredCallback observer);
 
     JvmBuffer currentConnectionAcknowledgmentOrNull();
     void awaitConnectivity(OnMqttMessageCallback cb);

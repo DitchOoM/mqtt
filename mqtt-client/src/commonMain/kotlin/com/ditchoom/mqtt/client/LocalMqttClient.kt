@@ -48,7 +48,8 @@ class LocalMqttClient(
         }
     override val packetFactory: ControlPacketFactory = connectivityManager.broker.connectionRequest.controlPacketFactory
 
-    override suspend fun currentConnectionAcknowledgment(): IConnectionAcknowledgment? = connectivityManager.currentConnack()
+    override suspend fun currentConnectionAcknowledgment(): IConnectionAcknowledgment? =
+        connectivityManager.currentConnack()
 
     override suspend fun awaitConnectivity(): IConnectionAcknowledgment {
         var c = currentConnectionAcknowledgment()
@@ -57,6 +58,7 @@ class LocalMqttClient(
         }
         return c
     }
+
     override suspend fun pingCount() = connectivityManager.processor.pingCount
     override suspend fun pingResponseCount() = connectivityManager.processor.pingResponseCount
 
@@ -179,9 +181,16 @@ class LocalMqttClient(
             allocateSharedMemoryInitial: Boolean = false,
             observer: Observer? = null,
             sentMessage: (ReadBuffer) -> Unit = {},
-            incomingMessage: (UByte, Int, ReadBuffer) -> Unit = { _, _, _, -> }
+            incomingMessage: (UByte, Int, ReadBuffer) -> Unit = { _, _, _ -> }
         ): LocalMqttClient {
-            val connectivityManager = ConnectivityManager(scope, persistence, broker, allocateSharedMemoryInitial, sentMessage, incomingMessage)
+            val connectivityManager = ConnectivityManager(
+                scope,
+                persistence,
+                broker,
+                allocateSharedMemoryInitial,
+                sentMessage,
+                incomingMessage
+            )
             val c = LocalMqttClient(connectivityManager)
             c.observer = observer
             connectivityManager.stayConnected()
@@ -195,9 +204,16 @@ class LocalMqttClient(
             allocateSharedMemoryInitial: Boolean = false,
             observer: Observer? = null,
             sentMessage: (ReadBuffer) -> Unit = {},
-            incomingMessage: (UByte, Int, ReadBuffer) -> Unit = { _, _, _, -> }
+            incomingMessage: (UByte, Int, ReadBuffer) -> Unit = { _, _, _ -> }
         ): LocalMqttClient {
-            val connectivityManager = ConnectivityManager(scope, persistence, broker, allocateSharedMemoryInitial, sentMessage, incomingMessage)
+            val connectivityManager = ConnectivityManager(
+                scope,
+                persistence,
+                broker,
+                allocateSharedMemoryInitial,
+                sentMessage,
+                incomingMessage
+            )
             val c = LocalMqttClient(connectivityManager)
             c.observer = observer
             connectivityManager.connectOnce()

@@ -1,4 +1,4 @@
-package com.ditchoom.mqtt.client;
+package com.ditchoom.mqtt.client.ipc;
 
 import com.ditchoom.buffer.JvmBuffer;
 

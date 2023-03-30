@@ -2,14 +2,11 @@ package com.ditchoom.mqtt.client.ipc
 
 import com.ditchoom.buffer.AllocationZone
 import com.ditchoom.buffer.JvmBuffer
-import com.ditchoom.mqtt.client.IpcMqttServerToClientMessage
-import com.ditchoom.mqtt.client.MqttClientAidl
-import com.ditchoom.mqtt.client.OnMqttCompletionCallback
-import com.ditchoom.mqtt.client.OnMqttMessageCallback
 import kotlinx.coroutines.launch
 
-class AndroidMqttClientIPCServer(private val clientServer: MqttClientIPCServer) : MqttClientAidl.Stub() {
-    private val observers = ArrayList<IpcMqttServerToClientMessage>()
+class AndroidMqttClientIPCServer(private val clientServer: RemoteMqttClientWorker) : IPCMqttClient.Stub() {
+    private val observers = ArrayList<MqttMessageTransferredCallback>()
+
     init {
         clientServer.observers += { incoming, byte1, remaining, buffer ->
             observers.forEach {
@@ -25,17 +22,21 @@ class AndroidMqttClientIPCServer(private val clientServer: MqttClientIPCServer) 
     override fun subscribeQueued(packetIdentifier: Int, callback: OnMqttCompletionCallback) =
         wrapResultWithCallback(callback) { clientServer.onSubscribeQueued(packetIdentifier) }
 
-    override fun publishQueued(packetIdentifier: Int, nullablleQos0Buffer: JvmBuffer?, callback: OnMqttCompletionCallback) =
+    override fun publishQueued(
+        packetIdentifier: Int,
+        nullablleQos0Buffer: JvmBuffer?,
+        callback: OnMqttCompletionCallback
+    ) =
         wrapResultWithCallback(callback) { clientServer.onPublishQueued(packetIdentifier, nullablleQos0Buffer) }
 
     override fun unsubscribeQueued(packetIdentifier: Int, callback: OnMqttCompletionCallback) =
         wrapResultWithCallback(callback) { clientServer.onUnsubscribeQueued(packetIdentifier) }
 
-    override fun registerObserver(observer: IpcMqttServerToClientMessage) {
+    override fun registerObserver(observer: MqttMessageTransferredCallback) {
         observers += observer
     }
 
-    override fun unregisterObserver(observer: IpcMqttServerToClientMessage) {
+    override fun unregisterObserver(observer: MqttMessageTransferredCallback) {
         observers -= observer
     }
 
@@ -70,6 +71,7 @@ class AndroidMqttClientIPCServer(private val clientServer: MqttClientIPCServer) 
 
     override fun shutdown(sendDisconnect: Boolean, cb: OnMqttCompletionCallback) =
         wrapResultWithCallback(cb) { clientServer.shutdown(sendDisconnect) }
+
     private fun wrapResultWithCallback(callback: OnMqttCompletionCallback, block: suspend () -> Unit) {
         clientServer.scope.launch {
             try {

@@ -27,7 +27,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
-abstract class MqttClientIPCClient(
+abstract class RemoteMqttClient(
     protected val scope: CoroutineScope,
     override val broker: MqttBroker,
     private val persistence: Persistence

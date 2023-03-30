@@ -9,10 +9,10 @@ import org.w3c.dom.MessageChannel
 import org.w3c.dom.Worker
 import org.w3c.workers.ServiceWorker
 
-suspend fun buildMqttServiceIPCServer(): JsMqttServiceIPCServer {
+suspend fun buildMqttServiceIPCServer(): JsRemoteMqttServiceWorker {
     val service = LocalMqttService.buildService(null)
-    val serviceServer = MqttServiceIPCServer(service)
-    return JsMqttServiceIPCServer(serviceServer)
+    val serviceServer = RemoteMqttServiceWorker(service)
+    return JsRemoteMqttServiceWorker(serviceServer)
 }
 
 const val BROADCAST_IPC_MQTT_SERVICE = "mqtt-ipc-service"
@@ -20,14 +20,14 @@ internal const val MESSAGE_IPC_MQTT_SERVICE_REGISTRATION = "mqtt-ipc-service-reg
 internal const val MESSAGE_IPC_MQTT_SERVICE_REGISTRATION_ACK = "mqtt-ipc-service-registration-ack"
 internal const val MESSAGE_IPC_MQTT_SERVICE_CLOSE_CLIENT = "mqtt-ipc-service-close-client"
 
-suspend fun AbstractWorker.sendAndAwaitRegistration(ipcServer: JsMqttServiceIPCServer): JsMqttServiceIPCClient {
+suspend fun AbstractWorker.sendAndAwaitRegistration(ipcServer: JsRemoteMqttServiceWorker): JsRemoteMqttServiceClient {
     val messageChannel = MessageChannel()
     if (this is ServiceWorker) {
         postMessage(MESSAGE_IPC_MQTT_SERVICE_REGISTRATION, arrayOf(messageChannel.port2))
     } else if (this is Worker) {
         postMessage(MESSAGE_IPC_MQTT_SERVICE_REGISTRATION, arrayOf(messageChannel.port2))
     }
-    val ipcClient = JsMqttServiceIPCClient(ipcServer.mqttService, messageChannel.port1)
+    val ipcClient = JsRemoteMqttServiceClient(ipcServer.mqttService, messageChannel.port1)
     val callbackFlow = callbackFlow {
         messageChannel.port1.onmessage = { trySend(it) }
         awaitClose()

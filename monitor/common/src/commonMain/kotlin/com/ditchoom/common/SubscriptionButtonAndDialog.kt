@@ -13,7 +13,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import com.ditchoom.mqtt.client.LocalMqttClient
 import com.ditchoom.mqtt.client.MqttClient
 import com.ditchoom.mqtt.controlpacket.ISubscription
 import com.ditchoom.mqtt.controlpacket.QualityOfService

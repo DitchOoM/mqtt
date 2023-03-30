@@ -1,4 +1,4 @@
-package com.ditchoom.mqtt.client;
+package com.ditchoom.mqtt.client.ipc;
 
 interface OnMqttCompletionCallback {
     void onSuccess();

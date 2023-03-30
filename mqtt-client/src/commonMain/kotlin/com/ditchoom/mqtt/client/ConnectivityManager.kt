@@ -134,7 +134,15 @@ class ConnectivityManager(
                         connectionOp
                     )
                     val socketSession =
-                        MqttSocketSession.open(broker.identifier, broker.connectionRequest, connectionOp, allocateSharedMemory, observer, sentMessage, incomingMessage)
+                        MqttSocketSession.open(
+                            broker.identifier,
+                            broker.connectionRequest,
+                            connectionOp,
+                            allocateSharedMemory,
+                            observer,
+                            sentMessage,
+                            incomingMessage
+                        )
                     if (socketSession.connectionAcknowledgement.isSuccessful) {
                         connectionCount++
                         socketSession

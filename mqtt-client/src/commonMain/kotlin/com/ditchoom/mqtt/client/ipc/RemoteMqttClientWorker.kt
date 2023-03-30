@@ -5,7 +5,7 @@ import com.ditchoom.mqtt.client.LocalMqttClient
 import com.ditchoom.mqtt.controlpacket.IConnectionAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IPublishMessage
 
-class MqttClientIPCServer(
+class RemoteMqttClientWorker(
     internal val client: LocalMqttClient,
 ) {
     internal val scope = client.scope

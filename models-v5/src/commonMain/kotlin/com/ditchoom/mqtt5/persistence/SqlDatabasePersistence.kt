@@ -348,6 +348,7 @@ class SqlDatabasePersistence(driver: SqlDriver) : Persistence {
         }
         return MqttBroker(id.toInt(), connectionOps, connectionRequest)
     }
+
     override suspend fun allBrokers(): Collection<MqttBroker> = brokerQueries
         .allBrokers()
         .executeAsList()

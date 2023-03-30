@@ -14,9 +14,9 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-object MqttServiceManager {
+object MqttServiceHelper {
     private var serviceConnection: MqttServiceConnection? = null
-    private var ipcClient: AndroidMqttServiceIPCClient? = null
+    private var ipcClient: AndroidRemoteMqttServiceClient? = null
     suspend fun registerService(context: Context, inMemory: Boolean = false): MqttService {
         val ipcClient = ipcClient
         if (ipcClient != null) {
@@ -28,7 +28,7 @@ object MqttServiceManager {
             val serviceConnection = MqttServiceConnection(context, it)
             this.serviceConnection = serviceConnection
         }
-        val c = AndroidMqttServiceIPCClient(serviceBinder, LocalMqttService.buildService(context, inMemory))
+        val c = AndroidRemoteMqttServiceClient(serviceBinder, LocalMqttService.buildService(context, inMemory))
         this.ipcClient = c
         return c
     }
@@ -45,12 +45,18 @@ object MqttServiceManager {
         init {
             cont.invokeOnCancellation { unbind(context) }
         }
+
         override fun onServiceConnected(name: ComponentName, service: IBinder) {
             cont.resume(service)
         }
 
         override fun onServiceDisconnected(name: ComponentName) {
-            cont.resumeWithException(MqttException("Failed to connect to service $name", ReasonCode.NOT_AUTHORIZED.byte))
+            cont.resumeWithException(
+                MqttException(
+                    "Failed to connect to service $name",
+                    ReasonCode.NOT_AUTHORIZED.byte
+                )
+            )
         }
 
         fun unbind(context: Context) {

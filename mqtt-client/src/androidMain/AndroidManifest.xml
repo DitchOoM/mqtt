@@ -14,9 +14,9 @@
                 android:authorities="${applicationId}.androidx-startup"
                 android:exported="false"
                 tools:node="merge">
-<!--            lazy load the mqtt service initializer-->
-<!--            <meta-data  android:name="com.ditchoom.mqtt.client.MqttServiceInitializer"-->
-<!--                        android:value="androidx.startup" />-->
+            <!--            lazy load the mqtt service initializer-->
+            <!--            <meta-data  android:name="com.ditchoom.mqtt.client.MqttServiceInitializer"-->
+            <!--                        android:value="androidx.startup" />-->
         </provider>
     </application>
 </manifest>

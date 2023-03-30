@@ -5,7 +5,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.material.MaterialTheme
-import androidx.lifecycle.lifecycleScope
 import com.ditchoom.common.App
 import com.ditchoom.mqtt.client.LocalMqttService
 

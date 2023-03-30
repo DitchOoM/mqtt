@@ -6,7 +6,7 @@ import com.ditchoom.mqtt.connection.MqttBroker
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.IConnectionRequest
 
-abstract class MqttServiceIPCClient(
+abstract class RemoteMqttServiceClient(
     protected val service: LocalMqttService,
     protected open val startAllCb: suspend () -> Unit = {},
     protected open val startCb: suspend (Int, Byte) -> Unit = { _, _ -> },
@@ -29,7 +29,9 @@ abstract class MqttServiceIPCClient(
         service.removeBroker(brokerId, protocolVersion)
     }
 
-    override suspend fun start() { startAllCb() }
+    override suspend fun start() {
+        startAllCb()
+    }
 
     override suspend fun start(broker: MqttBroker) {
         startCb(broker.brokerId, broker.protocolVersion)

@@ -18,12 +18,12 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.w3c.dom.MessagePort
 
-class JsMqttClientIPCClient(
+class JsRemoteMqttClient(
     scope: CoroutineScope,
     private val port: MessagePort,
     broker: MqttBroker,
     persistence: Persistence,
-) : MqttClientIPCClient(scope, broker, persistence) {
+) : RemoteMqttClient(scope, broker, persistence) {
     private var nextMessageId = 0
     override val packetFactory: ControlPacketFactory = broker.connectionRequest.controlPacketFactory
     private var closeCb = {}
@@ -88,7 +88,12 @@ class JsMqttClientIPCClient(
         port.postMessage(buildSimpleMessage(MESSAGE_TYPE_CLIENT_AWAIT_CONNECTIVITY_REQUEST))
         val messageEvent =
             messageFlow.first { it.data?.asDynamic()[MESSAGE_TYPE_KEY] == MESSAGE_TYPE_CLIENT_AWAIT_CONNECTIVITY_RESPONSE }
-        return checkNotNull(readPacketIdMessage(packetFactory, messageEvent.data.asDynamic())?.second as? IConnectionAcknowledgment)
+        return checkNotNull(
+            readPacketIdMessage(
+                packetFactory,
+                messageEvent.data.asDynamic()
+            )?.second as? IConnectionAcknowledgment
+        )
     }
 
     override suspend fun pingCount(): Long {

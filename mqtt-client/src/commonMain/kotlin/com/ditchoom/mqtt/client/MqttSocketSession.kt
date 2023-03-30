@@ -47,7 +47,8 @@ class MqttSocketSession private constructor(
 
     suspend fun write(packet: ControlPacket) = write(listOf(packet))
     suspend fun write(controlPackets: Collection<ControlPacket>) {
-        val b = controlPackets.toBuffer(if (allocateSharedMemory) AllocationZone.SharedMemory else AllocationZone.Direct)
+        val b =
+            controlPackets.toBuffer(if (allocateSharedMemory) AllocationZone.SharedMemory else AllocationZone.Direct)
         b.resetForWrite()
         writer.write(b, writeTimeout)
         sentMessage(b)

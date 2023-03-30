@@ -2,15 +2,13 @@ package com.ditchoom.mqtt.client.ipc
 
 import android.util.Log
 import com.ditchoom.mqtt.client.LocalMqttService
-import com.ditchoom.mqtt.client.MqttIpcClientCallback
-import com.ditchoom.mqtt.client.MqttServiceAidl
-import com.ditchoom.mqtt.client.OnMqttCompletionCallback
 import kotlinx.coroutines.launch
 
-class AndroidMqttServiceIPCServer(private val serviceServer: MqttServiceIPCServer) : MqttServiceAidl.Stub() {
+class AndroidRemoteMqttServiceWorker(private val serviceServer: RemoteMqttServiceWorker) : IPCMqttService.Stub() {
     private val scope = serviceServer.service.scope
 
-    constructor(service: LocalMqttService) : this(MqttServiceIPCServer(service))
+    constructor(service: LocalMqttService) : this(RemoteMqttServiceWorker(service))
+
     override fun startAll(callback: OnMqttCompletionCallback) = wrapResultWithCallback(callback) {
         serviceServer.startAll()
     }
@@ -37,7 +35,7 @@ class AndroidMqttServiceIPCServer(private val serviceServer: MqttServiceIPCServe
         }
     }
 
-    override fun requestClientOrNull(brokerId: Int, protocolVersion: Byte, callback: MqttIpcClientCallback) {
+    override fun requestClientOrNull(brokerId: Int, protocolVersion: Byte, callback: OnMqttGetClientCallback) {
         scope.launch {
             val client = serviceServer.requestClientOrNull(brokerId, protocolVersion)
             if (client != null) {

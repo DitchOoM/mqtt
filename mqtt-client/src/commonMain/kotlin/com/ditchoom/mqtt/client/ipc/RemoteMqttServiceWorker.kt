@@ -3,10 +3,10 @@ package com.ditchoom.mqtt.client.ipc
 import com.ditchoom.mqtt.client.LocalMqttService
 import com.ditchoom.mqtt.connection.MqttBroker
 
-class MqttServiceIPCServer(
+class RemoteMqttServiceWorker(
     internal val service: LocalMqttService,
 ) {
-    private val clients = HashMap<Byte, HashMap<Int, MqttClientIPCServer>>()
+    private val clients = HashMap<Byte, HashMap<Int, RemoteMqttClientWorker>>()
 
     init {
         service.useSharedMemory = true
@@ -51,7 +51,7 @@ class MqttServiceIPCServer(
         clients.clear()
     }
 
-    suspend fun requestClientOrNull(brokerId: Int, protocolVersion: Byte): MqttClientIPCServer? {
+    suspend fun requestClientOrNull(brokerId: Int, protocolVersion: Byte): RemoteMqttClientWorker? {
         val cached = clients[protocolVersion]?.get(brokerId)
         if (cached != null) {
             return cached
@@ -59,7 +59,7 @@ class MqttServiceIPCServer(
         val persistence = service.getPersistence(protocolVersion)
         val broker = persistence.brokerWithId(brokerId) ?: return null
         val client = service.getClient(broker) ?: return null
-        val ipcClient = MqttClientIPCServer(client)
+        val ipcClient = RemoteMqttClientWorker(client)
         clients.getOrPut(protocolVersion) { HashMap() }[brokerId] = ipcClient
         return ipcClient
     }

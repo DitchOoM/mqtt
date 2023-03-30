@@ -14,7 +14,8 @@ class MqttManagerService : Service() {
         super.onCreate()
         mqttService = AppInitializer.getInstance(this).initializeComponent(MqttServiceInitializer::class.java)
     }
-    override fun onBind(intent: Intent) = AndroidMqttServiceIPCServer(mqttService)
+
+    override fun onBind(intent: Intent) = AndroidRemoteMqttServiceWorker(mqttService)
 
     override fun onDestroy() {
         runBlocking {

@@ -9,9 +9,9 @@ import kotlinx.coroutines.flow.first
 import org.w3c.dom.MessageChannel
 import org.w3c.dom.MessagePort
 
-class JsMqttServiceIPCClient(service: LocalMqttService, private val port: MessagePort) :
-    MqttServiceIPCClient(service) {
-    private val clients = HashMap<Byte, HashMap<Int, JsMqttClientIPCClient>>()
+class JsRemoteMqttServiceClient(service: LocalMqttService, private val port: MessagePort) :
+    RemoteMqttServiceClient(service) {
+    private val clients = HashMap<Byte, HashMap<Int, JsRemoteMqttClient>>()
     private var closeCb: () -> Unit = {}
     private var nextMessageId = 0
     private val onMessageFlow = callbackFlow {
@@ -29,7 +29,14 @@ class JsMqttServiceIPCClient(service: LocalMqttService, private val port: Messag
     }
     override val startCb: suspend (Int, Byte) -> Unit = { brokerId, protocolVersion ->
         val messageId = nextMessageId++
-        port.postMessage(buildBrokerIdProtocolVersionMessage(MESSAGE_TYPE_SERVICE_START, brokerId, protocolVersion, messageId))
+        port.postMessage(
+            buildBrokerIdProtocolVersionMessage(
+                MESSAGE_TYPE_SERVICE_START,
+                brokerId,
+                protocolVersion,
+                messageId
+            )
+        )
         awaitMessage(MESSAGE_TYPE_SERVICE_START_RESPONSE, messageId)
     }
     override val stopAllCb: suspend () -> Unit = {
@@ -39,7 +46,14 @@ class JsMqttServiceIPCClient(service: LocalMqttService, private val port: Messag
     }
     override val stopCb: suspend (Int, Byte) -> Unit = { brokerId, protocolVersion ->
         val messageId = nextMessageId++
-        port.postMessage(buildBrokerIdProtocolVersionMessage(MESSAGE_TYPE_SERVICE_STOP, brokerId, protocolVersion, messageId))
+        port.postMessage(
+            buildBrokerIdProtocolVersionMessage(
+                MESSAGE_TYPE_SERVICE_STOP,
+                brokerId,
+                protocolVersion,
+                messageId
+            )
+        )
         awaitMessage(MESSAGE_TYPE_SERVICE_STOP_RESPONSE, messageId)
     }
 
@@ -52,7 +66,7 @@ class JsMqttServiceIPCClient(service: LocalMqttService, private val port: Messag
 
     fun close() = closeCb()
 
-    override suspend fun getClient(broker: MqttBroker): JsMqttClientIPCClient? {
+    override suspend fun getClient(broker: MqttBroker): JsRemoteMqttClient? {
         val brokerId = broker.brokerId
         val protocolVersion = broker.protocolVersion
         val persistence = service.getPersistence(protocolVersion.toInt())
@@ -60,7 +74,14 @@ class JsMqttServiceIPCClient(service: LocalMqttService, private val port: Messag
         return clients.getOrPut(protocolVersion) { HashMap() }
             .getOrPut(brokerId) {
                 val messageChannel = MessageChannel()
-                port.postMessage(buildBrokerIdProtocolVersionMessage(MESSAGE_TYPE_REGISTER_CLIENT, brokerId, protocolVersion), arrayOf(messageChannel.port2))
+                port.postMessage(
+                    buildBrokerIdProtocolVersionMessage(
+                        MESSAGE_TYPE_REGISTER_CLIENT,
+                        brokerId,
+                        protocolVersion
+                    ),
+                    arrayOf(messageChannel.port2)
+                )
                 val message = onMessageFlow.filter {
                     val obj = it.data?.asDynamic()
                     obj[MESSAGE_TYPE_KEY] == MESSAGE_TYPE_REGISTER_CLIENT_SUCCESS ||
@@ -68,7 +89,7 @@ class JsMqttServiceIPCClient(service: LocalMqttService, private val port: Messag
                 }.first()
                 val obj = message.data?.asDynamic()
                 if (obj[MESSAGE_TYPE_KEY] == MESSAGE_TYPE_REGISTER_CLIENT_SUCCESS) {
-                    val c = JsMqttClientIPCClient(service.scope, messageChannel.port1, broker, persistence)
+                    val c = JsRemoteMqttClient(service.scope, messageChannel.port1, broker, persistence)
                     c.startObservingMessages()
                     c
                 } else if (obj[MESSAGE_TYPE_KEY] == MESSAGE_TYPE_REGISTER_CLIENT_NOT_FOUND) {

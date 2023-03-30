@@ -25,7 +25,8 @@ import kotlin.time.Duration.Companion.seconds
 @RunWith(AndroidJUnit4::class)
 @MediumTest
 class IPCTest {
-    @get:Rule val serviceRule: ServiceTestRule = ServiceTestRule.withTimeout(1000, TimeUnit.MILLISECONDS)
+    @get:Rule
+    val serviceRule: ServiceTestRule = ServiceTestRule.withTimeout(1000, TimeUnit.MILLISECONDS)
     private val testWsMqttConnectionOptions = MqttConnectionOptions.WebSocketConnectionOptions(
         "10.0.2.2",
         80,
@@ -45,11 +46,11 @@ class IPCTest {
         val context = InstrumentationRegistry.getInstrumentation().context
         val i = Intent(context, MqttManagerService::class.java)
         val serviceBinder = suspendCancellableCoroutine {
-            val connection = MqttServiceManager.MqttServiceConnection(context, it)
+            val connection = MqttServiceHelper.MqttServiceConnection(context, it)
             serviceRule.bindService(i, connection, Context.BIND_AUTO_CREATE)
         }
         // inMemory will not work because it's separate processes
-        val service: MqttService = AndroidMqttServiceIPCClient(serviceBinder, LocalMqttService.buildService(context))
+        val service: MqttService = AndroidRemoteMqttServiceClient(serviceBinder, LocalMqttService.buildService(context))
         service.allBrokers().forEach { service.removeBroker(it.brokerId, it.protocolVersion) }
 
         val broker = service.addBroker(listOf(testWsMqttConnectionOptions), connectionRequestMqtt4)

@@ -118,6 +118,7 @@ class LocalMqttService private constructor(
         brokerClientMap.clear()
         scope.cancel()
     }
+
     companion object {
         fun getControlPacketFactory(protocolVersion: Int): ControlPacketFactory = if (protocolVersion == 5) {
             ControlPacketV5Factory
@@ -125,9 +126,10 @@ class LocalMqttService private constructor(
             ControlPacketV4Factory
         }
 
-        suspend fun buildService(androidContext: Any? = null, inMemory: Boolean = false): LocalMqttService = suspendCoroutine { cont ->
-            buildService(androidContext, inMemory) { cont.resume(it) }
-        }
+        suspend fun buildService(androidContext: Any? = null, inMemory: Boolean = false): LocalMqttService =
+            suspendCoroutine { cont ->
+                buildService(androidContext, inMemory) { cont.resume(it) }
+            }
 
         fun buildService(androidContext: Any? = null, inMemory: Boolean = false, cb: (LocalMqttService) -> Unit) {
             val scope = CoroutineScope(Dispatchers.Default + CoroutineName("Mqtt Service"))

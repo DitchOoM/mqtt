@@ -1,14 +1,14 @@
-package com.ditchoom.mqtt.client;
+package com.ditchoom.mqtt.client.ipc;
 
-import com.ditchoom.mqtt.client.MqttIpcClientCallback;
-import com.ditchoom.mqtt.client.OnMqttCompletionCallback;
+import com.ditchoom.mqtt.client.ipc.OnMqttGetClientCallback;
+import com.ditchoom.mqtt.client.ipc.OnMqttCompletionCallback;
 
-interface MqttServiceAidl {
+interface IPCMqttService {
     void startAll(OnMqttCompletionCallback completion);
     void start(int brokerId, byte protocolVersion, OnMqttCompletionCallback completion);
 
     void stopAll(OnMqttCompletionCallback completion);
     void stop(int brokerId, byte protocolVersion, OnMqttCompletionCallback completion);
 
-    void requestClientOrNull(int brokerId, byte protocolVersion, MqttIpcClientCallback callback);
+    void requestClientOrNull(int brokerId, byte protocolVersion, OnMqttGetClientCallback callback);
 }

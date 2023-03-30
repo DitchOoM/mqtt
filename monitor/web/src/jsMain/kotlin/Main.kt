@@ -12,7 +12,6 @@ import com.ditchoom.mqtt5.controlpacket.ConnectionRequest
 import kotlinx.browser.document
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.await
 import kotlinx.coroutines.launch
 import kotlinx.html.InputType
 import kotlinx.html.button
@@ -22,7 +21,6 @@ import kotlinx.html.input
 import kotlinx.html.js.div
 import kotlinx.html.js.onChangeFunction
 import kotlinx.html.js.onClickFunction
-import kotlinx.html.js.p
 import kotlinx.html.option
 import kotlinx.html.p
 import kotlinx.html.select

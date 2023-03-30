@@ -4,7 +4,7 @@ import kotlinx.coroutines.launch
 import org.w3c.dom.MessageEvent
 import org.w3c.dom.MessagePort
 
-class JsMqttServiceIPCServer(private val serviceServer: MqttServiceIPCServer) {
+class JsRemoteMqttServiceWorker(private val serviceServer: RemoteMqttServiceWorker) {
     private val scope = serviceServer.service.scope
     internal val mqttService = serviceServer.service
 
@@ -42,9 +42,15 @@ class JsMqttServiceIPCServer(private val serviceServer: MqttServiceIPCServer) {
         val (brokerId, protocolVersion) = readBrokerIdProtocolVersionMessage(obj) ?: return
         val client = serviceServer.requestClientOrNull(brokerId, protocolVersion)
         if (client != null) {
-            val ipcClientServer = JsMqttClientIPCServer(client, port)
+            val ipcClientServer = JsRemoteMqttClientWorker(client, port)
             ipcClientServer.registerOnMessageObserver()
-            port.postMessage(buildBrokerIdProtocolVersionMessage(MESSAGE_TYPE_REGISTER_CLIENT_SUCCESS, brokerId, protocolVersion))
+            port.postMessage(
+                buildBrokerIdProtocolVersionMessage(
+                    MESSAGE_TYPE_REGISTER_CLIENT_SUCCESS,
+                    brokerId,
+                    protocolVersion
+                )
+            )
         } else {
             port.postMessage(buildSimpleMessage(MESSAGE_TYPE_REGISTER_CLIENT_NOT_FOUND))
             port.close()

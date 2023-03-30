@@ -29,7 +29,7 @@ class AndroidRemoteMqttServiceClient(binder: IBinder, service: LocalMqttService)
         return suspendCoroutine {
             aidl.requestClientOrNull(
                 brokerId, protocolVersion,
-                object : OnMqttGetClientCallback.Stub() {
+                object : MqttGetClientCallback.Stub() {
                     override fun onClientReady(client: IPCMqttClient, brokerId: Int, protocolVersion: Byte) {
                         it.resume(AndroidRemoteMqttClient(service.scope, client, broker, persistence))
                     }

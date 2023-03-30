@@ -1,6 +1,6 @@
 package com.ditchoom.mqtt.client.ipc;
 
-interface OnMqttCompletionCallback {
+interface MqttCompletionCallback {
     void onSuccess();
     void onError(String messageOrNull);
 }

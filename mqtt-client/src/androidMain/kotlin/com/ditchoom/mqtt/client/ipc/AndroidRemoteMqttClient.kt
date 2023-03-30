@@ -71,7 +71,7 @@ class AndroidRemoteMqttClient(
 
     override suspend fun awaitConnectivity(): IConnectionAcknowledgment {
         return suspendCoroutine {
-            aidl.awaitConnectivity(object : OnMqttMessageCallback.Stub() {
+            aidl.awaitConnectivity(object : MqttMessageCallback.Stub() {
                 override fun onMessage(buffer: JvmBuffer) {
                     buffer.resetForRead()
                     it.resume(packetFactory.from(buffer) as IConnectionAcknowledgment)

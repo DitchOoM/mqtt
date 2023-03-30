@@ -2,18 +2,19 @@ package com.ditchoom.android
 
 import android.os.Bundle
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.material.MaterialTheme
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.lifecycle.lifecycleScope
 import com.ditchoom.common.App
-import com.ditchoom.mqtt.client.MqttService
+import com.ditchoom.mqtt.client.LocalMqttService
 
 class MainActivity : AppCompatActivity() {
+    val model: MqttViewModel by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        MqttService.buildService(applicationContext) { service ->
+
+        LocalMqttService.buildService(applicationContext) { service ->
             setContent {
                 MaterialTheme {
                     App(service)

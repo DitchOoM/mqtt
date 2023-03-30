@@ -169,7 +169,7 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
                 cont.resume(op.result)
             }
             op.onerror = {
-                console.error("request error, cast throwable")
+                console.error("request error, cast throwable", it)
                 cont.resumeWithException(op.error as Throwable)
             }
         }
@@ -181,11 +181,11 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
                 cont.resume(Unit)
             }
             tx.onerror = {
-                console.error("error committing tx $logName", tx)
+                console.error("error committing tx $logName", tx, it)
                 cont.resumeWithException(tx.error as Throwable)
             }
             tx.onabort = {
-                console.error("abort committing tx $logName", tx)
+                console.error("abort committing tx $logName", tx, it)
                 cont.resumeWithException(tx.error as Throwable)
             }
             cont.invokeOnCancellation {
@@ -202,7 +202,6 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
         try {
             val store = tx.objectStore(Broker)
             val result = request { store.get(arrayOf(identifier)) } ?: return null
-            console.log("brokers result $identifier v4", result)
             val d = result.asDynamic()
             return MqttBroker(
                 d.id as Int,
@@ -215,7 +214,6 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
     }
 
     override suspend fun allBrokers(): Collection<MqttBroker> {
-        console.log("get all brokers v4")
         val tx = db.transaction(Broker, IDBTransactionMode.readonly)
         try {
             val store = tx.objectStore(Broker)
@@ -223,7 +221,6 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
             if (results.isEmpty()) {
                 return emptyList()
             }
-            console.log("all brokers result v4", results)
             return results.toList().map { persistableBroker ->
                 val d = persistableBroker.asDynamic()
                 MqttBroker(
@@ -528,7 +525,7 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
                     subscriptionStore.createIndex(UnsubIndex, arrayOf("brokerId", "unsubscribeId"))
                 }
                 openRequest.onerror = {
-                    console.error("open request error, cast throwable")
+                    console.error("open request error, cast throwable", it)
                     cont.resumeWithException(openRequest.error as Throwable)
                 }
             }

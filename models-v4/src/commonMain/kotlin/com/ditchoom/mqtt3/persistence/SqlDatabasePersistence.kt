@@ -91,7 +91,7 @@ class SqlDatabasePersistence(driver: SqlDriver) : Persistence {
     }
 
     override suspend fun ackUnsub(broker: MqttBroker, unsubAck: IUnsubscribeAcknowledgment) = withContext(dispatcher) {
-        subQueries.transaction {
+        unsubQueries.transaction {
             unsubQueries.deleteUnsubscribeRequest(broker.identifier.toLong(), unsubAck.packetIdentifier.toLong())
             subscriptionQueries.deleteSubscription(broker.identifier.toLong(), unsubAck.packetIdentifier.toLong())
         }

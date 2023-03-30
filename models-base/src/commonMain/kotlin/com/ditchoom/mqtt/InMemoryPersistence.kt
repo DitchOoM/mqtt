@@ -157,7 +157,6 @@ class InMemoryPersistence : Persistence {
     }
 
     override suspend fun allBrokers(): Collection<MqttBroker> {
-        println("all brokers in memory persistence")
         return brokers.values
     }
 

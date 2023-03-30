@@ -21,6 +21,8 @@ repositories {
 dependencies {
     api(project(":monitor:common"))
     implementation("androidx.activity:activity-compose:1.6.1")
+
+    implementation("androidx.startup:startup-runtime:1.1.1")
 }
 
 android {

@@ -1,5 +1,6 @@
 package com.ditchoom.mqtt.client
 
+import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.data.Reader
 import com.ditchoom.mqtt.MalformedInvalidVariableByteInteger
 import com.ditchoom.mqtt.controlpacket.ControlPacket
@@ -16,11 +17,10 @@ class BufferedControlPacketReader(
     private val factory: ControlPacketFactory,
     readTimeout: Duration,
     private val reader: Reader,
-    var observer: Observer? = null
+    var observer: Observer? = null,
+    private val incomingMessage: (UByte, Int, ReadBuffer) -> Unit
 ) {
     private val inputStream = SuspendingSocketInputStream(readTimeout, reader)
-
-    var incomingMessage: (ControlPacket) -> Unit = {}
     val incomingControlPackets = flow {
         try {
             while (reader.isOpen()) {
@@ -28,11 +28,9 @@ class BufferedControlPacketReader(
                     val p = readControlPacket()
                     emit(p)
                     if (p is IDisconnectNotification) {
-                        println("sent disconnect")
                         return@flow
                     }
                 } catch (e: Exception) {
-                    println("exception in flow $e")
                     return@flow
                 }
             }
@@ -57,7 +55,8 @@ class BufferedControlPacketReader(
             byte1,
             remainingLength
         )
-        incomingMessage(packet)
+        buffer.resetForRead()
+        incomingMessage(byte1, remainingLength, buffer)
         observer?.incomingPacket(brokerId, factory.protocolVersion.toByte(), packet)
         return packet
     }

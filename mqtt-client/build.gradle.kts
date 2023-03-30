@@ -75,7 +75,9 @@ kotlin {
         val atomicfuVersion = extra["atomicfu.version"] as String
         val commonMain by getting {
             dependencies {
-                api("com.ditchoom:buffer:$bufferVersion")
+                api("com.ditchoom:buffer:$bufferVersion") {
+                    version { strictly(bufferVersion) }
+                }
                 compileOnly(project(":models-v4"))
                 compileOnly(project(":models-v5"))
                 implementation("com.ditchoom:socket:$socketVersion")
@@ -111,16 +113,34 @@ kotlin {
             kotlin.srcDir("src/commonJvmMain/kotlin")
             dependsOn(commonMain)
             dependsOn(jvmMain)
+            dependencies {
+                implementation("androidx.startup:startup-runtime:1.1.1")
+            }
         }
         val androidTest by getting {
             dependsOn(commonTest)
             dependsOn(commonJvmTest)
         }
+
         val androidAndroidTest by getting {
-            dependsOn(commonTest)
             kotlin.srcDir("src/commonJvmTest/kotlin")
             kotlin.srcDir("src/commonTest/kotlin")
             dependsOn(commonJvmTest)
+            dependencies {
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutinesVersion")
+                implementation("androidx.test:runner:1.5.2")
+                implementation("androidx.test:rules:1.5.0")
+                implementation("androidx.test:core-ktx:1.5.0")
+                implementation("androidx.test:monitor:1.6.1")
+            }
+        }
+
+        val jsMain by getting {
+            dependsOn(commonMain)
+            dependencies {
+
+                implementation("org.jetbrains.kotlin-wrappers:kotlin-js:1.0.0-pre.521")
+            }
         }
 
         val jsTest by getting {
@@ -151,9 +171,11 @@ kotlin {
 android {
     compileSdk = 33
     sourceSets["main"].manifest.srcFile("src/androidMain/AndroidManifest.xml")
+    sourceSets["androidTest"].manifest.srcFile("src/androidAndroidTest/AndroidManifest.xml")
     defaultConfig {
         minSdk = 21
         targetSdk = 33
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     lint {
         abortOnError = false

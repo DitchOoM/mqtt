@@ -4,3 +4,11 @@ config.resolve.alias = {
     "tls": false,
     "crypto": false,
 }
+module.exports = {
+  devServer: {
+    headers: {
+      "Cross-Origin-Embedder-Policy": "require-corp",
+      "Cross-Origin-Opener-Policy": "same-origin",
+    },
+  },
+};

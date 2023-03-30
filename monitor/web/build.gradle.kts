@@ -47,13 +47,14 @@ kotlin {
         val serviceworkerMain by getting {
 
             val websocketVersion = extra["websocket.version"] as String
+            val bufferVersion = extra["buffer.version"] as String
             dependencies {
                 api(project(":models-base"))
                 api(project(":models-v4"))
                 api(project(":models-v5"))
                 api(project(":mqtt-client"))
                 api("com.ditchoom:websocket:$websocketVersion")
-                api("com.ditchoom:buffer:1.2.1")
+                api("com.ditchoom:buffer:$bufferVersion")
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-js:1.6.4")
                 implementation("org.jetbrains.kotlinx:kotlinx-html-js:0.8.0")
             }

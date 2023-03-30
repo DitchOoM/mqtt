@@ -59,7 +59,7 @@ fun PublishButtonAndDialog(client: MqttClient) {
                     if (hasPayload) {
                         inputTextField("Payload", payload) { payload = it }
                     }
-                    if (client.controlPacketFactory().protocolVersion == 5) {
+                    if (client.packetFactory.protocolVersion == 5) {
                         checkBoxRow("Show MQTT 5 Extra Props", showMqtt5Extras) { showMqtt5Extras = it }
                         if (showMqtt5Extras) {
                             checkBoxRow(
@@ -97,13 +97,13 @@ fun PublishButtonAndDialog(client: MqttClient) {
                     onClick = {
                         val topic = Topic.fromOrNull(topicName, Topic.Type.Name)
                         if (topic == null) {
-                            println("invalid topic $topicName")
+                            println("\r\ninvalid topic $topicName")
                             return@Button
                         }
                         val payloadValue = if (hasPayload) payload.toReadBuffer(Charset.UTF8) else null
                         val qosInt = qosString.toIntOrNull()
                         if (qosInt == null || qosInt < 0 || qosInt > 2) {
-                            println("invalid qos $qosString")
+                            println("\r\ninvalid qos $qosString")
                             return@Button
                         }
                         val qos = when (qosInt) {
@@ -133,7 +133,7 @@ fun PublishButtonAndDialog(client: MqttClient) {
                             null
                         }
                         val contentTypeValue = if (hasContentType) contentType else null
-                        val pub = client.controlPacketFactory().publish(
+                        val pub = client.packetFactory.publish(
                             qos = qos,
                             topicName = topic,
                             payload = payloadValue,

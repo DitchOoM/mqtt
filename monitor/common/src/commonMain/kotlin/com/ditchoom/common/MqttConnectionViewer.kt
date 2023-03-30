@@ -6,25 +6,24 @@ import androidx.compose.material.Button
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
-import com.ditchoom.mqtt.client.MqttService
+import com.ditchoom.mqtt.client.LocalMqttService
+import com.ditchoom.mqtt.client.MqttClient
 import com.ditchoom.mqtt.connection.MqttBroker
 import kotlinx.coroutines.launch
 
 @Composable
 fun MqttConnectionViewer(
-    broker: Pair<MqttBroker, MqttService>,
+    client: MqttClient,
     mqttLogs: String,
     onDisconnectButtonSelected: () -> Unit
 ) {
-    val (mqttBroker, service) = broker
-    val client = service.getClient(mqttBroker) ?: return
     val scope = rememberCoroutineScope()
     LazyColumn {
         item {
             Row {
                 Button(onClick = {
                     scope.launch {
-                        service.stop(mqttBroker)
+                        client.shutdown(true)
                     }
                     onDisconnectButtonSelected()
                 }) {
@@ -36,7 +35,7 @@ fun MqttConnectionViewer(
             }
         }
         item {
-            Text("\r\nReady ${broker.first.connectionOps.first()} ${broker.first.connectionRequest}\r\n$mqttLogs")
+            Text("\r\nReady ${client.broker.connectionOps.first()} ${client.broker.connectionRequest}\r\n$mqttLogs")
         }
     }
 }

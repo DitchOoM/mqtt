@@ -686,6 +686,7 @@ class SqlDatabasePersistence(driver: SqlDriver) : Persistence {
     override suspend fun writeUnsubGetPacketId(broker: MqttBroker, unsub: IUnsubscribeRequest): Int {
         return withContext(dispatcher) {
             val unsubscribe = unsub as UnsubscribeRequest
+
             packetIdMutex.withLock {
                 unsubQueries.transactionWithResult {
                     val packetId = brokerQueries.nextPacketId(broker.identifier.toLong()).executeAsOne()

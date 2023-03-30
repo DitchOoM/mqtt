@@ -1,7 +1,9 @@
 package com.ditchoom.mqtt.client.ipc
 
 import com.ditchoom.buffer.AllocationZone
+import com.ditchoom.buffer.PlatformBuffer
 import com.ditchoom.mqtt.Persistence
+import com.ditchoom.mqtt.client.MqttClient
 import com.ditchoom.mqtt.client.PublishOperation
 import com.ditchoom.mqtt.client.SubscribeOperation
 import com.ditchoom.mqtt.client.UnsubscribeOperation
@@ -21,20 +23,24 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
-class IPCMqttClient(
-    private val scope: CoroutineScope,
-    private val broker: MqttBroker,
-    private val persistence: Persistence,
-    private val emitMessage: suspend (IPCMqttMessage) -> Unit
-) {
-    private val incomingPackets = MutableSharedFlow<ControlPacket>(2, onBufferOverflow = BufferOverflow.DROP_OLDEST)
-    private val sentPackets = MutableSharedFlow<ControlPacket>(2, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+abstract class MqttClientIPCClient(
+    protected val scope: CoroutineScope,
+    override val broker: MqttBroker,
+    private val persistence: Persistence
+) : MqttClient {
+    private val _incomingPackets = MutableSharedFlow<ControlPacket>(2, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    val incomingPackets: SharedFlow<ControlPacket> = _incomingPackets
+    private val _sentPackets = MutableSharedFlow<ControlPacket>(2, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    val sendPackets: SharedFlow<ControlPacket> = _sentPackets
+    protected open suspend fun sendSubscribe(packetId: Int) {}
 
-    fun subscribe(sub: ISubscribeRequest) = scope.async {
+    override suspend fun subscribe(sub: ISubscribeRequest): SubscribeOperation {
         val subscribe = persistence.writeSubUpdatePacketIdAndSimplifySubscriptions(broker, sub)
-        val suback = async {
+        val suback = scope.async {
             val packet =
                 awaitControlPacketReceivedMatching(
                     subscribe.packetIdentifier,
@@ -42,41 +48,24 @@ class IPCMqttClient(
                 )
             packet as ISubscribeAcknowledgement
         }
-        emitMessage(
-            IPCMqttMessage.SendControlPacket(
-                broker.identifier,
-                subscribe.controlPacketFactory.protocolVersion,
-                subscribe.controlPacketValue,
-                subscribe.packetIdentifier
-            )
-        )
-        SubscribeOperation(subscribe.packetIdentifier, suback)
+        sendSubscribe(subscribe.packetIdentifier)
+        return SubscribeOperation(subscribe.packetIdentifier, suback)
     }
 
-    fun publish(pub: IPublishMessage) = scope.async {
-        val qos0Pub = if (pub.qualityOfService == QualityOfService.AT_MOST_ONCE) {
-            pub.serialize(AllocationZone.AndroidSharedMemory)
-        } else {
-            null
-        }
-        val publishPacketId = if (qos0Pub != null) {
+    protected open suspend fun sendPublish(packetId: Int, pubBuffer: PlatformBuffer) {}
+
+    override suspend fun publish(pub: IPublishMessage): PublishOperation {
+        val pubBuffer = pub.serialize(AllocationZone.SharedMemory)
+        val publishPacketId = if (pub.qualityOfService == QualityOfService.AT_MOST_ONCE) {
             NO_PACKET_ID
         } else {
             persistence.writePubGetPacketId(broker, pub)
         }
-        emitMessage(
-            IPCMqttMessage.SendControlPacket(
-                broker.identifier,
-                pub.controlPacketFactory.protocolVersion,
-                pub.controlPacketValue,
-                publishPacketId,
-                qos0Pub
-            )
-        )
-        when (pub.qualityOfService) {
+        sendPublish(publishPacketId, pubBuffer)
+        return when (pub.qualityOfService) {
             QualityOfService.AT_MOST_ONCE -> PublishOperation.QoSAtMostOnceComplete
             QualityOfService.AT_LEAST_ONCE -> {
-                val puback = async {
+                val puback = scope.async {
                     awaitControlPacketReceivedMatching(publishPacketId, IPublishAcknowledgment.controlPacketValue)
                         as IPublishAcknowledgment
                 }
@@ -84,13 +73,13 @@ class IPCMqttClient(
             }
 
             QualityOfService.EXACTLY_ONCE -> {
-                val pubrec = async {
-                    awaitControlPacketReceivedMatching(publishPacketId, IPublishAcknowledgment.controlPacketValue)
+                val pubrec = scope.async {
+                    awaitControlPacketReceivedMatching(publishPacketId, IPublishReceived.controlPacketValue)
                         as IPublishReceived
                 }
-                val pubcomp = async {
+                val pubcomp = scope.async {
                     pubrec.await()
-                    awaitControlPacketReceivedMatching(publishPacketId, IPublishAcknowledgment.controlPacketValue)
+                    awaitControlPacketReceivedMatching(publishPacketId, IPublishComplete.controlPacketValue)
                         as IPublishComplete
                 }
                 PublishOperation.QoSExactlyOnce(publishPacketId, pubrec, pubcomp)
@@ -98,34 +87,30 @@ class IPCMqttClient(
         }
     }
 
-    fun unsubscribe(unsub: IUnsubscribeRequest) = scope.async {
+    protected open suspend fun sendUnsubscribe(packetId: Int) = Unit
+
+    override suspend fun unsubscribe(unsub: IUnsubscribeRequest): UnsubscribeOperation {
         val packetId = persistence.writeUnsubGetPacketId(broker, unsub)
-        val unsuback = async {
+        val unsuback = scope.async {
             val packet =
                 awaitControlPacketReceivedMatching(packetId, IUnsubscribeAcknowledgment.controlPacketValue)
             packet as IUnsubscribeAcknowledgment
         }
-        emitMessage(
-            IPCMqttMessage.SendControlPacket(
-                broker.identifier,
-                unsub.controlPacketFactory.protocolVersion,
-                unsub.controlPacketValue,
-                packetId
-            )
-        )
-        UnsubscribeOperation(packetId, unsuback)
+        sendUnsubscribe(packetId)
+        return UnsubscribeOperation(packetId, unsuback)
     }
 
     private suspend fun awaitControlPacketReceivedMatching(packetId: Int, controlPacketValue: Byte): ControlPacket {
-        return incomingPackets.first { it.packetIdentifier == packetId && it.controlPacketValue == controlPacketValue }
-    }
-    internal suspend fun onLog(log: String) {
-    }
-    internal suspend fun onIncomingControlPacket(c: ControlPacket) {
-        incomingPackets.emit(c)
+        return _incomingPackets.first {
+            it.packetIdentifier == packetId && it.controlPacketValue == controlPacketValue
+        }
     }
 
-    internal suspend fun onControlPacketSent(c: ControlPacket) {
-        sentPackets.emit(c)
+    protected fun onIncomingControlPacket(c: ControlPacket) {
+        scope.launch { _incomingPackets.emit(c) }
+    }
+
+    protected fun onControlPacketSent(c: ControlPacket) {
+        scope.launch { _sentPackets.emit(c) }
     }
 }

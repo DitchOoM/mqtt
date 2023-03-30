@@ -92,7 +92,7 @@ kotlin {
         }
         val jsMain by getting {
             dependencies {
-                implementation("org.jetbrains.kotlin-wrappers:kotlin-browser:1.0.0-pre.484")
+                implementation("org.jetbrains.kotlin-wrappers:kotlin-browser:1.0.0-pre.521")
             }
         }
         val macosX64Main by getting

@@ -84,6 +84,7 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
             propStore.put(PersistableUserProperty(broker.identifier, 1, p.packetIdentifier, key, value))
         }
         commitTransaction(tx, "ackPubReceivedQueuePubRelease")
+        isQueueClear(broker, true)
     }
 
     override suspend fun ackPubRelease(
@@ -214,11 +215,11 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
                 cont.resume(Unit)
             }
             tx.onerror = {
-                console.error("failed to commit tx $logName", tx)
+                console.error("failed to commit tx $logName", tx, it)
                 cont.resumeWithException(Exception(tx.error))
             }
             tx.onabort = {
-                console.error("failed to commit tx because of abort $logName", tx)
+                console.error("failed to commit tx because of abort $logName", tx, it)
                 cont.resumeWithException(Exception(tx.error))
             }
             cont.invokeOnCancellation {
@@ -231,7 +232,6 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
     }
 
     override suspend fun allBrokers(): Collection<MqttBroker> {
-        console.log("all brokers v5")
         val tx = db.transaction(arrayOf(Broker, UserProperties), IDBTransactionMode.readonly)
         try {
             val brokerStore = tx.objectStore(Broker)
@@ -270,8 +270,6 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
             val result = request { store.get(arrayOf(identifier)) } ?: return null
             val propStore = tx.objectStore(UserProperties)
             val index = propStore.index(PropPacketIdIndex)
-
-            console.log("brokers result $identifier v5", result)
             val d = result.asDynamic()
             val userProperties = request { index.getAll(arrayOf(d.id as Int, -1, 0)) }
                 .map { Pair(it.asDynamic().key as String, it.asDynamic().value as String) }
@@ -308,7 +306,7 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
                 broker.identifier,
                 replyMessage.packetIdentifier,
                 replyMessage.controlPacketValue,
-                0, // TODO: How this this correct?
+                0,
                 p.variable.reasonCode.byte.toInt(),
                 p.variable.properties.reasonString
             )
@@ -318,6 +316,7 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
             propStore.put(PersistableUserProperty(broker.identifier, 0, p.packetIdentifier, key, value))
         }
         commitTransaction(tx, "incomingPublish")
+        isQueueClear(broker, true)
     }
 
     override suspend fun messagesToSendOnReconnect(broker: MqttBroker): Collection<ControlPacket> {

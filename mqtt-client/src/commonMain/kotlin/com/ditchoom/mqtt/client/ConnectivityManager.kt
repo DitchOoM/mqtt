@@ -1,5 +1,6 @@
 package com.ditchoom.mqtt.client
 
+import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.mqtt.Persistence
 import com.ditchoom.mqtt.connection.MqttBroker
 import com.ditchoom.mqtt.controlpacket.ControlPacket
@@ -20,7 +21,10 @@ import kotlin.time.Duration.Companion.seconds
 class ConnectivityManager(
     internal val scope: CoroutineScope,
     internal val persistence: Persistence,
-    internal val broker: MqttBroker
+    internal val broker: MqttBroker,
+    allocateSharedMemoryInitial: Boolean = false,
+    private val sentMessage: (ReadBuffer) -> Unit = {},
+    private val incomingMessage: (UByte, Int, ReadBuffer) -> Unit = { _, _, _ -> }
 ) {
     var connectionCount = 0L
         private set
@@ -32,20 +36,10 @@ class ConnectivityManager(
             currentSocketSession?.observer = value
             field = value
         }
-    var sentMessage: (Collection<ControlPacket>) -> Unit = {}
-        set(value) {
-            currentSocketSession?.sentMessage = value
-            field = value
-        }
-    var incomingMessage: (ControlPacket) -> Unit = {}
-        set(value) {
-            currentSocketSession?.incomingMessage = value
-            field = value
-        }
 
     private var incomingProcessingJob: Job? = null
     private var isStopped = false
-    private val readChannel = MutableSharedFlow<ControlPacket>()
+    private val readChannel = MutableSharedFlow<ControlPacket>(1)
     private val writeChannel = Channel<Collection<ControlPacket>>(Channel.BUFFERED)
     private val connectionBroadcastChannelInternal = MutableSharedFlow<IConnectionAcknowledgment>()
     val connectionBroadcastChannel: SharedFlow<IConnectionAcknowledgment> = connectionBroadcastChannelInternal
@@ -53,6 +47,15 @@ class ConnectivityManager(
     private var currentConnectionJob: Job? = null
     val processor = ControlPacketProcessor(scope, broker, readChannel, writeChannel, persistence)
     internal var currentSocketSession: MqttSocketSession? = null
+
+    var allocateSharedMemory: Boolean = allocateSharedMemoryInitial
+        set(value) {
+            field = value
+            currentSocketSession?.allocateSharedMemory = value
+        }
+        get() {
+            return currentSocketSession?.allocateSharedMemory ?: field
+        }
 
     fun currentConnack(): IConnectionAcknowledgment? = currentSocketSession?.connectionAcknowledgement
 
@@ -131,11 +134,7 @@ class ConnectivityManager(
                         connectionOp
                     )
                     val socketSession =
-                        MqttSocketSession.open(broker.identifier, broker.connectionRequest, connectionOp, observer)
-                    socketSession.incomingMessage = incomingMessage
-                    socketSession.sentMessage = sentMessage
-                    sentMessage(listOf(broker.connectionRequest))
-                    incomingMessage(socketSession.connectionAcknowledgement)
+                        MqttSocketSession.open(broker.identifier, broker.connectionRequest, connectionOp, allocateSharedMemory, observer, sentMessage, incomingMessage)
                     if (socketSession.connectionAcknowledgement.isSuccessful) {
                         connectionCount++
                         socketSession

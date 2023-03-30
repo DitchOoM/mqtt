@@ -16,7 +16,7 @@ fun <T> runTestInternal(
                 block()
             }
         } catch (e: UnsupportedOperationException) {
-            println("unsupported operation, skipping")
+            println("\r\nunsupported operation, skipping")
             e.printStackTrace()
         } catch (e: Exception) {
             e.printStackTrace()

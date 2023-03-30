@@ -84,8 +84,7 @@ class ControlPacketProcessor(
         controlPacketValue: Byte
     ): R {
         return readChannel
-            .transformWhile<ControlPacket, R> {
-//                println("\r\nawaitIncomingPacketId $packetIdentifier ${it.packetIdentifier} ${it.controlPacketValue == controlPacketValue} ${it.packetIdentifier.toString() == packetIdentifier.toString()} $it")
+            .transformWhile {
                 if (it.controlPacketValue == controlPacketValue && it.packetIdentifier.toString() == packetIdentifier.toString()) {
                     emit(it as R)
                     false

@@ -8,7 +8,7 @@ actual fun <T> block(body: suspend CoroutineScope.() -> T) {
             try {
                 body()
             } catch (e: UnsupportedOperationException) {
-                println("Test hit unsupported code, ignoring")
+                println("\r\nTest hit unsupported code, ignoring")
             }
         }
     }

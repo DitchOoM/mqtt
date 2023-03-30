@@ -43,10 +43,10 @@ fun UnsubscriptionButtonAndDialog(client: MqttClient) {
                     onClick = {
                         val topic = Topic.fromOrNull(topicFilter, Topic.Type.Filter)
                         if (topic == null) {
-                            println("invalid topic $topicFilter")
+                            println("\r\ninvalid topic $topicFilter")
                             return@Button
                         }
-                        val unsub = client.controlPacketFactory().unsubscribe(
+                        val unsub = client.packetFactory.unsubscribe(
                             topic
                         )
                         scope.launch { client.unsubscribe(unsub) }

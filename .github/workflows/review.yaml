@@ -4,6 +4,8 @@ on:
     types:
       - synchronize
       - opened
+    paths-ignore:
+      - '**.md'
 jobs:
   review:
     runs-on: ${{ matrix.os }}

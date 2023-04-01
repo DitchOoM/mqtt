@@ -14,14 +14,10 @@ val libraryVersion = if (System.getenv("GITHUB_RUN_NUMBER") != null) {
     "${libraryVersionPrefix}0-SNAPSHOT"
 }
 
-repositories {
-    jcenter()
-}
 
 dependencies {
     api(project(":monitor:common"))
-    implementation("androidx.activity:activity-compose:1.6.1")
-
+    implementation("androidx.activity:activity-compose:1.7.0")
     implementation("androidx.startup:startup-runtime:1.1.1")
 }
 

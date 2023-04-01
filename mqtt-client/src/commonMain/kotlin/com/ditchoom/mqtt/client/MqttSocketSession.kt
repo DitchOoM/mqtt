@@ -106,13 +106,12 @@ class MqttSocketSession private constructor(
                         val wsSocketConnectionOptions = WebSocketConnectionOptions(
                             connectionOps.host,
                             connectionOps.port,
-                            connectionOps.websocketEndpoint,
-                            connectionOps.protocols,
+                            connectionOps.tls,
                             connectionOps.connectionTimeout,
                             connectionOps.readTimeout,
                             connectionOps.writeTimeout,
-                            connectionOps.tls,
-                            connectionOps.bufferFactory
+                            connectionOps.websocketEndpoint,
+                            connectionOps.protocols
                         )
                         val client = WebSocketClient.allocate(
                             wsSocketConnectionOptions,

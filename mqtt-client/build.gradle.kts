@@ -75,11 +75,9 @@ kotlin {
         val atomicfuVersion = extra["atomicfu.version"] as String
         val commonMain by getting {
             dependencies {
-                api("com.ditchoom:buffer:$bufferVersion") {
-                    version { strictly(bufferVersion) }
-                }
-                compileOnly(project(":models-v4"))
-                compileOnly(project(":models-v5"))
+                api("com.ditchoom:buffer:$bufferVersion")
+                api(project(":models-v4"))
+                api(project(":models-v5"))
                 implementation("com.ditchoom:socket:$socketVersion")
                 implementation("com.ditchoom:websocket:$websocketVersion")
                 api(project(":models-base"))
@@ -138,7 +136,6 @@ kotlin {
         val jsMain by getting {
             dependsOn(commonMain)
             dependencies {
-
                 implementation("org.jetbrains.kotlin-wrappers:kotlin-js:1.0.0-pre.521")
             }
         }

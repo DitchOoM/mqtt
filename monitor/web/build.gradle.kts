@@ -12,7 +12,11 @@ val libraryVersion = if (System.getenv("GITHUB_RUN_NUMBER") != null) {
     "${libraryVersionPrefix}0-SNAPSHOT"
 }
 
-repositories { maven { url = uri("https://maven.pkg.jetbrains.space/public/p/kotlinx-html/maven") } }
+repositories {
+    maven { url = uri("https://maven.pkg.jetbrains.space/public/p/kotlinx-html/maven") }
+    mavenCentral()
+    mavenLocal()
+}
 
 kotlin {
     js(IR) {

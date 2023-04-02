@@ -15,10 +15,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
+import com.ditchoom.mqtt.client.LocalMqttService
+import com.ditchoom.mqtt.client.MqttClient
 import com.ditchoom.mqtt.client.MqttService
 import com.ditchoom.mqtt.connection.MqttBroker
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
@@ -30,51 +33,51 @@ import kotlin.random.nextUInt
 import kotlin.time.Duration.Companion.seconds
 
 @Composable
-fun App(androidContext: Any? = null) {
-    var serviceVar by remember { mutableStateOf<MqttService?>(null) }
+fun App(service: LocalMqttService) {
     var brokers by remember { mutableStateOf<List<MqttBroker>>(mutableListOf()) }
-    var selectedBroker by remember { mutableStateOf<MqttBroker?>(null) }
+    var selectedClient by remember { mutableStateOf<MqttClient?>(null) }
     var mqttLogs by remember { mutableStateOf("") }
-    val service = serviceVar
-    val selectedBrokerLocal = selectedBroker
-    if (service == null) {
-        Text("Loading")
-        LaunchedEffect(androidContext) {
-            println("android context $androidContext")
-            val serviceLocal = MqttService.buildService(androidContext)
-            serviceLocal.assignObservers(LoggingObserver { brokerId, log ->
-                mqttLogs += "$log\r\n"
-            })
-            brokers = serviceLocal.allMqttBrokers().toList()
-            serviceVar = serviceLocal
-        }
-    } else if (selectedBrokerLocal != null) {
-        MqttConnectionViewer(Pair(selectedBrokerLocal, service), mqttLogs) {
-            selectedBroker = null
+    val selectedClientLocal = selectedClient
+    LaunchedEffect(service) {
+        service.assignObservers(LoggingObserver { brokerId, log ->
+            mqttLogs += "$log\r\n"
+        })
+        brokers = service.allBrokers().toList()
+    }
+    if (selectedClientLocal != null) {
+        MqttConnectionViewer(selectedClientLocal, mqttLogs) {
+            selectedClient = null
         }
     } else if (brokers.isNotEmpty()) {
-        service.start()
-        showBrokers(brokers.toList()) { selectedBroker = it }
+//        service.start()
+        showBrokers(service, brokers.toList()) {
+            selectedClient = it
+        }
     } else {
         ConnectionBuilder(service, mqttLogs) {
             if (it != null) {
-                brokers = brokers + it
-                println("add broker $it")
+                brokers = brokers + it.broker
+                println("\r\nadd broker $it")
+                selectedClient = it
             }
-            selectedBroker = it
         }
     }
 }
 
 @Composable
 fun showBrokers(
+    service: MqttService,
     brokers: List<MqttBroker>,
-    onBrokerSelected: (MqttBroker) -> Unit
+    onBrokerSelected: (MqttClient) -> Unit
 ) {
+    val scope = rememberCoroutineScope()
     LazyColumn {
         items(brokers) {
             Button(onClick = {
-                onBrokerSelected(it)
+                scope.launch {
+                    val client = service.getClient(it) ?: return@launch
+                    onBrokerSelected(client)
+                }
             }) {
                 Text(it.connectionOps.joinToString() + "\r\n" + it.connectionRequest.toString())
             }
@@ -84,14 +87,14 @@ fun showBrokers(
 
 
 @Composable
-fun ConnectionBuilder(service: MqttService, mqttLogs: String, onBrokerSelected: (MqttBroker?) -> Unit) {
+fun ConnectionBuilder(service: LocalMqttService, mqttLogs: String, onBrokerSelected: (MqttClient?) -> Unit) {
     val platformName = getPlatformName()
     var mqttVersionPicked by remember { mutableStateOf(false) }
     var mqttVersion by remember { mutableStateOf(4) }
     var connectionOptions by remember {
         mutableStateOf<MqttConnectionOptions>(
             MqttConnectionOptions.SocketConnection(
-                "localhost",
+                if (platformName == "Android") "10.0.2.2" else "localhost",
                 1883,
                 false,
                 5.seconds,
@@ -157,11 +160,12 @@ fun ConnectionBuilder(service: MqttService, mqttLogs: String, onBrokerSelected: 
         }
         val options = connectionOptions
         LaunchedEffect(connect, options) {
-            println("launch")
-            val persistedBroker = service.addMqttBroker(listOf(connectionOptions), connect)
+            println("\r\nlaunch")
+            val persistedBroker = service.addBroker(listOf(connectionOptions), connect)
             service.start()
+            val client = service.getClient(persistedBroker) ?: return@LaunchedEffect
             launch(Dispatchers.Main) {
-                onBrokerSelected(persistedBroker)
+                onBrokerSelected(client)
             }
         }
     }

@@ -10,7 +10,7 @@ pluginManagement {
         val kotlinVersion = extra["kotlin.version"] as String
         val androidGradleVersion = extra["agp.version"] as String
         val sqldelightVersion = extra["sqldelight.version"] as String
-        val composeVersion = extra["compose.version"] as String
+        val composePluginVersion = extra["compose.plugin.version"] as String
         kotlin("multiplatform").version(kotlinVersion)
         kotlin("android").version(kotlinVersion)
         kotlin("native.cocoapods").version(kotlinVersion)
@@ -19,7 +19,7 @@ pluginManagement {
         id("io.codearte.nexus-staging").version(extra["nexus-staging.version"] as String)
         id("org.jlleitschuh.gradle.ktlint").version(extra["ktlint.version"] as String)
         id("app.cash.sqldelight").version(sqldelightVersion)
-        id("org.jetbrains.compose").version(composeVersion)
+        id("org.jetbrains.compose").version(composePluginVersion)
     }
 }
 

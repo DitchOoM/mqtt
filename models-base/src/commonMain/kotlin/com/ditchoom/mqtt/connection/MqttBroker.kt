@@ -7,6 +7,8 @@ data class MqttBroker(
     val connectionOps: Collection<MqttConnectionOptions>,
     val connectionRequest: IConnectionRequest
 ) {
+    val brokerId = identifier
+    val protocolVersion = connectionRequest.protocolVersion.toByte()
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

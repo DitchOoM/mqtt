@@ -8,10 +8,12 @@ import kotlinx.coroutines.Dispatchers
 import web.idb.IDBFactory
 
 actual suspend fun newDefaultPersistence(androidContext: Any?, name: String, inMemory: Boolean): Persistence {
+
     val indexedDb =
         try {
-            js("window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB || window.shimIndexedDB") as IDBFactory
+            js("indexedDB || window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB || window.shimIndexedDB") as IDBFactory
         } catch (e: ReferenceError) {
+            console.warn("Failed to reference indexedDB, defaulting to InMemoryPersistence for mqtt 5")
             return InMemoryPersistence()
         }
     return IDBPersistence.idbPersistence(indexedDb, name)

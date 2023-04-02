@@ -2,10 +2,14 @@ name: "Android Emulator Integration Test"
 on:
   push:
     branches: [ main ]
+    paths-ignore:
+      - '**.md'
   pull_request:
     types:
       - synchronize
       - opened
+    paths-ignore:
+      - '**.md'
 jobs:
   review:
     runs-on: ${{ matrix.os }}

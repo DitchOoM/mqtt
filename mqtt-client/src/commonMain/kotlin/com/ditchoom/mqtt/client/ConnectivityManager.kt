@@ -1,5 +1,6 @@
 package com.ditchoom.mqtt.client
 
+import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.mqtt.Persistence
 import com.ditchoom.mqtt.connection.MqttBroker
 import com.ditchoom.mqtt.controlpacket.ControlPacket
@@ -19,8 +20,11 @@ import kotlin.time.Duration.Companion.seconds
 
 class ConnectivityManager(
     internal val scope: CoroutineScope,
-    private val persistence: Persistence,
-    internal val broker: MqttBroker
+    internal val persistence: Persistence,
+    internal val broker: MqttBroker,
+    allocateSharedMemoryInitial: Boolean = false,
+    private val sentMessage: (ReadBuffer) -> Unit = {},
+    private val incomingMessage: (UByte, Int, ReadBuffer) -> Unit = { _, _, _ -> }
 ) {
     var connectionCount = 0L
         private set
@@ -35,14 +39,23 @@ class ConnectivityManager(
 
     private var incomingProcessingJob: Job? = null
     private var isStopped = false
-    private val readChannel = MutableSharedFlow<ControlPacket>()
+    private val readChannel = MutableSharedFlow<ControlPacket>(1)
     private val writeChannel = Channel<Collection<ControlPacket>>(Channel.BUFFERED)
     private val connectionBroadcastChannelInternal = MutableSharedFlow<IConnectionAcknowledgment>()
     val connectionBroadcastChannel: SharedFlow<IConnectionAcknowledgment> = connectionBroadcastChannelInternal
 
     private var currentConnectionJob: Job? = null
     val processor = ControlPacketProcessor(scope, broker, readChannel, writeChannel, persistence)
-    private var currentSocketSession: MqttSocketSession? = null
+    internal var currentSocketSession: MqttSocketSession? = null
+
+    var allocateSharedMemory: Boolean = allocateSharedMemoryInitial
+        set(value) {
+            field = value
+            currentSocketSession?.allocateSharedMemory = value
+        }
+        get() {
+            return currentSocketSession?.allocateSharedMemory ?: field
+        }
 
     fun currentConnack(): IConnectionAcknowledgment? = currentSocketSession?.connectionAcknowledgement
 
@@ -59,14 +72,27 @@ class ConnectivityManager(
                 val result = buildConnectionShouldRetry(this)
                 processor.cancelPingTimer()
                 if (!result.shouldContinueReconnecting) {
-                    observer?.stopReconnecting(broker.identifier, result)
+                    observer?.stopReconnecting(
+                        broker.identifier,
+                        broker.connectionRequest.protocolVersion.toByte(),
+                        result
+                    )
                     break
                 }
                 currentDelay = if (result.shouldResetTimer || isStopped) {
-                    observer?.reconnectAndResetTimer(broker.identifier, result)
+                    observer?.reconnectAndResetTimer(
+                        broker.identifier,
+                        broker.connectionRequest.protocolVersion.toByte(),
+                        result
+                    )
                     initialDelay
                 } else {
-                    observer?.reconnectIn(broker.identifier, currentDelay, result)
+                    observer?.reconnectIn(
+                        broker.identifier,
+                        broker.connectionRequest.protocolVersion.toByte(),
+                        currentDelay,
+                        result
+                    )
                     delay(currentDelay)
                     (currentDelay * factor).coerceAtMost(maxDelay)
                 }
@@ -91,7 +117,7 @@ class ConnectivityManager(
             writeChannel.close()
             currentConnectionJob?.cancel()
             currentConnectionJob = null
-            observer?.shutdown()
+            observer?.shutdown(broker.identifier, broker.connectionRequest.protocolVersion.toByte())
         }
     }
 
@@ -101,10 +127,24 @@ class ConnectivityManager(
             val session = try {
                 withTimeout(connectionOp.connectionTimeout) {
                     connectionAttempts++
-                    observer?.openSocketSession(broker.connectionRequest, connectionOp)
+                    observer?.openSocketSession(
+                        broker.identifier,
+                        broker.connectionRequest.protocolVersion.toByte(),
+                        broker.connectionRequest,
+                        connectionOp
+                    )
                     val socketSession =
-                        MqttSocketSession.open(broker.identifier, broker.connectionRequest, connectionOp, observer)
+                        MqttSocketSession.open(
+                            broker.identifier,
+                            broker.connectionRequest,
+                            connectionOp,
+                            allocateSharedMemory,
+                            observer,
+                            sentMessage,
+                            incomingMessage
+                        )
                     if (socketSession.connectionAcknowledgement.isSuccessful) {
+                        connectionCount++
                         socketSession
                     } else {
                         null
@@ -116,13 +156,19 @@ class ConnectivityManager(
             } ?: continue
             return session
         }
-        throw UnavailableMqttServiceException(broker.connectionOps, lastException)
+        val s = broker.connectionOps.joinToString(
+            prefix = "Failed to connect to services:",
+            postfix = (" " + lastException?.message)
+        )
+        throw UnavailableMqttServiceException(
+            broker.connectionOps,
+            Exception("Failed to connect to services: $s " + lastException?.message)
+        )
     }
 
     suspend fun connectOnce() {
         val socketSession = connectMqttSocketSessionOrThrow()
         currentSocketSession = socketSession
-        connectionCount++
         prepareSocketSession(socketSession)
         incomingProcessingJob = scope.launch {
             processor.processIncomingMessages()
@@ -132,7 +178,11 @@ class ConnectivityManager(
                 val packetToWrite = try {
                     writeChannel.receive()
                 } catch (e: Exception) {
-                    observer?.connectOnceWriteChannelReceiveException(broker.identifier, e)
+                    observer?.connectOnceWriteChannelReceiveException(
+                        broker.identifier,
+                        broker.connectionRequest.protocolVersion.toByte(),
+                        e
+                    )
                     shutdown()
                     return@launch
                 }
@@ -140,7 +190,11 @@ class ConnectivityManager(
                     socketSession.write(packetToWrite)
                 } catch (e: Exception) {
                     // ignore
-                    observer?.connectOnceSocketSessionWriteException(broker.identifier, e)
+                    observer?.connectOnceSocketSessionWriteException(
+                        broker.identifier,
+                        broker.connectionRequest.protocolVersion.toByte(),
+                        e
+                    )
                     shutdown()
                     return@launch
                 }
@@ -199,7 +253,6 @@ class ConnectivityManager(
                     msg = e.message
                 )
             }
-            connectionCount++
             currentSocketSession = socketSession
             val endReason = prepareSocketSession(socketSession)
             if (endReason != null) {
@@ -248,6 +301,7 @@ class ConnectivityManager(
     suspend fun sendDisconnect() {
         val disconnect = broker.connectionRequest.controlPacketFactory.disconnect()
         val socketSession = currentSocketSession
+        currentSocketSession = null
         if (socketSession != null && socketSession.isOpen()) {
             try {
                 socketSession.write(listOf(disconnect))

@@ -1,5 +1,6 @@
 package com.ditchoom.mqtt.client
 
+import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.data.Reader
 import com.ditchoom.mqtt.MalformedInvalidVariableByteInteger
 import com.ditchoom.mqtt.controlpacket.ControlPacket
@@ -16,30 +17,33 @@ class BufferedControlPacketReader(
     private val factory: ControlPacketFactory,
     readTimeout: Duration,
     private val reader: Reader,
-    var observer: Observer? = null
+    var observer: Observer? = null,
+    private val incomingMessage: (UByte, Int, ReadBuffer) -> Unit
 ) {
     private val inputStream = SuspendingSocketInputStream(readTimeout, reader)
-
     val incomingControlPackets = flow {
-        while (reader.isOpen()) {
-            try {
-                val p = readControlPacket()
-                emit(p)
-                if (p is IDisconnectNotification) {
+        try {
+            while (reader.isOpen()) {
+                try {
+                    val p = readControlPacket()
+                    emit(p)
+                    if (p is IDisconnectNotification) {
+                        return@flow
+                    }
+                } catch (e: Exception) {
                     return@flow
                 }
-            } catch (e: Exception) {
-                return@flow
             }
+        } finally {
+            observer?.onReaderClosed(brokerId, factory.protocolVersion.toByte())
         }
-        observer?.onReaderClosed(brokerId)
     }
 
     fun isOpen() = reader.isOpen()
 
     internal suspend fun readControlPacket(): ControlPacket {
         val byte1 = inputStream.readUnsignedByte()
-        observer?.readFirstByteFromStream(brokerId)
+        observer?.readFirstByteFromStream(brokerId, factory.protocolVersion.toByte())
         val remainingLength = readVariableByteInteger()
         val buffer = if (remainingLength < 1) {
             EMPTY_BUFFER
@@ -51,7 +55,9 @@ class BufferedControlPacketReader(
             byte1,
             remainingLength
         )
-        observer?.incomingPacket(brokerId, packet)
+        buffer.resetForRead()
+        incomingMessage(byte1, remainingLength, buffer)
+        observer?.incomingPacket(brokerId, factory.protocolVersion.toByte(), packet)
         return packet
     }
 

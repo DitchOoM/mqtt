@@ -1,8 +1,11 @@
 package com.ditchoom.mqtt.controlpacket
 
+import com.ditchoom.buffer.AllocationZone
 import com.ditchoom.buffer.Charset
+import com.ditchoom.buffer.PlatformBuffer
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
+import com.ditchoom.buffer.allocate
 import com.ditchoom.mqtt.MalformedInvalidVariableByteInteger
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
 import kotlin.experimental.and
@@ -48,6 +51,13 @@ interface ControlPacket {
     fun payload(writeBuffer: WriteBuffer) {}
     fun packetSize() = 2 + remainingLength()
     fun remainingLength() = 0
+
+    fun serialize(allocationZone: AllocationZone = AllocationZone.Heap): PlatformBuffer {
+        val size = packetSize()
+        val buffer = PlatformBuffer.allocate(size, allocationZone)
+        serialize(buffer)
+        return buffer
+    }
 
     fun serialize(writeBuffer: WriteBuffer) {
         fixedHeader(writeBuffer)

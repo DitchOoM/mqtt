@@ -20,7 +20,9 @@ interface Persistence {
     suspend fun activeSubscriptions(broker: MqttBroker, includePendingUnsub: Boolean = false): Map<Topic, ISubscription>
     suspend fun clearMessages(broker: MqttBroker)
     suspend fun writePubGetPacketId(broker: MqttBroker, pub: IPublishMessage): Int
+    suspend fun getPubWithPacketId(broker: MqttBroker, packetId: Int): IPublishMessage?
     suspend fun writeUnsubGetPacketId(broker: MqttBroker, unsub: IUnsubscribeRequest): Int
+    suspend fun getUnsubWithPacketId(broker: MqttBroker, packetId: Int): IUnsubscribeRequest?
     suspend fun messagesToSendOnReconnect(broker: MqttBroker): Collection<ControlPacket>
     suspend fun incomingPublish(broker: MqttBroker, packet: IPublishMessage, replyMessage: ControlPacket)
     suspend fun ackPub(broker: MqttBroker, packet: IPublishAcknowledgment)
@@ -29,6 +31,8 @@ interface Persistence {
         broker: MqttBroker,
         sub: ISubscribeRequest
     ): ISubscribeRequest
+
+    suspend fun getSubWithPacketId(broker: MqttBroker, packetId: Int): ISubscribeRequest?
 
     suspend fun ackPubReceivedQueuePubRelease(
         broker: MqttBroker,
@@ -50,6 +54,9 @@ interface Persistence {
     ): MqttBroker
 
     suspend fun allBrokers(): Collection<MqttBroker>
+
+    suspend fun brokerWithId(identifier: Int): MqttBroker?
+
     suspend fun removeBroker(identifier: Int)
 
     suspend fun isQueueClear(broker: MqttBroker, includeSubscriptions: Boolean = true): Boolean

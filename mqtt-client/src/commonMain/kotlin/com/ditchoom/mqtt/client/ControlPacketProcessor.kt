@@ -47,8 +47,8 @@ class ControlPacketProcessor(
     var pingResponseCount = 0L
         private set
 
-    suspend fun publish(pub: IPublishMessage): IPublishMessage {
-        val publishMessageOnWire = if (pub.qualityOfService.isGreaterThan(QualityOfService.AT_MOST_ONCE)) {
+    suspend fun publish(pub: IPublishMessage, persist: Boolean = true): IPublishMessage {
+        val publishMessageOnWire = if (persist && pub.qualityOfService.isGreaterThan(QualityOfService.AT_MOST_ONCE)) {
             val packetId = persistence.writePubGetPacketId(broker, pub)
             pub.maybeCopyWithNewPacketIdentifier(packetId)
         } else {
@@ -58,17 +58,25 @@ class ControlPacketProcessor(
         return publishMessageOnWire
     }
 
-    suspend fun subscribe(sub: ISubscribeRequest): ISubscribeRequest {
-        val persistedPacketId = persistence.writeSubUpdatePacketIdAndSimplifySubscriptions(broker, sub)
-        write(persistedPacketId)
-        return persistedPacketId
+    suspend fun subscribe(sub: ISubscribeRequest, persist: Boolean = true): ISubscribeRequest {
+        val persistedPacket = if (persist) {
+            persistence.writeSubUpdatePacketIdAndSimplifySubscriptions(broker, sub)
+        } else {
+            sub
+        }
+        write(persistedPacket)
+        return persistedPacket
     }
 
-    suspend fun unsubscribe(unsub: IUnsubscribeRequest): IUnsubscribeRequest {
-        val persistedPacketId = persistence.writeUnsubGetPacketId(broker, unsub)
-        val unsubMessageOnWire = unsub.copyWithNewPacketIdentifier(persistedPacketId)
-        write(unsubMessageOnWire)
-        return unsubMessageOnWire
+    suspend fun unsubscribe(unsub: IUnsubscribeRequest, persist: Boolean = true): IUnsubscribeRequest {
+        val persistedPacket = if (persist) {
+            val packetId = persistence.writeUnsubGetPacketId(broker, unsub)
+            unsub.copyWithNewPacketIdentifier(packetId)
+        } else {
+            unsub
+        }
+        write(persistedPacket)
+        return persistedPacket
     }
 
     internal suspend inline fun <reified R : ControlPacket> awaitIncomingPacketId(
@@ -76,8 +84,7 @@ class ControlPacketProcessor(
         controlPacketValue: Byte
     ): R {
         return readChannel
-            .transformWhile<ControlPacket, R> {
-//                println("\r\nawaitIncomingPacketId $packetIdentifier ${it.packetIdentifier} ${it.controlPacketValue == controlPacketValue} ${it.packetIdentifier.toString() == packetIdentifier.toString()} $it")
+            .transformWhile {
                 if (it.controlPacketValue == controlPacketValue && it.packetIdentifier.toString() == packetIdentifier.toString()) {
                     emit(it as R)
                     false
@@ -132,24 +139,24 @@ class ControlPacketProcessor(
     }
 
     fun resetPingTimer() {
-        observer?.resetPingTimer(broker.identifier)
+        observer?.resetPingTimer(broker.identifier, broker.connectionRequest.protocolVersion.toByte())
         val delayDuration = broker.connectionRequest.keepAliveTimeoutSeconds.toInt().seconds
         cancelPingTimer()
         currentPingJob = scope.launch {
-            observer?.delayPing(broker.identifier, delayDuration)
+            observer?.delayPing(broker.identifier, broker.connectionRequest.protocolVersion.toByte(), delayDuration)
             delay(delayDuration)
             while (isActive) {
-                observer?.sendingPing(broker.identifier)
+                observer?.sendingPing(broker.identifier, broker.connectionRequest.protocolVersion.toByte())
                 writeChannel.send(listOf(broker.connectionRequest.controlPacketFactory.pingRequest()))
                 pingCount++
-                observer?.delayPing(broker.identifier, delayDuration)
+                observer?.delayPing(broker.identifier, broker.connectionRequest.protocolVersion.toByte(), delayDuration)
                 delay(delayDuration)
             }
         }
     }
 
     fun cancelPingTimer() {
-        observer?.cancelPingTimer(broker.identifier)
+        observer?.cancelPingTimer(broker.identifier, broker.connectionRequest.protocolVersion.toByte())
         currentPingJob?.cancel()
         currentPingJob = null
     }

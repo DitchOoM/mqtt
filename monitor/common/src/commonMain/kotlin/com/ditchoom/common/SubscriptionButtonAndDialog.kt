@@ -45,7 +45,7 @@ fun SubscriptionButtonAndDialog(client: MqttClient) {
                 Column {
                     inputTextField("Topic Filter", topicFilter) { topicFilter = it }
                     inputTextField("QoS", qosString) { qosString = it }
-                    if (client.controlPacketFactory().protocolVersion == 5) {
+                    if (client.packetFactory.protocolVersion == 5) {
                         checkBoxRow("Show MQTT 5 Extra Props", showMqtt5Extras) { showMqtt5Extras = it }
                         if (showMqtt5Extras) {
                             checkBoxRow("No Local", noLocal) { noLocal = it }
@@ -63,12 +63,12 @@ fun SubscriptionButtonAndDialog(client: MqttClient) {
                     onClick = {
                         val topic = Topic.fromOrNull(topicFilter, Topic.Type.Filter)
                         if (topic == null) {
-                            println("invalid topic $topicFilter")
+                            println("\r\ninvalid topic $topicFilter")
                             return@Button
                         }
                         val qosInt = qosString.toIntOrNull()
                         if (qosInt == null || qosInt < 0 || qosInt > 2) {
-                            println("invalid qos $qosString")
+                            println("\r\ninvalid qos $qosString")
                             return@Button
                         }
                         val qos = when (qosInt) {
@@ -82,7 +82,7 @@ fun SubscriptionButtonAndDialog(client: MqttClient) {
                             "2" -> ISubscription.RetainHandling.DO_NOT_SEND_RETAINED_MESSAGES
                             else -> ISubscription.RetainHandling.SEND_RETAINED_MESSAGES_AT_TIME_OF_SUBSCRIBE
                         }
-                        val sub = client.controlPacketFactory().subscribe(
+                        val sub = client.packetFactory.subscribe(
                             topic,
                             qos,
                             noLocal,

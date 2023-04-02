@@ -12,7 +12,11 @@ val libraryVersion = if (System.getenv("GITHUB_RUN_NUMBER") != null) {
     "${libraryVersionPrefix}0-SNAPSHOT"
 }
 
-repositories { maven { url = uri("https://maven.pkg.jetbrains.space/public/p/kotlinx-html/maven") } }
+repositories {
+    maven { url = uri("https://maven.pkg.jetbrains.space/public/p/kotlinx-html/maven") }
+    mavenCentral()
+    mavenLocal()
+}
 
 kotlin {
     js(IR) {
@@ -26,21 +30,51 @@ kotlin {
         }
         binaries.executable()
     }
+    js("serviceworker", IR) {
+        browser {
+            webpackTask {
+                outputFileName = "serviceworker.js"
+            }
+            distribution {
+                name = "serviceworker"
+            }
+            testTask {
+                testLogging.showStandardStreams = true
+                useKarma {
+                    useChromeHeadless()
+                }
+            }
+        }
+        binaries.executable()
+    }
     sourceSets {
-        val jsMain by getting {
+        val serviceworkerMain by getting {
+
+            val websocketVersion = extra["websocket.version"] as String
+            val bufferVersion = extra["buffer.version"] as String
             dependencies {
                 api(project(":models-base"))
                 api(project(":models-v4"))
                 api(project(":models-v5"))
                 api(project(":mqtt-client"))
-                api("com.ditchoom:buffer:1.2.1")
+                api("com.ditchoom:websocket:$websocketVersion")
+                api("com.ditchoom:buffer:$bufferVersion")
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-js:1.6.4")
                 implementation("org.jetbrains.kotlinx:kotlinx-html-js:0.8.0")
             }
+        }
+
+        val jsMain by getting {
+            resources.srcDirs("./build/serviceworker")
+            dependsOn(serviceworkerMain)
         }
         val jsTest by getting {
             dependencies {
                 implementation(kotlin("test-js"))
             }
         }
+
+
     }
 }
+tasks["jsProcessResources"].dependsOn.add("serviceworkerBrowserDistribution")

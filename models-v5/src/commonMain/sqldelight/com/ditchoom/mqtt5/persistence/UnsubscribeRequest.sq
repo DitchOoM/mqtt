@@ -23,3 +23,6 @@ DELETE FROM UnsubscribeRequest WHERE broker_id = :brokerId;
 
 queuedMessageCount:
 SELECT COUNT(broker_id) FROM UnsubscribeRequest WHERE broker_id = :brokerId;
+
+messageWithId:
+SELECT * FROM UnsubscribeRequest WHERE broker_id = :brokerId AND packet_id = :packetId LIMIT 1;

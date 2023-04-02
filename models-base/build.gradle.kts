@@ -83,7 +83,7 @@ android {
     compileSdk = 33
     sourceSets["main"].manifest.srcFile("src/androidMain/AndroidManifest.xml")
     defaultConfig {
-        minSdk = 9
+        minSdk = 16
         targetSdk = 33
     }
     namespace = "com.ditchoom.mqtt"

@@ -43,3 +43,6 @@ SELECT COUNT(broker_id) FROM PublishMessage WHERE broker_id = :brokerId;
 
 allMessages:
 SELECT * FROM PublishMessage WHERE broker_id = :brokerId;
+
+messageWithId:
+SELECT * FROM PublishMessage WHERE broker_id = :brokerId AND incoming = :incoming AND packet_id = :packetId LIMIT 1;

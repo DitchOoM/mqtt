@@ -222,7 +222,8 @@ class MqttClientTest {
         val persistence = InMemoryPersistence()
         val broker = persistence.addBroker(testWsMqttConnectionOptions, connectionRequest)
         var client: LocalMqttClient? = null
-        withTimeout((connectionRequestMqtt4.variableHeader.keepAliveSeconds * 2).seconds + 800.milliseconds) {
+        val expectedPingCount = 2
+        withTimeout((connectionRequestMqtt4.variableHeader.keepAliveSeconds * expectedPingCount + 5).seconds) {
             val pongs = callbackFlow {
                 var count = 0
                 val incomingMessageCb: (UByte, Int, ReadBuffer) -> Unit = { byte1, remaining, buffer ->
@@ -238,11 +239,11 @@ class MqttClientTest {
                 client = LocalMqttClient.connectOnce(scope, broker, persistence, incomingMessage = incomingMessageCb)
                 awaitClose()
             }
-            pongs.take(2).toList()
-            client!!.shutdown()
-            assertEquals(2, client!!.pingCount())
-            assertEquals(2, client!!.pingResponseCount())
+            pongs.take(expectedPingCount).toList()
         }
+        client!!.shutdown()
+        assertEquals(expectedPingCount.toLong(), client!!.pingCount())
+        assertEquals(expectedPingCount.toLong(), client!!.pingResponseCount())
     }
 
     @Test

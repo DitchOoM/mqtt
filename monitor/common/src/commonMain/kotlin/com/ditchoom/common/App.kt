@@ -20,7 +20,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
-import com.ditchoom.mqtt.client.LocalMqttService
 import com.ditchoom.mqtt.client.MqttClient
 import com.ditchoom.mqtt.client.MqttService
 import com.ditchoom.mqtt.connection.MqttBroker
@@ -33,15 +32,20 @@ import kotlin.random.nextUInt
 import kotlin.time.Duration.Companion.seconds
 
 @Composable
-fun App(service: LocalMqttService) {
+fun LoadingScreen() {
+    Text("Loading")
+}
+
+@Composable
+fun App(service: MqttService) {
     var brokers by remember { mutableStateOf<List<MqttBroker>>(mutableListOf()) }
     var selectedClient by remember { mutableStateOf<MqttClient?>(null) }
     var mqttLogs by remember { mutableStateOf("") }
     val selectedClientLocal = selectedClient
     LaunchedEffect(service) {
-        service.assignObservers(LoggingObserver { brokerId, log ->
-            mqttLogs += "$log\r\n"
-        })
+//        service.assignObservers(LoggingObserver { brokerId, log ->
+//            mqttLogs += "$log\r\n"
+//        })
         brokers = service.allBrokers().toList()
     }
     if (selectedClientLocal != null) {
@@ -87,7 +91,7 @@ fun showBrokers(
 
 
 @Composable
-fun ConnectionBuilder(service: LocalMqttService, mqttLogs: String, onBrokerSelected: (MqttClient?) -> Unit) {
+fun ConnectionBuilder(service: MqttService, mqttLogs: String, onBrokerSelected: (MqttClient?) -> Unit) {
     val platformName = getPlatformName()
     var mqttVersionPicked by remember { mutableStateOf(false) }
     var mqttVersion by remember { mutableStateOf(4) }

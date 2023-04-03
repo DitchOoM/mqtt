@@ -110,7 +110,6 @@ kotlin {
         val androidMain by getting {
             kotlin.srcDir("src/commonJvmMain/kotlin")
             dependsOn(commonMain)
-            dependsOn(jvmMain)
             dependencies {
                 implementation("androidx.startup:startup-runtime:1.1.1")
             }
@@ -145,13 +144,27 @@ kotlin {
                 implementation(kotlin("test-js"))
             }
         }
+        val macosX64Main by getting
         val macosX64Test by getting
+        val macosArm64Main by getting
         val macosArm64Test by getting
+        val iosMain by getting
         val iosTest by getting
+        val iosSimulatorArm64Main by getting
         val iosSimulatorArm64Test by getting
 //        val watchosTest by getting
 //        val tvosTest by getting
 //
+        val appleMain by sourceSets.creating {
+            dependsOn(commonMain)
+            kotlin.srcDir("src/appleMain/kotlin")
+            macosX64Main.dependsOn(this)
+            macosArm64Main.dependsOn(this)
+            iosMain.dependsOn(this)
+            iosSimulatorArm64Main.dependsOn(this)
+//            watchosTest.dependsOn(this)
+//            tvosTest.dependsOn(this)
+        }
         val appleTest by sourceSets.creating {
             dependsOn(commonTest)
             kotlin.srcDir("src/appleTest/kotlin")

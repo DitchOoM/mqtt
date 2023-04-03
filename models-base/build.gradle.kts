@@ -122,9 +122,12 @@ publishing {
     publications.withType(MavenPublication::class) {
         groupId = project.group.toString()
         version = libraryVersion
-        artifactId = artifactName
+        artifactId = if (artifactId == "models-base") {
+            artifactName
+        } else {
+            artifactId.replaceBeforeLast('-', artifactName)
+        }
         artifact(tasks["javadocJar"])
-
         pom {
             name.set(libraryName)
             description.set(libraryDescription)

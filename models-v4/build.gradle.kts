@@ -186,12 +186,14 @@ project.version = libraryVersion
 
 publishing {
     publications.withType(MavenPublication::class) {
-        groupId = publishedGroupId
+        groupId = project.group.toString()
         version = libraryVersion
-        artifactId = artifactName
-
+        artifactId = if (artifactId == "models-v4") {
+            artifactName
+        } else {
+            artifactId.replaceBeforeLast('-', artifactName)
+        }
         artifact(tasks["javadocJar"])
-
         pom {
             name.set(libraryName)
             description.set(libraryDescription)

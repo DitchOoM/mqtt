@@ -1,5 +1,8 @@
 package com.ditchoom.mqtt.controlpacket
 
+import kotlin.js.JsExport
+
+@JsExport
 sealed class Level {
     abstract val value: String
     open val nextLevel: Level? = null

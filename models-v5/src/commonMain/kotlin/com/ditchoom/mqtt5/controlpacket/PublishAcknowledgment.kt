@@ -39,7 +39,7 @@ data class PublishAcknowledgment(val variable: VariableHeader) :
         reasonString: String? = null,
         props: List<Pair<String, String>> = emptyList()
     ) :
-        this(VariableHeader(packetId, reasonCode, VariableHeader.Properties(reasonString, props)))
+            this(VariableHeader(packetId, reasonCode, VariableHeader.Properties(reasonString, props)))
 
     override fun variableHeader(writeBuffer: WriteBuffer) = variable.serialize(writeBuffer)
     override val packetIdentifier: Int = variable.packetIdentifier
@@ -71,17 +71,17 @@ data class PublishAcknowledgment(val variable: VariableHeader) :
 
                 else -> throw ProtocolError(
                     "Invalid Publish Acknowledgment reason code ${reasonCode.byte} " +
-                        "see: https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477424"
+                            "see: https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477424"
                 )
             }
         }
 
         fun serialize(buffer: WriteBuffer) {
             val canOmitReasonCodeAndProperties = (
-                reasonCode == SUCCESS &&
-                    properties.userProperty.isEmpty() &&
-                    properties.reasonString == null
-                )
+                    reasonCode == SUCCESS &&
+                            properties.userProperty.isEmpty() &&
+                            properties.reasonString == null
+                    )
             buffer.writeUShort(packetIdentifier.toUShort())
             if (!canOmitReasonCodeAndProperties) {
                 buffer.writeUByte(reasonCode.byte)
@@ -91,10 +91,10 @@ data class PublishAcknowledgment(val variable: VariableHeader) :
 
         fun size(): Int {
             val canOmitReasonCodeAndProperties = (
-                reasonCode == SUCCESS &&
-                    properties.userProperty.isEmpty() &&
-                    properties.reasonString == null
-                )
+                    reasonCode == SUCCESS &&
+                            properties.userProperty.isEmpty() &&
+                            properties.reasonString == null
+                    )
             var size = UShort.SIZE_BYTES
             if (!canOmitReasonCodeAndProperties) {
                 val propsSize = properties.size()
@@ -168,7 +168,7 @@ data class PublishAcknowledgment(val variable: VariableHeader) :
                                 if (reasonString != null) {
                                     throw ProtocolError(
                                         "Reason String added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477427"
+                                                "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477427"
                                     )
                                 }
                                 reasonString = it.diagnosticInfoDontParse
@@ -203,7 +203,7 @@ data class PublishAcknowledgment(val variable: VariableHeader) :
                         PAYLOAD_FORMAT_INVALID.byte -> PAYLOAD_FORMAT_INVALID
                         else -> throw MalformedPacketException(
                             "Invalid reason code $reasonCodeByte" +
-                                "see: https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477424"
+                                    "see: https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477424"
                         )
                     }
                     val props = if (buffer.hasRemaining()) {

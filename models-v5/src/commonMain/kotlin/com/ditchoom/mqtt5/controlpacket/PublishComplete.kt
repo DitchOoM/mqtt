@@ -25,7 +25,7 @@ import com.ditchoom.mqtt5.controlpacket.properties.readProperties
 data class PublishComplete(val variable: VariableHeader) :
     ControlPacketV5(7, DirectionOfFlow.BIDIRECTIONAL), IPublishComplete {
     constructor(packetIdentifier: UShort, reasonCode: ReasonCode = SUCCESS) :
-        this(VariableHeader(packetIdentifier.toInt(), reasonCode))
+            this(VariableHeader(packetIdentifier.toInt(), reasonCode))
 
     constructor(
         packetIdentifier: Int,
@@ -33,9 +33,9 @@ data class PublishComplete(val variable: VariableHeader) :
         reasonString: String? = null,
         userProperty: List<Pair<String, String>> = emptyList()
     ) :
-        this(
-            VariableHeader(packetIdentifier, reasonCode, VariableHeader.Properties(reasonString, userProperty))
-        )
+            this(
+                VariableHeader(packetIdentifier, reasonCode, VariableHeader.Properties(reasonString, userProperty))
+            )
 
     override fun variableHeader(writeBuffer: WriteBuffer) = variable.serialize(writeBuffer)
     override val packetIdentifier = variable.packetIdentifier
@@ -75,17 +75,17 @@ data class PublishComplete(val variable: VariableHeader) :
 
                 else -> throw ProtocolError(
                     "Invalid Publish Acknowledgment reason code ${reasonCode.byte} " +
-                        "see: https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477424"
+                            "see: https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477424"
                 )
             }
         }
 
         fun size(): Int {
             val canOmitReasonCodeAndProperties = (
-                reasonCode == SUCCESS &&
-                    properties.userProperty.isEmpty() &&
-                    properties.reasonString == null
-                )
+                    reasonCode == SUCCESS &&
+                            properties.userProperty.isEmpty() &&
+                            properties.reasonString == null
+                    )
             var size = UShort.SIZE_BYTES
             if (!canOmitReasonCodeAndProperties) {
                 val propsSize = properties.size()
@@ -96,10 +96,10 @@ data class PublishComplete(val variable: VariableHeader) :
 
         fun serialize(buffer: WriteBuffer) {
             val canOmitReasonCodeAndProperties = (
-                reasonCode == SUCCESS &&
-                    properties.userProperty.isEmpty() &&
-                    properties.reasonString == null
-                )
+                    reasonCode == SUCCESS &&
+                            properties.userProperty.isEmpty() &&
+                            properties.reasonString == null
+                    )
             buffer.writeUShort(packetIdentifier.toUShort())
             if (!canOmitReasonCodeAndProperties) {
                 buffer.writeUByte(reasonCode.byte)
@@ -172,7 +172,7 @@ data class PublishComplete(val variable: VariableHeader) :
                                 if (reasonString != null) {
                                     throw ProtocolError(
                                         "Reason String added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477427"
+                                                "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477427"
                                     )
                                 }
                                 reasonString = it.diagnosticInfoDontParse
@@ -199,7 +199,7 @@ data class PublishComplete(val variable: VariableHeader) :
                         PACKET_IDENTIFIER_NOT_FOUND.byte -> PACKET_IDENTIFIER_NOT_FOUND
                         else -> throw MalformedPacketException(
                             "Invalid reason code $reasonCodeByte" +
-                                "see: https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477444"
+                                    "see: https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477444"
                         )
                     }
                     val propsData = buffer.readProperties()

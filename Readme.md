@@ -13,7 +13,7 @@
 <p align="center">  
 <h3 align="center">MQTT Kotlin Multiplatform</h3>  
 
-<p align="center">Buffer based kotlin multiplatform MQTT library.</p>  
+<p align="center">Buffer based kotlin multiplatform MQTT library. Backed by 5000+ tests</p>  
 <br />  
 <!-- <a href="https://github.com/DitchOoM/buffer"><strong>Explore the docs »</strong></a> -->  
 <br />  
@@ -62,41 +62,38 @@ This project aims to simplify managing an MQTT client between multiple platforms
 
 Buffer uses native buffers to pass to the socket or websocket module.
 
-|        Platform        |        Native Buffer Type        |
-|:----------------------:|:--------------------------------:|
-|     Android / JVM      |            ByteBuffer            |
-| iOS/macOS/tvOS/watchOS |              NSData              |
-|    BrowserJS/NodeJS    | ArrayBuffer / SharedArrayBuffer  |
-
+|        Platform        |       Native Buffer Type        |
+|:----------------------:|:-------------------------------:|
+|     Android / JVM      |           ByteBuffer            |
+| iOS/macOS/tvOS/watchOS |             NSData              |
+|    BrowserJS/NodeJS    | ArrayBuffer / SharedArrayBuffer |
 
 Socket uses native socket API's:
 
-| Platform  |  Native Socket Impl  |
-|:---------:|:--------------------:|
-|Android/JVM|AsynchronousSocketChannel (or fallback to SocketChannel)|
-| iOS/macOS/tvOS/watchOS | NWConnection |
-|NodeJS|Net module|
-|BrowserJS|unavailable|
+|        Platform        |                    Native Socket Impl                    |
+|:----------------------:|:--------------------------------------------------------:|
+|      Android/JVM       | AsynchronousSocketChannel (or fallback to SocketChannel) |
+| iOS/macOS/tvOS/watchOS |                       NWConnection                       |
+|         NodeJS         |                        Net module                        |
+|       BrowserJS        |                       unavailable                        |
 
 The WebSocket uses:
 
-| Platform  |                       WebSocket Impl                       |
-|:---------:|:----------------------------------------------------------:|
-|Android/JVM| AsynchronousSocketChannel (or fallback to SocketChannel)   |
-| iOS/macOS/tvOS/watchOS |                        NWConnection                        |
-|NodeJS|                         Net module                         |
-|BrowserJS|                         WebSocket                          |
+|        Platform        |                      WebSocket Impl                      |
+|:----------------------:|:--------------------------------------------------------:|
+|      Android/JVM       | AsynchronousSocketChannel (or fallback to SocketChannel) |
+| iOS/macOS/tvOS/watchOS |                       NWConnection                       |
+|         NodeJS         |                        Net module                        |
+|       BrowserJS        |                        WebSocket                         |
 
 Persistence uses:
 
-| Platform  |                                                           Persistence Impl                                                           |
-|:---------:|:------------------------------------------------------------------------------------------------------------------------------------:|
-|Android/JVM|                                                        SQLite via SQLdelight                                                         |
+|        Platform        |                                                           Persistence Impl                                                           |
+|:----------------------:|:------------------------------------------------------------------------------------------------------------------------------------:|
+|      Android/JVM       |                                                        SQLite via SQLdelight                                                         |
 | iOS/macOS/tvOS/watchOS |                                               SQLite via SQLdelight using `-lsqlite3`                                                |
-|NodeJS|                                                               InMemory                                                               |
-|BrowserJS| IndexedDB, [SQLite upcoming](https://developer.chrome.com/blog/sqlite-wasm-in-the-browser-backed-by-the-origin-private-file-system/) |
-
-
+|         NodeJS         |                                                               InMemory                                                               |
+|       BrowserJS        | IndexedDB, [SQLite upcoming](https://developer.chrome.com/blog/sqlite-wasm-in-the-browser-backed-by-the-origin-private-file-system/) |
 
 ### Runtime Dependencies
 
@@ -117,17 +114,17 @@ Other Kotlin Multiplatform Runtime Dependencies
 
 ### [Supported Platforms](https://kotlinlang.org/docs/reference/mpp-supported-platforms.html)
 
-| Platform  | MQTT 3.1.1 (4) | MQTT 5.0 | LWT | SSL / TLS | Message Persistence | Automatic Reconnect | Offline Buffering | WebSocket Support | Standard TCP Support | Asynchronous API | Coroutines API | High Availability |  IPC / Worker Support | 
-|:---------:|:--------------:|:--------:|:---:|:---------:|:-------------------:|:-------------------:|:-----------------:|:-----------------:|:--------------------:|:----------------:|:--------------:|:-----------------:|:---------------------:|
-|   `JVM`   |       🚀       |    🚀    | 🚀  |    🚀     |         🚀          |         🚀          |        🚀         |        🚀         |          🚀          |        📝        |       🚀       |        🚀        |           ❓           |
-| `Browser` |       🚀       |    🚀    | 🚀  |    🚀     |         🚀          |         🚀          |        🚀         |        🚀         |          ⛔           |        📝        |       🚀       |        🚀       |          🚀           |
-| `Node.JS` |       🚀       |    🚀    | 🚀  |    🚀     |         📝          |         🚀          |        🚀         |        🚀         |          🚀          |        📝        |       🚀       |        🚀        |           🧪           |
-| `Android` |       🚀       |    🚀    | 🚀  |    🚀     |         🚀          |         🚀          |        🚀         |        🚀         |          🚀          |        📝        |       🚀       |        🚀        |           🚀           |
-|   `iOS`   |       🚀       |    🚀    | 🚀  |    🚀     |         🚀          |         🚀          |        🚀         |        🚀         |          🚀          |        📝        |       🚀       |        🚀        |           ❓           |
-|  `MacOS`  |       🚀       |    🚀    | 🚀  |    🚀     |         🚀          |         🚀          |        🚀         |        🚀         |          🚀          |        📝        |       🚀       |        🚀        |           ❓           |
-| `WatchOS` |       📴       |    📴    | 📴  |    📴     |         📴          |         📴          |        📴         |        📴         |          📴          |        📝        |       📴       |        📴        |           ❓           |
-|  `TvOS`   |       📴       |    📴    | 📴  |    📴     |         📴          |         📴          |        📴         |        📴         |          📴          |        📝        |       📴       |        📴        |           ❓           |
-| `WatchOS` |       📴       |    📴    | 📴  |    📴     |         📴          |         📴          |        📴         |        📴         |          📴          |        📝        |       📴       |        📴        |           ❓           |
+| Platform  | MQTT 3.1.1 (4) | MQTT 5.0 | LWT | SSL / TLS | Message Persistence | Automatic Reconnect | Offline Buffering | WebSocket Support | Standard TCP Support | Asynchronous API | Coroutines API | High Availability | IPC / Worker Support | 
+|:---------:|:--------------:|:--------:|:---:|:---------:|:-------------------:|:-------------------:|:-----------------:|:-----------------:|:--------------------:|:----------------:|:--------------:|:-----------------:|:--------------------:|
+|   `JVM`   |       🚀       |    🚀    | 🚀  |    🚀     |         🚀          |         🚀          |        🚀         |        🚀         |          🚀          |        📝        |       🚀       |        🚀         |          ❓           |
+| `Browser` |       🚀       |    🚀    | 🚀  |    🚀     |         🚀          |         🚀          |        🚀         |        🚀         |          ⛔           |        📝        |       🚀       |        🚀         |          🚀          |
+| `Node.JS` |       🚀       |    🚀    | 🚀  |    🚀     |         📝          |         🚀          |        🚀         |        🚀         |          🚀          |        📝        |       🚀       |        🚀         |          🧪          |
+| `Android` |       🚀       |    🚀    | 🚀  |    🚀     |         🚀          |         🚀          |        🚀         |        🚀         |          🚀          |        📝        |       🚀       |        🚀         |          🚀          |
+|   `iOS`   |       🚀       |    🚀    | 🚀  |    🚀     |         🚀          |         🚀          |        🚀         |        🚀         |          🚀          |        📝        |       🚀       |        🚀         |          ❓           |
+|  `MacOS`  |       🚀       |    🚀    | 🚀  |    🚀     |         🚀          |         🚀          |        🚀         |        🚀         |          🚀          |        📝        |       🚀       |        🚀         |          ❓           |
+| `WatchOS` |       📴       |    📴    | 📴  |    📴     |         📴          |         📴          |        📴         |        📴         |          📴          |        📝        |       📴       |        📴         |          ❓           |
+|  `TvOS`   |       📴       |    📴    | 📴  |    📴     |         📴          |         📴          |        📴         |        📴         |          📴          |        📝        |       📴       |        📴         |          ❓           |
+| `WatchOS` |       📴       |    📴    | 📴  |    📴     |         📴          |         📴          |        📴         |        📴         |          📴          |        📝        |       📴       |        📴         |          ❓           |
 
 > 🚀 = Ready.
 >
@@ -135,11 +132,11 @@ Other Kotlin Multiplatform Runtime Dependencies
 >
 > 📴 = Disabled for now (can be enabled easily, just disabled to speed up build times). File an issue if you need it and
 > it can be easily enabled.
-> 
+>
 > 🧪 = Probably will work, but currently undocumented
 >
 > ❓= Probably unsupported, no current plans to support
-> 
+>
 > ⛔ = Impossible due to API issues.
 
 ## Installation
@@ -314,13 +311,14 @@ register the android service and use AIDL to communicate with it.
 However you can customize the process name by overriding the manifest:
 
 ```xml
+
 <service
         android:name="com.ditchoom.mqtt.client.ipc.MqttManagerService"
         android:process=":sync"/>
 ```
 
-
 Non-Mqtt Context (ex. Activity or ViewModel)
+
 ```kotlin
 // pass in the abstract worker reference
 val service: MqttService = MqttService.buildNewService(true, applicationContext)
@@ -330,17 +328,20 @@ For JS, your Abstract Worker (Dedicated Worker, Service Worker or Shared Worker)
 
 ```kotlin
 private var ipcServer: JsRemoteMqttServiceWorker? = null
-self.oninstall = { // for service workers, otherwise just call `buildMqttServiceIPCServer(false)` before setting the onmessage callback
-    val event = it.unsafeCast<ExtendableEvent>()
-    event.waitUntil(GlobalScope.promise {
-        ipcServer = buildMqttServiceIPCServer(false)
-    })
-}
+self.oninstall =
+    { // for service workers, otherwise just call `buildMqttServiceIPCServer(false)` before setting the onmessage callback
+        val event = it.unsafeCast<ExtendableEvent>()
+        event.waitUntil(GlobalScope.promise {
+            ipcServer = buildMqttServiceIPCServer(false)
+        })
+    }
 self.onmessage = {
     ipcServer?.processIncomingMessage(it)
 }
 ```
+
 Browser Window Context
+
 ```kotlin
 // pass in the abstract worker reference
 val service: MqttService = MqttService.buildNewService(true, worker)

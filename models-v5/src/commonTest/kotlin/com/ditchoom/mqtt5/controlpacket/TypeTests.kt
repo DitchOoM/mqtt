@@ -19,7 +19,7 @@ class TypeTests {
     private val packetIdentifier = 0
 
     private val controlPacketSpectMatchError = "doesn't match the spec from " +
-        "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477322"
+            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477322"
 
     // Control packet types controlPacketValue matching spec
     @Test

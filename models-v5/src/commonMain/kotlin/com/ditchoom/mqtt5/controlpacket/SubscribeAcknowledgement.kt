@@ -163,7 +163,7 @@ data class SubscribeAcknowledgement(val variable: VariableHeader, val payload: L
                                 if (reasonString != null) {
                                     throw ProtocolError(
                                         "Reason String added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477476"
+                                                "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477476"
                                     )
                                 }
                                 reasonString = it.diagnosticInfoDontParse
@@ -215,7 +215,7 @@ data class SubscribeAcknowledgement(val variable: VariableHeader, val payload: L
                     WILDCARD_SUBSCRIPTIONS_NOT_SUPPORTED.byte -> WILDCARD_SUBSCRIPTIONS_NOT_SUPPORTED
                     else -> throw MalformedPacketException(
                         "Invalid reason code $reasonCodeByte " +
-                            "see: https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477478"
+                                "see: https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477478"
                     )
                 }
                 codes += reasonCode

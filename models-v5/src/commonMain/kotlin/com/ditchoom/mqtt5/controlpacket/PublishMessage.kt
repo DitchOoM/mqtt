@@ -265,9 +265,9 @@ data class PublishMessage(
                 if (qosBit2 && qosBit1) {
                     throw MalformedPacketException(
                         "A PUBLISH Packet MUST NOT have both QoS bits set to 1 [MQTT-3.3.1-4]." +
-                            " If a Server or Client receives a PUBLISH packet which has both QoS bits set to 1 it is a " +
-                            "Malformed Packet. Use DISCONNECT with Reason Code 0x81 (Malformed Packet) as described in" +
-                            " section 4.13."
+                                " If a Server or Client receives a PUBLISH packet which has both QoS bits set to 1 it is a " +
+                                "Malformed Packet. Use DISCONNECT with Reason Code 0x81 (Malformed Packet) as described in" +
+                                " section 4.13."
                     )
                 }
                 val qos = QualityOfService.fromBooleans(qosBit2, qosBit1)
@@ -294,7 +294,7 @@ data class PublishMessage(
             if (properties.topicAlias == 0) {
                 throw ProtocolError(
                     "Topic Alias not permitted to be set to 0:" +
-                        "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477413"
+                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477413"
                 )
             }
         }
@@ -550,7 +550,7 @@ data class PublishMessage(
                 if (topicAlias == 0) {
                     throw ProtocolError(
                         "Topic Alias not permitted to be set to 0:" +
-                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477413"
+                                "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477413"
                     )
                 }
             }
@@ -632,13 +632,13 @@ data class PublishMessage(
                                 if (topicAlias != null) {
                                     throw ProtocolError(
                                         "Topic Alias found twice see:" +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477413"
+                                                "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477413"
                                     )
                                 }
                                 if (it.value == 0) {
                                     throw ProtocolError(
                                         "Topic Alias not permitted to be set to 0:" +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477413"
+                                                "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477413"
                                     )
                                 }
                                 topicAlias = it.value
@@ -648,7 +648,7 @@ data class PublishMessage(
                                 if (responseTopic != null) {
                                     throw ProtocolError(
                                         "Response Topic found twice see:" +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477414"
+                                                "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477414"
                                     )
                                 }
                                 responseTopic = it.value
@@ -658,7 +658,7 @@ data class PublishMessage(
                                 if (correlationData != null) {
                                     throw ProtocolError(
                                         "Correlation Data found twice see:" +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477415"
+                                                "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477415"
                                     )
                                 }
                                 correlationData = it.data
@@ -669,7 +669,7 @@ data class PublishMessage(
                                 if (it.value == 0L) {
                                     throw ProtocolError(
                                         "Subscription Identifier not permitted to be set to 0:" +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477417"
+                                                "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477417"
                                     )
                                 }
                                 subscriptionIdentifier.add(it.value)
@@ -679,7 +679,7 @@ data class PublishMessage(
                                 if (contentType != null) {
                                     throw ProtocolError(
                                         "Content Type found twice see:" +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477417"
+                                                "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477417"
                                     )
                                 }
                                 contentType = it.value

@@ -103,17 +103,17 @@ Other Kotlin Multiplatform Runtime Dependencies
 
 ### [Supported Platforms](https://kotlinlang.org/docs/reference/mpp-supported-platforms.html)
 
-| Platform  | MQTT 3.1.1 (4) | MQTT 5.0 | LWT | SSL / TLS | Message Persistence | Automatic Reconnect | Offline Buffering | WebSocket Support | Standard TCP Support | Asynchronous API | Coroutines API | High Availability |
-|:---------:|:--------------:|:--------:|:---:|:---------:|:-------------------:|:-------------------:|:-----------------:|:-----------------:|:--------------------:|:----------------:|:--------------:|:-----------------:|
-|   `JVM`   |       🚀       |    🚀    | 🚀  |    🚀     |         🚀          |         🚀          |        🚀         |        🚀         |          🚀          |        📝        |       🚀       |        🚀         |
-| `Browser` |       🚀       |    🚀    | 🚀  |    🚀     |         🚀          |         🚀          |        🚀         |        🚀         |          ⛔           |        📝        |       🚀       |        🚀         |
-| `Node.JS` |       🚀       |    🚀    | 🚀  |    🚀     |         📝          |         🚀          |        🚀         |        🚀         |          🚀          |        📝        |       🚀       |        🚀         |
-| `Android` |       🚀       |    🚀    | 🚀  |    🚀     |         🚀          |         🚀          |        🚀         |        🚀         |          🚀          |        📝        |       🚀       |        🚀         |
-|   `iOS`   |       🚀       |    🚀    | 🚀  |    🚀     |         🚀          |         🚀          |        🚀         |        🚀         |          🚀          |        📝        |       🚀       |        🚀         |
-|  `MacOS`  |       🚀       |    🚀    | 🚀  |    🚀     |         🚀          |         🚀          |        🚀         |        🚀         |          🚀          |        📝        |       🚀       |        🚀         |
-| `WatchOS` |       📴       |    📴    | 📴  |    📴     |         📴          |         📴          |        📴         |        📴         |          📴          |        📝        |       📴       |        📴         |
-|  `TvOS`   |       📴       |    📴    | 📴  |    📴     |         📴          |         📴          |        📴         |        📴         |          📴          |        📝        |       📴       |        📴         |
-| `WatchOS` |       📴       |    📴    | 📴  |    📴     |         📴          |         📴          |        📴         |        📴         |          📴          |        📝        |       📴       |        📴         |
+| Platform  | MQTT 3.1.1 (4) | MQTT 5.0 | LWT | SSL / TLS | Message Persistence | Automatic Reconnect | Offline Buffering | WebSocket Support | Standard TCP Support | Asynchronous API | Coroutines API | High Availability |  IPC / Worker Support | 
+|:---------:|:--------------:|:--------:|:---:|:---------:|:-------------------:|:-------------------:|:-----------------:|:-----------------:|:--------------------:|:----------------:|:--------------:|:-----------------:|:---------------------:|
+|   `JVM`   |       🚀       |    🚀    | 🚀  |    🚀     |         🚀          |         🚀          |        🚀         |        🚀         |          🚀          |        📝        |       🚀       |        🚀        |           ❓           |
+| `Browser` |       🚀       |    🚀    | 🚀  |    🚀     |         🚀          |         🚀          |        🚀         |        🚀         |          ⛔           |        📝        |       🚀       |        🚀       |          🚀           |
+| `Node.JS` |       🚀       |    🚀    | 🚀  |    🚀     |         📝          |         🚀          |        🚀         |        🚀         |          🚀          |        📝        |       🚀       |        🚀        |           🧪           |
+| `Android` |       🚀       |    🚀    | 🚀  |    🚀     |         🚀          |         🚀          |        🚀         |        🚀         |          🚀          |        📝        |       🚀       |        🚀        |           🚀           |
+|   `iOS`   |       🚀       |    🚀    | 🚀  |    🚀     |         🚀          |         🚀          |        🚀         |        🚀         |          🚀          |        📝        |       🚀       |        🚀        |           ❓           |
+|  `MacOS`  |       🚀       |    🚀    | 🚀  |    🚀     |         🚀          |         🚀          |        🚀         |        🚀         |          🚀          |        📝        |       🚀       |        🚀        |           ❓           |
+| `WatchOS` |       📴       |    📴    | 📴  |    📴     |         📴          |         📴          |        📴         |        📴         |          📴          |        📝        |       📴       |        📴        |           ❓           |
+|  `TvOS`   |       📴       |    📴    | 📴  |    📴     |         📴          |         📴          |        📴         |        📴         |          📴          |        📝        |       📴       |        📴        |           ❓           |
+| `WatchOS` |       📴       |    📴    | 📴  |    📴     |         📴          |         📴          |        📴         |        📴         |          📴          |        📝        |       📴       |        📴        |           ❓           |
 
 > 🚀 = Ready.
 >
@@ -121,7 +121,11 @@ Other Kotlin Multiplatform Runtime Dependencies
 >
 > 📴 = Disabled for now (can be enabled easily, just disabled to speed up build times). File an issue if you need it and
 > it can be easily enabled.
+> 
+> 🧪 = Probably will work, but currently undocumented
 >
+> ❓= Probably unsupported, no current plans to support
+> 
 > ⛔ = Impossible due to API issues.
 
 ## Installation
@@ -219,11 +223,7 @@ interface MqttService {
     suspend fun addAndStartClient(
         connectionOps: Collection<MqttConnectionOptions>,
         connectionRequest: IConnectionRequest
-    ): MqttClient {
-        val broker = addBroker(connectionOps, connectionRequest)
-        start(broker)
-        return checkNotNull(getClient(broker))
-    }
+    ): MqttClient
 
     // Get a MqttClient by the broker
     suspend fun getClient(broker: MqttBroker): MqttClient?
@@ -292,7 +292,7 @@ Multi-process IPC is fully supported on Android and JS, while silently ignored o
 limitations. IPC can help the client stay connected, continuing to transmit any messages even if the calling process
 dies. With IPC
 enabled, an Android Activity or Web Browser Context can crash and restart without affecting the process which manages
-the MQTT service. This means the MQTT service can continue to process messages without having to reconnect.
+the MQTT service. This means the MQTT service can continue to process messages without restarting.
 
 For Android it will work straight out of the box. Getting the MqttService with `ipcEnabled = true` will automatically
 register the android service and use AIDL to communicate with it.
@@ -300,19 +300,37 @@ register the android service and use AIDL to communicate with it.
 However you can customize the process name by overriding the manifest:
 
 ```xml
-
 <service
         android:name="com.ditchoom.mqtt.client.ipc.MqttManagerService"
         android:process=":sync"/>
 ```
 
-For JS, your Abstract Worker (WebWorker or SharedWorker) needs to call:
 
+Non-Mqtt Context (ex. Activity or ViewModel)
 ```kotlin
-
+// pass in the abstract worker reference
+val service: MqttService = MqttService.buildNewService(true, applicationContext)
 ```
 
-****************** TODO FINISH THIS SECTION ***************
+For JS, your Abstract Worker (Dedicated Worker, Service Worker or Shared Worker) needs to call:
+
+```kotlin
+private var ipcServer: JsRemoteMqttServiceWorker? = null
+self.oninstall = { // for service workers, otherwise just call `buildMqttServiceIPCServer(false)` before setting the onmessage callback
+    val event = it.unsafeCast<ExtendableEvent>()
+    event.waitUntil(GlobalScope.promise {
+        ipcServer = buildMqttServiceIPCServer(false)
+    })
+}
+self.onmessage = {
+    ipcServer?.processIncomingMessage(it)
+}
+```
+Browser Window Context
+```kotlin
+// pass in the abstract worker reference
+val service: MqttService = MqttService.buildNewService(true, worker)
+```
 
 ## Building Locally
 

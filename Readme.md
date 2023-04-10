@@ -55,34 +55,48 @@
 
 This project aims to simplify managing an MQTT client between multiple platforms.
 
-Implementation notes:
+### Implementation notes
 
 * A fully asynchronous, coroutines based implementation ensuring minimal memory footprint for low memory devices.
 * Models are inherited, allowing for customization or custom protocols derived from MQTT without a full rewrite.
 
-Buffer Module uses native buffers to pass to the socket or websocket module. For the:
-Android/JVM - ByteBuffer
-iOS/MacOSX/tvOS/watchOS - NSData
-Browser/NodeJS - ArrayBuffer / SharedArrayBuffer
+Buffer uses native buffers to pass to the socket or websocket module.
 
-The Socket module will use:
--Android/JVM - AsynchronousSocketChannel (or fallback to SocketChannel)
--iOS/MacOSX/tvOS/watchOS - NWConnection
--NodeJS - Net module
--BrowserJS - unavailable
+|        Platform        |        Native Buffer Type        |
+|:----------------------:|:--------------------------------:|
+|     Android / JVM      |            ByteBuffer            |
+| iOS/macOS/tvOS/watchOS |              NSData              |
+|    BrowserJS/NodeJS    | ArrayBuffer / SharedArrayBuffer  |
 
-The WebSocket module will use:
--Android/JVM - AsynchronousSocketChannel (or fallback to SocketChannel)
--iOS/MacOSX/tvOS/watchOS - NWConnection
--NodeJS - Net module
--BrowserJS - WebSocket MDN
 
-The Mqtt 3.1.1 (4) + 5 module will persist using:
--Android/JVM - SQLite via SQLDelight driver. Native android SQLite, imported SQLite on JVM.
--iOS/MacOSX/tvOS/watchOS - SQLite via SQLDelight using driver `-lsqlite3` linker flag
--NodeJS - InMemoryPersistence (Wait for SQLDelight solution) *** Not up to spec
--BrowserJS -
-IndexedDB, [SQLite upcoming](https://developer.chrome.com/blog/sqlite-wasm-in-the-browser-backed-by-the-origin-private-file-system/)
+Socket uses native socket API's:
+
+| Platform  |  Native Socket Impl  |
+|:---------:|:--------------------:|
+|Android/JVM|AsynchronousSocketChannel (or fallback to SocketChannel)|
+| iOS/macOS/tvOS/watchOS | NWConnection |
+|NodeJS|Net module|
+|BrowserJS|unavailable|
+
+The WebSocket uses:
+
+| Platform  |                       WebSocket Impl                       |
+|:---------:|:----------------------------------------------------------:|
+|Android/JVM| AsynchronousSocketChannel (or fallback to SocketChannel)   |
+| iOS/macOS/tvOS/watchOS |                        NWConnection                        |
+|NodeJS|                         Net module                         |
+|BrowserJS|                         WebSocket                          |
+
+Persistence uses:
+
+| Platform  |                                                           Persistence Impl                                                           |
+|:---------:|:------------------------------------------------------------------------------------------------------------------------------------:|
+|Android/JVM|                                                        SQLite via SQLdelight                                                         |
+| iOS/macOS/tvOS/watchOS |                                               SQLite via SQLdelight using `-lsqlite3`                                                |
+|NodeJS|                                                               InMemory                                                               |
+|BrowserJS| IndexedDB, [SQLite upcoming](https://developer.chrome.com/blog/sqlite-wasm-in-the-browser-backed-by-the-origin-private-file-system/) |
+
+
 
 ### Runtime Dependencies
 

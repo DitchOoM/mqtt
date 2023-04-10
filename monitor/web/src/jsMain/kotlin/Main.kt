@@ -1,16 +1,15 @@
 import com.ditchoom.buffer.Charset
 import com.ditchoom.buffer.PlatformBuffer
 import com.ditchoom.buffer.toReadBuffer
-import com.ditchoom.mqtt.client.LocalMqttService
 import com.ditchoom.mqtt.client.MqttClient
 import com.ditchoom.mqtt.client.MqttService
-import com.ditchoom.mqtt.connection.MqttBroker
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.Topic
+import com.ditchoom.mqtt.serviceworker.WorkerType
+import com.ditchoom.mqtt.serviceworker.findOrRegisterServiceWorker
 import com.ditchoom.mqtt5.controlpacket.ConnectionRequest
 import kotlinx.browser.document
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.html.InputType
@@ -25,123 +24,71 @@ import kotlinx.html.option
 import kotlinx.html.p
 import kotlinx.html.select
 import org.w3c.dom.Element
+import org.w3c.dom.HTMLElement
+import org.w3c.dom.Node
 import org.w3c.dom.asList
 import web.html.HTMLInputElement
 import web.html.HTMLSelectElement
-import web.prompts.alert
 import kotlin.random.Random
 import kotlin.random.nextUInt
 import kotlin.time.Duration.Companion.seconds
 
-const val PORT_INIT = "PORT_INITIALIZATION"
-private val testWsMqttConnectionOptions = MqttConnectionOptions.WebSocketConnectionOptions(
-    "localhost",
-    80,
-    websocketEndpoint = "/mqtt",
-    tls = false,
-    protocols = listOf("mqttv3.1"),
-    connectionTimeout = 10.seconds
-)
-private val connectionRequestMqtt4 =
-    com.ditchoom.mqtt3.controlpacket.ConnectionRequest(
-        variableHeader = com.ditchoom.mqtt3.controlpacket.ConnectionRequest.VariableHeader(
-            cleanSession = true,
-            keepAliveSeconds = 1
-        ),
-        payload = com.ditchoom.mqtt3.controlpacket.ConnectionRequest.Payload(clientId = "taco123-" + Random.nextUInt())
-    )
-private val connectionRequestMqtt5 =
-    ConnectionRequest(
-        variableHeader = ConnectionRequest.VariableHeader(
-            cleanStart = true,
-            keepAliveSeconds = 1
-        ),
-        payload = ConnectionRequest.Payload(clientId = "taco123-" + Random.nextUInt())
-    )
-
+private lateinit var service: MqttService
 fun main() {
     GlobalScope.launch {
-//        val (service, serviceWorker) = IpcMqttAppService.buildService().await()
-
-        val service = LocalMqttService.buildService()
-        val brokers = service.allBrokers()
-
-        val root: Element = document.getElementById("root")!!
-        if (brokers.isEmpty()) {
-            console.log("\r\nfrontend alloc broker")
-            root.appendChild(connectionOpNode(this, service))
-            root.appendChild(connectionRequest4Node())
-            root.appendChild(doneButton(this, service))
-        } else {
-            console.log("\r\nbrokers found ${brokers.joinToString()}")
-            brokers.forEach { broker ->
-                val child = document.create.button {
-                    p { +broker.toString() }
-                    onClickFunction = {
-                        loadLogsForClient(service, broker)
-                    }
-                }
-                root.appendChild(child)
-            }
-            root.appendChild(document.create.button {
-                id = "deleteAllBrokers"
-                p { +"Delete All Brokers" }
-                onClickFunction = {
-                    launch {
-                        val allBrokers = service.allBrokers()
-                        service.stop()
-                        allBrokers.forEach { service.removeBroker(it.brokerId, it.protocolVersion) }
-                    }
-                }
-            })
-        }
+        val serviceWorker = findOrRegisterServiceWorker(WorkerType.DedicatedWorker)
+        service = MqttService.buildNewService(true, serviceWorker)
+        mainSuspend()
     }
-
 }
 
-fun mainOld(service: MqttService) {
+private suspend fun mainSuspend() {
+    val brokers = service.allBrokers()
 
     val root: Element = document.getElementById("root")!!
-    val logs = StringBuilder()
-    GlobalScope.launch {
-        var brokers = service.allBrokers()
-        if (brokers.isEmpty()) {
-            root.appendChild(connectionOpNode(this, service))
-            root.appendChild(connectionRequest4Node())
-            root.appendChild(doneButton(this, service))
-        } else {
-            console.log("\r\nNON EMPTY BROKER ${brokers.joinToString()}")
-            brokers.forEach { broker ->
-                val child = document.create.button {
-                    p { +broker.toString() }
-                    onClickFunction = {
-                        loadLogsForClient(service, broker)
-                    }
-                }
-                root.appendChild(child)
-            }
-            root.appendChild(document.create.button {
-                id = "deleteAllBrokers"
-                p { +"Delete All Brokers" }
+    if (brokers.isEmpty()) {
+        root.appendChild(connectionOpNode(service))
+        root.appendChild(connectionRequest4Node())
+        root.appendChild(doneButton(service))
+    } else {
+        brokers.forEach { broker ->
+            val child = document.create.button {
+                p { +broker.toString() }
                 onClickFunction = {
-                    launch {
-                        val allBrokers = service.allBrokers()
-                        service.stop()
-                        allBrokers.forEach { service.removeBroker(it.brokerId, it.protocolVersion) }
+                    GlobalScope.launch {
+                        service.start(broker)
+                        val client = checkNotNull(service.getClient(broker))
+                        loadLogsForClient(client)
                     }
                 }
-            })
+            }
+            root.appendChild(child)
         }
+        var deleteAllRef: Node? = null
+        val deleteAll = root.appendChild(document.create.button(name = "deleteAll") {
+            id = "deleteAllBrokers"
+            p { +"Delete All Brokers" }
+            onClickFunction = {
+                root.childNodes.asList().forEach { root.removeChild(it) }
+                deleteAllRef?.let { it1 -> root.removeChild(it1) }
+                GlobalScope.launch {
+                    val allBrokers = service.allBrokers()
+                    service.stop()
+                    allBrokers.forEach { service.removeBroker(it.brokerId, it.protocolVersion) }
+                    mainSuspend()
+                }
+            }
+        })
+        deleteAllRef = deleteAll
     }
 }
 
-fun doneButton(scope: CoroutineScope, service: MqttService) = document.create.button {
+fun doneButton(service: MqttService) = document.create.button {
     id = "doneButton"
     p {
         +" Connect"
     }
     onClickFunction = { event ->
-        console.log("\r\nonClick", event)
         val mqttVersionSelect = document.getElementById("mqttVersion") as HTMLSelectElement
         val host = (document.getElementById("host") as HTMLInputElement).value
         val port = (document.getElementById("port") as HTMLInputElement).value.toInt()
@@ -235,10 +182,9 @@ fun doneButton(scope: CoroutineScope, service: MqttService) = document.create.bu
                 clientId, keepAlive, cleanStart, username, password, willTopic, willPayload, willRetain, willQos
             )
         }
-        console.log("\r\nconnection request, $request")
-        scope.launch {
-            service.addBroker(listOf(options), request)
-//            .then { loadLogsForClient(service, it) }
+        GlobalScope.launch {
+            val client = service.addBrokerAndStartClient(listOf(options), request)
+            loadLogsForClient(client)
         }
     }
 }
@@ -251,7 +197,7 @@ fun getQos(id: String): QualityOfService {
     }
 }
 
-fun loadLogsForClient(service: MqttService, broker: MqttBroker) {
+fun loadLogsForClient(client: MqttClient) {
     val root: Element = document.getElementById("root")!!
     val doneButton = document.getElementById("doneButton")
     val connection4Options = document.getElementById("connectionRequest4")
@@ -270,31 +216,32 @@ fun loadLogsForClient(service: MqttService, broker: MqttBroker) {
         root.removeChild(deleteAllButton)
     }
 
-    GlobalScope.launch {
-        service.start(broker)
-        val client = checkNotNull(service.getClient(broker))
-        root.childNodes.asList().forEach { node -> root.removeChild(node) }
-        root.append(subscribeUi(this, client))
-        root.append(publishUi(this, client))
-        root.append(unsubscribeUi(this, client))
-        root.append(document.create.button {
-            p { +"Disconnect" }
-            onClickFunction = {
-                launch {
-                    client.shutdown()
-                    alert("shutdown")
-                }
+    root.childNodes.asList().forEach { node -> root.removeChild(node) }
+    root.append(subscribeUi(client))
+    val pubUi = publishUi(client)
+    root.append(pubUi)
+    root.append(unsubscribeUi(client))
+    var disconnectButton: HTMLElement? = null
+    val b = document.create.button {
+        p { +"Disconnect" }
+        id = "disconnectButton"
+        onClickFunction = {
+            root.childNodes.asList().forEach { node ->
+                root.removeChild(node)
             }
-        })
-//        client.observer = LoggingObserver {
-//            root.appendChild(document.create.p {
-//                +it
-//            })
-//        }
+            root.removeChild(pubUi)
+            disconnectButton?.let { it1 -> root.removeChild(it1) }
+            GlobalScope.launch {
+                client.shutdown()
+                mainSuspend()
+            }
+        }
     }
+    disconnectButton = b
+    root.append(b)
 }
 
-fun subscribeUi(scope: CoroutineScope, client: MqttClient) = document.create.div {
+fun subscribeUi(client: MqttClient) = document.create.div {
     p { +"Subscribe Topic" }
     input(InputType.text) {
         id = "subTopic"
@@ -329,16 +276,15 @@ fun subscribeUi(scope: CoroutineScope, client: MqttClient) = document.create.div
                     topicFilter = topic,
                     maximumQos = qos,
                 )
-                scope.launch {
+                GlobalScope.launch {
                     client.subscribe(sub)
-                    console.log("\r\nsubscribed")
                 }
             }
         }
     }
 }
 
-fun publishUi(scope: CoroutineScope, client: MqttClient) = document.create.div {
+fun publishUi(client: MqttClient) = document.create.div {
     p { +"Publish Topic" }
     input(InputType.text) {
         id = "publishTopic"
@@ -381,9 +327,8 @@ fun publishUi(scope: CoroutineScope, client: MqttClient) = document.create.div {
                     qos = qos,
                     payload = payload
                 )
-                scope.launch {
+                GlobalScope.launch {
                     client.publish(pub)
-                    console.log("\r\npublished")
                 }
             }
         }
@@ -391,7 +336,7 @@ fun publishUi(scope: CoroutineScope, client: MqttClient) = document.create.div {
 }
 
 
-fun unsubscribeUi(scope: CoroutineScope, client: MqttClient) = document.create.div {
+fun unsubscribeUi(client: MqttClient) = document.create.div {
     p { +"Unsubscribe Topic" }
     input(InputType.text) {
         id = "unsubTopic"
@@ -405,16 +350,15 @@ fun unsubscribeUi(scope: CoroutineScope, client: MqttClient) = document.create.d
             if (topic != null) {
                 val factory = client.packetFactory
                 val unsub = factory.unsubscribe(topic)
-                scope.launch {
+                GlobalScope.launch {
                     client.unsubscribe(unsub)
-                    console.log("\r\nunsubscribed")
                 }
             }
         }
     }
 }
 
-fun connectionOpNode(scope: CoroutineScope, mqttService: MqttService) = document.create.div {
+fun connectionOpNode(mqttService: MqttService) = document.create.div {
     id = "connectionOp"
     p {
         +"Mqtt Version "
@@ -448,7 +392,7 @@ fun connectionOpNode(scope: CoroutineScope, mqttService: MqttService) = document
                     }
                     root.appendChild(connectionRequest4Node())
                 }
-                root.appendChild(doneButton(scope, mqttService))
+                root.appendChild(doneButton(mqttService))
             }
         }
     }
@@ -798,9 +742,7 @@ fun connectionRequest5Node() = document.create.div {
             id = "mqtt5Extras"
             checked = false
             onChangeFunction = {
-                println(document.getElementById("mqtt5Extras"))
                 val mqtt5Extras = document.getElementById("mqtt5Extras") as HTMLInputElement
-                println(mqtt5Extras.checked)
                 val sessionExpiryIntervalSeconds =
                     document.getElementById("sessionExpiryIntervalSeconds") as HTMLInputElement
                 val receiveMaximum = document.getElementById("receiveMaximum") as HTMLInputElement

@@ -23,14 +23,14 @@ import com.ditchoom.mqtt3.controlpacket.PublishMessage
 import com.ditchoom.mqtt3.controlpacket.PublishReceived
 import com.ditchoom.mqtt3.controlpacket.PublishRelease
 import com.ditchoom.mqtt3.controlpacket.SubscribeRequest
+import com.ditchoom.mqtt3.controlpacket.Subscription
 import com.ditchoom.mqtt3.controlpacket.UnsubscribeRequest
 import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.coroutines.withContext
-import web.errors.DOMException
 import web.idb.IDBDatabase
 import web.idb.IDBFactory
 import web.idb.IDBKeyRange
 import web.idb.IDBRequest
+import web.idb.IDBRequestReadyState
 import web.idb.IDBTransaction
 import web.idb.IDBTransactionMode
 import kotlin.coroutines.resume
@@ -39,11 +39,9 @@ import kotlin.coroutines.suspendCoroutine
 
 class IDBPersistence(private val db: IDBDatabase) : Persistence {
 
-    private val dispatcher = defaultDispatcher(0, "unused")
     override suspend fun ackPub(broker: MqttBroker, packet: IPublishAcknowledgment) {
         val tx = db.transaction(PubMsg, IDBTransactionMode.readwrite)
-        val queuedMsgStore = tx.objectStore(PubMsg)
-        request { queuedMsgStore.delete(arrayOf(broker.identifier, packet.packetIdentifier, 0)) }
+        tx.objectStore(PubMsg).delete(arrayOf(broker.identifier, packet.packetIdentifier, 0))
         commitTransaction(tx, "ackPub")
     }
 
@@ -59,7 +57,7 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
         incomingPubRecv: IPublishReceived,
         pubRel: IPublishRelease
     ) {
-        val tx = db.transaction(arrayOf(PubMsg, QoS2Msg), IDBTransactionMode.readwrite)
+        val tx = db.transaction(storeNames = arrayOf(PubMsg, QoS2Msg), mode = IDBTransactionMode.readwrite)
         val queuedMsgStore = tx.objectStore(PubMsg)
         val qos2MsgStore = tx.objectStore(QoS2Msg)
         queuedMsgStore.delete(arrayOf(broker.identifier, incomingPubRecv.packetIdentifier, 0))
@@ -106,14 +104,14 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
         unsubMsgStore.delete(arrayOf(broker.identifier, unsubAck.packetIdentifier))
         val subStore = tx.objectStore(Subscription)
         val unsubIndex = subStore.index(UnsubIndex)
-
-        val unsubSubscriptions = request { unsubIndex.getAll(key) }
-        for (unsubscription in unsubSubscriptions) {
-            val d = unsubscription.asDynamic()
-            PersistableUnsubscribe(d.brokerId.unsafeCast<Int>(), unsubAck.packetIdentifier)
-            subStore.delete(arrayOf(broker.identifier, d.topicFilter))
+        val unsubSubscriptionsRequest = unsubIndex.getAll(key)
+        unsubSubscriptionsRequest.onsuccess = {
+            for (unsubscription in unsubSubscriptionsRequest.result) {
+                val d = unsubscription.asDynamic()
+                subStore.delete(arrayOf(broker.identifier, d.topicFilter))
+            }
+            tx.commit()
         }
-        commitTransaction(tx, "ackUnsub")
     }
 
     override suspend fun activeSubscriptions(
@@ -123,9 +121,10 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
         val tx = db.transaction(Subscription, IDBTransactionMode.readonly)
         val subStore = tx.objectStore(Subscription)
         val index = subStore.index(BrokerIndex)
-        val subscriptionsRaw = request { index.getAll(broker.identifier) }
+        val subscriptionsRawRequest = index.getAll(broker.identifier)
         commitTransaction(tx, "activeSubscriptions")
-        return subscriptionsRaw
+        await(subscriptionsRawRequest)
+        return subscriptionsRawRequest.result
             .map {
                 val d = it.asDynamic()
                 PersistableSubscription(
@@ -155,86 +154,94 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
         val store = tx.objectStore(Broker)
         val connections = PersistableSocketConnection.from(connectionOps)
         val persistableRequest = PersistableConnectionRequest.from(connectionRequest as ConnectionRequest)
-        val countOp = request { store.count() }
-        val broker = PersistableBroker(countOp, connections, persistableRequest)
-        store.put(broker)
-        commitTransaction(tx, "addBroker")
-        return MqttBroker(countOp.unsafeCast<Int>(), connectionOps, connectionRequest)
+        val storeCountRequest = store.count()
+        val countOp = suspendCoroutine { cont ->
+            storeCountRequest.onsuccess = {
+                val countOp = storeCountRequest.result.unsafeCast<Int>()
+                val broker = PersistableBroker(countOp, connections, persistableRequest)
+                store.put(broker)
+                tx.commit()
+                cont.resume(countOp)
+            }
+        }
+        return MqttBroker(countOp, connectionOps, connectionRequest)
     }
 
-    private suspend fun <T> request(block: () -> IDBRequest<T>): T = withContext(dispatcher) {
-        suspendCoroutine { cont ->
-            val op = block()
-            op.onsuccess = {
-                cont.resume(op.result)
+    private suspend fun await(request: IDBRequest<*>) {
+        if (request.readyState == IDBRequestReadyState.done) {
+            return
+        }
+        suspendCoroutine<Any?> { cont ->
+            request.onsuccess = {
+                cont.resume(request.result)
             }
-            op.onerror = {
+            request.onerror = {
                 console.error("request error, cast throwable", it)
-                cont.resumeWithException(op.error as Throwable)
+                cont.resumeWithException(request.error!!)
             }
         }
     }
 
-    private suspend fun commitTransaction(tx: IDBTransaction, logName: String) = withContext(dispatcher) {
-        suspendCancellableCoroutine { cont ->
+    private suspend fun commitTransaction(tx: IDBTransaction, logName: String) {
+        return suspendCancellableCoroutine { cont ->
             tx.oncomplete = {
                 cont.resume(Unit)
             }
             tx.onerror = {
-                console.error("error committing tx $logName", tx, it)
-                cont.resumeWithException(tx.error as Throwable)
+                cont.resumeWithException(Exception("error committing tx $logName", tx.error))
             }
             tx.onabort = {
-                console.error("abort committing tx $logName", tx, it)
-                cont.resumeWithException(tx.error as Throwable)
+                cont.resumeWithException(Exception("abort committing tx $logName", tx.error))
             }
             cont.invokeOnCancellation {
                 if (!cont.isCompleted) {
                     tx.abort()
                 }
             }
-            tx.commit()
+            try {
+                tx.commit()
+            } catch (e: Throwable) {
+                console.error("Failed to commit $logName", e)
+            }
         }
     }
 
     override suspend fun brokerWithId(identifier: Int): MqttBroker? {
         val tx = db.transaction(Broker, IDBTransactionMode.readonly)
+        val store = tx.objectStore(Broker)
+        val brokerObjRequest = store[arrayOf(identifier)]
+        commitTransaction(tx, "brokerWithId v4")
         try {
-            val store = tx.objectStore(Broker)
-            val result = request { store.get(arrayOf(identifier)) } ?: return null
-            val d = result.asDynamic()
-            return MqttBroker(
-                d.id as Int,
-                (d.connectionOptions as Array<*>).map { toSocketConnection(it) }.toSet(),
-                toConnectionRequest(d.connectionRequest)
-            )
-        } finally {
-            commitTransaction(tx, "broker v4 $identifier")
+            await(brokerObjRequest)
+        } catch (t: Throwable) {
+            return null
         }
+        val result = brokerObjRequest.result ?: return null
+        val d = result.asDynamic()
+        return MqttBroker(
+            d.id as Int,
+            (d.connectionOptions as Array<*>).map { toSocketConnection(it) }.toSet(),
+            toConnectionRequest(d.connectionRequest)
+        )
     }
 
     override suspend fun allBrokers(): Collection<MqttBroker> {
         val tx = db.transaction(Broker, IDBTransactionMode.readonly)
-        try {
-            val store = tx.objectStore(Broker)
-            val results = request { store.getAll() }
-            if (results.isEmpty()) {
-                return emptyList()
-            }
-            return results.toList().map { persistableBroker ->
-                val d = persistableBroker.asDynamic()
-                MqttBroker(
-                    d.id as Int,
-                    (d.connectionOptions as Array<*>).map { toSocketConnection(it) }.toSet(),
-                    toConnectionRequest(d.connectionRequest)
-                )
-            }
-        } finally {
-            try {
-                commitTransaction(tx, "allBrokers v4")
-            } catch (e: DOMException) {
-                // ignore. happens when it's an empty list
-            }
+        val store = tx.objectStore(Broker)
+        val allBrokersRequest = store.getAll()
+        commitTransaction(tx, "allBrokers v4")
+        await(allBrokersRequest)
+        val results = allBrokersRequest.result
+        if (results.isEmpty()) {
+            return emptyList()
+        }
+        return results.toList().map { persistableBroker ->
+            val d = persistableBroker.asDynamic()
+            MqttBroker(
+                d.id as Int,
+                (d.connectionOptions as Array<*>).map { toSocketConnection(it) }.toSet(),
+                toConnectionRequest(d.connectionRequest)
+            )
         }
     }
 
@@ -272,37 +279,17 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
         val subStore = tx.objectStore(SubMsg)
         val subscriptionStore = tx.objectStore(Subscription)
         val unsubStore = tx.objectStore(UnsubMsg)
-        val pub = request { queuedMsgStore.index(BrokerIncomingIndex).getAll(arrayOf(broker.identifier, 0)) }
-        val qos2Persistable = request { qos2Store.index(BrokerIndex).getAll(broker.identifier) }
-        val subscribeRequests = request { subStore.index(BrokerIndex).getAll(broker.identifier) }
-        val subIndex = subscriptionStore.index(AllSubIndex)
-        val retrievedSubscribeRequests = if (subscribeRequests.isNotEmpty()) {
-            subscribeRequests
-                .map {
-                    PersistableSubscribe(it.asDynamic().brokerId as Int, it.asDynamic().packetId as Int)
-                }
-                .map { persistableSubscribe ->
-                    val subscriptions =
-                        request { subIndex.getAll(arrayOf(broker.identifier, persistableSubscribe.packetId)) }
-                            .map { toSubscription(it.unsafeCast<PersistableSubscription>()) }
-                    SubscribeRequest(persistableSubscribe.packetId, subscriptions.toSet())
-                }
-        } else {
-            emptyList()
-        }
-        val unsubscribeRequests = request { unsubStore.index(BrokerIndex).getAll(broker.identifier) }
-        val unsubIndex = subscriptionStore.index(UnsubIndex)
-        val unsubs = unsubscribeRequests
-            .map { unsubscribeRequestObject ->
-                val packetId = unsubscribeRequestObject.asDynamic().packetId.unsafeCast<Int>()
-                val topics =
-                    request { unsubIndex.getAll(arrayOf(broker.identifier, packetId)) }
-                        .map { it.asDynamic().topicFilter.toString() }
-                UnsubscribeRequest(packetId, topics)
-            }
+        val subscriptionsRequest = subscriptionStore.index(AllSubBrokerId).getAll(broker.identifier)
+        val pubIdbRequest = queuedMsgStore.index(BrokerIncomingIndex).getAll(arrayOf(broker.identifier, 0))
+        val qos2PersistableIdbRequest = qos2Store.index(BrokerIndex).getAll(broker.identifier)
+        val subscribeRequestIdbRequest = subStore.index(BrokerIndex).getAll(broker.identifier)
+        val unsubscribeRequestsIdbRequest = unsubStore.index(BrokerIndex).getAll(broker.identifier)
         commitTransaction(tx, "messagesToSendOnReconnect")
-        val pubs = pub.map { toPub(it.unsafeCast<PersistablePublishMessage>()).setDupFlagNewPubMessage() }
-        val qos2 = qos2Persistable.map {
+        await(pubIdbRequest)
+        val pubs =
+            pubIdbRequest.result.map { toPub(it.unsafeCast<PersistablePublishMessage>()).setDupFlagNewPubMessage() }
+        await(qos2PersistableIdbRequest)
+        val qos2 = qos2PersistableIdbRequest.result.map {
             val dynamicIt = it.asDynamic()
             val msg = PersistableQos2Message(
                 dynamicIt.brokerId as Int,
@@ -317,6 +304,44 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
                 else -> error("IDB Persistence failed to get a valid qos 2 type")
             }
         }
+        await(subscriptionsRequest)
+        val persistableSubscriptions = subscriptionsRequest.result.map {
+            it.unsafeCast<PersistableSubscription>()
+        }.toTypedArray()
+        val subscriptionsBySubscribePacketId = HashMap<Int, MutableSet<Subscription>>()
+        persistableSubscriptions.forEach {
+            val subscriptionsById = subscriptionsBySubscribePacketId.getOrPut(it.subscribeId) { HashSet() }
+            subscriptionsById.add(toSubscription(it))
+        }
+        await(subscribeRequestIdbRequest)
+        val retrievedSubscribeRequests = if (subscribeRequestIdbRequest.result.isNotEmpty()) {
+            subscribeRequestIdbRequest.result
+                .map {
+                    PersistableSubscribe(it.asDynamic().brokerId as Int, it.asDynamic().packetId as Int)
+                }
+                .map { persistableSubscribe ->
+                    val subscriptions = checkNotNull(subscriptionsBySubscribePacketId[persistableSubscribe.packetId])
+                    SubscribeRequest(persistableSubscribe.packetId, subscriptions)
+                }
+        } else {
+            emptyList()
+        }
+        val unsubscriptionsByUnsubscribePacketId = HashMap<Int, MutableSet<String>>()
+        persistableSubscriptions.forEach {
+            val subscriptionsById = unsubscriptionsByUnsubscribePacketId.getOrPut(it.unsubscribeId) { HashSet() }
+            subscriptionsById.add(it.topicFilter)
+        }
+        await(unsubscribeRequestsIdbRequest)
+        val unsubs = unsubscribeRequestsIdbRequest.result
+            .mapNotNull { unsubscribeRequestObject ->
+                val packetId = unsubscribeRequestObject.asDynamic().packetId.unsafeCast<Int>()
+                val topics = unsubscriptionsByUnsubscribePacketId[packetId]
+                if (topics != null) {
+                    UnsubscribeRequest(packetId, topics)
+                } else {
+                    null
+                }
+            }
         return (pubs + retrievedSubscribeRequests + unsubs + qos2).sortedBy { it.packetIdentifier }
     }
 
@@ -352,8 +377,8 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
     }
 
     override suspend fun writePubGetPacketId(broker: MqttBroker, pub: IPublishMessage): Int {
+        val newPacketId = getAndIncrementPacketId(broker)
         val tx = db.transaction(arrayOf(PacketId, PubMsg), IDBTransactionMode.readwrite)
-        val newPacketId = getAndIncrementPacketId(tx, broker)
         val queuedMsgStore = tx.objectStore(PubMsg)
         val packetIdPub = pub.maybeCopyWithNewPacketIdentifier(newPacketId) as PublishMessage
         val persistablePub = PersistablePublishMessage(broker.identifier, false, packetIdPub)
@@ -364,41 +389,46 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
 
     override suspend fun getPubWithPacketId(broker: MqttBroker, packetId: Int): IPublishMessage? {
         val tx = db.transaction(arrayOf(PubMsg), IDBTransactionMode.readonly)
-        try {
-            val queuedMsgStore = tx.objectStore(PubMsg)
-            if (request { queuedMsgStore.count(arrayOf(broker.identifier, packetId, 0)) } == 0) {
-                return null
-            }
-            val pub = request { queuedMsgStore.get(arrayOf(broker.identifier, packetId, 0)) }
-            return toPub(pub.unsafeCast<PersistablePublishMessage>())
-        } finally {
-            commitTransaction(tx, "getPubWithPacketId")
-        }
+        val pubRequest = tx.objectStore(PubMsg)[arrayOf(broker.identifier, packetId, 0)]
+        commitTransaction(tx, "getPubWithPacketId")
+        await(pubRequest)
+        val persistablePub = pubRequest.result?.unsafeCast<PersistablePublishMessage>() ?: return null
+        return toPub(persistablePub)
     }
 
-    private suspend fun getAndIncrementPacketId(tx: IDBTransaction, broker: MqttBroker): Int {
+    private suspend fun getAndIncrementPacketId(broker: MqttBroker): Int {
+        val tx = db.transaction(arrayOf(PacketId), IDBTransactionMode.readwrite)
         val packetIdStore = tx.objectStore(PacketId)
         val brokerIdKey = IDBKeyRange.only(broker.identifier)
-        val result = request { packetIdStore.get(brokerIdKey) }
-        val value = if (result == undefined) {
-            1
-        } else {
-            result.unsafeCast<Int>()
+        val packetIdCurrentRequest = packetIdStore[brokerIdKey]
+        return suspendCoroutine { cont ->
+            packetIdCurrentRequest.onsuccess = {
+                val result = packetIdCurrentRequest.result
+                val value = if (result == undefined) {
+                    1
+                } else {
+                    result.unsafeCast<Int>()
+                }
+                val next = value.toString().toInt() + 1
+                packetIdStore.put(next, broker.identifier)
+                tx.commit()
+                cont.resume(value.toString().toInt())
+            }
+            packetIdCurrentRequest.onerror = {
+                cont.resumeWithException(packetIdCurrentRequest.error!!)
+            }
         }
-        val next = value.toString().toInt() + 1
-        request { packetIdStore.put(next, broker.identifier) }
-        return value.toString().toInt()
     }
 
     override suspend fun writeSubUpdatePacketIdAndSimplifySubscriptions(
         broker: MqttBroker,
         sub: ISubscribeRequest
     ): ISubscribeRequest {
-        val tx = db.transaction(arrayOf(PacketId, SubMsg, Subscription), IDBTransactionMode.readwrite)
-        val newPacketId = getAndIncrementPacketId(tx, broker)
-        val subMsgStore = tx.objectStore(SubMsg)
+        val newPacketId = getAndIncrementPacketId(broker)
         val newSub = sub.copyWithNewPacketIdentifier(newPacketId)
         val persistableSubscribe = PersistableSubscribe(broker.identifier, newSub.packetIdentifier)
+        val tx = db.transaction(arrayOf(PacketId, SubMsg, Subscription), IDBTransactionMode.readwrite)
+        val subMsgStore = tx.objectStore(SubMsg)
         subMsgStore.add(persistableSubscribe)
         val subStore = tx.objectStore(Subscription)
         for (subscription in sub.subscriptions) {
@@ -410,67 +440,82 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
 
     override suspend fun getSubWithPacketId(broker: MqttBroker, packetId: Int): ISubscribeRequest? {
         val tx = db.transaction(arrayOf(SubMsg, Subscription), IDBTransactionMode.readonly)
-        try {
-            val subStore = tx.objectStore(SubMsg)
-            if (request { subStore.count(arrayOf(broker.identifier, packetId)) } == 0) {
-                return null
-            }
-            val subscriptionStore = tx.objectStore(Subscription)
-            val subIndex = subscriptionStore.index(AllSubIndex)
-            val obj = request { subStore.get(arrayOf(broker.identifier, packetId)) }
-            val persistableSubscribe =
-                PersistableSubscribe(obj.asDynamic().brokerId as Int, obj.asDynamic().packetId as Int)
-            val subscriptions =
-                request { subIndex.getAll(arrayOf(broker.identifier, persistableSubscribe.packetId)) }
-                    .map { toSubscription(it.unsafeCast<PersistableSubscription>()) }
-            return SubscribeRequest(persistableSubscribe.packetId, subscriptions.toSet())
-        } finally {
-            commitTransaction(tx, "getSubWithPacketId")
+        val subStore = tx.objectStore(SubMsg)
+
+        val objRequest = subStore[arrayOf(broker.identifier, packetId)]
+        val subscriptionStore = tx.objectStore(Subscription)
+        val subIndex = subscriptionStore.index(BrokerIdPacketIdSubIndex)
+        val allSubRequest = subIndex.getAll(arrayOf(broker.identifier, packetId))
+
+        commitTransaction(tx, "getSubWIthPacketId")
+        await(objRequest)
+        val obj = objRequest.result ?: return null
+        await(allSubRequest)
+        if (allSubRequest.result.isEmpty()) {
+            return null
         }
+        val persistableSubscribe =
+            PersistableSubscribe(obj.asDynamic().brokerId as Int, obj.asDynamic().packetId as Int)
+
+        val subscriptions =
+            allSubRequest.result
+                .map { toSubscription(it.unsafeCast<PersistableSubscription>()) }
+        val s = SubscribeRequest(persistableSubscribe.packetId, subscriptions.toSet())
+        return s
     }
 
     override suspend fun writeUnsubGetPacketId(broker: MqttBroker, unsub: IUnsubscribeRequest): Int {
-        val tx = db.transaction(arrayOf(PacketId, UnsubMsg, Subscription), IDBTransactionMode.readwrite)
-        val newPacketId = getAndIncrementPacketId(tx, broker)
-        val newUnsub = unsub.copyWithNewPacketIdentifier(newPacketId)
+        val newPacketId = getAndIncrementPacketId(broker)
+        suspendCoroutine { cont ->
+            val newUnsub = unsub.copyWithNewPacketIdentifier(newPacketId)
+            val persistableUnsub = PersistableUnsubscribe(broker.identifier, newUnsub as UnsubscribeRequest)
 
-        val persistableUnsub = PersistableUnsubscribe(broker.identifier, newUnsub as UnsubscribeRequest)
-        val unsubMsgStore = tx.objectStore(UnsubMsg)
-        unsubMsgStore.put(persistableUnsub)
-        val subscriptions = tx.objectStore(Subscription)
-        val persistableSubscriptions = unsub.topics.map {
-            val persistableSubscription = request { subscriptions.get(arrayOf(broker.identifier, it.toString())) }
-            PersistableSubscription(
-                persistableSubscription.asDynamic().brokerId as Int,
-                persistableSubscription.asDynamic().topicFilter as String,
-                persistableSubscription.asDynamic().subscribeId as Int,
-                newPacketId,
-                persistableSubscription.asDynamic().qos as Byte
-            )
+            val tx = db.transaction(arrayOf(PacketId, UnsubMsg, Subscription), IDBTransactionMode.readwrite)
+            val unsubMsgStore = tx.objectStore(UnsubMsg)
+            unsubMsgStore.put(persistableUnsub)
+            val subscriptions = tx.objectStore(Subscription)
+
+            val topicsLeft = HashSet(unsub.topics)
+            unsub.topics.forEach { topicObj ->
+                val topic = topicObj.toString()
+                val request = subscriptions[arrayOf(broker.identifier, topic)]
+                request.onsuccess = {
+                    val persistableSubscription = request.result.asDynamic()
+                    subscriptions.put(
+                        PersistableSubscription(
+                            broker.identifier,
+                            topic,
+                            persistableSubscription.subscribeId as Int,
+                            newPacketId,
+                            persistableSubscription.qos as Byte
+                        )
+                    )
+                    topicsLeft -= topicObj
+                    if (topicsLeft.isEmpty()) {
+                        tx.commit()
+                        cont.resume(Unit)
+                    }
+                }
+                request.onerror = {
+                    cont.resumeWithException(request.error!!)
+                }
+            }
         }
-        persistableSubscriptions.forEach {
-            subscriptions.put(it)
-        }
-        commitTransaction(tx, "writeUnsubGetPacketId")
         return newPacketId
     }
 
     override suspend fun getUnsubWithPacketId(broker: MqttBroker, packetId: Int): IUnsubscribeRequest? {
         val tx = db.transaction(arrayOf(UnsubMsg, Subscription), IDBTransactionMode.readonly)
-        try {
-            val unsubStore = tx.objectStore(UnsubMsg)
-            if (request { unsubStore.count(arrayOf(broker.identifier, packetId)) } == 0) {
-                return null
-            }
-            val subStore = tx.objectStore(Subscription)
-            val unsubIndex = subStore.index(UnsubIndex)
-            val topics =
-                request { unsubIndex.getAll(arrayOf(broker.identifier, packetId)) }
-                    .map { it.asDynamic().topicFilter.toString() }
-            return UnsubscribeRequest(packetId, topics)
-        } finally {
-            commitTransaction(tx, "getUnsubWithPacketId")
+        val subStore = tx.objectStore(Subscription)
+        val unsubIndex = subStore.index(UnsubIndex)
+        val topicsRequest = unsubIndex.getAll(arrayOf(broker.identifier, packetId))
+        commitTransaction(tx, "getUnsubWithPacketId")
+        await(topicsRequest)
+        if (topicsRequest.result.isEmpty()) {
+            return null
         }
+        val topics = topicsRequest.result.map { it.asDynamic().topicFilter.toString() }
+        return UnsubscribeRequest(packetId, topics)
     }
 
     override suspend fun isQueueClear(broker: MqttBroker, includeSubscriptions: Boolean): Boolean {
@@ -492,10 +537,10 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
         private const val QoS2Msg = "QoS2Msg"
         private const val SubMsg = "SubMsg"
         private const val SubIndex = "sub"
-        private const val AllSubIndex = "allSub"
+        private const val BrokerIdPacketIdSubIndex = "brokerIdPacketIdSubIndex"
+        private const val AllSubBrokerId = "brokerId"
         private const val UnsubMsg = "UnsubMsg"
         private const val UnsubIndex = "unsub"
-        private const val AllUnsubIndex = "allUnsub"
 
         suspend fun idbPersistence(indexedDb: IDBFactory, name: String): IDBPersistence {
             val database = suspendCoroutine<IDBDatabase> { cont ->
@@ -521,7 +566,8 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
                     unsubStore.createIndex(BrokerIndex, "brokerId")
                     subscriptionStore.createIndex(BrokerIndex, "brokerId")
                     subscriptionStore.createIndex(SubIndex, arrayOf("brokerId", "topicFilter", "subscribeId"))
-                    subscriptionStore.createIndex(AllSubIndex, arrayOf("brokerId", "subscribeId"))
+                    subscriptionStore.createIndex(BrokerIdPacketIdSubIndex, arrayOf("brokerId", "subscribeId"))
+                    subscriptionStore.createIndex(AllSubBrokerId, "brokerId")
                     subscriptionStore.createIndex(UnsubIndex, arrayOf("brokerId", "unsubscribeId"))
                 }
                 openRequest.onerror = {

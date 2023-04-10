@@ -128,8 +128,10 @@ class LocalMqttClient(
     override suspend fun subscribe(sub: ISubscribeRequest): SubscribeOperation = observeSub(processor.subscribe(sub))
 
     private fun observeSub(subscribeRequestSent: ISubscribeRequest): SubscribeOperation {
+        val map = subscribeRequestSent.subscriptions.associateWith { observe(it.topicFilter) }
         return SubscribeOperation(
             subscribeRequestSent.packetIdentifier,
+            map,
             scope.async {
                 processor.awaitIncomingPacketId(
                     subscribeRequestSent.packetIdentifier,
@@ -169,6 +171,7 @@ class LocalMqttClient(
         connectivityManager.shutdown(sendDisconnect)
     }
 
+    internal fun isStopped() = connectivityManager.isStopped
     override suspend fun connectionCount(): Long = connectivityManager.connectionCount
     override suspend fun connectionAttempts(): Long = connectivityManager.connectionAttempts
 

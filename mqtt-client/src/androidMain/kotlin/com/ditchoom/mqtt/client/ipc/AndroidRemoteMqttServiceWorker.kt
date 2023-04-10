@@ -38,6 +38,7 @@ class AndroidRemoteMqttServiceWorker(private val serviceServer: RemoteMqttServic
     override fun requestClientOrNull(brokerId: Int, protocolVersion: Byte, callback: MqttGetClientCallback) {
         scope.launch {
             val client = serviceServer.requestClientOrNull(brokerId, protocolVersion)
+            client?.client?.allocateSharedMemory = true
             if (client != null) {
                 callback.onClientReady(AndroidMqttClientIPCServer(client), brokerId, protocolVersion)
             } else {

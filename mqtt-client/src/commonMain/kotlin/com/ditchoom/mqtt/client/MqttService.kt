@@ -15,6 +15,24 @@ interface MqttService {
 
     suspend fun removeBroker(brokerId: Int, protocolVersion: Byte)
 
+    suspend fun addBrokerAndStartClient(
+        connectionOps: MqttConnectionOptions,
+        connectionRequest: IConnectionRequest
+    ): MqttClient {
+        val broker = addBroker(listOf(connectionOps), connectionRequest)
+        start(broker)
+        return checkNotNull(getClient(broker))
+    }
+
+    suspend fun addBrokerAndStartClient(
+        connectionOps: Collection<MqttConnectionOptions>,
+        connectionRequest: IConnectionRequest
+    ): MqttClient {
+        val broker = addBroker(connectionOps, connectionRequest)
+        start(broker)
+        return checkNotNull(getClient(broker))
+    }
+
     suspend fun getClient(broker: MqttBroker): MqttClient?
 
     suspend fun start(broker: MqttBroker)
@@ -26,7 +44,7 @@ interface MqttService {
     suspend fun stop(broker: MqttBroker)
 
     companion object {
-        suspend fun getService(
+        suspend fun buildNewService(
             ipcEnabled: Boolean,
             androidContextOrAbstractWorker: Any? = null,
             inMemory: Boolean = false
@@ -38,6 +56,7 @@ interface MqttService {
             if (serviceFound == null) {
                 return LocalMqttService.buildService(androidContextOrAbstractWorker, inMemory)
             }
+
             return serviceFound
         }
     }

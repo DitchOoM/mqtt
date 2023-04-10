@@ -335,7 +335,7 @@ class MqttClientTest {
         val broker = persistence.addBroker(connectionOptions, connectionRequest)
         val client = LocalMqttClient.stayConnected(scope, broker, persistence)
         client.awaitConnectivity()
-        sendAllMessageTypes(client)
+        sendAllMessageTypes2(client)
         client.sendDisconnect()
         client.awaitConnectivity()
         client.shutdown()
@@ -359,12 +359,12 @@ class MqttClientTest {
                 assertEquals(payloadString + qosValue, payload.readString(payload.limit()))
             }
         }
-        sendAllMessageTypes(client)
+        sendAllMessageTypes2(client)
         client.shutdown()
         assertTrue(persistence.isQueueClear(broker, false))
     }
 
-    private suspend fun sendAllMessageTypes(client: MqttClient) =
+    private suspend fun sendAllMessageTypes2(client: MqttClient) =
         sendAllMessageTypes(client, topic, payloadString)
 }
 

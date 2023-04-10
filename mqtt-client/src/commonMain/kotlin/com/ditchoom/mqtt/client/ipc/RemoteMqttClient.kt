@@ -32,10 +32,11 @@ abstract class RemoteMqttClient(
     override val broker: MqttBroker,
     private val persistence: Persistence
 ) : MqttClient {
+    abstract val allocationZone: AllocationZone
     private val _incomingPackets = MutableSharedFlow<ControlPacket>(2, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     val incomingPackets: SharedFlow<ControlPacket> = _incomingPackets
     private val _sentPackets = MutableSharedFlow<ControlPacket>(2, onBufferOverflow = BufferOverflow.DROP_OLDEST)
-    val sendPackets: SharedFlow<ControlPacket> = _sentPackets
+    val sentPackets: SharedFlow<ControlPacket> = _sentPackets
     protected open suspend fun sendSubscribe(packetId: Int) {}
 
     override suspend fun subscribe(sub: ISubscribeRequest): SubscribeOperation {
@@ -49,18 +50,20 @@ abstract class RemoteMqttClient(
             packet as ISubscribeAcknowledgement
         }
         sendSubscribe(subscribe.packetIdentifier)
-        return SubscribeOperation(subscribe.packetIdentifier, suback)
+        val map = subscribe.subscriptions.associateWith { observe(it.topicFilter) }
+        return SubscribeOperation(subscribe.packetIdentifier, map, suback)
     }
 
     protected open suspend fun sendPublish(packetId: Int, pubBuffer: PlatformBuffer) {}
 
     override suspend fun publish(pub: IPublishMessage): PublishOperation {
-        val pubBuffer = pub.serialize(AllocationZone.SharedMemory)
         val publishPacketId = if (pub.qualityOfService == QualityOfService.AT_MOST_ONCE) {
             NO_PACKET_ID
         } else {
             persistence.writePubGetPacketId(broker, pub)
         }
+        val pub = pub.maybeCopyWithNewPacketIdentifier(publishPacketId)
+        val pubBuffer = pub.serialize(allocationZone)
         sendPublish(publishPacketId, pubBuffer)
         return when (pub.qualityOfService) {
             QualityOfService.AT_MOST_ONCE -> PublishOperation.QoSAtMostOnceComplete

@@ -54,6 +54,7 @@ class LocalMqttService private constructor(
 
     override suspend fun start(broker: MqttBroker) {
         val client = brokerClientMap[broker.protocolVersion]?.get(broker.identifier)
+
         if (client == null) {
             val c = LocalMqttClient.stayConnected(scope, broker, getPersistence(broker), useSharedMemory, observer, {
                 sentMessages(broker, it)
@@ -63,6 +64,14 @@ class LocalMqttService private constructor(
             brokerClientMap
                 .getOrPut(broker.protocolVersion) { HashMap() }
                 .getOrPut(broker.identifier) { c }
+        } else if (client.isStopped()) {
+            val c = LocalMqttClient.stayConnected(scope, broker, getPersistence(broker), useSharedMemory, observer, {
+                sentMessages(broker, it)
+            }) { byte1, remainingLength, buffer ->
+                incomingMessages(broker, byte1, remainingLength, buffer)
+            }
+            brokerClientMap
+                .getOrPut(broker.protocolVersion) { HashMap() }[broker.identifier] = c
         }
     }
 
@@ -92,7 +101,8 @@ class LocalMqttService private constructor(
     }
 
     override suspend fun stop(broker: MqttBroker) {
-        brokerClientMap[broker.protocolVersion]?.remove(broker.identifier)?.shutdown()
+        val c = brokerClientMap[broker.protocolVersion]?.remove(broker.identifier) ?: return
+        c.shutdown()
     }
 
     override suspend fun addBroker(

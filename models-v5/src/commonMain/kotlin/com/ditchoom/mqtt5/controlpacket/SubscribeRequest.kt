@@ -52,10 +52,10 @@ data class SubscribeRequest(
         retainAsPublished: Boolean = false,
         retainHandling: RetainHandling = SEND_RETAINED_MESSAGES_AT_TIME_OF_SUBSCRIBE
     ) :
-            this(
-                VariableHeader(packetIdentifier.toInt(), props),
-                setOf(Subscription.from(topic, qos, noLocal, retainAsPublished, retainHandling))
-            )
+        this(
+            VariableHeader(packetIdentifier.toInt(), props),
+            setOf(Subscription.from(topic, qos, noLocal, retainAsPublished, retainHandling))
+        )
 
     constructor(
         packetIdentifier: Int,
@@ -66,16 +66,16 @@ data class SubscribeRequest(
         retainAsPublishedList: List<Boolean>? = null,
         retainHandlingList: List<RetainHandling>? = null
     ) :
-            this(
-                VariableHeader(packetIdentifier, props),
-                Subscription.from(
-                    topic,
-                    qos,
-                    noLocalList,
-                    retainAsPublishedList,
-                    retainHandlingList
-                )
+        this(
+            VariableHeader(packetIdentifier, props),
+            Subscription.from(
+                topic,
+                qos,
+                noLocalList,
+                retainAsPublishedList,
+                retainHandlingList
             )
+        )
 
     override val packetIdentifier = variable.packetIdentifier
     override fun variableHeader(writeBuffer: WriteBuffer) = variable.serialize(writeBuffer)
@@ -193,7 +193,7 @@ data class SubscribeRequest(
                                 if (reasonString != null) {
                                     throw ProtocolError(
                                         "Reason String added multiple times see: " +
-                                                "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477427"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477427"
                                     )
                                 }
                                 reasonString = it.diagnosticInfoDontParse

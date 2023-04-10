@@ -35,10 +35,10 @@ data class UnsubscribeRequest(
     ) : this(VariableHeader(NO_PACKET_ID, VariableHeader.Properties(userProperty)), topics)
 
     constructor(topic: String, userProperty: List<Pair<String, String>> = emptyList()) :
-            this(
-                VariableHeader(NO_PACKET_ID, VariableHeader.Properties(userProperty)),
-                setOf<Topic>(Topic.fromOrThrow(topic, Topic.Type.Filter))
-            )
+        this(
+            VariableHeader(NO_PACKET_ID, VariableHeader.Properties(userProperty)),
+            setOf<Topic>(Topic.fromOrThrow(topic, Topic.Type.Filter))
+        )
 
     init {
         if (topics.isEmpty()) {

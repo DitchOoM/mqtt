@@ -159,7 +159,7 @@ data class DisconnectNotification(val variable: VariableHeader = VariableHeader(
                                 if (sessionExpiryIntervalSeconds != null) {
                                     throw ProtocolError(
                                         "Session Expiry Interval added multiple times see: " +
-                                                "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477382"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477382"
                                     )
                                 }
                                 sessionExpiryIntervalSeconds = it.seconds
@@ -169,7 +169,7 @@ data class DisconnectNotification(val variable: VariableHeader = VariableHeader(
                                 if (reasonString != null) {
                                     throw ProtocolError(
                                         "Reason String added multiple times see: " +
-                                                "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477476"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477476"
                                     )
                                 }
                                 reasonString = it.diagnosticInfoDontParse
@@ -180,7 +180,7 @@ data class DisconnectNotification(val variable: VariableHeader = VariableHeader(
                                 if (serverReference != null) {
                                     throw ProtocolError(
                                         "Server Reference added multiple times see: " +
-                                                "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477396"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477396"
                                     )
                                 }
                                 serverReference = it.otherServer

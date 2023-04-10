@@ -31,7 +31,7 @@ data class PersistableUnsubscribe(
     val packetId: Int
 ) {
     constructor(brokerId: Int, unsub: UnsubscribeRequest) :
-            this(brokerId, unsub.packetIdentifier)
+        this(brokerId, unsub.packetIdentifier)
 }
 
 // fun toUnsubscribe(p: PersistableUnsubscribe) =
@@ -59,7 +59,7 @@ data class PersistableSubscription(
 ) {
     @JsName("build")
     constructor(brokerId: Int, subscribeId: Int, sub: ISubscription) :
-            this(brokerId, sub.topicFilter.toString(), subscribeId, -1, sub.maximumQos.integerValue)
+        this(brokerId, sub.topicFilter.toString(), subscribeId, -1, sub.maximumQos.integerValue)
 }
 
 fun toSubscription(s: PersistableSubscription) =

@@ -132,7 +132,7 @@ data class AuthenticationExchange(val variable: VariableHeader) :
                                 if (method != null) {
                                     throw ProtocolError(
                                         "Auth Method added multiple times see: " +
-                                                "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477382"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477382"
                                     )
                                 }
                                 method = it.value
@@ -142,7 +142,7 @@ data class AuthenticationExchange(val variable: VariableHeader) :
                                 if (reasonString != null) {
                                     throw ProtocolError(
                                         "Reason String added multiple times see: " +
-                                                "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477476"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477476"
                                     )
                                 }
                                 reasonString = it.diagnosticInfoDontParse
@@ -153,7 +153,7 @@ data class AuthenticationExchange(val variable: VariableHeader) :
                                 if (data != null) {
                                     throw ProtocolError(
                                         "Server Reference added multiple times see: " +
-                                                "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477396"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477396"
                                     )
                                 }
                                 data = it.data

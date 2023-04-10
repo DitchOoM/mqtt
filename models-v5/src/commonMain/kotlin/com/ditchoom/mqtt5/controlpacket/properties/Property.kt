@@ -108,7 +108,7 @@ fun ReadBuffer.readMqttProperty(): Pair<Property, Int> {
             if (!(uByteAsInt == 0 || uByteAsInt == 1)) {
                 throw ProtocolError(
                     "Request Problem Information cannot have a value other than 0 or 1" +
-                            "see: https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477353"
+                        "see: https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477353"
                 )
             }
             RequestProblemInformation(uByteAsInt == 1)
@@ -120,7 +120,7 @@ fun ReadBuffer.readMqttProperty(): Pair<Property, Int> {
             if (!(uByteAsInt == 0 || uByteAsInt == 1)) {
                 throw ProtocolError(
                     "Request Response Information cannot have a value other than 0 or 1" +
-                            "see: https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477352"
+                        "see: https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477352"
                 )
             }
             RequestResponseInformation(uByteAsInt == 1)
@@ -145,9 +145,9 @@ fun ReadBuffer.readMqttProperty(): Pair<Property, Int> {
         0x2A -> SharedSubscriptionAvailable(readByte() == 1.toByte())
         else -> throw MalformedPacketException(
             "Invalid Byte Code while reading properties $identifierByte 0x${
-                identifierByte.toString(
-                    16
-                )
+            identifierByte.toString(
+                16
+            )
             }"
         )
     }

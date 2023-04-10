@@ -169,36 +169,36 @@ data class ConnectionRequest(
             return MqttWarning(
                 "[MQTT-3.1.2-9]",
                 "If the Will Flag is set to " +
-                        "1, the Will QoS and Will Retain fields in the Connect Flags will be used by the Server, " +
-                        "and the Will Properties, Will Topic and Will Message fields MUST be present in the Payload."
+                    "1, the Will QoS and Will Retain fields in the Connect Flags will be used by the Server, " +
+                    "and the Will Properties, Will Topic and Will Message fields MUST be present in the Payload."
             )
         }
         if (variableHeader.hasUserName && payload.userName == null) {
             return MqttWarning(
                 "[MQTT-3.1.2-17]",
                 "If the User Name Flag is set" +
-                        " to 1, a User Name MUST be present in the Payload"
+                    " to 1, a User Name MUST be present in the Payload"
             )
         }
         if (!variableHeader.hasUserName && payload.userName != null) {
             return MqttWarning(
                 "[MQTT-3.1.2-16]",
                 "If the User Name Flag is set " +
-                        "to 0, a User Name MUST NOT be present in the Payload"
+                    "to 0, a User Name MUST NOT be present in the Payload"
             )
         }
         if (variableHeader.hasPassword && payload.password == null) {
             return MqttWarning(
                 "[MQTT-3.1.2-19]",
                 "If the Password Flag is set" +
-                        " to 1, a Password MUST be present in the Payload"
+                    " to 1, a Password MUST be present in the Payload"
             )
         }
         if (!variableHeader.hasPassword && payload.password != null) {
             return MqttWarning(
                 "[MMQTT-3.1.2-18]",
                 "If the Password Flag is set " +
-                        "to 0, a Password MUST NOT be present in the Payload"
+                    "to 0, a Password MUST NOT be present in the Payload"
             )
         }
         return variableHeader.validateOrGetWarning()
@@ -415,7 +415,7 @@ data class ConnectionRequest(
                 return MqttWarning(
                     "[MQTT-3.1.2-13]",
                     "If the Will Flag is set" +
-                            " to 0, then Will Retain MUST be set to 0"
+                        " to 0, then Will Retain MUST be set to 0"
                 )
             }
             return null
@@ -730,7 +730,7 @@ data class ConnectionRequest(
                                 if (sessionExpiryIntervalSeconds != null) {
                                     throw ProtocolError(
                                         "Session Expiry Interval added multiple times see: " +
-                                                "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477348"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477348"
                                     )
                                 }
                                 sessionExpiryIntervalSeconds = it.seconds
@@ -740,13 +740,13 @@ data class ConnectionRequest(
                                 if (receiveMaximum != null) {
                                     throw ProtocolError(
                                         "Receive Maximum added multiple times see: " +
-                                                "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477349"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477349"
                                     )
                                 }
                                 if (it.maxQos1Or2ConcurrentMessages == 0) {
                                     throw ProtocolError(
                                         "Receive Maximum cannot be set to 0 see: " +
-                                                "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477349"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477349"
                                     )
                                 }
                                 receiveMaximum = it.maxQos1Or2ConcurrentMessages
@@ -756,13 +756,13 @@ data class ConnectionRequest(
                                 if (maximumPacketSize != null) {
                                     throw ProtocolError(
                                         "Maximum Packet Size added multiple times see: " +
-                                                "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477350"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477350"
                                     )
                                 }
                                 if (it.packetSizeLimitationBytes == 0uL) {
                                     throw ProtocolError(
                                         "Maximum Packet Size cannot be set to 0 see: " +
-                                                "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477350"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477350"
                                     )
                                 }
                                 maximumPacketSize = it.packetSizeLimitationBytes
@@ -772,7 +772,7 @@ data class ConnectionRequest(
                                 if (topicAliasMaximum != null) {
                                     throw ProtocolError(
                                         "Topic Alias Maximum added multiple times see: " +
-                                                "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477351"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477351"
                                     )
                                 }
                                 topicAliasMaximum = it.highestValueSupported
@@ -782,7 +782,7 @@ data class ConnectionRequest(
                                 if (requestResponseInformation != null) {
                                     throw ProtocolError(
                                         "Request Response Information added multiple times see: " +
-                                                "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477352"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477352"
                                     )
                                 }
                                 requestResponseInformation = it.requestServerToReturnInfoInConnack
@@ -792,7 +792,7 @@ data class ConnectionRequest(
                                 if (requestProblemInformation != null) {
                                     throw ProtocolError(
                                         "Request Problem Information added multiple times see: " +
-                                                "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477353"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477353"
                                     )
                                 }
                                 requestProblemInformation =
@@ -804,7 +804,7 @@ data class ConnectionRequest(
                                 if (authenticationMethod != null) {
                                     throw ProtocolError(
                                         "Authentication Method added multiple times see: " +
-                                                "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477355"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477355"
                                     )
                                 }
                                 authenticationMethod = it.value
@@ -814,7 +814,7 @@ data class ConnectionRequest(
                                 if (authenticationData != null) {
                                     throw ProtocolError(
                                         "Authentication Data added multiple times see: " +
-                                                "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477356"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477356"
                                     )
                                 }
                                 authenticationData = it.data
@@ -1199,7 +1199,7 @@ data class ConnectionRequest(
                                 if (willDelayIntervalSeconds != null) {
                                     throw ProtocolError(
                                         "Will Delay Interval added multiple times see: " +
-                                                "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477362"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477362"
                                     )
                                 }
                                 willDelayIntervalSeconds = it.seconds
@@ -1209,7 +1209,7 @@ data class ConnectionRequest(
                                 if (payloadFormatIndicator != null) {
                                     throw ProtocolError(
                                         "Payload Format Indicator added multiple times see: " +
-                                                "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477363"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477363"
                                     )
                                 }
                                 payloadFormatIndicator = it.willMessageIsUtf8
@@ -1219,7 +1219,7 @@ data class ConnectionRequest(
                                 if (messageExpiryIntervalSeconds != null) {
                                     throw ProtocolError(
                                         "Message Expiry Interval added multiple times see: " +
-                                                "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477363"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477363"
                                     )
                                 }
                                 messageExpiryIntervalSeconds = it.seconds
@@ -1229,7 +1229,7 @@ data class ConnectionRequest(
                                 if (contentType != null) {
                                     throw ProtocolError(
                                         "Content Type added multiple times see: " +
-                                                "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477365"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477365"
                                     )
                                 }
                                 contentType = it.value
@@ -1239,7 +1239,7 @@ data class ConnectionRequest(
                                 if (responseTopic != null) {
                                     throw ProtocolError(
                                         "Response Topic added multiple times see: " +
-                                                "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477366"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477366"
                                     )
                                 }
                                 responseTopic = it.value
@@ -1249,7 +1249,7 @@ data class ConnectionRequest(
                                 if (correlationData != null) {
                                     throw ProtocolError(
                                         "Coorelation data added multiple times see: " +
-                                                "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477367"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477367"
                                     )
                                 }
                                 correlationData = it.data

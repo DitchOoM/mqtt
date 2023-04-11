@@ -13,6 +13,7 @@ import com.ditchoom.mqtt5.controlpacket.properties.Authentication
 import org.khronos.webgl.Uint8Array
 import kotlin.time.Duration.Companion.milliseconds
 
+@JsExport
 data class PersistableUserProperty(
     @JsName("brokerId")
     val brokerId: Int,
@@ -26,6 +27,7 @@ data class PersistableUserProperty(
     val value: String
 )
 
+@JsExport
 data class PersistableQos2Message(
     @JsName("brokerId")
     val brokerId: Int,
@@ -41,12 +43,14 @@ data class PersistableQos2Message(
     val reasonString: String?
 )
 
+@JsExport
 data class PersistableUnsubscribe(
     @JsName("brokerId")
     val brokerId: Int,
     @JsName("packetId")
     val packetId: Int
 ) {
+    @JsName("constuct")
     constructor(brokerId: Int, unsub: UnsubscribeRequest) :
         this(brokerId, unsub.packetIdentifier)
 }
@@ -54,6 +58,7 @@ data class PersistableUnsubscribe(
 // fun toUnsubscribe(p: PersistableUnsubscribe) =
 //    UnsubscribeRequest(p.brokerId, p.packetId)//, p.topic.map { Topic.fromOrThrow(it, Topic.Type.Filter) }.toSet())
 
+@JsExport
 data class PersistableSubscribe(
     @JsName("brokerId")
     val brokerId: Int,
@@ -63,6 +68,7 @@ data class PersistableSubscribe(
     val reasonString: String?
 )
 
+@JsExport
 data class PersistableSubscription(
     @JsName("brokerId")
     val brokerId: Int,
@@ -81,6 +87,7 @@ data class PersistableSubscription(
     @JsName("retainHandling")
     val retainHandling: Int
 ) {
+    @JsName("construct")
     constructor(brokerId: Int, subscribeId: Int, sub: Subscription) :
         this(
             brokerId,
@@ -107,6 +114,7 @@ fun toSubscription(s: PersistableSubscription) =
         }
     )
 
+@JsExport
 data class PersistablePublishMessage(
     @JsName("brokerId")
     val brokerId: Int,
@@ -139,6 +147,7 @@ data class PersistablePublishMessage(
     @JsName("payload")
     val payload: Uint8Array?
 ) {
+    @JsName("construct")
     constructor(brokerId: Int, incoming: Boolean, pub: PublishMessage) : this(
         brokerId,
         if (incoming) 1 else 0,
@@ -182,6 +191,7 @@ fun toPub(p: PersistablePublishMessage, userProperty: List<Pair<String, String>>
     p.payload?.let { JsBuffer(it, position = it.length, limit = it.length) }?.also { it.resetForRead() }
 )
 
+@JsExport
 data class PersistableBroker(
     @JsName("id")
     val id: Int,
@@ -191,6 +201,7 @@ data class PersistableBroker(
     val connectionRequest: PersistableConnectionRequest
 )
 
+@JsExport
 data class PersistableSocketConnection(
     @JsName("type")
     val type: String,
@@ -271,6 +282,7 @@ fun toSocketConnection(a: Any?): MqttConnectionOptions {
     }
 }
 
+@JsExport
 data class PersistableConnectionRequest(
     @JsName("protocolName")
     val protocolName: String,
@@ -323,7 +335,7 @@ data class PersistableConnectionRequest(
     @JsName("willPropertyContentType")
     val willPropertyContentType: String?,
     @JsName("willPropertyResponseTopic")
-    val willPropertyResponseTopic: Topic?,
+    val willPropertyResponseTopic: String?,
     @JsName("willPropertyCorrelationData")
     val willPropertyCorrelationData: Uint8Array?
 ) {
@@ -356,7 +368,7 @@ data class PersistableConnectionRequest(
                 props?.payloadFormatIndicator ?: false,
                 props?.messageExpiryIntervalSeconds?.toString(),
                 props?.contentType,
-                props?.responseTopic,
+                props?.responseTopic?.toString(),
                 props?.correlationData?.let { (it as JsBuffer).buffer }
             )
         }

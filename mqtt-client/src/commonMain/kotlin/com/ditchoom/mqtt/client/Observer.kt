@@ -18,6 +18,7 @@ interface Observer {
         connectionRequest: IConnectionRequest,
         connectionOp: MqttConnectionOptions
     )
+
     fun onReaderClosed(brokerId: Int, protocolVersion: Byte)
 
     fun shutdown(brokerId: Int, protocolVersion: Byte)

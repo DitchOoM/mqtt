@@ -1,6 +1,5 @@
 package com.ditchoom.mqtt.connection
 
-import com.ditchoom.buffer.PlatformBuffer
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
@@ -42,23 +41,21 @@ sealed interface MqttConnectionOptions {
     data class SocketConnection(
         override val host: String,
         override val port: Int,
-        override val tls: Boolean,
-        override val connectionTimeout: Duration,
+        override val tls: Boolean = port == 8883,
+        override val connectionTimeout: Duration = 15.seconds,
         override val readTimeout: Duration = connectionTimeout,
         override val writeTimeout: Duration = connectionTimeout,
-        val bufferFactory: (() -> PlatformBuffer)? = null,
     ) : MqttConnectionOptions
 
     data class WebSocketConnectionOptions(
         override val host: String,
-        override val port: Int = 443,
+        override val port: Int,
         override val tls: Boolean = port == 443,
         override val connectionTimeout: Duration = 15.seconds,
         override val readTimeout: Duration = connectionTimeout,
         override val writeTimeout: Duration = connectionTimeout,
         val websocketEndpoint: String = "/",
-        val protocols: List<String> = emptyList(),
-        val bufferFactory: (() -> PlatformBuffer)? = null,
+        val protocols: List<String> = listOf("mqtt"),
     ) : MqttConnectionOptions {
         internal fun buildUrl(): String {
             val prefix = if (tls) {
@@ -71,29 +68,6 @@ sealed interface MqttConnectionOptions {
         }
 
         companion object {
-            fun build(
-                name: String,
-                port: Int = 443,
-                websocketEndpoint: String = "/",
-                protocols: List<String> = emptyList(),
-                connectionTimeout: Duration = 15.seconds,
-                readTimeout: Duration = connectionTimeout,
-                writeTimeout: Duration = connectionTimeout,
-                tls: Boolean = port == 443,
-                bufferFactory: (() -> PlatformBuffer)? = null
-            ): WebSocketConnectionOptions {
-                return WebSocketConnectionOptions(
-                    name,
-                    port,
-                    tls,
-                    connectionTimeout,
-                    readTimeout,
-                    writeTimeout,
-                    websocketEndpoint,
-                    protocols,
-                    bufferFactory
-                )
-            }
         }
     }
 }

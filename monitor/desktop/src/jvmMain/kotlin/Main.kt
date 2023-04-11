@@ -6,18 +6,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import com.ditchoom.common.App
-import com.ditchoom.mqtt.client.LocalMqttService
+import com.ditchoom.mqtt.client.MqttService
 
 
 fun main() = application {
-    var service by remember { mutableStateOf<LocalMqttService?>(null) }
-    LaunchedEffect("MQTTService") {
-        service = LocalMqttService.buildService()
-    }
-    val serviceLocal = service
-    if (serviceLocal != null) {
-        Window(onCloseRequest = ::exitApplication) {
+    Window(onCloseRequest = ::exitApplication) {
+        var service by remember { mutableStateOf<MqttService?>(null) }
+        LaunchedEffect(true) {
+            service = MqttService.buildNewService(false)
+        }
+        val serviceLocal = service
+        if (serviceLocal != null) {
+
             App(serviceLocal)
         }
     }
+
 }

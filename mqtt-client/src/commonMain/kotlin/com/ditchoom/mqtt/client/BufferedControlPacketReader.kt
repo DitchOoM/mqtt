@@ -18,7 +18,7 @@ class BufferedControlPacketReader(
     readTimeout: Duration,
     private val reader: Reader,
     var observer: Observer? = null,
-    private val incomingMessage: (UByte, Int, ReadBuffer) -> Unit
+    private var incomingMessage: (UByte, Int, ReadBuffer) -> Unit
 ) {
     private val inputStream = SuspendingSocketInputStream(readTimeout, reader)
     val incomingControlPackets = flow {
@@ -35,6 +35,7 @@ class BufferedControlPacketReader(
                 }
             }
         } finally {
+            incomingMessage = { _, _, _ -> }
             observer?.onReaderClosed(brokerId, factory.protocolVersion.toByte())
         }
     }

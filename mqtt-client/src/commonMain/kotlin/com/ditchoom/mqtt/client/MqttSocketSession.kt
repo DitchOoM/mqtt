@@ -31,7 +31,7 @@ class MqttSocketSession private constructor(
     private val reader: BufferedControlPacketReader,
     private val socketController: SuspendCloseable,
     var allocateSharedMemory: Boolean = false,
-    val sentMessage: (PlatformBuffer) -> Unit
+    var sentMessage: (PlatformBuffer) -> Unit
 ) : SuspendCloseable {
     var observer: Observer? = null
         set(value) {
@@ -69,6 +69,7 @@ class MqttSocketSession private constructor(
         } catch (e: Exception) {
             // ignore close exceptions
         }
+        sentMessage = {}
     }
 
     companion object {
@@ -115,7 +116,7 @@ class MqttSocketSession private constructor(
                         )
                         val client = WebSocketClient.allocate(
                             wsSocketConnectionOptions,
-                            if (allocateSharedMemory) AllocationZone.SharedMemory else AllocationZone.Direct
+                            zone
                         )
                         try {
                             client.connect()
@@ -127,7 +128,7 @@ class MqttSocketSession private constructor(
                     }
                 }
             }
-            val connect = connectionRequest.toBuffer()
+            val connect = connectionRequest.toBuffer(zone)
             connect.resetForWrite()
             socket.write(connect, connectionOps.writeTimeout)
             sentMessage(connect)

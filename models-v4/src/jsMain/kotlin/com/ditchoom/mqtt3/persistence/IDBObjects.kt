@@ -44,6 +44,7 @@ data class PersistableSubscribe(
     val packetId: Int
 )
 
+@JsExport
 data class PersistableSubscription(
     @JsName("brokerId")
     val brokerId: Int,
@@ -56,6 +57,7 @@ data class PersistableSubscription(
     @JsName("qos")
     val qos: Byte
 ) {
+    @JsName("build")
     constructor(brokerId: Int, subscribeId: Int, sub: ISubscription) :
         this(brokerId, sub.topicFilter.toString(), subscribeId, -1, sub.maximumQos.integerValue)
 }

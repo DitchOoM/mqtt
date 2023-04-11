@@ -23,8 +23,8 @@ class ConnectivityManager(
     internal val persistence: Persistence,
     internal val broker: MqttBroker,
     allocateSharedMemoryInitial: Boolean = false,
-    private val sentMessage: (ReadBuffer) -> Unit = {},
-    private val incomingMessage: (UByte, Int, ReadBuffer) -> Unit = { _, _, _ -> }
+    private var sentMessage: (ReadBuffer) -> Unit = {},
+    private var incomingMessage: (UByte, Int, ReadBuffer) -> Unit = { _, _, _ -> }
 ) {
     var connectionCount = 0L
         private set
@@ -38,7 +38,7 @@ class ConnectivityManager(
         }
 
     private var incomingProcessingJob: Job? = null
-    private var isStopped = false
+    internal var isStopped = false
     private val readChannel = MutableSharedFlow<ControlPacket>(1)
     private val writeChannel = Channel<Collection<ControlPacket>>(Channel.BUFFERED)
     private val connectionBroadcastChannelInternal = MutableSharedFlow<IConnectionAcknowledgment>()

@@ -18,7 +18,7 @@ import com.ditchoom.mqtt.controlpacket.IUnsubscribeRequest
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.channels.SendChannel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.last
@@ -36,7 +36,7 @@ class ControlPacketProcessor(
     private val scope: CoroutineScope,
     private val broker: MqttBroker,
     internal val readChannel: SharedFlow<ControlPacket>,
-    private val writeChannel: SendChannel<Collection<ControlPacket>>,
+    private val writeChannel: Channel<Collection<ControlPacket>>,
     internal val persistence: Persistence
 ) {
 

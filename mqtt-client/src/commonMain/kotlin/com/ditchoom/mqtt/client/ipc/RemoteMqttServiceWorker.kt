@@ -9,7 +9,6 @@ class RemoteMqttServiceWorker(
     private val clients = HashMap<Byte, HashMap<Int, RemoteMqttClientWorker>>()
 
     init {
-        service.useSharedMemory = true
         service.incomingMessages = { broker, byte1, remaining, buffer ->
             clients[broker.connectionRequest.protocolVersion.toByte()]
                 ?.get(broker.identifier)
@@ -53,13 +52,13 @@ class RemoteMqttServiceWorker(
 
     suspend fun requestClientOrNull(brokerId: Int, protocolVersion: Byte): RemoteMqttClientWorker? {
         val cached = clients[protocolVersion]?.get(brokerId)
-        if (cached != null) {
+        if (cached != null && !cached.client.isStopped()) {
             return cached
         }
         val persistence = service.getPersistence(protocolVersion)
         val broker = persistence.brokerWithId(brokerId) ?: return null
         val client = service.getClient(broker) ?: return null
-        val ipcClient = RemoteMqttClientWorker(client)
+        val ipcClient = RemoteMqttClientWorker(service, client)
         clients.getOrPut(protocolVersion) { HashMap() }[brokerId] = ipcClient
         return ipcClient
     }

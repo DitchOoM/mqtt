@@ -7,7 +7,9 @@
     <application>
         <service
                 android:name="com.ditchoom.mqtt.client.ipc.MqttManagerService"
-                android:process=":sync"/>
+                android:process=":sync"
+                tools:node="merge"
+        />
 
         <provider
                 android:name="androidx.startup.InitializationProvider"

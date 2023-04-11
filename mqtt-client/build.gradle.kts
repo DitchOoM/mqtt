@@ -72,7 +72,6 @@ kotlin {
         val coroutinesVersion = extra["coroutines.version"] as String
         val socketVersion = extra["socket.version"] as String
         val websocketVersion = extra["websocket.version"] as String
-        val atomicfuVersion = extra["atomicfu.version"] as String
         val commonMain by getting {
             dependencies {
                 api("com.ditchoom:buffer:$bufferVersion")
@@ -82,7 +81,6 @@ kotlin {
                 implementation("com.ditchoom:websocket:$websocketVersion")
                 api(project(":models-base"))
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
-                implementation("org.jetbrains.kotlinx:atomicfu:$atomicfuVersion")
             }
         }
         val commonTest by getting {

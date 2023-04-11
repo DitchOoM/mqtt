@@ -1,5 +1,7 @@
 package com.ditchoom.mqtt.client.ipc
 
+import android.util.Log
+import com.ditchoom.buffer.AllocationZone
 import com.ditchoom.buffer.JvmBuffer
 import com.ditchoom.buffer.PlatformBuffer
 import com.ditchoom.mqtt.Persistence
@@ -12,6 +14,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterIsInstance
+import java.util.UUID
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
@@ -21,17 +24,24 @@ class AndroidRemoteMqttClient(
     broker: MqttBroker,
     persistence: Persistence,
 ) : RemoteMqttClient(scope, broker, persistence) {
+    override val allocationZone: AllocationZone = AllocationZone.SharedMemory
 
     override val packetFactory: ControlPacketFactory = broker.connectionRequest.controlPacketFactory
+
     private val cb = object : MqttMessageTransferredCallback.Stub() {
+        private val id = UUID.randomUUID().leastSignificantBits.toInt()
+        override fun id(): Int = id
+
         override fun onControlPacketSent(controlPacket: JvmBuffer) {
             controlPacket.resetForRead()
             val packet = packetFactory.from(controlPacket)
+            Log.i("RAHUL", "IPCOUT:  $packet")
             onControlPacketSent(packet)
         }
 
         override fun onControlPacketReceived(byte1: Byte, remainingLength: Int, controlPacket: JvmBuffer) {
             val packet = packetFactory.from(controlPacket, byte1.toUByte(), remainingLength)
+            Log.i("RAHUL", "IPCIN :  $packet")
             onIncomingControlPacket(packet)
         }
     }
@@ -92,7 +102,7 @@ class AndroidRemoteMqttClient(
         incomingPackets.filterIsInstance<IPublishMessage>().filter { filter.matches(it.topic) }
 
     override suspend fun sendDisconnect() {
-        suspendCoroutine { aidl.sendDisconnect(SuspendingMqttCompletionCallback("", it)) }
+        suspendCoroutine { aidl.sendDisconnect(SuspendingMqttCompletionCallback("sendDisconnect", it)) }
     }
 
     override suspend fun connectionCount(): Long {
@@ -105,6 +115,6 @@ class AndroidRemoteMqttClient(
 
     override suspend fun shutdown(sendDisconnect: Boolean) {
         aidl.unregisterObserver(cb)
-        suspendCoroutine { aidl.shutdown(sendDisconnect, SuspendingMqttCompletionCallback("", it)) }
+        suspendCoroutine { aidl.shutdown(sendDisconnect, SuspendingMqttCompletionCallback("shutdown", it)) }
     }
 }

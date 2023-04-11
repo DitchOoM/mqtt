@@ -5,13 +5,14 @@ import com.ditchoom.buffer.JvmBuffer
 import kotlinx.coroutines.launch
 
 class AndroidMqttClientIPCServer(private val clientServer: RemoteMqttClientWorker) : IPCMqttClient.Stub() {
-    private val observers = ArrayList<MqttMessageTransferredCallback>()
+    private val observers = HashMap<Int, MqttMessageTransferredCallback>()
 
     init {
         clientServer.observers += { incoming, byte1, remaining, buffer ->
-            observers.forEach {
+            observers.values.forEach {
                 if (incoming) {
                     it.onControlPacketReceived(byte1.toByte(), remaining, buffer as JvmBuffer)
+                    buffer.resetForRead()
                 } else {
                     it.onControlPacketSent(buffer as JvmBuffer)
                 }
@@ -33,11 +34,11 @@ class AndroidMqttClientIPCServer(private val clientServer: RemoteMqttClientWorke
         wrapResultWithCallback(callback) { clientServer.onUnsubscribeQueued(packetIdentifier) }
 
     override fun registerObserver(observer: MqttMessageTransferredCallback) {
-        observers += observer
+        observers[observer.id()] = observer
     }
 
     override fun unregisterObserver(observer: MqttMessageTransferredCallback) {
-        observers -= observer
+        observers.remove(observer.id())
     }
 
     override fun currentConnectionAcknowledgmentOrNull(): JvmBuffer? {
@@ -70,7 +71,9 @@ class AndroidMqttClientIPCServer(private val clientServer: RemoteMqttClientWorke
         wrapResultWithCallback(cb) { clientServer.client.sendDisconnect() }
 
     override fun shutdown(sendDisconnect: Boolean, cb: MqttCompletionCallback) =
-        wrapResultWithCallback(cb) { clientServer.shutdown(sendDisconnect) }
+        wrapResultWithCallback(cb) {
+            clientServer.shutdown(sendDisconnect)
+        }
 
     private fun wrapResultWithCallback(callback: MqttCompletionCallback, block: suspend () -> Unit) {
         clientServer.scope.launch {

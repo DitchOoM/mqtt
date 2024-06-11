@@ -9,6 +9,8 @@ import com.ditchoom.mqtt.controlpacket.ISubscription
 import com.ditchoom.mqtt.controlpacket.IUnsubscribeAcknowledgment
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.FlowCollector
+import kotlinx.coroutines.flow.combine
 
 sealed interface PublishOperation {
     object QoSAtMostOnceComplete : PublishOperation
@@ -38,6 +40,13 @@ data class SubscribeOperation(
     val packetId: Int,
     val subscriptions: Map<ISubscription, Flow<IPublishMessage>>,
     val subAck: Deferred<ISubscribeAcknowledgement>,
-)
+): Flow<IPublishMessage> {
+    override suspend fun collect(collector: FlowCollector<IPublishMessage>) {
+        combine(subscriptions.values.asIterable()) { array ->
+            array.forEach { collector.emit(it) }
+        }
+    }
+
+}
 
 data class UnsubscribeOperation(val packetId: Int, val unsubAck: Deferred<IUnsubscribeAcknowledgment>)

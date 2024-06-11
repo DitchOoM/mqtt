@@ -1,10 +1,9 @@
 package com.ditchoom.mqtt.client.net
 
-import block
-import blockWithResult
 import com.ditchoom.buffer.Charset
 import com.ditchoom.buffer.PlatformBuffer
 import com.ditchoom.buffer.ReadBuffer
+import com.ditchoom.buffer.ReadBuffer.Companion.EMPTY_BUFFER
 import com.ditchoom.buffer.allocate
 import com.ditchoom.buffer.toReadBuffer
 import com.ditchoom.mqtt.InMemoryPersistence
@@ -17,10 +16,7 @@ import com.ditchoom.mqtt.controlpacket.IPublishMessage
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.Topic
 import com.ditchoom.mqtt3.controlpacket.ConnectionRequest
-import com.ditchoom.socket.ClientSocket
-import com.ditchoom.socket.EMPTY_BUFFER
 import com.ditchoom.socket.NetworkCapabilities
-import com.ditchoom.socket.allocate
 import com.ditchoom.socket.getNetworkCapabilities
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
@@ -33,27 +29,18 @@ import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
 import kotlin.random.Random
 import kotlin.random.nextUInt
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
-import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 class MqttClientTest {
     internal val inMemory: Boolean = true
-    private val isAndroidDevice: Boolean = blockWithResult {
-        try {
-            val c = ClientSocket.allocate()
-            c.open(1883, 100.milliseconds, "localhost")
-            c.close()
-            false
-        } catch (t: Throwable) {
-            true
-        }
-    }
+    private val isAndroidDevice: Boolean = getPlatform() == Platform.Android
     private val host = if (isAndroidDevice) "10.0.2.2" else "localhost"
     private val testMqttConnectionOptions = MqttConnectionOptions.SocketConnection(
         host,
@@ -101,56 +88,56 @@ class MqttClientTest {
     private val payloadString = "Taco"
 
     @Test
-    fun clientEcho4() = block {
-        if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@block
+    fun clientEcho4() = runTest {
+        if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTest
         clientEchoInternal(this, testMqttConnectionOptions, connectionRequestMqtt4)
     }
 
     @Test
-    fun clientEchoMqtt5() = block {
-        if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@block
+    fun clientEchoMqtt5() = runTest {
+        if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTest
         clientEchoInternal(this, testMqttConnectionOptions, connectionRequestMqtt5)
     }
 
     @Test
-    fun clientWebsocketEcho4() = block {
+    fun clientWebsocketEcho4() = runTest {
         clientEchoInternal(this, testWsMqttConnectionOptions, connectionRequestMqtt4)
     }
 
     @Test
-    fun clientWebsocketEcho5() = block {
+    fun clientWebsocketEcho5() = runTest {
         clientEchoInternal(this, testWsMqttConnectionOptions, connectionRequestMqtt5)
     }
 
     @Test
-    fun stayConnectedEcho4() = block {
-        if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@block
+    fun stayConnectedEcho4() = runTest {
+        if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTest
         stayConnectedEchoInternal(this, testMqttConnectionOptions, connectionRequestResumeSessionMqtt4)
     }
 
     @Test
-    fun stayConnectedEcho5() = block {
-        if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@block
+    fun stayConnectedEcho5() = runTest {
+        if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTest
         stayConnectedEchoInternal(this, testMqttConnectionOptions, connectionRequestResumeSessionMqtt5)
     }
 
     @Test
-    fun stayConnectedEchoWebsockets4() = block {
+    fun stayConnectedEchoWebsockets4() = runTest {
         stayConnectedEchoInternal(this, testWsMqttConnectionOptions, connectionRequestResumeSessionMqtt4)
     }
 
     @Test
-    fun stayConnectedEchoWebsockets5() = block {
+    fun stayConnectedEchoWebsockets5() = runTest {
         stayConnectedEchoInternal(this, testWsMqttConnectionOptions, connectionRequestResumeSessionMqtt5)
     }
 
     @Test
-    fun highAvailabilityBadPortConnectOnceMqtt4() = block {
+    fun highAvailabilityBadPortConnectOnceMqtt4() = runTest {
         highAvailabilityBadPortConnectOnceInternal(this, connectionRequestMqtt4)
     }
 
     @Test
-    fun highAvailabilityBadPortConnectOnceMqtt5() = block {
+    fun highAvailabilityBadPortConnectOnceMqtt5() = runTest {
         highAvailabilityBadPortConnectOnceInternal(this, connectionRequestMqtt5)
     }
 
@@ -176,12 +163,12 @@ class MqttClientTest {
     }
 
     @Test
-    fun highAvailabilityBadPortStayConnectedMqtt4() = block {
+    fun highAvailabilityBadPortStayConnectedMqtt4() = runTest {
         highAvailabilityBadPortStayConnectedInternal(this, connectionRequestMqtt4)
     }
 
     @Test
-    fun highAvailabilityBadPortStayConnectedMqtt5() = block {
+    fun highAvailabilityBadPortStayConnectedMqtt5() = runTest {
         highAvailabilityBadPortStayConnectedInternal(this, connectionRequestMqtt5)
     }
 
@@ -209,12 +196,12 @@ class MqttClientTest {
     }
 
     @Test
-    fun pingMqtt4() = block {
+    fun pingMqtt4() = runTest {
         pingInternal(this, connectionRequestMqtt4)
     }
 
     @Test
-    fun pingMqtt5() = block {
+    fun pingMqtt5() = runTest {
         pingInternal(this, connectionRequestMqtt5)
     }
 
@@ -247,7 +234,7 @@ class MqttClientTest {
     }
 
     @Test
-    fun lastWillTestamentMqtt4() = block {
+    fun lastWillTestamentMqtt4() = runTest {
         val buffer = PlatformBuffer.allocate(4)
         buffer.writeString("yolo", Charset.UTF8)
         buffer.resetForRead()
@@ -270,7 +257,7 @@ class MqttClientTest {
     }
 
     @Test
-    fun lastWillTestamentMqtt5() = block {
+    fun lastWillTestamentMqtt5() = runTest {
         val buffer = PlatformBuffer.allocate(4)
         buffer.writeString("yolo", Charset.UTF8)
         buffer.resetForRead()

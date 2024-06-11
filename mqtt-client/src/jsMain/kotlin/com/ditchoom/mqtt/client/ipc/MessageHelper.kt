@@ -5,6 +5,7 @@ import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.ControlPacketFactory
 import js.buffer.SharedArrayBuffer
 import org.khronos.webgl.ArrayBuffer
+import org.khronos.webgl.Int8Array
 import org.khronos.webgl.Uint8Array
 import org.w3c.dom.MessageEvent
 
@@ -152,7 +153,7 @@ fun readPacketIdMessage(factory: ControlPacketFactory, data: dynamic): Pair<Int,
         val buffer = if (data[MESSAGE_IS_SHARED_BUFFER_KEY] == true) {
             val sharedArrayBuffer = data[MESSAGE_BUFFER_KEY].unsafeCast<SharedArrayBuffer>()
             JsBuffer(
-                Uint8Array(sharedArrayBuffer as ArrayBuffer),
+                Int8Array(sharedArrayBuffer as ArrayBuffer),
                 false,
                 position,
                 limit,
@@ -161,7 +162,7 @@ fun readPacketIdMessage(factory: ControlPacketFactory, data: dynamic): Pair<Int,
             )
         } else {
             val arrayBuffer = data[MESSAGE_BUFFER_KEY].unsafeCast<ArrayBuffer>()
-            JsBuffer(Uint8Array(arrayBuffer), false, position, limit, arrayBuffer.byteLength)
+            JsBuffer(Int8Array(arrayBuffer), false, position, limit, arrayBuffer.byteLength)
         }
         buffer.resetForRead()
         factory.from(buffer)
@@ -227,7 +228,7 @@ fun sendControlPacketFromMessageEvent(factory: ControlPacketFactory, m: MessageE
         if (isSharedBuffer) {
             val arrayBuffer = obj[MESSAGE_BUFFER_KEY].unsafeCast<SharedArrayBuffer>()
             JsBuffer(
-                Uint8Array(arrayBuffer.unsafeCast<ArrayBuffer>()),
+                Int8Array(arrayBuffer.unsafeCast<ArrayBuffer>()),
                 false,
                 position,
                 limit,
@@ -236,7 +237,7 @@ fun sendControlPacketFromMessageEvent(factory: ControlPacketFactory, m: MessageE
             )
         } else {
             val arrayBuffer = obj[MESSAGE_BUFFER_KEY].unsafeCast<ArrayBuffer>()
-            JsBuffer(Uint8Array(arrayBuffer), false, position, limit, arrayBuffer.byteLength, null)
+            JsBuffer(Int8Array(arrayBuffer), false, position, limit, arrayBuffer.byteLength, null)
         }
     } else {
         return null

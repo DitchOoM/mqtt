@@ -1,6 +1,5 @@
 package com.ditchoom.mqtt5.persistence
 
-import block
 import com.ditchoom.buffer.PlatformBuffer
 import com.ditchoom.buffer.wrap
 import com.ditchoom.mqtt.Persistence
@@ -22,6 +21,7 @@ import com.ditchoom.mqtt5.controlpacket.SubscribeRequest
 import com.ditchoom.mqtt5.controlpacket.Subscription
 import com.ditchoom.mqtt5.controlpacket.UnsubscribeAcknowledgment
 import com.ditchoom.mqtt5.controlpacket.UnsubscribeRequest
+import kotlinx.coroutines.test.runTest
 import kotlin.random.Random
 import kotlin.random.nextUInt
 import kotlin.test.Test
@@ -44,7 +44,7 @@ class PersistenceTests {
     }
 
     @Test
-    fun pubQos1() = block {
+    fun pubQos1() = runTest {
         val (persistence, broker) = setupPersistence()
         val pub = PublishMessage(
             topicName = "test",
@@ -71,7 +71,7 @@ class PersistenceTests {
     }
 
     @Test
-    fun pubQos2() = block {
+    fun pubQos2() = runTest {
         val (persistence, broker) = setupPersistence()
         val pub = PublishMessage(
             topicName = "test",
@@ -105,7 +105,7 @@ class PersistenceTests {
     }
 
     @Test
-    fun incomingQos2() = block {
+    fun incomingQos2() = runTest {
         val (persistence, broker) = setupPersistence()
         val packetId = 3
         val pub = PublishMessage(
@@ -137,7 +137,7 @@ class PersistenceTests {
     }
 
     @Test
-    fun subscription() = block {
+    fun subscription() = runTest {
         val (persistence, broker) = setupPersistence()
         val topicMap = HashMap<Topic, QualityOfService>()
         val topic0 = Topic.fromOrThrow("topic0", Topic.Type.Filter)
@@ -235,7 +235,7 @@ class PersistenceTests {
     }
 
     @Test
-    fun broker() = block {
+    fun broker() = runTest {
         val p = newDefaultPersistence(inMemory = true)
         assertEquals(0, p.allBrokers().size, "initial broker size")
         val broker = p.addBroker(setOf(testMqttConnectionOptions, testWsMqttConnectionOptions), connectionRequestMqtt5)

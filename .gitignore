@@ -44,3 +44,5 @@ bin/
 ### Application DB
 mqtt-client/mqtt4.db
 mqtt-client/mqtt5.db
+
+.kotlin

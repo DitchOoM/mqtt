@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalJsExport::class)
+
 package com.ditchoom.mqtt3.persistence
 
 import com.ditchoom.buffer.JsBuffer
@@ -10,6 +12,7 @@ import com.ditchoom.mqtt3.controlpacket.ConnectionRequest
 import com.ditchoom.mqtt3.controlpacket.PublishMessage
 import com.ditchoom.mqtt3.controlpacket.Subscription
 import com.ditchoom.mqtt3.controlpacket.UnsubscribeRequest
+import org.khronos.webgl.Int8Array
 import org.khronos.webgl.Uint8Array
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -81,7 +84,7 @@ data class PersistablePublishMessage(
     @JsName("packetId")
     val packetId: Int,
     @JsName("payload")
-    val payload: Uint8Array?
+    val payload: Int8Array?
 ) {
     constructor(brokerId: Int, incoming: Boolean, pub: PublishMessage) : this(
         brokerId,
@@ -210,7 +213,7 @@ data class PersistableConnectionRequest(
     @JsName("willTopic")
     val willTopic: String?,
     @JsName("willPayload")
-    val willPayload: Uint8Array?,
+    val willPayload: Int8Array?,
     @JsName("username")
     val username: String?,
     @JsName("password")
@@ -252,7 +255,7 @@ fun toConnectionRequest(a: Any?): ConnectionRequest {
         ConnectionRequest.Payload(
             p.clientId as String,
             (p.willTopic as? String)?.let { Topic.fromOrThrow(it, Topic.Type.Name) },
-            (p.willPayload as? Uint8Array)?.let { JsBuffer(it, limit = it.length) } as? ReadBuffer,
+            (p.willPayload as? Int8Array)?.let { JsBuffer(it, limit = it.length) } as? ReadBuffer,
             p.username as? String,
             p.password as? String
         )

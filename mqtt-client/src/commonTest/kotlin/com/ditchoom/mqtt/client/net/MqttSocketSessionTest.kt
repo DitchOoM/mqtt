@@ -1,39 +1,26 @@
 package com.ditchoom.mqtt.client.net
 
-import block
-import blockWithResult
 import com.ditchoom.mqtt.client.MqttSocketSession
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.IPublishAcknowledgment
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.Topic
 import com.ditchoom.mqtt3.controlpacket.ConnectionRequest
-import com.ditchoom.socket.ClientSocket
 import com.ditchoom.socket.NetworkCapabilities
-import com.ditchoom.socket.allocate
 import com.ditchoom.socket.getNetworkCapabilities
+import kotlinx.coroutines.test.runTest
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertTrue
-import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 class MqttSocketSessionTest {
-    private val isAndroidDevice: Boolean = blockWithResult {
-        try {
-            val c = ClientSocket.allocate()
-            c.open(1883, 100.milliseconds, "localhost")
-            c.close()
-            false
-        } catch (t: Throwable) {
-            true
-        }
-    }
+    private val isAndroidDevice: Boolean = getPlatform() == Platform.Android
     private val host = if (isAndroidDevice) "10.0.2.2" else "localhost"
 
     //    @Test
-    fun connectTls() = block {
-        if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@block
+    fun connectTls() = runTest {
+        if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTest
         val connectionOptions = MqttConnectionOptions.SocketConnection(
             "test.mosquitto.org",
             8886,
@@ -44,21 +31,21 @@ class MqttSocketSessionTest {
     }
 
     @Test
-    fun connectLocalhostMqtt4() = block {
-        if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@block
+    fun connectLocalhostMqtt4() = runTest {
+        if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTest
         val connectionOptions = MqttConnectionOptions.SocketConnection(host, 1883, false, 10.seconds)
         connectTest(connectionOptions, 4)
     }
 
     @Test
-    fun connectLocalhostMqtt5() = block {
-        if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@block
+    fun connectLocalhostMqtt5() = runTest {
+        if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTest
         val connectionOptions = MqttConnectionOptions.SocketConnection(host, 1883, false, 10.seconds)
         connectTest(connectionOptions, 5)
     }
 
     @Test
-    fun connectWebsockets() = block {
+    fun connectWebsockets() = runTest {
         val connectionOptions = MqttConnectionOptions.WebSocketConnectionOptions(
             host, 80, websocketEndpoint = "/mqtt", tls = false, protocols = listOf("mqtt")
         )
@@ -66,8 +53,8 @@ class MqttSocketSessionTest {
     }
 
     //    @Test
-    fun connectTestMosquitto() = block {
-        if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@block
+    fun connectTestMosquitto() = runTest {
+        if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTest
         val connectionOptions = MqttConnectionOptions.SocketConnection(
             "test.mosquitto.org",
             1883,
@@ -78,7 +65,7 @@ class MqttSocketSessionTest {
     }
 
     //    @Test
-    fun connectWebsocketsTestMosquitto() = block {
+    fun connectWebsocketsTestMosquitto() = runTest {
         val connectionOptions = MqttConnectionOptions.WebSocketConnectionOptions(
             "test.mosquitto.org", 8081, websocketEndpoint = "/mqtt", tls = true, protocols = listOf("mqttv3.1")
         )

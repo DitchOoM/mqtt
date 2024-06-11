@@ -1,3 +1,6 @@
+@file:OptIn(ExperimentalJsExport::class)
+@file:Suppress("NON_EXPORTABLE_TYPE")
+
 package com.ditchoom.mqtt5.persistence
 
 import com.ditchoom.buffer.JsBuffer
@@ -10,7 +13,7 @@ import com.ditchoom.mqtt5.controlpacket.PublishMessage
 import com.ditchoom.mqtt5.controlpacket.Subscription
 import com.ditchoom.mqtt5.controlpacket.UnsubscribeRequest
 import com.ditchoom.mqtt5.controlpacket.properties.Authentication
-import org.khronos.webgl.Uint8Array
+import org.khronos.webgl.Int8Array
 import kotlin.time.Duration.Companion.milliseconds
 
 @JsExport
@@ -139,13 +142,13 @@ data class PersistablePublishMessage(
     @JsName("responseTopic")
     val responseTopic: String?,
     @JsName("correlationData")
-    val correlationData: Uint8Array?,
+    val correlationData: Int8Array?,
     @JsName("subscriptionIdentifier")
     val subscriptionIdentifier: String?,
     @JsName("contentType")
     val contentType: String?,
     @JsName("payload")
-    val payload: Uint8Array?
+    val payload: Int8Array?
 ) {
     @JsName("construct")
     constructor(brokerId: Int, incoming: Boolean, pub: PublishMessage) : this(
@@ -313,7 +316,7 @@ data class PersistableConnectionRequest(
     @JsName("authMethod")
     val authMethod: String?,
     @JsName("authData")
-    val authData: Uint8Array?,
+    val authData: Int8Array?,
     @JsName("clientId")
     val clientId: String,
     @JsName("hasWillProperties")
@@ -321,7 +324,7 @@ data class PersistableConnectionRequest(
     @JsName("willTopic")
     val willTopic: String?,
     @JsName("willPayload")
-    val willPayload: Uint8Array?,
+    val willPayload: Int8Array?,
     @JsName("username")
     val username: String?,
     @JsName("password")
@@ -337,7 +340,7 @@ data class PersistableConnectionRequest(
     @JsName("willPropertyResponseTopic")
     val willPropertyResponseTopic: String?,
     @JsName("willPropertyCorrelationData")
-    val willPropertyCorrelationData: Uint8Array?
+    val willPropertyCorrelationData: Int8Array?
 ) {
     companion object {
         fun from(connectionRequest: ConnectionRequest): PersistableConnectionRequest {
@@ -382,7 +385,7 @@ fun toConnectionRequest(
 ): ConnectionRequest {
     val p = a.asDynamic()
     val authMethod = p.authMethod as String?
-    val authData = (p.authData as Uint8Array?)?.let { JsBuffer(it, position = it.length, limit = it.length) }
+    val authData = (p.authData as Int8Array?)?.let { JsBuffer(it, position = it.length, limit = it.length) }
     val auth = if (authMethod != null && authData != null) {
         Authentication(authMethod, authData)
     } else {
@@ -395,7 +398,7 @@ fun toConnectionRequest(
             (p.willPropertyMessageExpiryIntervalSeconds as String?)?.toLong(),
             p.willPropertyContentType as String?,
             (p.willPropertyResponseTopic as String?)?.let { Topic.fromOrThrow(it, Topic.Type.Name) },
-            p.willPropertyCorrelationData?.unsafeCast<Uint8Array>()
+            p.willPropertyCorrelationData?.unsafeCast<Int8Array>()
                 ?.let { JsBuffer(it, position = 0, limit = it.length) },
             willUserProperty
         )
@@ -429,7 +432,7 @@ fun toConnectionRequest(
             p.clientId as String,
             willProps,
             (p.willTopic as? String)?.let { Topic.fromOrThrow(it, Topic.Type.Name) },
-            p.willPayload?.unsafeCast<Uint8Array>()
+            p.willPayload?.unsafeCast<Int8Array>()
                 ?.let { JsBuffer(it, position = it.length, limit = it.length) },
             p.username as? String,
             p.password as? String

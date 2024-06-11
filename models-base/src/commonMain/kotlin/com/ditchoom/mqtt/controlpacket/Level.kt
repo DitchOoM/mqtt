@@ -1,5 +1,8 @@
+@file:OptIn(ExperimentalJsExport::class)
+
 package com.ditchoom.mqtt.controlpacket
 
+import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
 @JsExport

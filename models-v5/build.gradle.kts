@@ -36,10 +36,10 @@ kotlin {
         publishLibraryVariants("release")
     }
     jvm()
-    js {
-        browser()
-        nodejs()
-    }
+//    js {
+//        browser()
+//        nodejs()
+//    }
     macosX64()
     macosArm64()
     iosArm64()
@@ -69,9 +69,9 @@ kotlin {
         jvmMain.dependencies {
             implementation("app.cash.sqldelight:sqlite-driver:$sqldelightVersion")
         }
-        jsMain.dependencies {
-            implementation("org.jetbrains.kotlin-wrappers:kotlin-browser:1.0.0-pre.521")
-        }
+//        jsMain.dependencies {
+//            implementation("org.jetbrains.kotlin-wrappers:kotlin-browser:1.0.0-pre.521")
+//        }
         appleMain.dependencies {
             implementation("app.cash.sqldelight:native-driver:$sqldelightVersion")
         }

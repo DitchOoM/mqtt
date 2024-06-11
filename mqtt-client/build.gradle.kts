@@ -37,10 +37,10 @@ kotlin {
         publishLibraryVariants("release")
     }
     jvm()
-    js {
-        browser()
-        nodejs()
-    }
+//    js {
+//        browser()
+//        nodejs()
+//    }
     macosX64()
     macosArm64()
     iosArm64()
@@ -95,9 +95,9 @@ kotlin {
 //            implementation("androidx.test:monitor:1.6.1")
 //        }
 
-        jsMain.dependencies {
-            implementation("org.jetbrains.kotlin-wrappers:kotlin-js:1.0.0-pre.521")
-        }
+//        jsMain.dependencies {
+//            implementation("org.jetbrains.kotlin-wrappers:kotlin-js:1.0.0-pre.521")
+//        }
     }
 }
 

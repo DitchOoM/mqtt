@@ -61,7 +61,7 @@ android {
     defaultConfig {
         minSdk = 19
     }
-    namespace = "$group.${rootProject.name}"
+    namespace = "com.ditchoom.mqtt"
     publishing {
         singleVariant("release") {
             withSourcesJar()
@@ -100,6 +100,7 @@ if (isRunningOnGithub) {
     val developerName: String by project
     val developerEmail: String by project
     val developerId: String by project
+    val artifactName: String by project
 
     project.group = publishedGroupId
     project.version = libraryVersion
@@ -108,7 +109,11 @@ if (isRunningOnGithub) {
         publications.withType(MavenPublication::class) {
             groupId = publishedGroupId
             version = libraryVersion
-
+            artifactId = if (artifactId == "models-v4") {
+                artifactName
+            } else {
+                artifactId.replaceBeforeLast('-', artifactName)
+            }
             artifact(tasks["javadocJar"])
 
             pom {
@@ -162,7 +167,6 @@ if (isRunningOnGithub) {
 ktlint {
     verbose.set(true)
     outputToConsole.set(true)
-    disabledRules.set(setOf("standard:property-naming"))
 }
 
 class Version(val major: UInt, val minor: UInt, val patch: UInt, val snapshot: Boolean) {

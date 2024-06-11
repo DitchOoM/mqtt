@@ -131,6 +131,7 @@ if (isRunningOnGithub) {
     val developerName: String by project
     val developerEmail: String by project
     val developerId: String by project
+    val artifactName: String by project
 
     project.group = publishedGroupId
     project.version = libraryVersion
@@ -139,7 +140,11 @@ if (isRunningOnGithub) {
         publications.withType(MavenPublication::class) {
             groupId = publishedGroupId
             version = libraryVersion
-
+            artifactId = if (artifactId == "models-v5") {
+                artifactName
+            } else {
+                artifactId.replaceBeforeLast('-', artifactName)
+            }
             artifact(tasks["javadocJar"])
 
             pom {

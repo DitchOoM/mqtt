@@ -40,13 +40,12 @@ data class SubscribeOperation(
     val packetId: Int,
     val subscriptions: Map<ISubscription, Flow<IPublishMessage>>,
     val subAck: Deferred<ISubscribeAcknowledgement>,
-): Flow<IPublishMessage> {
+) : Flow<IPublishMessage> {
     override suspend fun collect(collector: FlowCollector<IPublishMessage>) {
         combine(subscriptions.values.asIterable()) { array ->
             array.forEach { collector.emit(it) }
         }
     }
-
 }
 
 data class UnsubscribeOperation(val packetId: Int, val unsubAck: Deferred<IUnsubscribeAcknowledgment>)

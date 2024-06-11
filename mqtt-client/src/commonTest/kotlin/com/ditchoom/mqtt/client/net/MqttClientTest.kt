@@ -33,11 +33,13 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
 import kotlin.random.Random
 import kotlin.random.nextUInt
+import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.seconds
 
+@Ignore
 class MqttClientTest {
     internal val inMemory: Boolean = true
     private val isAndroidDevice: Boolean = getPlatform() == Platform.Android

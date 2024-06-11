@@ -141,7 +141,7 @@ if (isRunningOnGithub) {
         publications.withType(MavenPublication::class) {
             groupId = publishedGroupId
             version = libraryVersion
-            artifactId = if (artifactId == "models-base") {
+            artifactId = if (artifactId == "models-v4") {
                 artifactName
             } else {
                 artifactId.replaceBeforeLast('-', artifactName)

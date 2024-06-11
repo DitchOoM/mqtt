@@ -39,7 +39,7 @@ class PublishReceivedTests {
         assertEquals(
             packetIdentifier,
             buffer.readUnsignedShort().toInt(),
-            "variable header byte 1-2"
+            "variable header byte 1-2",
         )
         buffer.resetForRead()
         val pubrecResult = ControlPacketV5.from(buffer) as PublishReceived
@@ -71,7 +71,7 @@ class PublishReceivedTests {
         assertEquals(
             packetIdentifier,
             buffer.readUnsignedShort().toInt(),
-            "variable header byte 1-2"
+            "variable header byte 1-2",
         )
         assertEquals(NO_MATCHING_SUBSCRIBERS.byte, buffer.readUnsignedByte(), "reason code")
         assertEquals(0, buffer.readVariableByteInteger(), "property length")
@@ -91,7 +91,7 @@ class PublishReceivedTests {
         assertEquals(
             packetIdentifier,
             buffer.readUnsignedShort().toInt(),
-            "variable header byte 1-2"
+            "variable header byte 1-2",
         )
         assertEquals(UNSPECIFIED_ERROR.byte, buffer.readUnsignedByte(), "reason code")
         assertEquals(0, buffer.readVariableByteInteger(), "property length")
@@ -112,7 +112,7 @@ class PublishReceivedTests {
         assertEquals(
             packetIdentifier,
             buffer.readUnsignedShort().toInt(),
-            "variable header byte 1-2"
+            "variable header byte 1-2",
         )
         assertEquals(IMPLEMENTATION_SPECIFIC_ERROR.byte, buffer.readUnsignedByte(), "reason code")
         assertEquals(0, buffer.readVariableByteInteger(), "property length")
@@ -132,7 +132,7 @@ class PublishReceivedTests {
         assertEquals(
             packetIdentifier,
             buffer.readUnsignedShort().toInt(),
-            "variable header byte 1-2"
+            "variable header byte 1-2",
         )
         assertEquals(NOT_AUTHORIZED.byte, buffer.readUnsignedByte(), "reason code")
         assertEquals(0, buffer.readVariableByteInteger(), "property length")
@@ -152,7 +152,7 @@ class PublishReceivedTests {
         assertEquals(
             packetIdentifier,
             buffer.readUnsignedShort().toInt(),
-            "variable header byte 1-2"
+            "variable header byte 1-2",
         )
         assertEquals(TOPIC_NAME_INVALID.byte, buffer.readUnsignedByte(), "reason code")
         assertEquals(0, buffer.readVariableByteInteger(), "property length")
@@ -172,7 +172,7 @@ class PublishReceivedTests {
         assertEquals(
             packetIdentifier,
             buffer.readUnsignedShort().toInt(),
-            "variable header byte 1-2"
+            "variable header byte 1-2",
         )
         assertEquals(PACKET_IDENTIFIER_IN_USE.byte, buffer.readUnsignedByte(), "reason code")
         assertEquals(0, buffer.readVariableByteInteger(), "property length")
@@ -192,7 +192,7 @@ class PublishReceivedTests {
         assertEquals(
             packetIdentifier,
             buffer.readUnsignedShort().toInt(),
-            "variable header byte 1-2"
+            "variable header byte 1-2",
         )
         assertEquals(QUOTA_EXCEEDED.byte, buffer.readUnsignedByte(), "reason code")
         assertEquals(0, buffer.readVariableByteInteger(), "property length")
@@ -212,7 +212,7 @@ class PublishReceivedTests {
         assertEquals(
             packetIdentifier,
             buffer.readUnsignedShort().toInt(),
-            "variable header byte 1-2"
+            "variable header byte 1-2",
         )
         assertEquals(PAYLOAD_FORMAT_INVALID.byte, buffer.readUnsignedByte(), "reason code")
         assertEquals(0, buffer.readVariableByteInteger(), "property length")
@@ -232,12 +232,13 @@ class PublishReceivedTests {
 
     @Test
     fun reasonString() {
-        val expected = PublishReceived(
-            VariableHeader(
-                packetIdentifier,
-                properties = VariableHeader.Properties(reasonString = "yolo")
+        val expected =
+            PublishReceived(
+                VariableHeader(
+                    packetIdentifier,
+                    properties = VariableHeader.Properties(reasonString = "yolo"),
+                ),
             )
-        )
         val buffer = PlatformBuffer.allocate(13)
         expected.serialize(buffer)
         buffer.resetForRead()
@@ -246,7 +247,7 @@ class PublishReceivedTests {
         assertEquals(
             packetIdentifier,
             buffer.readUnsignedShort().toInt(),
-            "variable header byte 1-2"
+            "variable header byte 1-2",
         )
         assertEquals(SUCCESS.byte, buffer.readUnsignedByte(), "reason code")
         assertEquals(7, buffer.readVariableByteInteger(), "property length")
@@ -254,7 +255,7 @@ class PublishReceivedTests {
         assertEquals(
             "yolo",
             buffer.readMqttUtf8StringNotValidatedSized().second.toString(),
-            "reason string"
+            "reason string",
         )
         buffer.resetForRead()
         val pubrecResult = ControlPacketV5.from(buffer) as PublishReceived

@@ -8,7 +8,6 @@ plugins {
     id("com.android.library")
     `maven-publish`
     signing
-    id("org.jlleitschuh.gradle.ktlint")
     id("io.codearte.nexus-staging")
     id("app.cash.sqldelight")
 }
@@ -22,9 +21,8 @@ group = "com.ditchoom"
 val libraryVersion = getNextVersion().toString()
 println(
     "Version: ${libraryVersion}\nisRunningOnGithub: $isRunningOnGithub\nisMainBranchGithub: $isMainBranchGithub\n" +
-            "OS:$isMacOS\nLoad All Platforms: $loadAllPlatforms",
+        "OS:$isMacOS\nLoad All Platforms: $loadAllPlatforms",
 )
-
 
 repositories {
     google()
@@ -77,7 +75,6 @@ kotlin {
         appleMain.dependencies {
             implementation("app.cash.sqldelight:native-driver:$sqldelightVersion")
         }
-
     }
 }
 
@@ -193,19 +190,14 @@ if (isRunningOnGithub) {
     }
 }
 
-ktlint {
-    verbose.set(true)
-    outputToConsole.set(true)
-}
-
 class Version(val major: UInt, val minor: UInt, val patch: UInt, val snapshot: Boolean) {
     constructor(string: String, snapshot: Boolean) :
-            this(
-                string.split('.')[0].toUInt(),
-                string.split('.')[1].toUInt(),
-                string.split('.')[2].toUInt(),
-                snapshot,
-            )
+        this(
+            string.split('.')[0].toUInt(),
+            string.split('.')[1].toUInt(),
+            string.split('.')[2].toUInt(),
+            snapshot,
+        )
 
     fun incrementMajor() = Version(major + 1u, 0u, 0u, snapshot)
 
@@ -262,7 +254,6 @@ tasks.withType<AbstractPublishToMaven>().configureEach {
     dependsOn(signingTasks)
 }
 
-
 allprojects {
     afterEvaluate {
         // temp fix until sqllight includes https://github.com/cashapp/sqldelight/pull/3671
@@ -273,6 +264,5 @@ allprojects {
                     .flatMap { it.binaries }
                     .forEach { it.linkerOpts("-lsqlite3") }
             }
-
     }
 }

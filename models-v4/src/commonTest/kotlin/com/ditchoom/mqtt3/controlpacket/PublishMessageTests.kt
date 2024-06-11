@@ -21,7 +21,6 @@ import kotlin.test.assertTrue
 import kotlin.test.fail
 
 class PublishMessageTests {
-
     private val payload: PlatformBuffer = PlatformBuffer.allocate(4)
 
     init {
@@ -70,7 +69,7 @@ class PublishMessageTests {
         val publishMessage =
             PublishMessage.buildPayload(
                 topicName = checkNotNull(Topic.fromOrThrow("user/log", Topic.Type.Name)),
-                payload = payload
+                payload = payload,
             )
         val buffer = PlatformBuffer.allocate(16)
         publishMessage.serialize(buffer)
@@ -88,12 +87,12 @@ class PublishMessageTests {
         assertEquals(
             checkNotNull(Topic.fromOrThrow("user/log", Topic.Type.Name)).toString(),
             buffer.readString(8, Charset.UTF8),
-            "variable header topic name value"
+            "variable header topic name value",
         )
         if (publishMessage.variable.packetIdentifier in validControlPacketIdentifierRange) {
             assertEquals(
                 buffer.readUnsignedShort().toInt(),
-                publishMessage.variable.packetIdentifier
+                publishMessage.variable.packetIdentifier,
             )
         }
         assertEquals("yolo", buffer.readString(4, Charset.UTF8), "payload value")
@@ -104,7 +103,10 @@ class PublishMessageTests {
         assertMessageIsSame(publishMessage, result)
     }
 
-    private fun assertMessageIsSame(left: ControlPacketV4, right: ControlPacketV4) {
+    private fun assertMessageIsSame(
+        left: ControlPacketV4,
+        right: ControlPacketV4,
+    ) {
         val leftSize = left.packetSize()
         val leftBuffer = PlatformBuffer.allocate(leftSize)
         left.serialize(leftBuffer)
@@ -126,7 +128,7 @@ class PublishMessageTests {
             PublishMessage.buildPayload(
                 topicName = checkNotNull(Topic.fromOrThrow("user/log", Topic.Type.Name)),
                 payload = payload,
-                dup = true
+                dup = true,
             )
         val buffer = PlatformBuffer.allocate(16)
         publishMessage.serialize(buffer)
@@ -143,12 +145,12 @@ class PublishMessageTests {
         assertEquals(
             checkNotNull(Topic.fromOrThrow("user/log", Topic.Type.Name)).toString(),
             buffer.readString(8, Charset.UTF8),
-            "variable header topic name value"
+            "variable header topic name value",
         )
         if (publishMessage.variable.packetIdentifier in validControlPacketIdentifierRange) {
             assertEquals(
                 buffer.readUnsignedShort().toInt(),
-                publishMessage.variable.packetIdentifier
+                publishMessage.variable.packetIdentifier,
             )
         }
         assertEquals("yolo", buffer.readString(4, Charset.UTF8), "payload value")
@@ -161,12 +163,13 @@ class PublishMessageTests {
 
     @Test
     fun genericSerializationPublishQos1() {
-        val publishMessage = PublishMessage.buildPayload(
-            topicName = checkNotNull(Topic.fromOrThrow("user/log", Topic.Type.Name)),
-            payload = payload,
-            qos = QualityOfService.AT_LEAST_ONCE,
-            packetIdentifier = 13
-        )
+        val publishMessage =
+            PublishMessage.buildPayload(
+                topicName = checkNotNull(Topic.fromOrThrow("user/log", Topic.Type.Name)),
+                payload = payload,
+                qos = QualityOfService.AT_LEAST_ONCE,
+                packetIdentifier = 13,
+            )
         val buffer = PlatformBuffer.allocate(18)
         publishMessage.serialize(buffer)
         publishMessage.payload?.position(0)
@@ -182,12 +185,12 @@ class PublishMessageTests {
         assertEquals(
             checkNotNull(Topic.fromOrThrow("user/log", Topic.Type.Name)).toString(),
             buffer.readString(8, Charset.UTF8),
-            "variable header topic name value"
+            "variable header topic name value",
         )
         if (publishMessage.variable.packetIdentifier in validControlPacketIdentifierRange) {
             assertEquals(
                 buffer.readUnsignedShort().toInt(),
-                publishMessage.variable.packetIdentifier
+                publishMessage.variable.packetIdentifier,
             )
         }
         assertEquals("yolo", buffer.readString(4, Charset.UTF8), "payload value")
@@ -200,12 +203,13 @@ class PublishMessageTests {
 
     @Test
     fun genericSerializationPublishQos2() {
-        val publishMessage = PublishMessage.buildPayload(
-            topicName = checkNotNull(Topic.fromOrThrow("user/log", Topic.Type.Name)),
-            payload = payload,
-            qos = QualityOfService.EXACTLY_ONCE,
-            packetIdentifier = 13
-        )
+        val publishMessage =
+            PublishMessage.buildPayload(
+                topicName = checkNotNull(Topic.fromOrThrow("user/log", Topic.Type.Name)),
+                payload = payload,
+                qos = QualityOfService.EXACTLY_ONCE,
+                packetIdentifier = 13,
+            )
         val buffer = PlatformBuffer.allocate(18)
         publishMessage.serialize(buffer)
         publishMessage.payload?.position(0)
@@ -221,12 +225,12 @@ class PublishMessageTests {
         assertEquals(
             checkNotNull(Topic.fromOrThrow("user/log", Topic.Type.Name)).toString(),
             buffer.readString(8, Charset.UTF8),
-            "variable header topic name value"
+            "variable header topic name value",
         )
         if (publishMessage.variable.packetIdentifier in validControlPacketIdentifierRange) {
             assertEquals(
                 buffer.readUnsignedShort().toInt(),
-                publishMessage.variable.packetIdentifier
+                publishMessage.variable.packetIdentifier,
             )
         }
         assertEquals("yolo", buffer.readString(4, Charset.UTF8), "payload value")
@@ -243,7 +247,7 @@ class PublishMessageTests {
             PublishMessage.buildPayload(
                 topicName = checkNotNull(Topic.fromOrThrow("user/log", Topic.Type.Name)),
                 payload = payload,
-                retain = true
+                retain = true,
             )
         val buffer = PlatformBuffer.allocate(16)
         publishMessage.serialize(buffer)
@@ -260,12 +264,12 @@ class PublishMessageTests {
         assertEquals(
             checkNotNull(Topic.fromOrThrow("user/log", Topic.Type.Name)).toString(),
             buffer.readString(8, Charset.UTF8),
-            "variable header topic name value"
+            "variable header topic name value",
         )
         if (publishMessage.variable.packetIdentifier in validControlPacketIdentifierRange) {
             assertEquals(
                 buffer.readUnsignedShort().toInt(),
-                publishMessage.variable.packetIdentifier
+                publishMessage.variable.packetIdentifier,
             )
         }
         assertEquals("yolo", buffer.readString(4, Charset.UTF8), "payload value")
@@ -294,12 +298,12 @@ class PublishMessageTests {
         assertEquals(
             checkNotNull(Topic.fromOrThrow("user/log", Topic.Type.Name)).toString(),
             buffer.readString(8, Charset.UTF8),
-            "variable header topic name value"
+            "variable header topic name value",
         )
         if (publishMessage.variable.packetIdentifier in validControlPacketIdentifierRange) {
             assertEquals(
                 buffer.readUnsignedShort().toInt(),
-                publishMessage.variable.packetIdentifier
+                publishMessage.variable.packetIdentifier,
             )
         }
         buffer.resetForRead()

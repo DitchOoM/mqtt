@@ -30,8 +30,8 @@ data class ConnectionAcknowledgment(val header: VariableHeader = VariableHeader(
     constructor(sessionPresent: Boolean, connectReason: ReturnCode) : this(
         VariableHeader(
             sessionPresent,
-            connectReason
-        )
+            connectReason,
+        ),
     )
 
     override val sessionPresent: Boolean = header.sessionPresent
@@ -39,6 +39,7 @@ data class ConnectionAcknowledgment(val header: VariableHeader = VariableHeader(
     override val connectionReason: String = header.connectReason.name
 
     override fun variableHeader(writeBuffer: WriteBuffer) = header.serialize(writeBuffer)
+
     override fun remainingLength() = 2
 
     /**
@@ -97,9 +98,8 @@ data class ConnectionAcknowledgment(val header: VariableHeader = VariableHeader(
          * in the case where an error is found on the CONNECT. For instance, when on a public network and
          * the connection has not been authorized it might be unwise to indicate that this is an MQTT Server.
          */
-        val connectReason: ReturnCode = CONNECTION_ACCEPTED
+        val connectReason: ReturnCode = CONNECTION_ACCEPTED,
     ) {
-
         enum class ReturnCode(val value: UByte) {
             CONNECTION_ACCEPTED(0.toUByte()),
             CONNECTION_REFUSED_UNACCEPTABLE_PROTOCOL_VERSION(1.toUByte()),
@@ -107,7 +107,7 @@ data class ConnectionAcknowledgment(val header: VariableHeader = VariableHeader(
             CONNECTION_REFUSED_SERVER_UNAVAILABLE(3.toUByte()),
             CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD(4.toUByte()),
             CONNECTION_REFUSED_NOT_AUTHORIZED(5.toUByte()),
-            RESERVED(6.toUByte())
+            RESERVED(6.toUByte()),
         }
 
         fun serialize(writeBuffer: WriteBuffer) {
@@ -119,11 +119,12 @@ data class ConnectionAcknowledgment(val header: VariableHeader = VariableHeader(
             fun from(buffer: ReadBuffer): VariableHeader {
                 val sessionPresent = buffer.readByte() == 1.toByte()
                 val connectionReasonByte = buffer.readUnsignedByte()
-                val connectionReasonByteNormalized = if (connectionReasonByte > 5.toUByte()) {
-                    RESERVED
-                } else {
-                    connectionReasonByte
-                }
+                val connectionReasonByteNormalized =
+                    if (connectionReasonByte > 5.toUByte()) {
+                        RESERVED
+                    } else {
+                        connectionReasonByte
+                    }
                 val connectionReason = connackReturnCode[connectionReasonByteNormalized]
                 if (connectionReason == null) {
                     throw MalformedPacketException("Invalid property type found in MQTT payload $connectionReason")
@@ -143,15 +144,15 @@ val connackReturnCode by lazy(LazyThreadSafetyMode.NONE) {
         Pair(CONNECTION_ACCEPTED.value, CONNECTION_ACCEPTED),
         Pair(
             CONNECTION_REFUSED_UNACCEPTABLE_PROTOCOL_VERSION.value,
-            CONNECTION_REFUSED_UNACCEPTABLE_PROTOCOL_VERSION
+            CONNECTION_REFUSED_UNACCEPTABLE_PROTOCOL_VERSION,
         ),
         Pair(CONNECTION_REFUSED_IDENTIFIER_REJECTED.value, CONNECTION_REFUSED_IDENTIFIER_REJECTED),
         Pair(CONNECTION_REFUSED_SERVER_UNAVAILABLE.value, CONNECTION_REFUSED_SERVER_UNAVAILABLE),
         Pair(
             CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD.value,
-            CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD
+            CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD,
         ),
         Pair(CONNECTION_REFUSED_NOT_AUTHORIZED.value, CONNECTION_REFUSED_NOT_AUTHORIZED),
-        Pair(RESERVED.value, CONNECTION_REFUSED_NOT_AUTHORIZED)
+        Pair(RESERVED.value, CONNECTION_REFUSED_NOT_AUTHORIZED),
     )
 }

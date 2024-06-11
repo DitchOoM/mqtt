@@ -35,17 +35,17 @@ class PublishAcknowledgementTest {
         assertEquals(
             0b01000000,
             buffer.readUnsignedByte().toInt(),
-            "fixed header invalid byte 1, packet identifier"
+            "fixed header invalid byte 1, packet identifier",
         )
         assertEquals(
             2,
             buffer.readVariableByteInteger(),
-            "fixed header invalid byte 2, remaining length"
+            "fixed header invalid byte 2, remaining length",
         )
         assertEquals(
             packetIdentifier.toUShort(),
             buffer.readUnsignedShort(),
-            "variable header invalid byte 3-4, packet identifier"
+            "variable header invalid byte 3-4, packet identifier",
         )
         buffer.resetForRead()
         val pubackResult = ControlPacketV5.from(buffer) as PublishAcknowledgment
@@ -156,12 +156,13 @@ class PublishAcknowledgementTest {
 
     @Test
     fun reasonString() {
-        val expected = PublishAcknowledgment(
-            VariableHeader(
-                packetIdentifier,
-                properties = VariableHeader.Properties(reasonString = "yolo")
+        val expected =
+            PublishAcknowledgment(
+                VariableHeader(
+                    packetIdentifier,
+                    properties = VariableHeader.Properties(reasonString = "yolo"),
+                ),
             )
-        )
         val buffer = PlatformBuffer.allocate(13)
         expected.serialize(buffer)
         buffer.resetForRead()

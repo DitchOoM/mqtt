@@ -19,10 +19,11 @@ class JsRemoteMqttClientWorker(private val delegate: RemoteMqttClientWorker, pri
                         val (packetId, packet) = checkNotNull(msg)
                         delegate.scope.launch {
                             delegate.onPublishQueued(packetId, packet as? IPublishMessage)
-                            val msg2 = buildSimpleMessage(
-                                MESSAGE_TYPE_CLIENT_PUBLISH_COMPLETION,
-                                messageId.toInt()
-                            )
+                            val msg2 =
+                                buildSimpleMessage(
+                                    MESSAGE_TYPE_CLIENT_PUBLISH_COMPLETION,
+                                    messageId.toInt(),
+                                )
                             port.postMessage(msg2)
                         }
                     }
@@ -32,10 +33,11 @@ class JsRemoteMqttClientWorker(private val delegate: RemoteMqttClientWorker, pri
                         delegate.scope.launch {
                             delegate.onSubscribeQueued(packetId)
                             try {
-                                val postMessage = buildSimpleMessage(
-                                    MESSAGE_TYPE_CLIENT_SUBSCRIBE_COMPLETION,
-                                    messageId.toInt()
-                                )
+                                val postMessage =
+                                    buildSimpleMessage(
+                                        MESSAGE_TYPE_CLIENT_SUBSCRIBE_COMPLETION,
+                                        messageId.toInt(),
+                                    )
                                 port.postMessage(postMessage)
                             } catch (e: Throwable) {
                                 console.error("failed to build and respond with message", e)
@@ -50,8 +52,8 @@ class JsRemoteMqttClientWorker(private val delegate: RemoteMqttClientWorker, pri
                             port.postMessage(
                                 buildSimpleMessage(
                                     MESSAGE_TYPE_CLIENT_UNSUBSCRIBE_COMPLETION,
-                                    messageId.toInt()
-                                )
+                                    messageId.toInt(),
+                                ),
                             )
                         }
                     }
@@ -62,8 +64,8 @@ class JsRemoteMqttClientWorker(private val delegate: RemoteMqttClientWorker, pri
                             port.postMessage(
                                 buildSimpleMessage(
                                     MESSAGE_TYPE_CLIENT_SHUTDOWN_COMPLETION,
-                                    messageId.toInt()
-                                )
+                                    messageId.toInt(),
+                                ),
                             )
                             port.close()
                         }
@@ -74,7 +76,7 @@ class JsRemoteMqttClientWorker(private val delegate: RemoteMqttClientWorker, pri
                             val connack =
                                 delegate.currentConnack()?.serialize() as? JsBuffer
                             port.postMessage(
-                                buildPacketIdMessage(MESSAGE_TYPE_CLIENT_CONNACK_RESPONSE, 0, connack)
+                                buildPacketIdMessage(MESSAGE_TYPE_CLIENT_CONNACK_RESPONSE, 0, connack),
                             )
                         }
                     }
@@ -84,7 +86,7 @@ class JsRemoteMqttClientWorker(private val delegate: RemoteMqttClientWorker, pri
                             val connack =
                                 delegate.awaitConnectivity().serialize() as JsBuffer
                             port.postMessage(
-                                buildPacketIdMessage(MESSAGE_TYPE_CLIENT_AWAIT_CONNECTIVITY_RESPONSE, 0, connack)
+                                buildPacketIdMessage(MESSAGE_TYPE_CLIENT_AWAIT_CONNECTIVITY_RESPONSE, 0, connack),
                             )
                         }
                     }

@@ -37,12 +37,14 @@ data class PublishAcknowledgment(val variable: VariableHeader) :
         packetId: Int,
         reasonCode: ReasonCode = SUCCESS,
         reasonString: String? = null,
-        props: List<Pair<String, String>> = emptyList()
+        props: List<Pair<String, String>> = emptyList(),
     ) :
         this(VariableHeader(packetId, reasonCode, VariableHeader.Properties(reasonString, props)))
 
     override fun variableHeader(writeBuffer: WriteBuffer) = variable.serialize(writeBuffer)
+
     override val packetIdentifier: Int = variable.packetIdentifier
+
     override fun remainingLength() = variable.size()
 
     data class VariableHeader(
@@ -62,7 +64,7 @@ data class PublishAcknowledgment(val variable: VariableHeader) :
         /**
          * 3.4.2.2 PUBACK Properties
          */
-        val properties: Properties = Properties()
+        val properties: Properties = Properties(),
     ) {
         init {
             when (reasonCode.byte.toInt()) {
@@ -71,7 +73,7 @@ data class PublishAcknowledgment(val variable: VariableHeader) :
 
                 else -> throw ProtocolError(
                     "Invalid Publish Acknowledgment reason code ${reasonCode.byte} " +
-                        "see: https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477424"
+                        "see: https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477424",
                 )
             }
         }
@@ -81,7 +83,7 @@ data class PublishAcknowledgment(val variable: VariableHeader) :
                 reasonCode == SUCCESS &&
                     properties.userProperty.isEmpty() &&
                     properties.reasonString == null
-                )
+            )
             buffer.writeUShort(packetIdentifier.toUShort())
             if (!canOmitReasonCodeAndProperties) {
                 buffer.writeUByte(reasonCode.byte)
@@ -94,7 +96,7 @@ data class PublishAcknowledgment(val variable: VariableHeader) :
                 reasonCode == SUCCESS &&
                     properties.userProperty.isEmpty() &&
                     properties.reasonString == null
-                )
+            )
             var size = UShort.SIZE_BYTES
             if (!canOmitReasonCodeAndProperties) {
                 val propsSize = properties.size()
@@ -130,7 +132,7 @@ data class PublishAcknowledgment(val variable: VariableHeader) :
              * Property is allowed to appear multiple times to represent multiple name, value pairs. The same
              * name is allowed to appear more than once.
              */
-            val userProperty: List<Pair<String, String>> = emptyList()
+            val userProperty: List<Pair<String, String>> = emptyList(),
         ) {
             val props by lazy(LazyThreadSafetyMode.NONE) {
                 val list = ArrayList<Property>(1 + userProperty.count())
@@ -168,7 +170,7 @@ data class PublishAcknowledgment(val variable: VariableHeader) :
                                 if (reasonString != null) {
                                     throw ProtocolError(
                                         "Reason String added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477427"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477427",
                                     )
                                 }
                                 reasonString = it.diagnosticInfoDontParse
@@ -184,34 +186,38 @@ data class PublishAcknowledgment(val variable: VariableHeader) :
         }
 
         companion object {
-
-            fun from(buffer: ReadBuffer, remainingLength: Int): VariableHeader {
+            fun from(
+                buffer: ReadBuffer,
+                remainingLength: Int,
+            ): VariableHeader {
                 val packetIdentifier = buffer.readUnsignedShort()
                 if (remainingLength == 2) {
                     return VariableHeader(packetIdentifier.toInt())
                 } else {
                     val reasonCodeByte = buffer.readUnsignedByte()
-                    val reasonCode = when (reasonCodeByte) {
-                        SUCCESS.byte -> SUCCESS
-                        NO_MATCHING_SUBSCRIBERS.byte -> NO_MATCHING_SUBSCRIBERS
-                        UNSPECIFIED_ERROR.byte -> UNSPECIFIED_ERROR
-                        IMPLEMENTATION_SPECIFIC_ERROR.byte -> IMPLEMENTATION_SPECIFIC_ERROR
-                        NOT_AUTHORIZED.byte -> NOT_AUTHORIZED
-                        TOPIC_NAME_INVALID.byte -> TOPIC_NAME_INVALID
-                        PACKET_IDENTIFIER_IN_USE.byte -> PACKET_IDENTIFIER_IN_USE
-                        QUOTA_EXCEEDED.byte -> QUOTA_EXCEEDED
-                        PAYLOAD_FORMAT_INVALID.byte -> PAYLOAD_FORMAT_INVALID
-                        else -> throw MalformedPacketException(
-                            "Invalid reason code $reasonCodeByte" +
-                                "see: https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477424"
-                        )
-                    }
-                    val props = if (buffer.hasRemaining()) {
-                        val propsData = buffer.readProperties()
-                        Properties.from(propsData)
-                    } else {
-                        Properties()
-                    }
+                    val reasonCode =
+                        when (reasonCodeByte) {
+                            SUCCESS.byte -> SUCCESS
+                            NO_MATCHING_SUBSCRIBERS.byte -> NO_MATCHING_SUBSCRIBERS
+                            UNSPECIFIED_ERROR.byte -> UNSPECIFIED_ERROR
+                            IMPLEMENTATION_SPECIFIC_ERROR.byte -> IMPLEMENTATION_SPECIFIC_ERROR
+                            NOT_AUTHORIZED.byte -> NOT_AUTHORIZED
+                            TOPIC_NAME_INVALID.byte -> TOPIC_NAME_INVALID
+                            PACKET_IDENTIFIER_IN_USE.byte -> PACKET_IDENTIFIER_IN_USE
+                            QUOTA_EXCEEDED.byte -> QUOTA_EXCEEDED
+                            PAYLOAD_FORMAT_INVALID.byte -> PAYLOAD_FORMAT_INVALID
+                            else -> throw MalformedPacketException(
+                                "Invalid reason code $reasonCodeByte" +
+                                    "see: https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477424",
+                            )
+                        }
+                    val props =
+                        if (buffer.hasRemaining()) {
+                            val propsData = buffer.readProperties()
+                            Properties.from(propsData)
+                        } else {
+                            Properties()
+                        }
                     return VariableHeader(packetIdentifier.toInt(), reasonCode, props)
                 }
             }
@@ -219,7 +225,9 @@ data class PublishAcknowledgment(val variable: VariableHeader) :
     }
 
     companion object {
-        fun from(buffer: ReadBuffer, remainingLength: Int) =
-            PublishAcknowledgment(VariableHeader.from(buffer, remainingLength))
+        fun from(
+            buffer: ReadBuffer,
+            remainingLength: Int,
+        ) = PublishAcknowledgment(VariableHeader.from(buffer, remainingLength))
     }
 }

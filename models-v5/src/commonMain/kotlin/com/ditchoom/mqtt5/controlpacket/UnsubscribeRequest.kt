@@ -24,20 +24,19 @@ import com.ditchoom.mqtt5.controlpacket.properties.readPropertiesSized
 
 data class UnsubscribeRequest(
     val variable: VariableHeader,
-    override val topics: Set<Topic>
+    override val topics: Set<Topic>,
 ) :
     ControlPacketV5(IUnsubscribeRequest.controlPacketValue, DirectionOfFlow.CLIENT_TO_SERVER, 0b10),
-    IUnsubscribeRequest {
-
+        IUnsubscribeRequest {
     constructor(
         topics: Set<Topic>,
-        userProperty: List<Pair<String, String>> = emptyList()
+        userProperty: List<Pair<String, String>> = emptyList(),
     ) : this(VariableHeader(NO_PACKET_ID, VariableHeader.Properties(userProperty)), topics)
 
     constructor(topic: String, userProperty: List<Pair<String, String>> = emptyList()) :
         this(
             VariableHeader(NO_PACKET_ID, VariableHeader.Properties(userProperty)),
-            setOf<Topic>(Topic.fromOrThrow(topic, Topic.Type.Filter))
+            setOf<Topic>(Topic.fromOrThrow(topic, Topic.Type.Filter)),
         )
 
     init {
@@ -50,6 +49,7 @@ data class UnsubscribeRequest(
         copy(variable = variable.copy(packetIdentifier = packetIdentifier))
 
     override fun variableHeader(writeBuffer: WriteBuffer) = variable.serialize(writeBuffer)
+
     override fun remainingLength(): Int {
         val variableSize = variable.size()
         var payloadSize = 0
@@ -57,8 +57,7 @@ data class UnsubscribeRequest(
         return variableSize + payloadSize
     }
 
-    override fun payload(writeBuffer: WriteBuffer) =
-        topics.forEach { writeBuffer.writeMqttUtf8String(it.toString()) }
+    override fun payload(writeBuffer: WriteBuffer) = topics.forEach { writeBuffer.writeMqttUtf8String(it.toString()) }
 
     override val packetIdentifier = variable.packetIdentifier
 
@@ -72,7 +71,7 @@ data class UnsubscribeRequest(
 
     data class VariableHeader(
         val packetIdentifier: Int,
-        val properties: Properties = Properties()
+        val properties: Properties = Properties(),
     ) {
         fun size() = UShort.SIZE_BYTES + variableByteSize(properties.size()) + properties.size()
 
@@ -101,7 +100,7 @@ data class UnsubscribeRequest(
              * User Properties on the UNSUBSCRIBE packet can be used to send subscription related properties from
              * the Client to the Server. The meaning of these properties is not defined by this specification.
              */
-            val userProperty: List<Pair<String, String>> = emptyList()
+            val userProperty: List<Pair<String, String>> = emptyList(),
         ) {
             val props by lazy(LazyThreadSafetyMode.NONE) {
                 val props = ArrayList<Property>(userProperty.size)
@@ -147,14 +146,17 @@ data class UnsubscribeRequest(
                 val props = Properties.from(sized.second)
                 return Pair(
                     sized.first + variableByteSize(sized.first) + UShort.SIZE_BYTES,
-                    VariableHeader(packetIdentifier, props)
+                    VariableHeader(packetIdentifier, props),
                 )
             }
         }
     }
 
     companion object {
-        fun from(buffer: ReadBuffer, remainingLength: Int): UnsubscribeRequest {
+        fun from(
+            buffer: ReadBuffer,
+            remainingLength: Int,
+        ): UnsubscribeRequest {
             val header = VariableHeader.from(buffer)
             val topics = mutableSetOf<Topic>()
             var bytesRead = header.first

@@ -17,40 +17,96 @@ import com.ditchoom.mqtt.controlpacket.IUnsubscribeRequest
 import com.ditchoom.mqtt.controlpacket.Topic
 
 interface Persistence {
-    suspend fun activeSubscriptions(broker: MqttBroker, includePendingUnsub: Boolean = false): Map<Topic, ISubscription>
+    suspend fun activeSubscriptions(
+        broker: MqttBroker,
+        includePendingUnsub: Boolean = false,
+    ): Map<Topic, ISubscription>
+
     suspend fun clearMessages(broker: MqttBroker)
-    suspend fun writePubGetPacketId(broker: MqttBroker, pub: IPublishMessage): Int
-    suspend fun getPubWithPacketId(broker: MqttBroker, packetId: Int): IPublishMessage?
-    suspend fun writeUnsubGetPacketId(broker: MqttBroker, unsub: IUnsubscribeRequest): Int
-    suspend fun getUnsubWithPacketId(broker: MqttBroker, packetId: Int): IUnsubscribeRequest?
+
+    suspend fun writePubGetPacketId(
+        broker: MqttBroker,
+        pub: IPublishMessage,
+    ): Int
+
+    suspend fun getPubWithPacketId(
+        broker: MqttBroker,
+        packetId: Int,
+    ): IPublishMessage?
+
+    suspend fun writeUnsubGetPacketId(
+        broker: MqttBroker,
+        unsub: IUnsubscribeRequest,
+    ): Int
+
+    suspend fun getUnsubWithPacketId(
+        broker: MqttBroker,
+        packetId: Int,
+    ): IUnsubscribeRequest?
+
     suspend fun messagesToSendOnReconnect(broker: MqttBroker): Collection<ControlPacket>
-    suspend fun incomingPublish(broker: MqttBroker, packet: IPublishMessage, replyMessage: ControlPacket)
-    suspend fun ackPub(broker: MqttBroker, packet: IPublishAcknowledgment)
-    suspend fun ackPubComplete(broker: MqttBroker, packet: IPublishComplete)
+
+    suspend fun incomingPublish(
+        broker: MqttBroker,
+        packet: IPublishMessage,
+        replyMessage: ControlPacket,
+    )
+
+    suspend fun ackPub(
+        broker: MqttBroker,
+        packet: IPublishAcknowledgment,
+    )
+
+    suspend fun ackPubComplete(
+        broker: MqttBroker,
+        packet: IPublishComplete,
+    )
+
     suspend fun writeSubUpdatePacketIdAndSimplifySubscriptions(
         broker: MqttBroker,
-        sub: ISubscribeRequest
+        sub: ISubscribeRequest,
     ): ISubscribeRequest
 
-    suspend fun getSubWithPacketId(broker: MqttBroker, packetId: Int): ISubscribeRequest?
+    suspend fun getSubWithPacketId(
+        broker: MqttBroker,
+        packetId: Int,
+    ): ISubscribeRequest?
 
     suspend fun ackPubReceivedQueuePubRelease(
         broker: MqttBroker,
         incomingPubRecv: IPublishReceived,
-        pubRel: IPublishRelease
+        pubRel: IPublishRelease,
     )
 
-    suspend fun ackPubRelease(broker: MqttBroker, incomingPubRel: IPublishRelease, outPubComp: IPublishComplete)
-    suspend fun onPubCompWritten(broker: MqttBroker, outPubComp: IPublishComplete)
-    suspend fun ackSub(broker: MqttBroker, subAck: ISubscribeAcknowledgement)
-    suspend fun ackUnsub(broker: MqttBroker, unsubAck: IUnsubscribeAcknowledgment)
+    suspend fun ackPubRelease(
+        broker: MqttBroker,
+        incomingPubRel: IPublishRelease,
+        outPubComp: IPublishComplete,
+    )
 
-    suspend fun addBroker(connectionOp: MqttConnectionOptions, connectionRequest: IConnectionRequest): MqttBroker =
-        addBroker(listOf(connectionOp), connectionRequest)
+    suspend fun onPubCompWritten(
+        broker: MqttBroker,
+        outPubComp: IPublishComplete,
+    )
+
+    suspend fun ackSub(
+        broker: MqttBroker,
+        subAck: ISubscribeAcknowledgement,
+    )
+
+    suspend fun ackUnsub(
+        broker: MqttBroker,
+        unsubAck: IUnsubscribeAcknowledgment,
+    )
+
+    suspend fun addBroker(
+        connectionOp: MqttConnectionOptions,
+        connectionRequest: IConnectionRequest,
+    ): MqttBroker = addBroker(listOf(connectionOp), connectionRequest)
 
     suspend fun addBroker(
         connectionOps: Collection<MqttConnectionOptions>,
-        connectionRequest: IConnectionRequest
+        connectionRequest: IConnectionRequest,
     ): MqttBroker
 
     suspend fun allBrokers(): Collection<MqttBroker>
@@ -59,5 +115,8 @@ interface Persistence {
 
     suspend fun removeBroker(identifier: Int)
 
-    suspend fun isQueueClear(broker: MqttBroker, includeSubscriptions: Boolean = true): Boolean
+    suspend fun isQueueClear(
+        broker: MqttBroker,
+        includeSubscriptions: Boolean = true,
+    ): Boolean
 }

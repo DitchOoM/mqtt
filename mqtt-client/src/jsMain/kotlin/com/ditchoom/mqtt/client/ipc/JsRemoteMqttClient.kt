@@ -44,7 +44,10 @@ class JsRemoteMqttClient(
         }
     }
 
-    override suspend fun sendPublish(packetId: Int, pubBuffer: PlatformBuffer) {
+    override suspend fun sendPublish(
+        packetId: Int,
+        pubBuffer: PlatformBuffer,
+    ) {
         val messageId = nextMessageId++
         val msg = buildPacketIdMessage(MESSAGE_TYPE_CLIENT_PUBLISH, packetId, pubBuffer as? JsBuffer, messageId)
         port.postMessage(msg)
@@ -87,8 +90,8 @@ class JsRemoteMqttClient(
         return checkNotNull(
             readPacketIdMessage(
                 packetFactory,
-                messageEvent.data.asDynamic()
-            )?.second as? IConnectionAcknowledgment
+                messageEvent.data.asDynamic(),
+            )?.second as? IConnectionAcknowledgment,
         )
     }
 
@@ -132,7 +135,10 @@ class JsRemoteMqttClient(
         }
     }
 
-    private suspend fun awaitMessage(messageType: String, messageId: Int) {
+    private suspend fun awaitMessage(
+        messageType: String,
+        messageId: Int,
+    ) {
         messageFlow.first {
             val obj = it.data?.asDynamic()
             obj[MESSAGE_TYPE_KEY] == messageType &&

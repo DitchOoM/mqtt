@@ -29,21 +29,20 @@ import com.ditchoom.mqtt.controlpacket.utf8Length
  */
 data class SubscribeRequest(
     override val packetIdentifier: Int,
-    override val subscriptions: Set<ISubscription>
+    override val subscriptions: Set<ISubscription>,
 ) :
-    ControlPacketV4(ISubscribeRequest.controlPacketValue, DirectionOfFlow.CLIENT_TO_SERVER, 0b10),
-    ISubscribeRequest {
-
+    ControlPacketV4(ISubscribeRequest.CONTROL_PACKET_VALUE, DirectionOfFlow.CLIENT_TO_SERVER, 0b10),
+        ISubscribeRequest {
     constructor(packetIdentifier: UShort, topic: Topic, qos: QualityOfService) :
         this(
             packetIdentifier.toInt(),
-            subscriptions = setOf(Subscription(topic, qos))
+            subscriptions = setOf(Subscription(topic, qos)),
         )
 
     constructor(packetIdentifier: UShort, topic: String, qos: QualityOfService) :
         this(
             packetIdentifier.toInt(),
-            subscriptions = setOf(Subscription(Topic.fromOrThrow(topic, Topic.Type.Filter), qos))
+            subscriptions = setOf(Subscription(Topic.fromOrThrow(topic, Topic.Type.Filter), qos)),
         )
 
     constructor(packetIdentifier: UShort, topics: List<Topic>, qos: List<QualityOfService>) :
@@ -52,36 +51,36 @@ data class SubscribeRequest(
     constructor(packetIdentifier: Int, topicsQosMap: Map<Topic, QualityOfService>) :
         this(
             packetIdentifier,
-            subscriptions = Subscription.from(topicsQosMap.keys.toList(), topicsQosMap.values.toList())
+            subscriptions = Subscription.from(topicsQosMap.keys.toList(), topicsQosMap.values.toList()),
         )
 
-    override fun copyWithNewPacketIdentifier(packetIdentifier: Int): ISubscribeRequest =
-        copy(packetIdentifier = packetIdentifier)
+    override fun copyWithNewPacketIdentifier(packetIdentifier: Int): ISubscribeRequest = copy(packetIdentifier = packetIdentifier)
 
     override fun variableHeader(writeBuffer: WriteBuffer) {
         writeBuffer.writeUShort(packetIdentifier.toUShort())
     }
 
-    override fun payload(writeBuffer: WriteBuffer) =
-        Subscription.writeMany(subscriptions, writeBuffer)
+    override fun payload(writeBuffer: WriteBuffer) = Subscription.writeMany(subscriptions, writeBuffer)
 
-    override fun remainingLength() =
-        UShort.SIZE_BYTES + Subscription.sizeMany(subscriptions)
+    override fun remainingLength() = UShort.SIZE_BYTES + Subscription.sizeMany(subscriptions)
 
     override fun expectedResponse(): SubscribeAcknowledgement {
-        val returnCodes = subscriptions.map {
-            when (it.maximumQos) {
-                AT_MOST_ONCE -> ReasonCode.GRANTED_QOS_0
-                AT_LEAST_ONCE -> ReasonCode.GRANTED_QOS_1
-                EXACTLY_ONCE -> ReasonCode.GRANTED_QOS_2
+        val returnCodes =
+            subscriptions.map {
+                when (it.maximumQos) {
+                    AT_MOST_ONCE -> ReasonCode.GRANTED_QOS_0
+                    AT_LEAST_ONCE -> ReasonCode.GRANTED_QOS_1
+                    EXACTLY_ONCE -> ReasonCode.GRANTED_QOS_2
+                }
             }
-        }
         return SubscribeAcknowledgement(packetIdentifier, returnCodes)
     }
 
     companion object {
-
-        fun from(buffer: ReadBuffer, remaining: Int): SubscribeRequest {
+        fun from(
+            buffer: ReadBuffer,
+            remaining: Int,
+        ): SubscribeRequest {
             val packetIdentifier = buffer.readUnsignedShort().toInt()
             val subscriptions = Subscription.fromMany(buffer, remaining - UShort.SIZE_BYTES)
             return SubscribeRequest(packetIdentifier, subscriptions)
@@ -96,11 +95,13 @@ data class Subscription(
      * QoS level at which the Server can send Application Messages to the Client. It is a Protocol
      * Error if the Maximum QoS field has the value 3.
      */
-    override val maximumQos: QualityOfService = AT_LEAST_ONCE
+    override val maximumQos: QualityOfService = AT_LEAST_ONCE,
 ) : ISubscription {
-
     companion object {
-        fun fromMany(buffer: ReadBuffer, remaining: Int): Set<Subscription> {
+        fun fromMany(
+            buffer: ReadBuffer,
+            remaining: Int,
+        ): Set<Subscription> {
             val subscriptions = HashSet<Subscription>()
             var bytesRead = 0
             while (bytesRead < remaining) {
@@ -124,9 +125,14 @@ data class Subscription(
             return Pair(bytesRead, Subscription(topic, qos))
         }
 
-        fun from(topics: List<Topic>, qos: List<QualityOfService>): Set<ISubscription> {
+        fun from(
+            topics: List<Topic>,
+            qos: List<QualityOfService>,
+        ): Set<ISubscription> {
             if (topics.size != qos.size) {
-                throw ProtocolError("[MQTT-3.8.3-3] The payload of a SUBSCRIBE packet MUST contain at least one Topic Filter / QoS pair. A SUBSCRIBE packet with no payload is a protocol violation.")
+                throw ProtocolError(
+                    "[MQTT-3.8.3-3] The payload of a SUBSCRIBE packet MUST contain at least one Topic Filter / QoS pair. A SUBSCRIBE packet with no payload is a protocol violation.",
+                )
             }
             val subscriptions = mutableSetOf<ISubscription>()
             topics.forEachIndexed { index, topic ->
@@ -135,9 +141,14 @@ data class Subscription(
             return subscriptions
         }
 
-        fun fromOrThrow(topics: List<String>, qos: List<QualityOfService>): Set<ISubscription> {
+        fun fromOrThrow(
+            topics: List<String>,
+            qos: List<QualityOfService>,
+        ): Set<ISubscription> {
             if (topics.size != qos.size) {
-                throw ProtocolError("[MQTT-3.8.3-3] The payload of a SUBSCRIBE packet MUST contain at least one Topic Filter / QoS pair. A SUBSCRIBE packet with no payload is a protocol violation.")
+                throw ProtocolError(
+                    "[MQTT-3.8.3-3] The payload of a SUBSCRIBE packet MUST contain at least one Topic Filter / QoS pair. A SUBSCRIBE packet with no payload is a protocol violation.",
+                )
             }
             val subscriptions = mutableSetOf<ISubscription>()
             topics.forEachIndexed { index, topic ->
@@ -154,7 +165,10 @@ data class Subscription(
             return size
         }
 
-        fun writeMany(subscriptions: Collection<ISubscription>, writeBuffer: WriteBuffer) {
+        fun writeMany(
+            subscriptions: Collection<ISubscription>,
+            writeBuffer: WriteBuffer,
+        ) {
             subscriptions.forEach {
                 writeBuffer.writeMqttUtf8String(it.topicFilter.toString())
                 writeBuffer.writeByte(it.maximumQos.integerValue)

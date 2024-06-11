@@ -30,61 +30,70 @@ import kotlinx.coroutines.launch
 abstract class RemoteMqttClient(
     protected val scope: CoroutineScope,
     override val broker: MqttBroker,
-    private val persistence: Persistence
+    private val persistence: Persistence,
 ) : MqttClient {
     abstract val allocationZone: AllocationZone
     private val _incomingPackets = MutableSharedFlow<ControlPacket>(2, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     val incomingPackets: SharedFlow<ControlPacket> = _incomingPackets
     private val _sentPackets = MutableSharedFlow<ControlPacket>(2, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     val sentPackets: SharedFlow<ControlPacket> = _sentPackets
+
     protected open suspend fun sendSubscribe(packetId: Int) {}
 
     override suspend fun subscribe(sub: ISubscribeRequest): SubscribeOperation {
         val subscribe = persistence.writeSubUpdatePacketIdAndSimplifySubscriptions(broker, sub)
-        val suback = scope.async {
-            val packet =
-                awaitControlPacketReceivedMatching(
-                    subscribe.packetIdentifier,
-                    ISubscribeAcknowledgement.controlPacketValue
-                )
-            packet as ISubscribeAcknowledgement
-        }
+        val suback =
+            scope.async {
+                val packet =
+                    awaitControlPacketReceivedMatching(
+                        subscribe.packetIdentifier,
+                        ISubscribeAcknowledgement.CONTROL_PACKET_VALUE,
+                    )
+                packet as ISubscribeAcknowledgement
+            }
         sendSubscribe(subscribe.packetIdentifier)
         val map = subscribe.subscriptions.associateWith { observe(it.topicFilter) }
         return SubscribeOperation(subscribe.packetIdentifier, map, suback)
     }
 
-    protected open suspend fun sendPublish(packetId: Int, pubBuffer: PlatformBuffer) {}
+    protected open suspend fun sendPublish(
+        packetId: Int,
+        pubBuffer: PlatformBuffer,
+    ) {}
 
     override suspend fun publish(pub: IPublishMessage): PublishOperation {
-        val publishPacketId = if (pub.qualityOfService == QualityOfService.AT_MOST_ONCE) {
-            NO_PACKET_ID
-        } else {
-            persistence.writePubGetPacketId(broker, pub)
-        }
+        val publishPacketId =
+            if (pub.qualityOfService == QualityOfService.AT_MOST_ONCE) {
+                NO_PACKET_ID
+            } else {
+                persistence.writePubGetPacketId(broker, pub)
+            }
         val pub = pub.maybeCopyWithNewPacketIdentifier(publishPacketId)
         val pubBuffer = pub.serialize(allocationZone)
         sendPublish(publishPacketId, pubBuffer)
         return when (pub.qualityOfService) {
             QualityOfService.AT_MOST_ONCE -> PublishOperation.QoSAtMostOnceComplete
             QualityOfService.AT_LEAST_ONCE -> {
-                val puback = scope.async {
-                    awaitControlPacketReceivedMatching(publishPacketId, IPublishAcknowledgment.controlPacketValue)
-                        as IPublishAcknowledgment
-                }
+                val puback =
+                    scope.async {
+                        awaitControlPacketReceivedMatching(publishPacketId, IPublishAcknowledgment.CONTROL_PACKET_VALUE)
+                            as IPublishAcknowledgment
+                    }
                 PublishOperation.QoSAtLeastOnce(publishPacketId, puback)
             }
 
             QualityOfService.EXACTLY_ONCE -> {
-                val pubrec = scope.async {
-                    awaitControlPacketReceivedMatching(publishPacketId, IPublishReceived.controlPacketValue)
-                        as IPublishReceived
-                }
-                val pubcomp = scope.async {
-                    pubrec.await()
-                    awaitControlPacketReceivedMatching(publishPacketId, IPublishComplete.controlPacketValue)
-                        as IPublishComplete
-                }
+                val pubrec =
+                    scope.async {
+                        awaitControlPacketReceivedMatching(publishPacketId, IPublishReceived.CONTROL_PACKET_VALUE)
+                            as IPublishReceived
+                    }
+                val pubcomp =
+                    scope.async {
+                        pubrec.await()
+                        awaitControlPacketReceivedMatching(publishPacketId, IPublishComplete.CONTROL_PACKET_VALUE)
+                            as IPublishComplete
+                    }
                 PublishOperation.QoSExactlyOnce(publishPacketId, pubrec, pubcomp)
             }
         }
@@ -94,16 +103,20 @@ abstract class RemoteMqttClient(
 
     override suspend fun unsubscribe(unsub: IUnsubscribeRequest): UnsubscribeOperation {
         val packetId = persistence.writeUnsubGetPacketId(broker, unsub)
-        val unsuback = scope.async {
-            val packet =
-                awaitControlPacketReceivedMatching(packetId, IUnsubscribeAcknowledgment.controlPacketValue)
-            packet as IUnsubscribeAcknowledgment
-        }
+        val unsuback =
+            scope.async {
+                val packet =
+                    awaitControlPacketReceivedMatching(packetId, IUnsubscribeAcknowledgment.CONTROL_PACKET_VALUE)
+                packet as IUnsubscribeAcknowledgment
+            }
         sendUnsubscribe(packetId)
         return UnsubscribeOperation(packetId, unsuback)
     }
 
-    private suspend fun awaitControlPacketReceivedMatching(packetId: Int, controlPacketValue: Byte): ControlPacket {
+    private suspend fun awaitControlPacketReceivedMatching(
+        packetId: Int,
+        controlPacketValue: Byte,
+    ): ControlPacket {
         return _incomingPackets.first {
             it.packetIdentifier == packetId && it.controlPacketValue == controlPacketValue
         }

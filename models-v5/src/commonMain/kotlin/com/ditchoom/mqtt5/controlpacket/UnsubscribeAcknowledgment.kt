@@ -23,9 +23,8 @@ import com.ditchoom.mqtt5.controlpacket.properties.readPropertiesSized
 
 data class UnsubscribeAcknowledgment(
     val variable: VariableHeader,
-    val reasonCodes: List<ReasonCode> = listOf(SUCCESS)
+    val reasonCodes: List<ReasonCode> = listOf(SUCCESS),
 ) : ControlPacketV5(11, DirectionOfFlow.SERVER_TO_CLIENT), IUnsubscribeAcknowledgment {
-
     init {
         val invalidCodes = reasonCodes.map { it.byte } - validSubscribeCodes
         if (invalidCodes.isEmpty()) {
@@ -37,7 +36,7 @@ data class UnsubscribeAcknowledgment(
         packetIdentifier: Int,
         reasonString: String? = null,
         userProperty: List<Pair<String, String>> = emptyList(),
-        reasonCodes: List<ReasonCode>
+        reasonCodes: List<ReasonCode>,
     ) : this(VariableHeader(packetIdentifier, VariableHeader.Properties(reasonString, userProperty)), reasonCodes)
 
     override fun variableHeader(writeBuffer: WriteBuffer) = variable.serialize(writeBuffer)
@@ -48,8 +47,7 @@ data class UnsubscribeAcknowledgment(
         return variableSize + subSize
     }
 
-    override fun payload(writeBuffer: WriteBuffer) =
-        reasonCodes.forEach { writeBuffer.writeUByte(it.byte) }
+    override fun payload(writeBuffer: WriteBuffer) = reasonCodes.forEach { writeBuffer.writeUByte(it.byte) }
 
     override val packetIdentifier = variable.packetIdentifier
 
@@ -63,7 +61,7 @@ data class UnsubscribeAcknowledgment(
 
     data class VariableHeader(
         val packetIdentifier: Int,
-        val properties: Properties = Properties()
+        val properties: Properties = Properties(),
     ) {
         fun size() = UShort.SIZE_BYTES + variableByteSize(properties.size()) + properties.size()
 
@@ -103,7 +101,7 @@ data class UnsubscribeAcknowledgment(
              * Property is allowed to appear multiple times to represent multiple name, value pairs. The same
              * name is allowed to appear more than once.
              */
-            val userProperty: List<Pair<String, String>> = emptyList()
+            val userProperty: List<Pair<String, String>> = emptyList(),
         ) {
             val props by lazy(LazyThreadSafetyMode.NONE) {
                 val props = ArrayList<Property>(1 + userProperty.size)
@@ -141,7 +139,7 @@ data class UnsubscribeAcknowledgment(
                                 if (reasonString != null) {
                                     throw ProtocolError(
                                         "Reason String added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477476"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477476",
                                     )
                                 }
                                 reasonString = it.diagnosticInfoDontParse
@@ -163,31 +161,35 @@ data class UnsubscribeAcknowledgment(
                 val props = Properties.from(sized.second)
                 return Pair(
                     UShort.SIZE_BYTES + variableByteSize(sized.first) + sized.first,
-                    VariableHeader(packetIdentifier.toInt(), props)
+                    VariableHeader(packetIdentifier.toInt(), props),
                 )
             }
         }
     }
 
     companion object {
-        fun from(buffer: ReadBuffer, remainingLength: Int): UnsubscribeAcknowledgment {
+        fun from(
+            buffer: ReadBuffer,
+            remainingLength: Int,
+        ): UnsubscribeAcknowledgment {
             val variableHeader = VariableHeader.from(buffer)
             val list = mutableListOf<ReasonCode>()
             while (remainingLength - variableHeader.first > list.count()) {
                 val reasonCodeByte = buffer.readUnsignedByte()
-                list += when (reasonCodeByte) {
-                    SUCCESS.byte -> SUCCESS
-                    NO_SUBSCRIPTIONS_EXISTED.byte -> NO_SUBSCRIPTIONS_EXISTED
-                    UNSPECIFIED_ERROR.byte -> UNSPECIFIED_ERROR
-                    IMPLEMENTATION_SPECIFIC_ERROR.byte -> IMPLEMENTATION_SPECIFIC_ERROR
-                    NOT_AUTHORIZED.byte -> NOT_AUTHORIZED
-                    TOPIC_FILTER_INVALID.byte -> TOPIC_FILTER_INVALID
-                    PACKET_IDENTIFIER_IN_USE.byte -> PACKET_IDENTIFIER_IN_USE
-                    else -> throw MalformedPacketException(
-                        "Invalid reason code $reasonCodeByte " +
-                            "see: https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477478"
-                    )
-                }
+                list +=
+                    when (reasonCodeByte) {
+                        SUCCESS.byte -> SUCCESS
+                        NO_SUBSCRIPTIONS_EXISTED.byte -> NO_SUBSCRIPTIONS_EXISTED
+                        UNSPECIFIED_ERROR.byte -> UNSPECIFIED_ERROR
+                        IMPLEMENTATION_SPECIFIC_ERROR.byte -> IMPLEMENTATION_SPECIFIC_ERROR
+                        NOT_AUTHORIZED.byte -> NOT_AUTHORIZED
+                        TOPIC_FILTER_INVALID.byte -> TOPIC_FILTER_INVALID
+                        PACKET_IDENTIFIER_IN_USE.byte -> PACKET_IDENTIFIER_IN_USE
+                        else -> throw MalformedPacketException(
+                            "Invalid reason code $reasonCodeByte " +
+                                "see: https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477478",
+                        )
+                    }
             }
             return UnsubscribeAcknowledgment(variableHeader.second, list)
         }
@@ -202,6 +204,6 @@ private val validSubscribeCodes by lazy(LazyThreadSafetyMode.NONE) {
         IMPLEMENTATION_SPECIFIC_ERROR,
         NOT_AUTHORIZED,
         TOPIC_FILTER_INVALID,
-        PACKET_IDENTIFIER_IN_USE
+        PACKET_IDENTIFIER_IN_USE,
     )
 }

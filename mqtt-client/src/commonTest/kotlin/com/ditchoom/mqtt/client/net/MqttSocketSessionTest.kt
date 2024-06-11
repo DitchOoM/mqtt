@@ -19,60 +19,81 @@ class MqttSocketSessionTest {
     private val host = if (isAndroidDevice) "10.0.2.2" else "localhost"
 
     //    @Test
-    fun connectTls() = runTest {
-        if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTest
-        val connectionOptions = MqttConnectionOptions.SocketConnection(
-            "test.mosquitto.org",
-            8886,
-            tls = true,
-            connectionTimeout = 10.seconds
-        )
-        connectTest(connectionOptions)
-    }
+    fun connectTls() =
+        runTest {
+            if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTest
+            val connectionOptions =
+                MqttConnectionOptions.SocketConnection(
+                    "test.mosquitto.org",
+                    8886,
+                    tls = true,
+                    connectionTimeout = 10.seconds,
+                )
+            connectTest(connectionOptions)
+        }
 
     @Test
-    fun connectLocalhostMqtt4() = runTest {
-        if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTest
-        val connectionOptions = MqttConnectionOptions.SocketConnection(host, 1883, false, 10.seconds)
-        connectTest(connectionOptions, 4)
-    }
+    fun connectLocalhostMqtt4() =
+        runTest {
+            if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTest
+            val connectionOptions = MqttConnectionOptions.SocketConnection(host, 1883, false, 10.seconds)
+            connectTest(connectionOptions, 4)
+        }
 
     @Test
-    fun connectLocalhostMqtt5() = runTest {
-        if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTest
-        val connectionOptions = MqttConnectionOptions.SocketConnection(host, 1883, false, 10.seconds)
-        connectTest(connectionOptions, 5)
-    }
+    fun connectLocalhostMqtt5() =
+        runTest {
+            if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTest
+            val connectionOptions = MqttConnectionOptions.SocketConnection(host, 1883, false, 10.seconds)
+            connectTest(connectionOptions, 5)
+        }
 
     @Test
-    fun connectWebsockets() = runTest {
-        val connectionOptions = MqttConnectionOptions.WebSocketConnectionOptions(
-            host, 80, websocketEndpoint = "/mqtt", tls = false, protocols = listOf("mqtt")
-        )
-        connectTest(connectionOptions)
-    }
+    fun connectWebsockets() =
+        runTest {
+            val connectionOptions =
+                MqttConnectionOptions.WebSocketConnectionOptions(
+                    host,
+                    80,
+                    websocketEndpoint = "/mqtt",
+                    tls = false,
+                    protocols = listOf("mqtt"),
+                )
+            connectTest(connectionOptions)
+        }
 
     //    @Test
-    fun connectTestMosquitto() = runTest {
-        if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTest
-        val connectionOptions = MqttConnectionOptions.SocketConnection(
-            "test.mosquitto.org",
-            1883,
-            tls = false,
-            connectionTimeout = 10.seconds
-        )
-        connectTest(connectionOptions)
-    }
+    fun connectTestMosquitto() =
+        runTest {
+            if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTest
+            val connectionOptions =
+                MqttConnectionOptions.SocketConnection(
+                    "test.mosquitto.org",
+                    1883,
+                    tls = false,
+                    connectionTimeout = 10.seconds,
+                )
+            connectTest(connectionOptions)
+        }
 
     //    @Test
-    fun connectWebsocketsTestMosquitto() = runTest {
-        val connectionOptions = MqttConnectionOptions.WebSocketConnectionOptions(
-            "test.mosquitto.org", 8081, websocketEndpoint = "/mqtt", tls = true, protocols = listOf("mqttv3.1")
-        )
-        connectTest(connectionOptions)
-    }
+    fun connectWebsocketsTestMosquitto() =
+        runTest {
+            val connectionOptions =
+                MqttConnectionOptions.WebSocketConnectionOptions(
+                    "test.mosquitto.org",
+                    8081,
+                    websocketEndpoint = "/mqtt",
+                    tls = true,
+                    protocols = listOf("mqttv3.1"),
+                )
+            connectTest(connectionOptions)
+        }
 
-    private suspend fun connectTest(connectionOptions: MqttConnectionOptions, version: Int = 4) {
+    private suspend fun connectTest(
+        connectionOptions: MqttConnectionOptions,
+        version: Int = 4,
+    ) {
         var testCompleted = false
         try {
             val connectionRequest =
@@ -83,9 +104,11 @@ class MqttSocketSessionTest {
                 }
             val socketSession = MqttSocketSession.open(-1, connectionRequest, connectionOptions)
             assertTrue(socketSession.connectionAcknowledgement.isSuccessful)
-            val publish = connectionRequest.controlPacketFactory.publish(
-                topicName = Topic.fromOrThrow("testtt", Topic.Type.Name), qos = QualityOfService.AT_LEAST_ONCE,
-            ).maybeCopyWithNewPacketIdentifier(1)
+            val publish =
+                connectionRequest.controlPacketFactory.publish(
+                    topicName = Topic.fromOrThrow("testtt", Topic.Type.Name),
+                    qos = QualityOfService.AT_LEAST_ONCE,
+                ).maybeCopyWithNewPacketIdentifier(1)
             socketSession.write(publish)
             val controlPacketAck = socketSession.read()
             assertTrue { controlPacketAck is IPublishAcknowledgment }

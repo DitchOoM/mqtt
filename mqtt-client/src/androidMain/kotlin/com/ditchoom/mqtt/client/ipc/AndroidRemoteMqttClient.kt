@@ -28,23 +28,29 @@ class AndroidRemoteMqttClient(
 
     override val packetFactory: ControlPacketFactory = broker.connectionRequest.controlPacketFactory
 
-    private val cb = object : MqttMessageTransferredCallback.Stub() {
-        private val id = UUID.randomUUID().leastSignificantBits.toInt()
-        override fun id(): Int = id
+    private val cb =
+        object : MqttMessageTransferredCallback.Stub() {
+            private val id = UUID.randomUUID().leastSignificantBits.toInt()
 
-        override fun onControlPacketSent(controlPacket: JvmBuffer) {
-            controlPacket.resetForRead()
-            val packet = packetFactory.from(controlPacket)
-            Log.i("RAHUL", "IPCOUT:  $packet")
-            onControlPacketSent(packet)
-        }
+            override fun id(): Int = id
 
-        override fun onControlPacketReceived(byte1: Byte, remainingLength: Int, controlPacket: JvmBuffer) {
-            val packet = packetFactory.from(controlPacket, byte1.toUByte(), remainingLength)
-            Log.i("RAHUL", "IPCIN :  $packet")
-            onIncomingControlPacket(packet)
+            override fun onControlPacketSent(controlPacket: JvmBuffer) {
+                controlPacket.resetForRead()
+                val packet = packetFactory.from(controlPacket)
+                Log.i("RAHUL", "IPCOUT:  $packet")
+                onControlPacketSent(packet)
+            }
+
+            override fun onControlPacketReceived(
+                byte1: Byte,
+                remainingLength: Int,
+                controlPacket: JvmBuffer,
+            ) {
+                val packet = packetFactory.from(controlPacket, byte1.toUByte(), remainingLength)
+                Log.i("RAHUL", "IPCIN :  $packet")
+                onIncomingControlPacket(packet)
+            }
         }
-    }
 
     init {
         aidl.registerObserver(cb)
@@ -58,14 +64,16 @@ class AndroidRemoteMqttClient(
         aidl.unregisterObserver(observer)
     }
 
-    override suspend fun sendPublish(packetId: Int, pubBuffer: PlatformBuffer) =
-        suspendCoroutine {
-            aidl.publishQueued(
-                packetId,
-                pubBuffer as JvmBuffer,
-                SuspendingMqttCompletionCallback("sendPublish", it)
-            )
-        }
+    override suspend fun sendPublish(
+        packetId: Int,
+        pubBuffer: PlatformBuffer,
+    ) = suspendCoroutine {
+        aidl.publishQueued(
+            packetId,
+            pubBuffer as JvmBuffer,
+            SuspendingMqttCompletionCallback("sendPublish", it),
+        )
+    }
 
     override suspend fun sendSubscribe(packetId: Int) =
         suspendCoroutine { aidl.subscribeQueued(packetId, SuspendingMqttCompletionCallback("sendSubscribe", it)) }
@@ -81,12 +89,14 @@ class AndroidRemoteMqttClient(
 
     override suspend fun awaitConnectivity(): IConnectionAcknowledgment {
         return suspendCoroutine {
-            aidl.awaitConnectivity(object : MqttMessageCallback.Stub() {
-                override fun onMessage(buffer: JvmBuffer) {
-                    buffer.resetForRead()
-                    it.resume(packetFactory.from(buffer) as IConnectionAcknowledgment)
-                }
-            })
+            aidl.awaitConnectivity(
+                object : MqttMessageCallback.Stub() {
+                    override fun onMessage(buffer: JvmBuffer) {
+                        buffer.resetForRead()
+                        it.resume(packetFactory.from(buffer) as IConnectionAcknowledgment)
+                    }
+                },
+            )
         }
     }
 

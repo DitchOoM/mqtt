@@ -29,24 +29,26 @@ data class PublishRelease(val variable: VariableHeader) :
         packetIdentifier: Int,
         reasonCode: ReasonCode = SUCCESS,
         reasonString: String? = null,
-        userProperty: List<Pair<String, String>> = emptyList()
+        userProperty: List<Pair<String, String>> = emptyList(),
     ) :
         this(VariableHeader(packetIdentifier, reasonCode, VariableHeader.Properties(reasonString, userProperty)))
 
     override val packetIdentifier: Int = variable.packetIdentifier
+
     override fun expectedResponse(
         reasonCode: ReasonCode,
         reasonString: String?,
-        userProperty: List<Pair<String, String>>
+        userProperty: List<Pair<String, String>>,
     ) = PublishComplete(
         PublishComplete.VariableHeader(
             variable.packetIdentifier,
             reasonCode,
-            PublishComplete.VariableHeader.Properties(reasonString, userProperty)
-        )
+            PublishComplete.VariableHeader.Properties(reasonString, userProperty),
+        ),
     )
 
     override fun variableHeader(writeBuffer: WriteBuffer) = variable.serialize(writeBuffer)
+
     override fun remainingLength() = variable.size().toInt()
 
     /**
@@ -73,7 +75,7 @@ data class PublishRelease(val variable: VariableHeader) :
         /**
          * 3.4.2.2 PUBREL Properties
          */
-        val properties: Properties = Properties()
+        val properties: Properties = Properties(),
     ) {
         init {
             when (reasonCode.byte.toInt()) {
@@ -82,7 +84,7 @@ data class PublishRelease(val variable: VariableHeader) :
 
                 else -> throw ProtocolError(
                     "Invalid Publish Release reason code ${reasonCode.byte} " +
-                        "see: https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477424"
+                        "see: https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477424",
                 )
             }
         }
@@ -92,7 +94,7 @@ data class PublishRelease(val variable: VariableHeader) :
                 reasonCode == SUCCESS &&
                     properties.userProperty.isEmpty() &&
                     properties.reasonString == null
-                )
+            )
             var size = UShort.SIZE_BYTES
             if (!canOmitReasonCodeAndProperties) {
                 val propsSize = properties.size()
@@ -107,7 +109,7 @@ data class PublishRelease(val variable: VariableHeader) :
                 reasonCode == SUCCESS &&
                     properties.userProperty.isEmpty() &&
                     properties.reasonString == null
-                )
+            )
             if (!canOmitReasonCodeAndProperties) {
                 writeBuffer.writeUByte(reasonCode.byte)
                 properties.serialize(writeBuffer)
@@ -140,7 +142,7 @@ data class PublishRelease(val variable: VariableHeader) :
              * Property is allowed to appear multiple times to represent multiple name, value pairs. The same name
              * is allowed to appear more than once.
              */
-            val userProperty: List<Pair<String, String>> = emptyList()
+            val userProperty: List<Pair<String, String>> = emptyList(),
         ) {
             val props by lazy(LazyThreadSafetyMode.NONE) {
                 val props = ArrayList<Property>(1 + userProperty.size)
@@ -178,7 +180,7 @@ data class PublishRelease(val variable: VariableHeader) :
                                 if (reasonString != null) {
                                     throw ProtocolError(
                                         "Reason String added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477427"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477427",
                                     )
                                 }
                                 reasonString = it.diagnosticInfoDontParse
@@ -194,20 +196,24 @@ data class PublishRelease(val variable: VariableHeader) :
         }
 
         companion object {
-            fun from(buffer: ReadBuffer, remaining: Int): VariableHeader {
+            fun from(
+                buffer: ReadBuffer,
+                remaining: Int,
+            ): VariableHeader {
                 val packetIdentifier = buffer.readUnsignedShort().toInt()
                 return if (remaining == 2) {
                     VariableHeader(packetIdentifier)
                 } else {
                     val reasonCodeByte = buffer.readUnsignedByte()
-                    val reasonCode = when (reasonCodeByte) {
-                        SUCCESS.byte -> SUCCESS
-                        PACKET_IDENTIFIER_NOT_FOUND.byte -> PACKET_IDENTIFIER_NOT_FOUND
-                        else -> throw MalformedPacketException(
-                            "Invalid reason code $reasonCodeByte" +
-                                "see: https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477444"
-                        )
-                    }
+                    val reasonCode =
+                        when (reasonCodeByte) {
+                            SUCCESS.byte -> SUCCESS
+                            PACKET_IDENTIFIER_NOT_FOUND.byte -> PACKET_IDENTIFIER_NOT_FOUND
+                            else -> throw MalformedPacketException(
+                                "Invalid reason code $reasonCodeByte" +
+                                    "see: https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477444",
+                            )
+                        }
                     val propsData = buffer.readProperties()
                     val props = Properties.from(propsData)
                     VariableHeader(packetIdentifier, reasonCode, props)
@@ -217,7 +223,9 @@ data class PublishRelease(val variable: VariableHeader) :
     }
 
     companion object {
-        fun from(buffer: ReadBuffer, remainingLength: Int) =
-            PublishRelease(VariableHeader.from(buffer, remainingLength))
+        fun from(
+            buffer: ReadBuffer,
+            remainingLength: Int,
+        ) = PublishRelease(VariableHeader.from(buffer, remainingLength))
     }
 }

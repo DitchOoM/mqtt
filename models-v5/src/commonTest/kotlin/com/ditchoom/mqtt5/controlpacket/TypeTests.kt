@@ -18,8 +18,9 @@ import kotlin.test.assertEquals
 class TypeTests {
     private val packetIdentifier = 0
 
-    private val controlPacketSpectMatchError = "doesn't match the spec from " +
-        "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477322"
+    private val controlPacketSpectMatchError =
+        "doesn't match the spec from " +
+            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477322"
 
     // Control packet types controlPacketValue matching spec
     @Test
@@ -36,7 +37,7 @@ class TypeTests {
         assertEquals(
             3,
             PublishMessage(variable = variable).controlPacketValue,
-            controlPacketSpectMatchError
+            controlPacketSpectMatchError,
         )
     }
 
@@ -45,7 +46,7 @@ class TypeTests {
         assertEquals(
             4,
             PublishAcknowledgment(PublishAcknowledgment.VariableHeader(packetIdentifier)).controlPacketValue,
-            controlPacketSpectMatchError
+            controlPacketSpectMatchError,
         )
 
     @Test
@@ -53,7 +54,7 @@ class TypeTests {
         assertEquals(
             5,
             PublishReceived(PublishReceived.VariableHeader(packetIdentifier)).controlPacketValue,
-            controlPacketSpectMatchError
+            controlPacketSpectMatchError,
         )
 
     @Test
@@ -61,7 +62,7 @@ class TypeTests {
         assertEquals(
             6,
             PublishRelease(PublishRelease.VariableHeader(packetIdentifier)).controlPacketValue,
-            controlPacketSpectMatchError
+            controlPacketSpectMatchError,
         )
 
     @Test
@@ -69,7 +70,7 @@ class TypeTests {
         assertEquals(
             7,
             PublishComplete(PublishComplete.VariableHeader(packetIdentifier)).controlPacketValue,
-            controlPacketSpectMatchError
+            controlPacketSpectMatchError,
         )
 
     @Test
@@ -78,9 +79,9 @@ class TypeTests {
             8,
             SubscribeRequest(
                 SubscribeRequest.VariableHeader(packetIdentifier),
-                setOf(Subscription(Topic.fromOrThrow("yolo", Topic.Type.Filter)))
+                setOf(Subscription(Topic.fromOrThrow("yolo", Topic.Type.Filter))),
             ).controlPacketValue,
-            controlPacketSpectMatchError
+            controlPacketSpectMatchError,
         )
 
     @Test
@@ -88,7 +89,7 @@ class TypeTests {
         assertEquals(
             9,
             SubscribeAcknowledgement(packetIdentifier.toUShort(), GRANTED_QOS_0).controlPacketValue,
-            controlPacketSpectMatchError
+            controlPacketSpectMatchError,
         )
 
     @Test
@@ -97,9 +98,9 @@ class TypeTests {
             10,
             UnsubscribeRequest(
                 UnsubscribeRequest.VariableHeader(packetIdentifier),
-                setOf(Topic.fromOrThrow("yolo", Topic.Type.Filter))
+                setOf(Topic.fromOrThrow("yolo", Topic.Type.Filter)),
             ).controlPacketValue,
-            controlPacketSpectMatchError
+            controlPacketSpectMatchError,
         )
 
     @Test
@@ -108,25 +109,23 @@ class TypeTests {
             11,
             UnsubscribeAcknowledgment(
                 UnsubscribeAcknowledgment.VariableHeader(packetIdentifier),
-                listOf(GRANTED_QOS_1)
+                listOf(GRANTED_QOS_1),
             ).controlPacketValue,
-            controlPacketSpectMatchError
+            controlPacketSpectMatchError,
         )
 
     @Test
-    fun controlPacketTypeValueMatchesSpecForPINGREQ() =
-        assertEquals(12, PingRequest.controlPacketValue, controlPacketSpectMatchError)
+    fun controlPacketTypeValueMatchesSpecForPINGREQ() = assertEquals(12, PingRequest.controlPacketValue, controlPacketSpectMatchError)
 
     @Test
-    fun controlPacketTypeValueMatchesSpecForPINGRESP() =
-        assertEquals(13, PingResponse.controlPacketValue, controlPacketSpectMatchError)
+    fun controlPacketTypeValueMatchesSpecForPINGRESP() = assertEquals(13, PingResponse.controlPacketValue, controlPacketSpectMatchError)
 
     @Test
     fun controlPacketTypeValueMatchesSpecForDISCONNECT() =
         assertEquals(
             14,
             DisconnectNotification(DisconnectNotification.VariableHeader(NORMAL_DISCONNECTION)).controlPacketValue,
-            controlPacketSpectMatchError
+            controlPacketSpectMatchError,
         )
 
     @Test
@@ -139,12 +138,12 @@ class TypeTests {
                     AuthenticationExchange.VariableHeader.Properties(
                         Authentication(
                             "yolo",
-                            PlatformBuffer.allocate(0)
-                        )
-                    )
-                )
+                            PlatformBuffer.allocate(0),
+                        ),
+                    ),
+                ),
             ).controlPacketValue,
-            controlPacketSpectMatchError
+            controlPacketSpectMatchError,
         )
 
     // Control packet types direction of flow matching spec
@@ -157,7 +156,7 @@ class TypeTests {
         assertEquals(
             SERVER_TO_CLIENT,
             ConnectionAcknowledgment().direction,
-            controlPacketSpectMatchError
+            controlPacketSpectMatchError,
         )
 
     @Test
@@ -166,7 +165,7 @@ class TypeTests {
         assertEquals(
             BIDIRECTIONAL,
             PublishMessage(variable = variable).direction,
-            controlPacketSpectMatchError
+            controlPacketSpectMatchError,
         )
     }
 
@@ -175,7 +174,7 @@ class TypeTests {
         assertEquals(
             BIDIRECTIONAL,
             PublishAcknowledgment(PublishAcknowledgment.VariableHeader(packetIdentifier)).direction,
-            controlPacketSpectMatchError
+            controlPacketSpectMatchError,
         )
 
     @Test
@@ -183,7 +182,7 @@ class TypeTests {
         assertEquals(
             BIDIRECTIONAL,
             PublishReceived(PublishReceived.VariableHeader(packetIdentifier)).direction,
-            controlPacketSpectMatchError
+            controlPacketSpectMatchError,
         )
 
     @Test
@@ -191,7 +190,7 @@ class TypeTests {
         assertEquals(
             BIDIRECTIONAL,
             PublishRelease(PublishRelease.VariableHeader(packetIdentifier)).direction,
-            controlPacketSpectMatchError
+            controlPacketSpectMatchError,
         )
 
     @Test
@@ -199,7 +198,7 @@ class TypeTests {
         assertEquals(
             BIDIRECTIONAL,
             PublishComplete(PublishComplete.VariableHeader(packetIdentifier)).direction,
-            controlPacketSpectMatchError
+            controlPacketSpectMatchError,
         )
 
     @Test
@@ -208,9 +207,9 @@ class TypeTests {
             CLIENT_TO_SERVER,
             SubscribeRequest(
                 SubscribeRequest.VariableHeader(packetIdentifier),
-                setOf(Subscription(Topic.fromOrThrow("yolo", Topic.Type.Filter)))
+                setOf(Subscription(Topic.fromOrThrow("yolo", Topic.Type.Filter))),
             ).direction,
-            controlPacketSpectMatchError
+            controlPacketSpectMatchError,
         )
 
     @Test
@@ -218,7 +217,7 @@ class TypeTests {
         assertEquals(
             SERVER_TO_CLIENT,
             SubscribeAcknowledgement(packetIdentifier.toUShort(), GRANTED_QOS_0).direction,
-            controlPacketSpectMatchError
+            controlPacketSpectMatchError,
         )
 
     @Test
@@ -227,9 +226,9 @@ class TypeTests {
             CLIENT_TO_SERVER,
             UnsubscribeRequest(
                 UnsubscribeRequest.VariableHeader(packetIdentifier),
-                setOf(Topic.fromOrThrow("yolo", Topic.Type.Filter))
+                setOf(Topic.fromOrThrow("yolo", Topic.Type.Filter)),
             ).direction,
-            controlPacketSpectMatchError
+            controlPacketSpectMatchError,
         )
 
     @Test
@@ -238,25 +237,23 @@ class TypeTests {
             SERVER_TO_CLIENT,
             UnsubscribeAcknowledgment(
                 UnsubscribeAcknowledgment.VariableHeader(packetIdentifier),
-                listOf(GRANTED_QOS_1)
+                listOf(GRANTED_QOS_1),
             ).direction,
-            controlPacketSpectMatchError
+            controlPacketSpectMatchError,
         )
 
     @Test
-    fun controlPacketTypeDirectionOfFlowPINGREQ() =
-        assertEquals(CLIENT_TO_SERVER, PingRequest.direction, controlPacketSpectMatchError)
+    fun controlPacketTypeDirectionOfFlowPINGREQ() = assertEquals(CLIENT_TO_SERVER, PingRequest.direction, controlPacketSpectMatchError)
 
     @Test
-    fun controlPacketTypeDirectionOfFlowPINGRESP() =
-        assertEquals(SERVER_TO_CLIENT, PingResponse.direction, controlPacketSpectMatchError)
+    fun controlPacketTypeDirectionOfFlowPINGRESP() = assertEquals(SERVER_TO_CLIENT, PingResponse.direction, controlPacketSpectMatchError)
 
     @Test
     fun controlPacketTypeDirectionOfFlowDISCONNECT() =
         assertEquals(
             BIDIRECTIONAL,
             DisconnectNotification(DisconnectNotification.VariableHeader(NORMAL_DISCONNECTION)).direction,
-            controlPacketSpectMatchError
+            controlPacketSpectMatchError,
         )
 
     @Test
@@ -269,11 +266,11 @@ class TypeTests {
                     AuthenticationExchange.VariableHeader.Properties(
                         Authentication(
                             "yolo",
-                            PlatformBuffer.allocate(0)
-                        )
-                    )
-                )
+                            PlatformBuffer.allocate(0),
+                        ),
+                    ),
+                ),
             ).direction,
-            controlPacketSpectMatchError
+            controlPacketSpectMatchError,
         )
 }

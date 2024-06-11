@@ -4,7 +4,13 @@ import com.ditchoom.mqtt.Persistence
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.newSingleThreadContext
 
-actual suspend fun newDefaultPersistence(androidContext: Any?, name: String, inMemory: Boolean): Persistence =
-    SqlDatabasePersistence(sqlDriver(androidContext, name, inMemory)!!)
+actual suspend fun newDefaultPersistence(
+    androidContext: Any?,
+    name: String,
+    inMemory: Boolean,
+): Persistence = SqlDatabasePersistence(sqlDriver(androidContext, name, inMemory)!!)
 
-actual fun defaultDispatcher(nThreads: Int, name: String): CoroutineDispatcher = newSingleThreadContext("Mqtt-SQL")
+actual fun defaultDispatcher(
+    nThreads: Int,
+    name: String,
+): CoroutineDispatcher = newSingleThreadContext("Mqtt-SQL")

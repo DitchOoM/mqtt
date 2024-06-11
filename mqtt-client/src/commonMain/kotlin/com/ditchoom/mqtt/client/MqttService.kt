@@ -8,16 +8,19 @@ import com.ditchoom.mqtt.controlpacket.IConnectionRequest
 interface MqttService {
     suspend fun addBroker(
         connectionOps: Collection<MqttConnectionOptions>,
-        connectionRequest: IConnectionRequest
+        connectionRequest: IConnectionRequest,
     ): MqttBroker
 
     suspend fun allBrokers(): Collection<MqttBroker>
 
-    suspend fun removeBroker(brokerId: Int, protocolVersion: Byte)
+    suspend fun removeBroker(
+        brokerId: Int,
+        protocolVersion: Byte,
+    )
 
     suspend fun addBrokerAndStartClient(
         connectionOps: MqttConnectionOptions,
-        connectionRequest: IConnectionRequest
+        connectionRequest: IConnectionRequest,
     ): MqttClient {
         val broker = addBroker(listOf(connectionOps), connectionRequest)
         start(broker)
@@ -26,7 +29,7 @@ interface MqttService {
 
     suspend fun addBrokerAndStartClient(
         connectionOps: Collection<MqttConnectionOptions>,
-        connectionRequest: IConnectionRequest
+        connectionRequest: IConnectionRequest,
     ): MqttClient {
         val broker = addBroker(connectionOps, connectionRequest)
         start(broker)
@@ -47,7 +50,7 @@ interface MqttService {
         suspend fun buildNewService(
             ipcEnabled: Boolean,
             androidContextOrAbstractWorker: Any? = null,
-            inMemory: Boolean = false
+            inMemory: Boolean = false,
         ): MqttService {
             var serviceFound: MqttService? = null
             if (ipcEnabled) {

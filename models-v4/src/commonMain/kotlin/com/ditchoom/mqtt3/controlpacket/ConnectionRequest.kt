@@ -34,9 +34,8 @@ data class ConnectionRequest(
      * Protocol Level, Connect Flags, and Keep Alive.
      */
     val variableHeader: VariableHeader = VariableHeader(),
-    val payload: Payload = Payload()
+    val payload: Payload = Payload(),
 ) : ControlPacketV4(1, DirectionOfFlow.CLIENT_TO_SERVER), IConnectionRequest {
-
     constructor(
         clientId: String,
         keepAliveSeconds: Int = 3600,
@@ -48,7 +47,7 @@ data class ConnectionRequest(
         willRetain: Boolean = false,
         willQos: QualityOfService = QualityOfService.AT_MOST_ONCE,
         protocolName: String = "MQTT",
-        protocolLevel: UByte = 4u
+        protocolLevel: UByte = 4u,
     ) : this(
         VariableHeader(
             protocolName = protocolName,
@@ -59,7 +58,7 @@ data class ConnectionRequest(
             hasPassword = password != null,
             willRetain = willRetain,
             willFlag = willPayload != null && willTopic != null,
-            willQos = willQos
+            willQos = willQos,
         ),
         Payload(
             clientId,
@@ -70,8 +69,8 @@ data class ConnectionRequest(
             },
             willPayload,
             userName,
-            password
-        )
+            password,
+        ),
     )
 
     override val hasUserName: Boolean = variableHeader.hasUserName
@@ -88,6 +87,7 @@ data class ConnectionRequest(
     override val willTopic: Topic? = payload.willTopic
 
     override fun variableHeader(writeBuffer: WriteBuffer) = variableHeader.serialize(writeBuffer)
+
     override fun payload(writeBuffer: WriteBuffer) = payload.serialize(writeBuffer)
 
     override fun remainingLength() = variableHeader.size() + payload.size()
@@ -104,35 +104,35 @@ data class ConnectionRequest(
                 "[MQTT-3.1.2-9]",
                 "If the Will Flag is set to " +
                     "1, the Will QoS and Will Retain fields in the Connect Flags will be used by the Server, " +
-                    "and the Will Properties, Will Topic and Will Message fields MUST be present in the Payload."
+                    "and the Will Properties, Will Topic and Will Message fields MUST be present in the Payload.",
             )
         }
         if (variableHeader.hasUserName && payload.userName == null) {
             return MqttWarning(
                 "[MQTT-3.1.2-17]",
                 "If the User Name Flag is set" +
-                    " to 1, a User Name MUST be present in the Payload"
+                    " to 1, a User Name MUST be present in the Payload",
             )
         }
         if (!variableHeader.hasUserName && payload.userName != null) {
             return MqttWarning(
                 "[MQTT-3.1.2-16]",
                 "If the User Name Flag is set " +
-                    "to 0, a User Name MUST NOT be present in the Payload"
+                    "to 0, a User Name MUST NOT be present in the Payload",
             )
         }
         if (variableHeader.hasPassword && payload.password == null) {
             return MqttWarning(
                 "[MQTT-3.1.2-19]",
                 "If the Password Flag is set" +
-                    " to 1, a Password MUST be present in the Payload"
+                    " to 1, a Password MUST be present in the Payload",
             )
         }
         if (!variableHeader.hasPassword && payload.password != null) {
             return MqttWarning(
                 "[MQTT-3.1.2-18]",
                 "If the Password Flag is set " +
-                    "to 0, a Password MUST NOT be present in the Payload"
+                    "to 0, a Password MUST NOT be present in the Payload",
             )
         }
         return variableHeader.validateOrGetWarning()
@@ -360,14 +360,14 @@ data class ConnectionRequest(
          * maximum value is 18 hours 12 minutes and 15 seconds.
          *
          */
-        val keepAliveSeconds: Int = UShort.MAX_VALUE.toInt()
+        val keepAliveSeconds: Int = UShort.MAX_VALUE.toInt(),
     ) {
         fun validateOrGetWarning(): MqttWarning? {
             if (!willFlag && willRetain) {
                 return MqttWarning(
                     "[MQTT-3.1.2-13]",
                     "If the Will Flag is set" +
-                        " to 0, then Will Retain MUST be set to 0"
+                        " to 0, then Will Retain MUST be set to 0",
                 )
             }
             return null
@@ -395,7 +395,6 @@ data class ConnectionRequest(
         fun size() = protocolName.utf8Length() + 6
 
         companion object {
-
             fun from(buffer: ReadBuffer): VariableHeader {
                 val protocolName = buffer.readMqttUtf8StringNotValidatedSized().second
                 val protocolVersion = buffer.readUnsignedByte()
@@ -411,7 +410,7 @@ data class ConnectionRequest(
                 val hasUsername = connectFlags.get(7)
                 if (reserved) {
                     throw MalformedPacketException(
-                        "Reserved flag in Connect Variable Header packet is set incorrectly to 1"
+                        "Reserved flag in Connect Variable Header packet is set incorrectly to 1",
                     )
                 }
                 val keepAliveSeconds = buffer.readUnsignedShort()
@@ -424,7 +423,7 @@ data class ConnectionRequest(
                     willQos,
                     willFlag,
                     cleanStart,
-                    keepAliveSeconds.toInt()
+                    keepAliveSeconds.toInt(),
                 )
             }
         }
@@ -511,9 +510,8 @@ data class ConnectionRequest(
          * to 65535 bytes of binary data prefixed with a two byte length field which indicates the number of bytes
          * used by the binary data (it does not include the two bytes taken up by the length field itself).
          */
-        val password: String? = null
+        val password: String? = null,
     ) {
-
         fun size(): Int {
             var size = 2 + clientId.utf8Length()
             if (willTopic != null) {
@@ -549,45 +547,48 @@ data class ConnectionRequest(
         }
 
         companion object {
-
             fun from(
                 buffer: ReadBuffer,
-                variableHeader: VariableHeader
+                variableHeader: VariableHeader,
             ): Payload {
                 val clientId = buffer.readMqttUtf8StringNotValidatedSized().second
-                val willTopic = if (variableHeader.willFlag) {
-                    buffer.readMqttUtf8StringNotValidatedSized().second
-                } else {
-                    null
-                }
-                val willPayload = if (variableHeader.willFlag) {
-                    val willPayloadSize = buffer.readUnsignedShort().toInt()
-                    buffer.readBytes(willPayloadSize)
-                } else {
-                    null
-                }
-                val username = if (variableHeader.hasUserName) {
-                    buffer.readMqttUtf8StringNotValidatedSized().second
-                } else {
-                    null
-                }
-                val password = if (variableHeader.hasPassword) {
-                    buffer.readMqttUtf8StringNotValidatedSized().second
-                } else {
-                    null
-                }
-                val topic = if (willTopic != null) {
-                    Topic.fromOrThrow(willTopic, Topic.Type.Name)
-                } else {
-                    null
-                }
+                val willTopic =
+                    if (variableHeader.willFlag) {
+                        buffer.readMqttUtf8StringNotValidatedSized().second
+                    } else {
+                        null
+                    }
+                val willPayload =
+                    if (variableHeader.willFlag) {
+                        val willPayloadSize = buffer.readUnsignedShort().toInt()
+                        buffer.readBytes(willPayloadSize)
+                    } else {
+                        null
+                    }
+                val username =
+                    if (variableHeader.hasUserName) {
+                        buffer.readMqttUtf8StringNotValidatedSized().second
+                    } else {
+                        null
+                    }
+                val password =
+                    if (variableHeader.hasPassword) {
+                        buffer.readMqttUtf8StringNotValidatedSized().second
+                    } else {
+                        null
+                    }
+                val topic =
+                    if (willTopic != null) {
+                        Topic.fromOrThrow(willTopic, Topic.Type.Name)
+                    } else {
+                        null
+                    }
                 return Payload(clientId, topic, willPayload, username, password)
             }
         }
     }
 
     companion object {
-
         fun from(buffer: ReadBuffer): ConnectionRequest {
             val variableHeader = VariableHeader.from(buffer)
             val payload = Payload.from(buffer, variableHeader)

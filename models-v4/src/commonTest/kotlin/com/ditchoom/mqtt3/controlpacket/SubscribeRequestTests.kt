@@ -11,14 +11,14 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class SubscribeRequestTests {
-
     @Test
     fun serializeTestByteArray() {
         val readBuffer = PlatformBuffer.allocate(12)
-        val subscription = Subscription.fromOrThrow(
-            listOf("a/b", "c/d"),
-            listOf(AT_LEAST_ONCE, EXACTLY_ONCE)
-        )
+        val subscription =
+            Subscription.fromOrThrow(
+                listOf("a/b", "c/d"),
+                listOf(AT_LEAST_ONCE, EXACTLY_ONCE),
+            )
         Subscription.writeMany(subscription, readBuffer)
         readBuffer.resetForRead()
         // Topic Filter ("a/b")
@@ -55,10 +55,11 @@ class SubscribeRequestTests {
     @Test
     fun subscriptionPayload() {
         val readBuffer = PlatformBuffer.allocate(12)
-        val subscription = Subscription.fromOrThrow(
-            listOf("a/b", "c/d"),
-            listOf(AT_LEAST_ONCE, EXACTLY_ONCE)
-        )
+        val subscription =
+            Subscription.fromOrThrow(
+                listOf("a/b", "c/d"),
+                listOf(AT_LEAST_ONCE, EXACTLY_ONCE),
+            )
         Subscription.writeMany(subscription, readBuffer)
         readBuffer.resetForRead()
         // Topic Filter ("a/b")
@@ -107,10 +108,11 @@ class SubscribeRequestTests {
 
     @Test
     fun serialized() {
-        val subscriptions = Subscription.fromOrThrow(
-            listOf("a/b", "c/d"),
-            listOf(AT_LEAST_ONCE, EXACTLY_ONCE)
-        )
+        val subscriptions =
+            Subscription.fromOrThrow(
+                listOf("a/b", "c/d"),
+                listOf(AT_LEAST_ONCE, EXACTLY_ONCE),
+            )
         val buffer = PlatformBuffer.allocate(19)
         val request = SubscribeRequest(10, subscriptions)
         request.serialize(buffer)

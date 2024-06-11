@@ -18,34 +18,37 @@ import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readVariableByteI
 abstract class ControlPacketV5(
     override val controlPacketValue: Byte,
     override val direction: com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow,
-    override val flags: Byte = 0b0
+    override val flags: Byte = 0b0,
 ) : ControlPacket {
     override val mqttVersion: Byte = 5
 
     override val controlPacketFactory = ControlPacketV5Factory
 
     companion object {
-
         fun from(buffer: ReadBuffer) = fromTyped(buffer)
 
         fun fromTyped(buffer: ReadBuffer): ControlPacketV5 {
             val byte1 = buffer.readUnsignedByte()
             val remainingLength = buffer.readVariableByteInteger()
-            val remainingBuffer = if (remainingLength > 1) {
-                buffer.readBytes(remainingLength)
-            } else {
-                PlatformBuffer.allocate(0)
-            }
+            val remainingBuffer =
+                if (remainingLength > 1) {
+                    buffer.readBytes(remainingLength)
+                } else {
+                    PlatformBuffer.allocate(0)
+                }
             return fromTyped(remainingBuffer, byte1, remainingLength)
         }
 
-        fun from(buffer: ReadBuffer, byte1: UByte, remainingLength: Int) =
-            fromTyped(buffer, byte1, remainingLength)
+        fun from(
+            buffer: ReadBuffer,
+            byte1: UByte,
+            remainingLength: Int,
+        ) = fromTyped(buffer, byte1, remainingLength)
 
         fun fromTyped(
             buffer: ReadBuffer,
             byte1: UByte,
-            remainingLength: Int
+            remainingLength: Int,
         ): ControlPacketV5 {
             val byte1AsUInt = byte1.toUInt()
             val packetValue = byte1AsUInt.shr(4).toInt()
@@ -66,7 +69,9 @@ abstract class ControlPacketV5(
                 13 -> PingResponse
                 14 -> DisconnectNotification.from(buffer)
                 15 -> AuthenticationExchange.from(buffer)
-                else -> throw MalformedPacketException("Invalid MQTT Control Packet Type: $packetValue Should be in range between 0 and 15 inclusive")
+                else -> throw MalformedPacketException(
+                    "Invalid MQTT Control Packet Type: $packetValue Should be in range between 0 and 15 inclusive",
+                )
             }
         }
     }

@@ -59,12 +59,13 @@ class PublishCompleteTests {
 
     @Test
     fun reasonString() {
-        val expected = PublishComplete(
-            VariableHeader(
-                packetIdentifier,
-                properties = VariableHeader.Properties(reasonString = "yolo")
+        val expected =
+            PublishComplete(
+                VariableHeader(
+                    packetIdentifier,
+                    properties = VariableHeader.Properties(reasonString = "yolo"),
+                ),
             )
-        )
         val buffer = PlatformBuffer.allocate(13)
         expected.serialize(buffer)
         buffer.resetForRead()
@@ -89,14 +90,15 @@ class PublishCompleteTests {
 
     @Test
     fun variableHeaderPropertyUserProperty() {
-        val props = VariableHeader.Properties.from(
-            setOf(
-                UserProperty(
-                    "key",
-                    "value"
-                )
+        val props =
+            VariableHeader.Properties.from(
+                setOf(
+                    UserProperty(
+                        "key",
+                        "value",
+                    ),
+                ),
             )
-        )
         val userPropertyResult = props.userProperty
         for ((key, value) in userPropertyResult) {
             assertEquals(key, "key")

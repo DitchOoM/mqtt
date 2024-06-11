@@ -31,14 +31,15 @@ import com.ditchoom.mqtt5.controlpacket.properties.readProperties
 
 data class DisconnectNotification(val variable: VariableHeader = VariableHeader()) :
     ControlPacketV5(14, DirectionOfFlow.BIDIRECTIONAL), IDisconnectNotification {
-
     override fun packetSize(): Int = 2 + remainingLength()
+
     override fun variableHeader(writeBuffer: WriteBuffer) = variable.serialize(writeBuffer)
 
     override fun remainingLength(): Int = variable.size()
+
     data class VariableHeader(
         val reasonCode: ReasonCode = ReasonCode.NORMAL_DISCONNECTION,
-        val properties: Properties = Properties()
+        val properties: Properties = Properties(),
     ) {
         init {
             // throw if the reason code is not valid for the disconnect notification
@@ -113,7 +114,7 @@ data class DisconnectNotification(val variable: VariableHeader = VariableHeader(
              *
              * Refer to section 4.11 Server Redirection for information about how Server Reference is used.
              */
-            val serverReference: String? = null
+            val serverReference: String? = null,
         ) {
             val props by lazy(LazyThreadSafetyMode.NONE) {
                 val list = ArrayList<Property>(3 + userProperty.count())
@@ -159,7 +160,7 @@ data class DisconnectNotification(val variable: VariableHeader = VariableHeader(
                                 if (sessionExpiryIntervalSeconds != null) {
                                     throw ProtocolError(
                                         "Session Expiry Interval added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477382"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477382",
                                     )
                                 }
                                 sessionExpiryIntervalSeconds = it.seconds
@@ -169,7 +170,7 @@ data class DisconnectNotification(val variable: VariableHeader = VariableHeader(
                                 if (reasonString != null) {
                                     throw ProtocolError(
                                         "Reason String added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477476"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477476",
                                     )
                                 }
                                 reasonString = it.diagnosticInfoDontParse
@@ -180,7 +181,7 @@ data class DisconnectNotification(val variable: VariableHeader = VariableHeader(
                                 if (serverReference != null) {
                                     throw ProtocolError(
                                         "Server Reference added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477396"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477396",
                                     )
                                 }
                                 serverReference = it.otherServer
@@ -193,7 +194,7 @@ data class DisconnectNotification(val variable: VariableHeader = VariableHeader(
                         sessionExpiryIntervalSeconds,
                         reasonString,
                         userProperty,
-                        serverReference
+                        serverReference,
                     )
                 }
             }

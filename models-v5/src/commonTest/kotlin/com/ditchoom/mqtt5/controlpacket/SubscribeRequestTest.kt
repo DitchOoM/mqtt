@@ -27,7 +27,7 @@ class SubscribeRequestTest {
         assertEquals(subscribeRequest.variable.packetIdentifier, 2)
         assertEquals(
             subscribeRequest.subscriptions.first().topicFilter.toString().validateMqttUTF8StringOrThrow(),
-            "test"
+            "test",
         )
         val buffer = PlatformBuffer.allocate(12)
         subscribeRequest.serialize(buffer)
@@ -66,18 +66,19 @@ class SubscribeRequestTest {
         val requestRead = ControlPacketV5.from(buffer) as SubscribeRequest
         assertEquals(
             requestRead.subscriptions.first().topicFilter.toString().validateMqttUTF8StringOrThrow(),
-            "test"
+            "test",
         )
         assertEquals(AT_LEAST_ONCE, requestRead.subscriptions.first().maximumQos)
     }
 
     @Test
     fun serialized() {
-        val subscribeRequest = SubscribeRequest(
-            2,
-            listOf(Topic.fromOrThrow("a/b", Topic.Type.Name), Topic.fromOrThrow("c/d", Topic.Type.Name)),
-            listOf(AT_LEAST_ONCE, EXACTLY_ONCE)
-        )
+        val subscribeRequest =
+            SubscribeRequest(
+                2,
+                listOf(Topic.fromOrThrow("a/b", Topic.Type.Name), Topic.fromOrThrow("c/d", Topic.Type.Name)),
+                listOf(AT_LEAST_ONCE, EXACTLY_ONCE),
+            )
         assertEquals(subscribeRequest.variable.packetIdentifier, 2)
         val buffer = PlatformBuffer.allocate(17)
         subscribeRequest.serialize(buffer)
@@ -140,13 +141,14 @@ class SubscribeRequestTest {
     @Test
     fun reasonString() {
         val buffer = PlatformBuffer.allocate(19)
-        val actual = SubscribeRequest(
-            VariableHeader(
-                packetIdentifier.toInt(),
-                properties = VariableHeader.Properties(reasonString = "yolo")
-            ),
-            setOf(Subscription(Topic.fromOrThrow("test", Topic.Type.Filter)))
-        )
+        val actual =
+            SubscribeRequest(
+                VariableHeader(
+                    packetIdentifier.toInt(),
+                    properties = VariableHeader.Properties(reasonString = "yolo"),
+                ),
+                setOf(Subscription(Topic.fromOrThrow("test", Topic.Type.Filter))),
+            )
         actual.serialize(buffer)
         buffer.resetForRead()
         val expected = ControlPacketV5.from(buffer) as SubscribeRequest
@@ -175,10 +177,11 @@ class SubscribeRequestTest {
         }
         assertEquals(userPropertyResult.size, 1)
 
-        val request = SubscribeRequest(
-            VariableHeader(packetIdentifier.toInt(), properties = props),
-            setOf(Subscription(Topic.fromOrThrow("test", Topic.Type.Filter)))
-        )
+        val request =
+            SubscribeRequest(
+                VariableHeader(packetIdentifier.toInt(), properties = props),
+                setOf(Subscription(Topic.fromOrThrow("test", Topic.Type.Filter))),
+            )
         val buffer = PlatformBuffer.allocate(25)
         request.serialize(buffer)
         buffer.resetForRead()

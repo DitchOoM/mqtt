@@ -7,7 +7,7 @@ import com.ditchoom.mqtt.controlpacket.utf8Length
 data class UserProperty(val key: String, val value: String) : Property(
     0x26,
     Type.UTF_8_STRING_PAIR,
-    willProperties = true
+    willProperties = true,
 ) {
     override fun write(buffer: WriteBuffer): Int {
         buffer.writeByte(identifierByte)

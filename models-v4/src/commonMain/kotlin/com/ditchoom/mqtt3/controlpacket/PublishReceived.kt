@@ -12,9 +12,8 @@ import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
  * A PUBREC packet is the response to a PUBLISH packet with QoS 2. It is the second packet of the QoS 2 protocol exchange.
  */
 data class PublishReceived(override val packetIdentifier: Int) :
-    ControlPacketV4(IPublishReceived.controlPacketValue, DirectionOfFlow.BIDIRECTIONAL),
+    ControlPacketV4(IPublishReceived.CONTROL_PACKET_VALUE, DirectionOfFlow.BIDIRECTIONAL),
     IPublishReceived {
-
     override fun variableHeader(writeBuffer: WriteBuffer) {
         writeBuffer.writeUShort(packetIdentifier.toUShort())
     }
@@ -24,7 +23,7 @@ data class PublishReceived(override val packetIdentifier: Int) :
     override fun expectedResponse(
         reasonCode: ReasonCode,
         reasonString: String?,
-        userProperty: List<Pair<String, String>>
+        userProperty: List<Pair<String, String>>,
     ) = PublishRelease(packetIdentifier.toUShort().toInt())
 
     companion object {

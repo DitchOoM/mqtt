@@ -44,10 +44,11 @@ class UnsubscribeAcknowledgmentTests {
 
     @Test
     fun serializeDeserializeNoSubscriptionsExisted() {
-        val actual = UnsubscribeAcknowledgment(
-            VariableHeader(packetIdentifier),
-            listOf(NO_SUBSCRIPTIONS_EXISTED)
-        )
+        val actual =
+            UnsubscribeAcknowledgment(
+                VariableHeader(packetIdentifier),
+                listOf(NO_SUBSCRIPTIONS_EXISTED),
+            )
         val buffer = PlatformBuffer.allocate(6)
         actual.serialize(buffer)
         buffer.resetForRead()
@@ -59,7 +60,7 @@ class UnsubscribeAcknowledgmentTests {
         assertEquals(
             NO_SUBSCRIPTIONS_EXISTED.byte,
             buffer.readUnsignedByte(),
-            "payload reason code"
+            "payload reason code",
         )
         buffer.resetForRead()
         val expected = ControlPacketV5.from(buffer)
@@ -86,10 +87,11 @@ class UnsubscribeAcknowledgmentTests {
 
     @Test
     fun serializeDeserializeImplementationSpecificError() {
-        val actual = UnsubscribeAcknowledgment(
-            VariableHeader(packetIdentifier),
-            listOf(IMPLEMENTATION_SPECIFIC_ERROR)
-        )
+        val actual =
+            UnsubscribeAcknowledgment(
+                VariableHeader(packetIdentifier),
+                listOf(IMPLEMENTATION_SPECIFIC_ERROR),
+            )
         val buffer = PlatformBuffer.allocate(6)
         actual.serialize(buffer)
         buffer.resetForRead()
@@ -101,7 +103,7 @@ class UnsubscribeAcknowledgmentTests {
         assertEquals(
             IMPLEMENTATION_SPECIFIC_ERROR.byte,
             buffer.readUnsignedByte(),
-            "payload reason code"
+            "payload reason code",
         )
         buffer.resetForRead()
         val expected = ControlPacketV5.from(buffer)
@@ -128,10 +130,11 @@ class UnsubscribeAcknowledgmentTests {
 
     @Test
     fun serializeDeserializeTopicFilterInvalid() {
-        val actual = UnsubscribeAcknowledgment(
-            VariableHeader(packetIdentifier),
-            listOf(TOPIC_FILTER_INVALID)
-        )
+        val actual =
+            UnsubscribeAcknowledgment(
+                VariableHeader(packetIdentifier),
+                listOf(TOPIC_FILTER_INVALID),
+            )
         val buffer = PlatformBuffer.allocate(6)
         actual.serialize(buffer)
         buffer.resetForRead()
@@ -157,10 +160,11 @@ class UnsubscribeAcknowledgmentTests {
 
     @Test
     fun serializeDeserializePacketIdentifierInUse() {
-        val actual = UnsubscribeAcknowledgment(
-            VariableHeader(packetIdentifier),
-            listOf(PACKET_IDENTIFIER_IN_USE)
-        )
+        val actual =
+            UnsubscribeAcknowledgment(
+                VariableHeader(packetIdentifier),
+                listOf(PACKET_IDENTIFIER_IN_USE),
+            )
         val buffer = PlatformBuffer.allocate(6)
         actual.serialize(buffer)
         buffer.resetForRead()
@@ -172,7 +176,7 @@ class UnsubscribeAcknowledgmentTests {
         assertEquals(
             PACKET_IDENTIFIER_IN_USE.byte,
             buffer.readUnsignedByte(),
-            "payload reason code"
+            "payload reason code",
         )
         buffer.resetForRead()
         val expected = ControlPacketV5.from(buffer)
@@ -196,7 +200,7 @@ class UnsubscribeAcknowledgmentTests {
         assertEquals(
             "yolo",
             buffer.readMqttUtf8StringNotValidatedSized().second.toString(),
-            "reason code value"
+            "reason code value",
         )
         assertEquals(SUCCESS.byte, buffer.readUnsignedByte(), "payload reason code")
         buffer.resetForRead()
@@ -218,12 +222,13 @@ class UnsubscribeAcknowledgmentTests {
 
     @Test
     fun variableHeaderPropertyUserProperty() {
-        val props = VariableHeader.Properties.from(
-            setOf(
-                UserProperty("key", "value"),
-                UserProperty("key", "value")
+        val props =
+            VariableHeader.Properties.from(
+                setOf(
+                    UserProperty("key", "value"),
+                    UserProperty("key", "value"),
+                ),
             )
-        )
         val userPropertyResult = props.userProperty
         for ((key, value) in userPropertyResult) {
             assertEquals(key, "key")

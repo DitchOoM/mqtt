@@ -11,8 +11,7 @@ import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
  * A PUBACK packet is the response to a PUBLISH packet with QoS 1.
  */
 data class PublishAcknowledgment(override val packetIdentifier: Int) :
-    ControlPacketV4(IPublishAcknowledgment.controlPacketValue, DirectionOfFlow.BIDIRECTIONAL), IPublishAcknowledgment {
-
+    ControlPacketV4(IPublishAcknowledgment.CONTROL_PACKET_VALUE, DirectionOfFlow.BIDIRECTIONAL), IPublishAcknowledgment {
     override fun remainingLength() = 2
 
     override fun variableHeader(writeBuffer: WriteBuffer) {

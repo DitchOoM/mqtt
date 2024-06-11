@@ -8,7 +8,6 @@ import kotlin.coroutines.suspendCoroutine
 
 class AndroidRemoteMqttServiceClient(binder: IBinder, service: LocalMqttService) :
     RemoteMqttServiceClient(service) {
-
     private val aidl = IPCMqttService.Stub.asInterface(binder)
     override val startAllCb: suspend () -> Unit =
         { suspendCoroutine { aidl.startAll(SuspendingMqttCompletionCallback("startAllCb", it)) } }
@@ -28,16 +27,21 @@ class AndroidRemoteMqttServiceClient(binder: IBinder, service: LocalMqttService)
         persistence.brokerWithId(brokerId) ?: return null // validate broker still exists
         return suspendCoroutine {
             aidl.requestClientOrNull(
-                brokerId, protocolVersion,
+                brokerId,
+                protocolVersion,
                 object : MqttGetClientCallback.Stub() {
-                    override fun onClientReady(client: IPCMqttClient, brokerId: Int, protocolVersion: Byte) {
+                    override fun onClientReady(
+                        client: IPCMqttClient,
+                        brokerId: Int,
+                        protocolVersion: Byte,
+                    ) {
                         it.resume(AndroidRemoteMqttClient(service.scope, client, broker, persistence))
                     }
 
                     override fun onClientNotFound() {
                         it.resume(null)
                     }
-                }
+                },
             )
         }
     }

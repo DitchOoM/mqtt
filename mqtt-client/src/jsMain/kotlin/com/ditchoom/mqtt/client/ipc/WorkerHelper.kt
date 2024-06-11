@@ -10,6 +10,7 @@ import org.w3c.dom.Worker
 import org.w3c.workers.ServiceWorker
 
 private var worker: JsRemoteMqttServiceWorker? = null
+
 suspend fun buildMqttServiceIPCServer(useSharedMemory: Boolean): JsRemoteMqttServiceWorker {
     val workerTmp = worker
     if (workerTmp != null) {

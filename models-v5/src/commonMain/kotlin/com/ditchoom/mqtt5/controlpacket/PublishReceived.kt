@@ -36,24 +36,26 @@ data class PublishReceived(val variable: VariableHeader) :
         packetIdentifier: Int,
         reasonCode: ReasonCode = SUCCESS,
         reasonString: String? = null,
-        userProperty: List<Pair<String, String>> = emptyList()
+        userProperty: List<Pair<String, String>> = emptyList(),
     ) :
         this(VariableHeader(packetIdentifier, reasonCode, VariableHeader.Properties(reasonString, userProperty)))
 
     override fun expectedResponse(
         reasonCode: ReasonCode,
         reasonString: String?,
-        userProperty: List<Pair<String, String>>
+        userProperty: List<Pair<String, String>>,
     ) = PublishRelease(
         PublishRelease.VariableHeader(
             variable.packetIdentifier,
             reasonCode,
-            PublishRelease.VariableHeader.Properties(reasonString, userProperty)
-        )
+            PublishRelease.VariableHeader.Properties(reasonString, userProperty),
+        ),
     )
 
     override val packetIdentifier: Int = variable.packetIdentifier
+
     override fun variableHeader(writeBuffer: WriteBuffer) = variable.serialize(writeBuffer)
+
     override fun remainingLength() = variable.size()
 
     data class VariableHeader(
@@ -71,7 +73,7 @@ data class PublishReceived(val variable: VariableHeader) :
         /**
          * 3.4.2.2 PUBACK Properties
          */
-        val properties: Properties = Properties()
+        val properties: Properties = Properties(),
     ) {
         init {
             when (reasonCode.byte.toInt()) {
@@ -80,7 +82,7 @@ data class PublishReceived(val variable: VariableHeader) :
 
                 else -> throw ProtocolError(
                     "Invalid Publish Receieved reason code ${reasonCode.byte} " +
-                        "see: https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477424"
+                        "see: https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477424",
                 )
             }
         }
@@ -90,7 +92,7 @@ data class PublishReceived(val variable: VariableHeader) :
                 reasonCode == SUCCESS &&
                     properties.userProperty.isEmpty() &&
                     properties.reasonString == null
-                )
+            )
             var size = UShort.SIZE_BYTES
             if (!canOmitReasonCodeAndProperties) {
                 val propsSize = properties.size()
@@ -105,7 +107,7 @@ data class PublishReceived(val variable: VariableHeader) :
                 reasonCode == SUCCESS &&
                     properties.userProperty.isEmpty() &&
                     properties.reasonString == null
-                )
+            )
             if (!canOmitReasonCodeAndProperties) {
                 writeBuffer.writeUByte(reasonCode.byte)
                 properties.serialize(writeBuffer)
@@ -138,7 +140,7 @@ data class PublishReceived(val variable: VariableHeader) :
              * is allowed to appear multiple times to represent multiple name, value pairs. The same name is
              * allowed to appear more than once.
              */
-            val userProperty: List<Pair<String, String>> = emptyList()
+            val userProperty: List<Pair<String, String>> = emptyList(),
         ) {
             val props by lazy(LazyThreadSafetyMode.NONE) {
                 val props = ArrayList<Property>(1 + userProperty.size)
@@ -176,7 +178,7 @@ data class PublishReceived(val variable: VariableHeader) :
                                 if (reasonString != null) {
                                     throw ProtocolError(
                                         "Reason String added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477427"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477427",
                                     )
                                 }
                                 reasonString = it.diagnosticInfoDontParse
@@ -192,28 +194,31 @@ data class PublishReceived(val variable: VariableHeader) :
         }
 
         companion object {
-
-            fun from(buffer: ReadBuffer, remainingLength: Int): VariableHeader {
+            fun from(
+                buffer: ReadBuffer,
+                remainingLength: Int,
+            ): VariableHeader {
                 val packetIdentifier = buffer.readUnsignedShort().toInt()
                 if (remainingLength == 2) {
                     return VariableHeader(packetIdentifier)
                 } else {
                     val reasonCodeByte = buffer.readUnsignedByte()
-                    val reasonCode = when (reasonCodeByte) {
-                        SUCCESS.byte -> SUCCESS
-                        NO_MATCHING_SUBSCRIBERS.byte -> NO_MATCHING_SUBSCRIBERS
-                        UNSPECIFIED_ERROR.byte -> UNSPECIFIED_ERROR
-                        IMPLEMENTATION_SPECIFIC_ERROR.byte -> IMPLEMENTATION_SPECIFIC_ERROR
-                        NOT_AUTHORIZED.byte -> NOT_AUTHORIZED
-                        TOPIC_NAME_INVALID.byte -> TOPIC_NAME_INVALID
-                        PACKET_IDENTIFIER_IN_USE.byte -> PACKET_IDENTIFIER_IN_USE
-                        QUOTA_EXCEEDED.byte -> QUOTA_EXCEEDED
-                        PAYLOAD_FORMAT_INVALID.byte -> PAYLOAD_FORMAT_INVALID
-                        else -> throw MalformedPacketException(
-                            "Invalid reason code $reasonCodeByte" +
-                                "see: https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477424"
-                        )
-                    }
+                    val reasonCode =
+                        when (reasonCodeByte) {
+                            SUCCESS.byte -> SUCCESS
+                            NO_MATCHING_SUBSCRIBERS.byte -> NO_MATCHING_SUBSCRIBERS
+                            UNSPECIFIED_ERROR.byte -> UNSPECIFIED_ERROR
+                            IMPLEMENTATION_SPECIFIC_ERROR.byte -> IMPLEMENTATION_SPECIFIC_ERROR
+                            NOT_AUTHORIZED.byte -> NOT_AUTHORIZED
+                            TOPIC_NAME_INVALID.byte -> TOPIC_NAME_INVALID
+                            PACKET_IDENTIFIER_IN_USE.byte -> PACKET_IDENTIFIER_IN_USE
+                            QUOTA_EXCEEDED.byte -> QUOTA_EXCEEDED
+                            PAYLOAD_FORMAT_INVALID.byte -> PAYLOAD_FORMAT_INVALID
+                            else -> throw MalformedPacketException(
+                                "Invalid reason code $reasonCodeByte" +
+                                    "see: https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477424",
+                            )
+                        }
                     val propsData = buffer.readProperties()
                     val props = Properties.from(propsData)
                     return VariableHeader(packetIdentifier, reasonCode, props)
@@ -223,7 +228,9 @@ data class PublishReceived(val variable: VariableHeader) :
     }
 
     companion object {
-        fun from(buffer: ReadBuffer, remainingLength: Int) =
-            PublishReceived(VariableHeader.from(buffer, remainingLength))
+        fun from(
+            buffer: ReadBuffer,
+            remainingLength: Int,
+        ) = PublishReceived(VariableHeader.from(buffer, remainingLength))
     }
 }

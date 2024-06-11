@@ -20,18 +20,21 @@ class AndroidMqttClientIPCServer(private val clientServer: RemoteMqttClientWorke
         }
     }
 
-    override fun subscribeQueued(packetIdentifier: Int, callback: MqttCompletionCallback) =
-        wrapResultWithCallback(callback) { clientServer.onSubscribeQueued(packetIdentifier) }
+    override fun subscribeQueued(
+        packetIdentifier: Int,
+        callback: MqttCompletionCallback,
+    ) = wrapResultWithCallback(callback) { clientServer.onSubscribeQueued(packetIdentifier) }
 
     override fun publishQueued(
         packetIdentifier: Int,
         nullablleQos0Buffer: JvmBuffer?,
-        callback: MqttCompletionCallback
-    ) =
-        wrapResultWithCallback(callback) { clientServer.onPublishQueued(packetIdentifier, nullablleQos0Buffer) }
+        callback: MqttCompletionCallback,
+    ) = wrapResultWithCallback(callback) { clientServer.onPublishQueued(packetIdentifier, nullablleQos0Buffer) }
 
-    override fun unsubscribeQueued(packetIdentifier: Int, callback: MqttCompletionCallback) =
-        wrapResultWithCallback(callback) { clientServer.onUnsubscribeQueued(packetIdentifier) }
+    override fun unsubscribeQueued(
+        packetIdentifier: Int,
+        callback: MqttCompletionCallback,
+    ) = wrapResultWithCallback(callback) { clientServer.onUnsubscribeQueued(packetIdentifier) }
 
     override fun registerObserver(observer: MqttMessageTransferredCallback) {
         observers[observer.id()] = observer
@@ -67,15 +70,19 @@ class AndroidMqttClientIPCServer(private val clientServer: RemoteMqttClientWorke
         return clientServer.client.connectivityManager.connectionAttempts
     }
 
-    override fun sendDisconnect(cb: MqttCompletionCallback) =
-        wrapResultWithCallback(cb) { clientServer.client.sendDisconnect() }
+    override fun sendDisconnect(cb: MqttCompletionCallback) = wrapResultWithCallback(cb) { clientServer.client.sendDisconnect() }
 
-    override fun shutdown(sendDisconnect: Boolean, cb: MqttCompletionCallback) =
-        wrapResultWithCallback(cb) {
-            clientServer.shutdown(sendDisconnect)
-        }
+    override fun shutdown(
+        sendDisconnect: Boolean,
+        cb: MqttCompletionCallback,
+    ) = wrapResultWithCallback(cb) {
+        clientServer.shutdown(sendDisconnect)
+    }
 
-    private fun wrapResultWithCallback(callback: MqttCompletionCallback, block: suspend () -> Unit) {
+    private fun wrapResultWithCallback(
+        callback: MqttCompletionCallback,
+        block: suspend () -> Unit,
+    ) {
         clientServer.scope.launch {
             try {
                 block()

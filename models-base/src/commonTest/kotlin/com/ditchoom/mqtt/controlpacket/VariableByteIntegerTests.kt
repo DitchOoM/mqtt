@@ -15,8 +15,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class VariableByteIntegerTests {
-
-    private val VARIABLE_BYTE_INT_MAX = 268435455
+    private val variableByteIntMax = 268435455
 
     @Test
     @JsName("encodedValueMustUseMinNumberOfBytes")
@@ -49,7 +48,7 @@ class VariableByteIntegerTests {
         assertEquals(
             expectedValue,
             buffer.readVariableByteInteger(),
-            "Failed to read remaining bytes properly"
+            "Failed to read remaining bytes properly",
         )
     }
 
@@ -62,7 +61,7 @@ class VariableByteIntegerTests {
         assertEquals(
             expectedValue,
             buffer.readVariableByteInteger(),
-            "Failed to read remaining bytes properly"
+            "Failed to read remaining bytes properly",
         )
     }
 
@@ -75,7 +74,7 @@ class VariableByteIntegerTests {
         assertEquals(
             expectedValue,
             buffer.readVariableByteInteger(),
-            "Failed to read remaining bytes properly"
+            "Failed to read remaining bytes properly",
         )
     }
 
@@ -88,7 +87,7 @@ class VariableByteIntegerTests {
         assertEquals(
             expectedValue,
             buffer.readVariableByteInteger(),
-            "Failed to read remaining bytes properly"
+            "Failed to read remaining bytes properly",
         )
     }
 
@@ -101,7 +100,7 @@ class VariableByteIntegerTests {
         assertEquals(
             expectedValue,
             buffer.readVariableByteInteger(),
-            "Failed to read remaining bytes properly"
+            "Failed to read remaining bytes properly",
         )
     }
 
@@ -114,7 +113,7 @@ class VariableByteIntegerTests {
         assertEquals(
             expectedValue,
             buffer.readVariableByteInteger(),
-            "Failed to read remaining bytes properly"
+            "Failed to read remaining bytes properly",
         )
     }
 
@@ -127,43 +126,43 @@ class VariableByteIntegerTests {
         assertEquals(
             expectedValue,
             buffer.readVariableByteInteger(),
-            "Failed to read remaining bytes properly"
+            "Failed to read remaining bytes properly",
         )
     }
 
     @Test
     fun handlesMaxMinus1() {
-        val expectedValue = VARIABLE_BYTE_INT_MAX - 1
+        val expectedValue = variableByteIntMax - 1
         val buffer = PlatformBuffer.allocate(4)
         buffer.writeVariableByteInteger(expectedValue)
         buffer.resetForRead()
         assertEquals(
             expectedValue,
             buffer.readVariableByteInteger(),
-            "Failed to read remaining bytes properly"
+            "Failed to read remaining bytes properly",
         )
     }
 
     @Test
     fun handlesMax() {
-        val expectedValue = VARIABLE_BYTE_INT_MAX
+        val expectedValue = variableByteIntMax
         val buffer = PlatformBuffer.allocate(4)
         buffer.writeVariableByteInteger(expectedValue)
         buffer.resetForRead()
         assertEquals(
             expectedValue,
             buffer.readVariableByteInteger(),
-            "Failed to read remaining bytes properly"
+            "Failed to read remaining bytes properly",
         )
     }
 
     @Test
     fun handlesMaxPlus1() {
-        val expectedValue = VARIABLE_BYTE_INT_MAX + 1
+        val expectedValue = variableByteIntMax + 1
         val buffer = PlatformBuffer.allocate(4)
         assertFailsWith(
             MalformedInvalidVariableByteInteger::class,
-            "Larger than variable byte integer maximum"
+            "Larger than variable byte integer maximum",
         ) {
             buffer.writeVariableByteInteger(expectedValue)
             buffer.resetForRead()

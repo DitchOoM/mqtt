@@ -33,7 +33,6 @@ import kotlin.test.assertTrue
 import kotlin.test.fail
 
 class ConnectionRequestTests {
-
     @Test
     fun serializeDefaults() {
         val connectionRequest = ConnectionRequest()
@@ -44,86 +43,86 @@ class ConnectionRequestTests {
         assertEquals(
             13,
             buffer.readVariableByteInteger().toInt(),
-            "invalid remaining length on the CONNECT fixed header"
+            "invalid remaining length on the CONNECT fixed header",
         )
         assertEquals(
             0,
             buffer.readByte(),
-            "invalid byte 1 on the CONNECT variable header (Length MSB (0))"
+            "invalid byte 1 on the CONNECT variable header (Length MSB (0))",
         )
         assertEquals(
             4,
             buffer.readByte(),
-            "invalid byte 2 on the CONNECT variable header (Length LSB (4))"
+            "invalid byte 2 on the CONNECT variable header (Length LSB (4))",
         )
         assertEquals(
             'M',
             buffer.readByte().toInt().toChar(),
-            "invalid byte 3 on the CONNECT variable header"
+            "invalid byte 3 on the CONNECT variable header",
         )
         assertEquals(
             'Q',
             buffer.readByte().toInt().toChar(),
-            "invalid byte 4 on the CONNECT variable header"
+            "invalid byte 4 on the CONNECT variable header",
         )
         assertEquals(
             'T',
             buffer.readByte().toInt().toChar(),
-            "invalid byte 5 on the CONNECT variable header"
+            "invalid byte 5 on the CONNECT variable header",
         )
         assertEquals(
             'T',
             buffer.readByte().toInt().toChar(),
-            "invalid byte 6 on the CONNECT variable header"
+            "invalid byte 6 on the CONNECT variable header",
         )
         assertEquals(5, buffer.readByte(), "invalid byte 7 on the CONNECT variable header")
         val connectFlagsPacked = buffer.readByte()
         assertFalse(
             connectFlagsPacked.toUByte().get(7),
-            "invalid byte 8 bit 7 on the CONNECT variable header for username flag"
+            "invalid byte 8 bit 7 on the CONNECT variable header for username flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(6),
-            "invalid byte 8 bit 6 on the CONNECT variable header for password flag"
+            "invalid byte 8 bit 6 on the CONNECT variable header for password flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(5),
-            "invalid byte 8 bit 5 on the CONNECT variable header for willRetain flag"
+            "invalid byte 8 bit 5 on the CONNECT variable header for willRetain flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(4),
-            "invalid byte 8 bit 4 on the CONNECT variable header for willQosBit4 flag"
+            "invalid byte 8 bit 4 on the CONNECT variable header for willQosBit4 flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(3),
-            "invalid byte 8 bit 3 on the CONNECT variable header for willQosBit3 flag"
+            "invalid byte 8 bit 3 on the CONNECT variable header for willQosBit3 flag",
         )
         assertEquals(
             AT_MOST_ONCE,
             QualityOfService.fromBooleans(
                 connectFlagsPacked.toUByte().get(4),
-                connectFlagsPacked.toUByte().get(3)
+                connectFlagsPacked.toUByte().get(3),
             ),
-            "invalid byte 8 bit 4-3 on the CONNECT variable header for willQosBit flag"
+            "invalid byte 8 bit 4-3 on the CONNECT variable header for willQosBit flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(2),
-            "invalid byte 8 bit 2 on the CONNECT variable header for willFlag flag"
+            "invalid byte 8 bit 2 on the CONNECT variable header for willFlag flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(1),
-            "invalid byte 8 bit 1 on the CONNECT variable header for cleanStart flag"
+            "invalid byte 8 bit 1 on the CONNECT variable header for cleanStart flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(0),
-            "invalid byte 8 bit 0 on the CONNECT variable header for reserved flag"
+            "invalid byte 8 bit 0 on the CONNECT variable header for reserved flag",
         )
         assertEquals(UShort.MAX_VALUE, buffer.readUnsignedShort(), "invalid keep alive")
         assertEquals(0, buffer.readVariableByteInteger(), "property length")
         assertEquals(
             "",
             buffer.readMqttUtf8StringNotValidatedSized().second.toString(),
-            "client id"
+            "client id",
         )
     }
 
@@ -139,95 +138,96 @@ class ConnectionRequestTests {
         assertEquals(
             13,
             buffer.readVariableByteInteger().toInt(),
-            "invalid remaining length on the CONNECT fixed header"
+            "invalid remaining length on the CONNECT fixed header",
         )
         assertEquals(
             0,
             buffer.readByte(),
-            "invalid byte 1 on the CONNECT variable header (Length MSB (0))"
+            "invalid byte 1 on the CONNECT variable header (Length MSB (0))",
         )
         assertEquals(
             4,
             buffer.readByte(),
-            "invalid byte 2 on the CONNECT variable header (Length LSB (4))"
+            "invalid byte 2 on the CONNECT variable header (Length LSB (4))",
         )
         assertEquals(
             'M',
             buffer.readByte().toInt().toChar(),
-            "invalid byte 3 on the CONNECT variable header"
+            "invalid byte 3 on the CONNECT variable header",
         )
         assertEquals(
             'Q',
             buffer.readByte().toInt().toChar(),
-            "invalid byte 4 on the CONNECT variable header"
+            "invalid byte 4 on the CONNECT variable header",
         )
         assertEquals(
             'T',
             buffer.readByte().toInt().toChar(),
-            "invalid byte 5 on the CONNECT variable header"
+            "invalid byte 5 on the CONNECT variable header",
         )
         assertEquals(
             'T',
             buffer.readByte().toInt().toChar(),
-            "invalid byte 6 on the CONNECT variable header"
+            "invalid byte 6 on the CONNECT variable header",
         )
         assertEquals(5, buffer.readByte(), "invalid byte 7 on the CONNECT variable header")
         val connectFlagsPacked = buffer.readByte()
         assertFalse(
             connectFlagsPacked.toUByte().get(7),
-            "invalid byte 8 bit 7 on the CONNECT variable header for username flag"
+            "invalid byte 8 bit 7 on the CONNECT variable header for username flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(6),
-            "invalid byte 8 bit 6 on the CONNECT variable header for password flag"
+            "invalid byte 8 bit 6 on the CONNECT variable header for password flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(5),
-            "invalid byte 8 bit 5 on the CONNECT variable header for willRetain flag"
+            "invalid byte 8 bit 5 on the CONNECT variable header for willRetain flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(4),
-            "invalid byte 8 bit 4 on the CONNECT variable header for willQosBit4 flag"
+            "invalid byte 8 bit 4 on the CONNECT variable header for willQosBit4 flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(3),
-            "invalid byte 8 bit 3 on the CONNECT variable header for willQosBit3 flag"
+            "invalid byte 8 bit 3 on the CONNECT variable header for willQosBit3 flag",
         )
         assertEquals(
             AT_MOST_ONCE,
             QualityOfService.fromBooleans(
                 connectFlagsPacked.toUByte().get(4),
-                connectFlagsPacked.toUByte().get(3)
+                connectFlagsPacked.toUByte().get(3),
             ),
-            "invalid byte 8 bit 4-3 on the CONNECT variable header for willQosBit flag"
+            "invalid byte 8 bit 4-3 on the CONNECT variable header for willQosBit flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(2),
-            "invalid byte 8 bit 2 on the CONNECT variable header for willFlag flag"
+            "invalid byte 8 bit 2 on the CONNECT variable header for willFlag flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(1),
-            "invalid byte 8 bit 1 on the CONNECT variable header for cleanStart flag"
+            "invalid byte 8 bit 1 on the CONNECT variable header for cleanStart flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(0),
-            "invalid byte 8 bit 0 on the CONNECT variable header for reserved flag"
+            "invalid byte 8 bit 0 on the CONNECT variable header for reserved flag",
         )
         assertEquals(UShort.MAX_VALUE, buffer.readUnsignedShort(), "invalid keep alive")
         assertEquals(0, buffer.readVariableByteInteger(), "property length")
         assertEquals(
             "",
             buffer.readMqttUtf8StringNotValidatedSized().second.toString(),
-            "client id"
+            "client id",
         )
     }
 
     @Test
     fun serializeAtMostOnceHasUsername() {
-        val connectionRequest = ConnectionRequest(
-            VariableHeader(willQos = AT_MOST_ONCE, hasUserName = true),
-            ConnectionRequest.Payload(userName = "yolo")
-        )
+        val connectionRequest =
+            ConnectionRequest(
+                VariableHeader(willQos = AT_MOST_ONCE, hasUserName = true),
+                ConnectionRequest.Payload(userName = "yolo"),
+            )
         val buffer = PlatformBuffer.allocate(21)
         connectionRequest.serialize(buffer)
         buffer.resetForRead()
@@ -235,100 +235,101 @@ class ConnectionRequestTests {
         assertEquals(
             19,
             buffer.readVariableByteInteger().toInt(),
-            "invalid remaining length on the CONNECT fixed header"
+            "invalid remaining length on the CONNECT fixed header",
         )
         assertEquals(
             0,
             buffer.readByte(),
-            "invalid byte 1 on the CONNECT variable header (Length MSB (0))"
+            "invalid byte 1 on the CONNECT variable header (Length MSB (0))",
         )
         assertEquals(
             4,
             buffer.readByte(),
-            "invalid byte 2 on the CONNECT variable header (Length LSB (4))"
+            "invalid byte 2 on the CONNECT variable header (Length LSB (4))",
         )
         assertEquals(
             'M',
             buffer.readByte().toInt().toChar(),
-            "invalid byte 3 on the CONNECT variable header"
+            "invalid byte 3 on the CONNECT variable header",
         )
         assertEquals(
             'Q',
             buffer.readByte().toInt().toChar(),
-            "invalid byte 4 on the CONNECT variable header"
+            "invalid byte 4 on the CONNECT variable header",
         )
         assertEquals(
             'T',
             buffer.readByte().toInt().toChar(),
-            "invalid byte 5 on the CONNECT variable header"
+            "invalid byte 5 on the CONNECT variable header",
         )
         assertEquals(
             'T',
             buffer.readByte().toInt().toChar(),
-            "invalid byte 6 on the CONNECT variable header"
+            "invalid byte 6 on the CONNECT variable header",
         )
         assertEquals(5, buffer.readByte(), "invalid byte 7 on the CONNECT variable header")
         val connectFlagsPacked = buffer.readByte()
         assertTrue(
             connectFlagsPacked.toUByte().get(7),
-            "invalid byte 8 bit 7 on the CONNECT variable header for username flag"
+            "invalid byte 8 bit 7 on the CONNECT variable header for username flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(6),
-            "invalid byte 8 bit 6 on the CONNECT variable header for password flag"
+            "invalid byte 8 bit 6 on the CONNECT variable header for password flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(5),
-            "invalid byte 8 bit 5 on the CONNECT variable header for willRetain flag"
+            "invalid byte 8 bit 5 on the CONNECT variable header for willRetain flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(4),
-            "invalid byte 8 bit 4 on the CONNECT variable header for willQosBit4 flag"
+            "invalid byte 8 bit 4 on the CONNECT variable header for willQosBit4 flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(3),
-            "invalid byte 8 bit 3 on the CONNECT variable header for willQosBit3 flag"
+            "invalid byte 8 bit 3 on the CONNECT variable header for willQosBit3 flag",
         )
         assertEquals(
             AT_MOST_ONCE,
             QualityOfService.fromBooleans(
                 connectFlagsPacked.toUByte().get(4),
-                connectFlagsPacked.toUByte().get(3)
+                connectFlagsPacked.toUByte().get(3),
             ),
-            "invalid byte 8 bit 4-3 on the CONNECT variable header for willQosBit flag"
+            "invalid byte 8 bit 4-3 on the CONNECT variable header for willQosBit flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(2),
-            "invalid byte 8 bit 2 on the CONNECT variable header for willFlag flag"
+            "invalid byte 8 bit 2 on the CONNECT variable header for willFlag flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(1),
-            "invalid byte 8 bit 1 on the CONNECT variable header for cleanStart flag"
+            "invalid byte 8 bit 1 on the CONNECT variable header for cleanStart flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(0),
-            "invalid byte 8 bit 0 on the CONNECT variable header for reserved flag"
+            "invalid byte 8 bit 0 on the CONNECT variable header for reserved flag",
         )
         assertEquals(UShort.MAX_VALUE, buffer.readUnsignedShort(), "invalid keep alive")
         assertEquals(0, buffer.readVariableByteInteger(), "property length")
         assertEquals(
             "",
             buffer.readMqttUtf8StringNotValidatedSized().second.toString(),
-            "client id"
+            "client id",
         )
         assertEquals(
             "yolo",
             buffer.readMqttUtf8StringNotValidatedSized().second.toString(),
-            "username"
+            "username",
         )
     }
 
     @Test
     fun serializeAtMostOnceHasPassword() {
-        val connectionRequest = ConnectionRequest(
-            VariableHeader(willQos = AT_MOST_ONCE, hasPassword = true),
-            ConnectionRequest.Payload(password = "yolo")
-        )
+        val connectionRequest =
+            ConnectionRequest(
+                VariableHeader(willQos = AT_MOST_ONCE, hasPassword = true),
+                ConnectionRequest.Payload(password = "yolo"),
+            )
         val buffer = PlatformBuffer.allocate(21)
         connectionRequest.serialize(buffer)
         buffer.resetForRead()
@@ -336,91 +337,91 @@ class ConnectionRequestTests {
         assertEquals(
             19,
             buffer.readVariableByteInteger().toInt(),
-            "invalid remaining length on the CONNECT fixed header"
+            "invalid remaining length on the CONNECT fixed header",
         )
         assertEquals(
             0,
             buffer.readByte(),
-            "invalid byte 1 on the CONNECT variable header (Length MSB (0))"
+            "invalid byte 1 on the CONNECT variable header (Length MSB (0))",
         )
         assertEquals(
             4,
             buffer.readByte(),
-            "invalid byte 2 on the CONNECT variable header (Length LSB (4))"
+            "invalid byte 2 on the CONNECT variable header (Length LSB (4))",
         )
         assertEquals(
             'M',
             buffer.readByte().toInt().toChar(),
-            "invalid byte 3 on the CONNECT variable header"
+            "invalid byte 3 on the CONNECT variable header",
         )
         assertEquals(
             'Q',
             buffer.readByte().toInt().toChar(),
-            "invalid byte 4 on the CONNECT variable header"
+            "invalid byte 4 on the CONNECT variable header",
         )
         assertEquals(
             'T',
             buffer.readByte().toInt().toChar(),
-            "invalid byte 5 on the CONNECT variable header"
+            "invalid byte 5 on the CONNECT variable header",
         )
         assertEquals(
             'T',
             buffer.readByte().toInt().toChar(),
-            "invalid byte 6 on the CONNECT variable header"
+            "invalid byte 6 on the CONNECT variable header",
         )
         assertEquals(5, buffer.readByte(), "invalid byte 7 on the CONNECT variable header")
         val connectFlagsPacked = buffer.readByte()
         assertFalse(
             connectFlagsPacked.toUByte().get(7),
-            "invalid byte 8 bit 7 on the CONNECT variable header for username flag"
+            "invalid byte 8 bit 7 on the CONNECT variable header for username flag",
         )
         assertTrue(
             connectFlagsPacked.toUByte().get(6),
-            "invalid byte 8 bit 6 on the CONNECT variable header for password flag"
+            "invalid byte 8 bit 6 on the CONNECT variable header for password flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(5),
-            "invalid byte 8 bit 5 on the CONNECT variable header for willRetain flag"
+            "invalid byte 8 bit 5 on the CONNECT variable header for willRetain flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(4),
-            "invalid byte 8 bit 4 on the CONNECT variable header for willQosBit4 flag"
+            "invalid byte 8 bit 4 on the CONNECT variable header for willQosBit4 flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(3),
-            "invalid byte 8 bit 3 on the CONNECT variable header for willQosBit3 flag"
+            "invalid byte 8 bit 3 on the CONNECT variable header for willQosBit3 flag",
         )
         assertEquals(
             AT_MOST_ONCE,
             QualityOfService.fromBooleans(
                 connectFlagsPacked.toUByte().get(4),
-                connectFlagsPacked.toUByte().get(3)
+                connectFlagsPacked.toUByte().get(3),
             ),
-            "invalid byte 8 bit 4-3 on the CONNECT variable header for willQosBit flag"
+            "invalid byte 8 bit 4-3 on the CONNECT variable header for willQosBit flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(2),
-            "invalid byte 8 bit 2 on the CONNECT variable header for willFlag flag"
+            "invalid byte 8 bit 2 on the CONNECT variable header for willFlag flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(1),
-            "invalid byte 8 bit 1 on the CONNECT variable header for cleanStart flag"
+            "invalid byte 8 bit 1 on the CONNECT variable header for cleanStart flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(0),
-            "invalid byte 8 bit 0 on the CONNECT variable header for reserved flag"
+            "invalid byte 8 bit 0 on the CONNECT variable header for reserved flag",
         )
         assertEquals(UShort.MAX_VALUE, buffer.readUnsignedShort(), "invalid keep alive")
         assertEquals(0, buffer.readVariableByteInteger(), "property length")
         assertEquals(
             "",
             buffer.readMqttUtf8StringNotValidatedSized().second.toString(),
-            "client id"
+            "client id",
         )
         assertEquals(
             "yolo",
             buffer.readMqttUtf8StringNotValidatedSized().second.toString(),
-            "password"
+            "password",
         )
     }
 
@@ -428,7 +429,7 @@ class ConnectionRequestTests {
     fun variableHeaderConnectFlagsByte8HasWillRetainCheckWarning() {
         assertNotNull(
             VariableHeader(willQos = AT_MOST_ONCE, willRetain = true).validateOrGetWarning(),
-            "should of provided an warning"
+            "should of provided an warning",
         )
     }
 
@@ -443,86 +444,86 @@ class ConnectionRequestTests {
         assertEquals(
             13,
             buffer.readVariableByteInteger().toInt(),
-            "invalid remaining length on the CONNECT fixed header"
+            "invalid remaining length on the CONNECT fixed header",
         )
         assertEquals(
             0,
             buffer.readByte(),
-            "invalid byte 1 on the CONNECT variable header (Length MSB (0))"
+            "invalid byte 1 on the CONNECT variable header (Length MSB (0))",
         )
         assertEquals(
             4,
             buffer.readByte(),
-            "invalid byte 2 on the CONNECT variable header (Length LSB (4))"
+            "invalid byte 2 on the CONNECT variable header (Length LSB (4))",
         )
         assertEquals(
             'M',
             buffer.readByte().toInt().toChar(),
-            "invalid byte 3 on the CONNECT variable header"
+            "invalid byte 3 on the CONNECT variable header",
         )
         assertEquals(
             'Q',
             buffer.readByte().toInt().toChar(),
-            "invalid byte 4 on the CONNECT variable header"
+            "invalid byte 4 on the CONNECT variable header",
         )
         assertEquals(
             'T',
             buffer.readByte().toInt().toChar(),
-            "invalid byte 5 on the CONNECT variable header"
+            "invalid byte 5 on the CONNECT variable header",
         )
         assertEquals(
             'T',
             buffer.readByte().toInt().toChar(),
-            "invalid byte 6 on the CONNECT variable header"
+            "invalid byte 6 on the CONNECT variable header",
         )
         assertEquals(5, buffer.readByte(), "invalid byte 7 on the CONNECT variable header")
         val connectFlagsPacked = buffer.readByte()
         assertFalse(
             connectFlagsPacked.toUByte().get(7),
-            "invalid byte 8 bit 7 on the CONNECT variable header for username flag"
+            "invalid byte 8 bit 7 on the CONNECT variable header for username flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(6),
-            "invalid byte 8 bit 6 on the CONNECT variable header for password flag"
+            "invalid byte 8 bit 6 on the CONNECT variable header for password flag",
         )
         assertTrue(
             connectFlagsPacked.toUByte().get(5),
-            "invalid byte 8 bit 5 on the CONNECT variable header for willRetain flag"
+            "invalid byte 8 bit 5 on the CONNECT variable header for willRetain flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(4),
-            "invalid byte 8 bit 4 on the CONNECT variable header for willQosBit4 flag"
+            "invalid byte 8 bit 4 on the CONNECT variable header for willQosBit4 flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(3),
-            "invalid byte 8 bit 3 on the CONNECT variable header for willQosBit3 flag"
+            "invalid byte 8 bit 3 on the CONNECT variable header for willQosBit3 flag",
         )
         assertEquals(
             AT_MOST_ONCE,
             QualityOfService.fromBooleans(
                 connectFlagsPacked.toUByte().get(4),
-                connectFlagsPacked.toUByte().get(3)
+                connectFlagsPacked.toUByte().get(3),
             ),
-            "invalid byte 8 bit 4-3 on the CONNECT variable header for willQosBit flag"
+            "invalid byte 8 bit 4-3 on the CONNECT variable header for willQosBit flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(2),
-            "invalid byte 8 bit 2 on the CONNECT variable header for willFlag flag"
+            "invalid byte 8 bit 2 on the CONNECT variable header for willFlag flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(1),
-            "invalid byte 8 bit 1 on the CONNECT variable header for cleanStart flag"
+            "invalid byte 8 bit 1 on the CONNECT variable header for cleanStart flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(0),
-            "invalid byte 8 bit 0 on the CONNECT variable header for reserved flag"
+            "invalid byte 8 bit 0 on the CONNECT variable header for reserved flag",
         )
         assertEquals(UShort.MAX_VALUE, buffer.readUnsignedShort(), "invalid keep alive")
         assertEquals(0, buffer.readVariableByteInteger(), "property length")
         assertEquals(
             "",
             buffer.readMqttUtf8StringNotValidatedSized().second.toString(),
-            "client id"
+            "client id",
         )
     }
 
@@ -537,86 +538,86 @@ class ConnectionRequestTests {
         assertEquals(
             13,
             buffer.readVariableByteInteger().toInt(),
-            "invalid remaining length on the CONNECT fixed header"
+            "invalid remaining length on the CONNECT fixed header",
         )
         assertEquals(
             0,
             buffer.readByte(),
-            "invalid byte 1 on the CONNECT variable header (Length MSB (0))"
+            "invalid byte 1 on the CONNECT variable header (Length MSB (0))",
         )
         assertEquals(
             4,
             buffer.readByte(),
-            "invalid byte 2 on the CONNECT variable header (Length LSB (4))"
+            "invalid byte 2 on the CONNECT variable header (Length LSB (4))",
         )
         assertEquals(
             'M',
             buffer.readByte().toInt().toChar(),
-            "invalid byte 3 on the CONNECT variable header"
+            "invalid byte 3 on the CONNECT variable header",
         )
         assertEquals(
             'Q',
             buffer.readByte().toInt().toChar(),
-            "invalid byte 4 on the CONNECT variable header"
+            "invalid byte 4 on the CONNECT variable header",
         )
         assertEquals(
             'T',
             buffer.readByte().toInt().toChar(),
-            "invalid byte 5 on the CONNECT variable header"
+            "invalid byte 5 on the CONNECT variable header",
         )
         assertEquals(
             'T',
             buffer.readByte().toInt().toChar(),
-            "invalid byte 6 on the CONNECT variable header"
+            "invalid byte 6 on the CONNECT variable header",
         )
         assertEquals(5, buffer.readByte(), "invalid byte 7 on the CONNECT variable header")
         val connectFlagsPacked = buffer.readByte()
         assertFalse(
             connectFlagsPacked.toUByte().get(7),
-            "invalid byte 8 bit 7 on the CONNECT variable header for username flag"
+            "invalid byte 8 bit 7 on the CONNECT variable header for username flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(6),
-            "invalid byte 8 bit 6 on the CONNECT variable header for password flag"
+            "invalid byte 8 bit 6 on the CONNECT variable header for password flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(5),
-            "invalid byte 8 bit 5 on the CONNECT variable header for willRetain flag"
+            "invalid byte 8 bit 5 on the CONNECT variable header for willRetain flag",
         )
         assertTrue(
             connectFlagsPacked.toUByte().get(4),
-            "invalid byte 8 bit 4 on the CONNECT variable header for willQosBit4 flag"
+            "invalid byte 8 bit 4 on the CONNECT variable header for willQosBit4 flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(3),
-            "invalid byte 8 bit 3 on the CONNECT variable header for willQosBit3 flag"
+            "invalid byte 8 bit 3 on the CONNECT variable header for willQosBit3 flag",
         )
         assertEquals(
             QualityOfService.EXACTLY_ONCE,
             QualityOfService.fromBooleans(
                 connectFlagsPacked.toUByte().get(4),
-                connectFlagsPacked.toUByte().get(3)
+                connectFlagsPacked.toUByte().get(3),
             ),
-            "invalid byte 8 bit 4-3 on the CONNECT variable header for willQosBit flag"
+            "invalid byte 8 bit 4-3 on the CONNECT variable header for willQosBit flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(2),
-            "invalid byte 8 bit 2 on the CONNECT variable header for willFlag flag"
+            "invalid byte 8 bit 2 on the CONNECT variable header for willFlag flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(1),
-            "invalid byte 8 bit 1 on the CONNECT variable header for cleanStart flag"
+            "invalid byte 8 bit 1 on the CONNECT variable header for cleanStart flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(0),
-            "invalid byte 8 bit 0 on the CONNECT variable header for reserved flag"
+            "invalid byte 8 bit 0 on the CONNECT variable header for reserved flag",
         )
         assertEquals(UShort.MAX_VALUE, buffer.readUnsignedShort(), "invalid keep alive")
         assertEquals(0, buffer.readVariableByteInteger(), "property length")
         assertEquals(
             "",
             buffer.readMqttUtf8StringNotValidatedSized().second.toString(),
-            "client id"
+            "client id",
         )
     }
 
@@ -631,86 +632,86 @@ class ConnectionRequestTests {
         assertEquals(
             13,
             buffer.readVariableByteInteger().toInt(),
-            "invalid remaining length on the CONNECT fixed header"
+            "invalid remaining length on the CONNECT fixed header",
         )
         assertEquals(
             0,
             buffer.readByte(),
-            "invalid byte 1 on the CONNECT variable header (Length MSB (0))"
+            "invalid byte 1 on the CONNECT variable header (Length MSB (0))",
         )
         assertEquals(
             4,
             buffer.readByte(),
-            "invalid byte 2 on the CONNECT variable header (Length LSB (4))"
+            "invalid byte 2 on the CONNECT variable header (Length LSB (4))",
         )
         assertEquals(
             'M',
             buffer.readByte().toInt().toChar(),
-            "invalid byte 3 on the CONNECT variable header"
+            "invalid byte 3 on the CONNECT variable header",
         )
         assertEquals(
             'Q',
             buffer.readByte().toInt().toChar(),
-            "invalid byte 4 on the CONNECT variable header"
+            "invalid byte 4 on the CONNECT variable header",
         )
         assertEquals(
             'T',
             buffer.readByte().toInt().toChar(),
-            "invalid byte 5 on the CONNECT variable header"
+            "invalid byte 5 on the CONNECT variable header",
         )
         assertEquals(
             'T',
             buffer.readByte().toInt().toChar(),
-            "invalid byte 6 on the CONNECT variable header"
+            "invalid byte 6 on the CONNECT variable header",
         )
         assertEquals(5, buffer.readByte(), "invalid byte 7 on the CONNECT variable header")
         val connectFlagsPacked = buffer.readByte()
         assertFalse(
             connectFlagsPacked.toUByte().get(7),
-            "invalid byte 8 bit 7 on the CONNECT variable header for username flag"
+            "invalid byte 8 bit 7 on the CONNECT variable header for username flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(6),
-            "invalid byte 8 bit 6 on the CONNECT variable header for password flag"
+            "invalid byte 8 bit 6 on the CONNECT variable header for password flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(5),
-            "invalid byte 8 bit 5 on the CONNECT variable header for willRetain flag"
+            "invalid byte 8 bit 5 on the CONNECT variable header for willRetain flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(4),
-            "invalid byte 8 bit 4 on the CONNECT variable header for willQosBit4 flag"
+            "invalid byte 8 bit 4 on the CONNECT variable header for willQosBit4 flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(3),
-            "invalid byte 8 bit 3 on the CONNECT variable header for willQosBit3 flag"
+            "invalid byte 8 bit 3 on the CONNECT variable header for willQosBit3 flag",
         )
         assertEquals(
             AT_MOST_ONCE,
             QualityOfService.fromBooleans(
                 connectFlagsPacked.toUByte().get(4),
-                connectFlagsPacked.toUByte().get(3)
+                connectFlagsPacked.toUByte().get(3),
             ),
-            "invalid byte 8 bit 4-3 on the CONNECT variable header for willQosBit flag"
+            "invalid byte 8 bit 4-3 on the CONNECT variable header for willQosBit flag",
         )
         assertTrue(
             connectFlagsPacked.toUByte().get(2),
-            "invalid byte 8 bit 2 on the CONNECT variable header for willFlag flag"
+            "invalid byte 8 bit 2 on the CONNECT variable header for willFlag flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(1),
-            "invalid byte 8 bit 1 on the CONNECT variable header for cleanStart flag"
+            "invalid byte 8 bit 1 on the CONNECT variable header for cleanStart flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(0),
-            "invalid byte 8 bit 0 on the CONNECT variable header for reserved flag"
+            "invalid byte 8 bit 0 on the CONNECT variable header for reserved flag",
         )
         assertEquals(UShort.MAX_VALUE, buffer.readUnsignedShort(), "invalid keep alive")
         assertEquals(0, buffer.readVariableByteInteger(), "property length")
         assertEquals(
             "",
             buffer.readMqttUtf8StringNotValidatedSized().second.toString(),
-            "client id"
+            "client id",
         )
     }
 
@@ -725,86 +726,86 @@ class ConnectionRequestTests {
         assertEquals(
             13,
             buffer.readVariableByteInteger().toInt(),
-            "invalid remaining length on the CONNECT fixed header"
+            "invalid remaining length on the CONNECT fixed header",
         )
         assertEquals(
             0,
             buffer.readByte(),
-            "invalid byte 1 on the CONNECT variable header (Length MSB (0))"
+            "invalid byte 1 on the CONNECT variable header (Length MSB (0))",
         )
         assertEquals(
             4,
             buffer.readByte(),
-            "invalid byte 2 on the CONNECT variable header (Length LSB (4))"
+            "invalid byte 2 on the CONNECT variable header (Length LSB (4))",
         )
         assertEquals(
             'M',
             buffer.readByte().toInt().toChar(),
-            "invalid byte 3 on the CONNECT variable header"
+            "invalid byte 3 on the CONNECT variable header",
         )
         assertEquals(
             'Q',
             buffer.readByte().toInt().toChar(),
-            "invalid byte 4 on the CONNECT variable header"
+            "invalid byte 4 on the CONNECT variable header",
         )
         assertEquals(
             'T',
             buffer.readByte().toInt().toChar(),
-            "invalid byte 5 on the CONNECT variable header"
+            "invalid byte 5 on the CONNECT variable header",
         )
         assertEquals(
             'T',
             buffer.readByte().toInt().toChar(),
-            "invalid byte 6 on the CONNECT variable header"
+            "invalid byte 6 on the CONNECT variable header",
         )
         assertEquals(5, buffer.readByte(), "invalid byte 7 on the CONNECT variable header")
         val connectFlagsPacked = buffer.readByte()
         assertFalse(
             connectFlagsPacked.toUByte().get(7),
-            "invalid byte 8 bit 7 on the CONNECT variable header for username flag"
+            "invalid byte 8 bit 7 on the CONNECT variable header for username flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(6),
-            "invalid byte 8 bit 6 on the CONNECT variable header for password flag"
+            "invalid byte 8 bit 6 on the CONNECT variable header for password flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(5),
-            "invalid byte 8 bit 5 on the CONNECT variable header for willRetain flag"
+            "invalid byte 8 bit 5 on the CONNECT variable header for willRetain flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(4),
-            "invalid byte 8 bit 4 on the CONNECT variable header for willQosBit4 flag"
+            "invalid byte 8 bit 4 on the CONNECT variable header for willQosBit4 flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(3),
-            "invalid byte 8 bit 3 on the CONNECT variable header for willQosBit3 flag"
+            "invalid byte 8 bit 3 on the CONNECT variable header for willQosBit3 flag",
         )
         assertEquals(
             AT_MOST_ONCE,
             QualityOfService.fromBooleans(
                 connectFlagsPacked.toUByte().get(4),
-                connectFlagsPacked.toUByte().get(3)
+                connectFlagsPacked.toUByte().get(3),
             ),
-            "invalid byte 8 bit 4-3 on the CONNECT variable header for willQosBit flag"
+            "invalid byte 8 bit 4-3 on the CONNECT variable header for willQosBit flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(2),
-            "invalid byte 8 bit 2 on the CONNECT variable header for willFlag flag"
+            "invalid byte 8 bit 2 on the CONNECT variable header for willFlag flag",
         )
         assertTrue(
             connectFlagsPacked.toUByte().get(1),
-            "invalid byte 8 bit 1 on the CONNECT variable header for cleanStart flag"
+            "invalid byte 8 bit 1 on the CONNECT variable header for cleanStart flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(0),
-            "invalid byte 8 bit 0 on the CONNECT variable header for reserved flag"
+            "invalid byte 8 bit 0 on the CONNECT variable header for reserved flag",
         )
         assertEquals(UShort.MAX_VALUE, buffer.readUnsignedShort(), "invalid keep alive")
         assertEquals(0, buffer.readVariableByteInteger(), "property length")
         assertEquals(
             "",
             buffer.readMqttUtf8StringNotValidatedSized().second.toString(),
-            "client id"
+            "client id",
         )
     }
 
@@ -818,86 +819,86 @@ class ConnectionRequestTests {
         assertEquals(
             13,
             buffer.readVariableByteInteger().toInt(),
-            "invalid remaining length on the CONNECT fixed header"
+            "invalid remaining length on the CONNECT fixed header",
         )
         assertEquals(
             0,
             buffer.readByte(),
-            "invalid byte 1 on the CONNECT variable header (Length MSB (0))"
+            "invalid byte 1 on the CONNECT variable header (Length MSB (0))",
         )
         assertEquals(
             4,
             buffer.readByte(),
-            "invalid byte 2 on the CONNECT variable header (Length LSB (4))"
+            "invalid byte 2 on the CONNECT variable header (Length LSB (4))",
         )
         assertEquals(
             'M',
             buffer.readByte().toInt().toChar(),
-            "invalid byte 3 on the CONNECT variable header"
+            "invalid byte 3 on the CONNECT variable header",
         )
         assertEquals(
             'Q',
             buffer.readByte().toInt().toChar(),
-            "invalid byte 4 on the CONNECT variable header"
+            "invalid byte 4 on the CONNECT variable header",
         )
         assertEquals(
             'T',
             buffer.readByte().toInt().toChar(),
-            "invalid byte 5 on the CONNECT variable header"
+            "invalid byte 5 on the CONNECT variable header",
         )
         assertEquals(
             'T',
             buffer.readByte().toInt().toChar(),
-            "invalid byte 6 on the CONNECT variable header"
+            "invalid byte 6 on the CONNECT variable header",
         )
         assertEquals(5, buffer.readByte(), "invalid byte 7 on the CONNECT variable header")
         val connectFlagsPacked = buffer.readByte()
         assertFalse(
             connectFlagsPacked.toUByte().get(7),
-            "invalid byte 8 bit 7 on the CONNECT variable header for username flag"
+            "invalid byte 8 bit 7 on the CONNECT variable header for username flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(6),
-            "invalid byte 8 bit 6 on the CONNECT variable header for password flag"
+            "invalid byte 8 bit 6 on the CONNECT variable header for password flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(5),
-            "invalid byte 8 bit 5 on the CONNECT variable header for willRetain flag"
+            "invalid byte 8 bit 5 on the CONNECT variable header for willRetain flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(4),
-            "invalid byte 8 bit 4 on the CONNECT variable header for willQosBit4 flag"
+            "invalid byte 8 bit 4 on the CONNECT variable header for willQosBit4 flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(3),
-            "invalid byte 8 bit 3 on the CONNECT variable header for willQosBit3 flag"
+            "invalid byte 8 bit 3 on the CONNECT variable header for willQosBit3 flag",
         )
         assertEquals(
             AT_MOST_ONCE,
             QualityOfService.fromBooleans(
                 connectFlagsPacked.toUByte().get(4),
-                connectFlagsPacked.toUByte().get(3)
+                connectFlagsPacked.toUByte().get(3),
             ),
-            "invalid byte 8 bit 4-3 on the CONNECT variable header for willQosBit flag"
+            "invalid byte 8 bit 4-3 on the CONNECT variable header for willQosBit flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(2),
-            "invalid byte 8 bit 2 on the CONNECT variable header for willFlag flag"
+            "invalid byte 8 bit 2 on the CONNECT variable header for willFlag flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(1),
-            "invalid byte 8 bit 1 on the CONNECT variable header for cleanStart flag"
+            "invalid byte 8 bit 1 on the CONNECT variable header for cleanStart flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(0),
-            "invalid byte 8 bit 0 on the CONNECT variable header for reserved flag"
+            "invalid byte 8 bit 0 on the CONNECT variable header for reserved flag",
         )
         assertEquals(4u, buffer.readUnsignedShort(), "invalid keep alive")
         assertEquals(0, buffer.readVariableByteInteger(), "property length")
         assertEquals(
             "",
             buffer.readMqttUtf8StringNotValidatedSized().second.toString(),
-            "client id"
+            "client id",
         )
     }
 
@@ -912,79 +913,79 @@ class ConnectionRequestTests {
         assertEquals(
             22,
             buffer.readVariableByteInteger().toInt(),
-            "invalid remaining length on the CONNECT fixed header"
+            "invalid remaining length on the CONNECT fixed header",
         )
         assertEquals(
             0,
             buffer.readByte(),
-            "invalid byte 1 on the CONNECT variable header (Length MSB (0))"
+            "invalid byte 1 on the CONNECT variable header (Length MSB (0))",
         )
         assertEquals(
             4,
             buffer.readByte(),
-            "invalid byte 2 on the CONNECT variable header (Length LSB (4))"
+            "invalid byte 2 on the CONNECT variable header (Length LSB (4))",
         )
         assertEquals(
             'M',
             buffer.readByte().toInt().toChar(),
-            "invalid byte 3 on the CONNECT variable header"
+            "invalid byte 3 on the CONNECT variable header",
         )
         assertEquals(
             'Q',
             buffer.readByte().toInt().toChar(),
-            "invalid byte 4 on the CONNECT variable header"
+            "invalid byte 4 on the CONNECT variable header",
         )
         assertEquals(
             'T',
             buffer.readByte().toInt().toChar(),
-            "invalid byte 5 on the CONNECT variable header"
+            "invalid byte 5 on the CONNECT variable header",
         )
         assertEquals(
             'T',
             buffer.readByte().toInt().toChar(),
-            "invalid byte 6 on the CONNECT variable header"
+            "invalid byte 6 on the CONNECT variable header",
         )
         assertEquals(5, buffer.readByte(), "invalid byte 7 on the CONNECT variable header")
         val connectFlagsPacked = buffer.readByte()
         assertFalse(
             connectFlagsPacked.toUByte().get(7),
-            "invalid byte 8 bit 7 on the CONNECT variable header for username flag"
+            "invalid byte 8 bit 7 on the CONNECT variable header for username flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(6),
-            "invalid byte 8 bit 6 on the CONNECT variable header for password flag"
+            "invalid byte 8 bit 6 on the CONNECT variable header for password flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(5),
-            "invalid byte 8 bit 5 on the CONNECT variable header for willRetain flag"
+            "invalid byte 8 bit 5 on the CONNECT variable header for willRetain flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(4),
-            "invalid byte 8 bit 4 on the CONNECT variable header for willQosBit4 flag"
+            "invalid byte 8 bit 4 on the CONNECT variable header for willQosBit4 flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(3),
-            "invalid byte 8 bit 3 on the CONNECT variable header for willQosBit3 flag"
+            "invalid byte 8 bit 3 on the CONNECT variable header for willQosBit3 flag",
         )
         assertEquals(
             AT_MOST_ONCE,
             QualityOfService.fromBooleans(
                 connectFlagsPacked.toUByte().get(4),
-                connectFlagsPacked.toUByte().get(3)
+                connectFlagsPacked.toUByte().get(3),
             ),
-            "invalid byte 8 bit 4-3 on the CONNECT variable header for willQosBit flag"
+            "invalid byte 8 bit 4-3 on the CONNECT variable header for willQosBit flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(2),
-            "invalid byte 8 bit 2 on the CONNECT variable header for willFlag flag"
+            "invalid byte 8 bit 2 on the CONNECT variable header for willFlag flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(1),
-            "invalid byte 8 bit 1 on the CONNECT variable header for cleanStart flag"
+            "invalid byte 8 bit 1 on the CONNECT variable header for cleanStart flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(0),
-            "invalid byte 8 bit 0 on the CONNECT variable header for reserved flag"
+            "invalid byte 8 bit 0 on the CONNECT variable header for reserved flag",
         )
         assertEquals(UShort.MAX_VALUE, buffer.readUnsignedShort(), "invalid keep alive")
         assertEquals(9, buffer.readVariableByteInteger(), "property length")
@@ -993,7 +994,7 @@ class ConnectionRequestTests {
         assertEquals(
             "",
             buffer.readMqttUtf8StringNotValidatedSized().second.toString(),
-            "client id"
+            "client id",
         )
     }
 
@@ -1009,8 +1010,8 @@ class ConnectionRequestTests {
             VariableHeader.Properties.from(
                 listOf(
                     SessionExpiryInterval(5),
-                    SessionExpiryInterval(5)
-                )
+                    SessionExpiryInterval(5),
+                ),
             )
             fail("Should of hit a protocol exception for adding two session expiry intervals")
         } catch (e: ProtocolError) {
@@ -1126,8 +1127,8 @@ class ConnectionRequestTests {
             VariableHeader.Properties.from(
                 listOf(
                     RequestResponseInformation(true),
-                    RequestResponseInformation(true)
-                )
+                    RequestResponseInformation(true),
+                ),
             )
             fail("Should of hit a protocol exception for adding two Request Response Information")
         } catch (e: ProtocolError) {
@@ -1148,79 +1149,79 @@ class ConnectionRequestTests {
         assertEquals(
             15,
             buffer.readVariableByteInteger().toInt(),
-            "invalid remaining length on the CONNECT fixed header"
+            "invalid remaining length on the CONNECT fixed header",
         )
         assertEquals(
             0,
             buffer.readByte(),
-            "invalid byte 1 on the CONNECT variable header (Length MSB (0))"
+            "invalid byte 1 on the CONNECT variable header (Length MSB (0))",
         )
         assertEquals(
             4,
             buffer.readByte(),
-            "invalid byte 2 on the CONNECT variable header (Length LSB (4))"
+            "invalid byte 2 on the CONNECT variable header (Length LSB (4))",
         )
         assertEquals(
             'M',
             buffer.readByte().toInt().toChar(),
-            "invalid byte 3 on the CONNECT variable header"
+            "invalid byte 3 on the CONNECT variable header",
         )
         assertEquals(
             'Q',
             buffer.readByte().toInt().toChar(),
-            "invalid byte 4 on the CONNECT variable header"
+            "invalid byte 4 on the CONNECT variable header",
         )
         assertEquals(
             'T',
             buffer.readByte().toInt().toChar(),
-            "invalid byte 5 on the CONNECT variable header"
+            "invalid byte 5 on the CONNECT variable header",
         )
         assertEquals(
             'T',
             buffer.readByte().toInt().toChar(),
-            "invalid byte 6 on the CONNECT variable header"
+            "invalid byte 6 on the CONNECT variable header",
         )
         assertEquals(5, buffer.readByte(), "invalid byte 7 on the CONNECT variable header")
         val connectFlagsPacked = buffer.readByte()
         assertFalse(
             connectFlagsPacked.toUByte().get(7),
-            "invalid byte 8 bit 7 on the CONNECT variable header for username flag"
+            "invalid byte 8 bit 7 on the CONNECT variable header for username flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(6),
-            "invalid byte 8 bit 6 on the CONNECT variable header for password flag"
+            "invalid byte 8 bit 6 on the CONNECT variable header for password flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(5),
-            "invalid byte 8 bit 5 on the CONNECT variable header for willRetain flag"
+            "invalid byte 8 bit 5 on the CONNECT variable header for willRetain flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(4),
-            "invalid byte 8 bit 4 on the CONNECT variable header for willQosBit4 flag"
+            "invalid byte 8 bit 4 on the CONNECT variable header for willQosBit4 flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(3),
-            "invalid byte 8 bit 3 on the CONNECT variable header for willQosBit3 flag"
+            "invalid byte 8 bit 3 on the CONNECT variable header for willQosBit3 flag",
         )
         assertEquals(
             AT_MOST_ONCE,
             QualityOfService.fromBooleans(
                 connectFlagsPacked.toUByte().get(4),
-                connectFlagsPacked.toUByte().get(3)
+                connectFlagsPacked.toUByte().get(3),
             ),
-            "invalid byte 8 bit 4-3 on the CONNECT variable header for willQosBit flag"
+            "invalid byte 8 bit 4-3 on the CONNECT variable header for willQosBit flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(2),
-            "invalid byte 8 bit 2 on the CONNECT variable header for willFlag flag"
+            "invalid byte 8 bit 2 on the CONNECT variable header for willFlag flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(1),
-            "invalid byte 8 bit 1 on the CONNECT variable header for cleanStart flag"
+            "invalid byte 8 bit 1 on the CONNECT variable header for cleanStart flag",
         )
         assertFalse(
             connectFlagsPacked.toUByte().get(0),
-            "invalid byte 8 bit 0 on the CONNECT variable header for reserved flag"
+            "invalid byte 8 bit 0 on the CONNECT variable header for reserved flag",
         )
         assertEquals(UShort.MAX_VALUE, buffer.readUnsignedShort(), "invalid keep alive")
         assertEquals(2, buffer.readVariableByteInteger(), "property length")
@@ -1229,7 +1230,7 @@ class ConnectionRequestTests {
         assertEquals(
             "",
             buffer.readMqttUtf8StringNotValidatedSized().second.toString(),
-            "client id"
+            "client id",
         )
         buffer.resetForRead()
         val requestRead = ControlPacketV5.from(buffer) as ConnectionRequest
@@ -1242,8 +1243,8 @@ class ConnectionRequestTests {
             VariableHeader.Properties.from(
                 listOf(
                     RequestProblemInformation(true),
-                    RequestProblemInformation(true)
-                )
+                    RequestProblemInformation(true),
+                ),
             )
             fail("Should of hit a protocol exception for adding two Request Problem Information")
         } catch (e: ProtocolError) {
@@ -1282,10 +1283,11 @@ class ConnectionRequestTests {
         assertEquals(userPropertyResult.size, 2)
     }
 
-    private val buffer123 = PlatformBuffer.allocate(3).also {
-        it.write("123".toReadBuffer(Charset.UTF8))
-        it.resetForRead()
-    }
+    private val buffer123 =
+        PlatformBuffer.allocate(3).also {
+            it.write("123".toReadBuffer(Charset.UTF8))
+            it.resetForRead()
+        }
 
     @Test
     fun variableHeaderPropertyAuth() {
@@ -1305,12 +1307,12 @@ class ConnectionRequestTests {
         val requestRead = ControlPacketV5.from(buffer) as ConnectionRequest
         assertEquals(
             "yolo",
-            requestRead.variableHeader.properties.authentication!!.method.toString()
+            requestRead.variableHeader.properties.authentication!!.method.toString(),
         )
         assertEquals(
             "123",
             requestRead.variableHeader.properties.authentication!!.data.readString(3, Charset.UTF8)
-                .toString()
+                .toString(),
         )
     }
 
@@ -1347,10 +1349,11 @@ class ConnectionRequestTests {
 
     @Test
     fun packetQos0() {
-        val request = ConnectionRequest(
-            VariableHeader("", willQos = AT_MOST_ONCE),
-            ConnectionRequest.Payload("")
-        )
+        val request =
+            ConnectionRequest(
+                VariableHeader("", willQos = AT_MOST_ONCE),
+                ConnectionRequest.Payload(""),
+            )
         val buffer = PlatformBuffer.allocate(request.packetSize())
         request.serialize(buffer)
         buffer.resetForRead()
@@ -1362,16 +1365,20 @@ class ConnectionRequestTests {
     fun payloadFormatIndicatorInVariableHeader() {
         try {
             VariableHeader.Properties.from(setOf(PayloadFormatIndicator(true)))
-            fail("Should of thrown a malformed packet exception. Payload Format Indicator is not a valid connect variable header property, it is a will property")
+            fail(
+                "Should of thrown a malformed packet exception. Payload Format Indicator is not " +
+                    "a valid connect variable header property, it is a will property",
+            )
         } catch (e: MalformedPacketException) {
         }
     }
 
     @Test
     fun usernameFlagMatchesPayloadFailureCaseNoFlagWithUsername() {
-        val connectionRequest = ConnectionRequest(
-            payload = ConnectionRequest.Payload(userName = "yolo")
-        )
+        val connectionRequest =
+            ConnectionRequest(
+                payload = ConnectionRequest.Payload(userName = "yolo"),
+            )
         assertFailsWith<MqttWarning> { connectionRequest.validateOrThrow() }
     }
 
@@ -1383,9 +1390,10 @@ class ConnectionRequestTests {
 
     @Test
     fun passwordFlagMatchesPayloadFailureCaseNoFlagWithUsername() {
-        val connectionRequest = ConnectionRequest(
-            payload = ConnectionRequest.Payload(password = "yolo")
-        )
+        val connectionRequest =
+            ConnectionRequest(
+                payload = ConnectionRequest.Payload(password = "yolo"),
+            )
         assertFailsWith<MqttWarning> { connectionRequest.validateOrThrow() }
     }
 

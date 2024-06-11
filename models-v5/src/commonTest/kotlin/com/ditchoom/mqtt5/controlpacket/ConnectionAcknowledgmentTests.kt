@@ -57,7 +57,7 @@ class ConnectionAcknowledgmentTests {
         assertEquals(
             SUCCESS.byte,
             buffer.readUnsignedByte(),
-            "byte1 variable header connect reason code"
+            "byte1 variable header connect reason code",
         )
         assertEquals(0, buffer.readVariableByteInteger(), "property length")
     }
@@ -143,7 +143,7 @@ class ConnectionAcknowledgmentTests {
         assertEquals(
             SUCCESS.byte,
             buffer.readUnsignedByte(),
-            "byte1 variable header connect reason code"
+            "byte1 variable header connect reason code",
         )
         assertEquals(9, buffer.readVariableByteInteger(), "property length")
         assertEquals(0x11, buffer.readByte())
@@ -339,9 +339,10 @@ class ConnectionAcknowledgmentTests {
 
     @Test
     fun assignedClientIdentifier() {
-        val actual = ConnectionAcknowledgment(
-            VariableHeader(properties = Properties(assignedClientIdentifier = "yolo"))
-        )
+        val actual =
+            ConnectionAcknowledgment(
+                VariableHeader(properties = Properties(assignedClientIdentifier = "yolo")),
+            )
         val buffer = PlatformBuffer.allocate(12)
         actual.serialize(buffer)
         buffer.resetForRead()
@@ -369,9 +370,10 @@ class ConnectionAcknowledgmentTests {
 
     @Test
     fun topicAliasMaximum() {
-        val actual = ConnectionAcknowledgment(
-            VariableHeader(properties = Properties(topicAliasMaximum = 4))
-        )
+        val actual =
+            ConnectionAcknowledgment(
+                VariableHeader(properties = Properties(topicAliasMaximum = 4)),
+            )
         val buffer = PlatformBuffer.allocate(actual.packetSize())
         actual.serialize(buffer)
         buffer.resetForRead()
@@ -398,9 +400,10 @@ class ConnectionAcknowledgmentTests {
 
     @Test
     fun reasonString() {
-        val actual = ConnectionAcknowledgment(
-            VariableHeader(properties = Properties(reasonString = "yolo"))
-        )
+        val actual =
+            ConnectionAcknowledgment(
+                VariableHeader(properties = Properties(reasonString = "yolo")),
+            )
         val buffer = PlatformBuffer.allocate(12)
         actual.serialize(buffer)
         buffer.resetForRead()
@@ -451,10 +454,11 @@ class ConnectionAcknowledgmentTests {
         val actual =
             ConnectionAcknowledgment(
                 VariableHeader(
-                    properties = Properties(
-                        supportsWildcardSubscriptions = false
-                    )
-                )
+                    properties =
+                        Properties(
+                            supportsWildcardSubscriptions = false,
+                        ),
+                ),
             )
         val buffer = PlatformBuffer.allocate(7)
         actual.serialize(buffer)
@@ -505,10 +509,11 @@ class ConnectionAcknowledgmentTests {
         val actual =
             ConnectionAcknowledgment(
                 VariableHeader(
-                    properties = Properties(
-                        subscriptionIdentifiersAvailable = false
-                    )
-                )
+                    properties =
+                        Properties(
+                            subscriptionIdentifiersAvailable = false,
+                        ),
+                ),
             )
         val buffer = PlatformBuffer.allocate(7)
         actual.serialize(buffer)
@@ -549,10 +554,11 @@ class ConnectionAcknowledgmentTests {
         val actual =
             ConnectionAcknowledgment(
                 VariableHeader(
-                    properties = Properties(
-                        sharedSubscriptionAvailable = false
-                    )
-                )
+                    properties =
+                        Properties(
+                            sharedSubscriptionAvailable = false,
+                        ),
+                ),
             )
         val buffer = PlatformBuffer.allocate(7)
         actual.serialize(buffer)
@@ -608,9 +614,10 @@ class ConnectionAcknowledgmentTests {
 
     @Test
     fun responseInformation() {
-        val actual = ConnectionAcknowledgment(
-            VariableHeader(properties = Properties(responseInformation = "yolo"))
-        )
+        val actual =
+            ConnectionAcknowledgment(
+                VariableHeader(properties = Properties(responseInformation = "yolo")),
+            )
         val buffer = PlatformBuffer.allocate(12)
         actual.serialize(buffer)
         buffer.resetForRead()
@@ -637,9 +644,10 @@ class ConnectionAcknowledgmentTests {
 
     @Test
     fun serverReference() {
-        val actual = ConnectionAcknowledgment(
-            VariableHeader(properties = Properties(serverReference = "yolo"))
-        )
+        val actual =
+            ConnectionAcknowledgment(
+                VariableHeader(properties = Properties(serverReference = "yolo")),
+            )
         val buffer = PlatformBuffer.allocate(12)
         actual.serialize(buffer)
         buffer.resetForRead()
@@ -664,19 +672,22 @@ class ConnectionAcknowledgmentTests {
         }
     }
 
-    private val buffer1234 = PlatformBuffer.allocate(4)
-        .also { it.write("1234".toReadBuffer(Charset.UTF8)) }
+    private val buffer1234 =
+        PlatformBuffer.allocate(4)
+            .also { it.write("1234".toReadBuffer(Charset.UTF8)) }
 
     @Test
     fun authenticationMethodAndData() {
-        val actual = ConnectionAcknowledgment(
-            VariableHeader(
-                properties = Properties(
-                    authentication =
-                    Authentication("yolo", buffer1234)
-                )
+        val actual =
+            ConnectionAcknowledgment(
+                VariableHeader(
+                    properties =
+                        Properties(
+                            authentication =
+                                Authentication("yolo", buffer1234),
+                        ),
+                ),
             )
-        )
         val buffer = PlatformBuffer.allocate(19)
         actual.serialize(buffer)
         buffer.resetForRead()

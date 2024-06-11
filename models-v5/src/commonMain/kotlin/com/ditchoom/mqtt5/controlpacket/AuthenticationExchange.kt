@@ -31,8 +31,8 @@ import com.ditchoom.mqtt5.controlpacket.properties.readProperties
 
 data class AuthenticationExchange(val variable: VariableHeader) :
     ControlPacketV5(15, DirectionOfFlow.BIDIRECTIONAL) {
-
     override fun remainingLength() = variable.size()
+
     override fun variableHeader(writeBuffer: WriteBuffer) = variable.serialize(writeBuffer)
 
     /**
@@ -62,7 +62,7 @@ data class AuthenticationExchange(val variable: VariableHeader) :
          * 25|0x19|Re-authenticate|Client
          */
         val reasonCode: ReasonCode = SUCCESS,
-        val properties: Properties
+        val properties: Properties,
     ) {
         init {
             // throw if reason code doesnt exist
@@ -82,9 +82,8 @@ data class AuthenticationExchange(val variable: VariableHeader) :
         data class Properties(
             val authentication: Authentication?,
             val reasonString: String? = null,
-            val userProperty: List<Pair<String, String>> = emptyList()
+            val userProperty: List<Pair<String, String>> = emptyList(),
         ) {
-
             fun size(): Int {
                 val authMethod =
                     if (authentication != null) AuthenticationMethod(authentication.method) else null
@@ -132,7 +131,7 @@ data class AuthenticationExchange(val variable: VariableHeader) :
                                 if (method != null) {
                                     throw ProtocolError(
                                         "Auth Method added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477382"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477382",
                                     )
                                 }
                                 method = it.value
@@ -142,7 +141,7 @@ data class AuthenticationExchange(val variable: VariableHeader) :
                                 if (reasonString != null) {
                                     throw ProtocolError(
                                         "Reason String added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477476"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477476",
                                     )
                                 }
                                 reasonString = it.diagnosticInfoDontParse
@@ -153,7 +152,7 @@ data class AuthenticationExchange(val variable: VariableHeader) :
                                 if (data != null) {
                                     throw ProtocolError(
                                         "Server Reference added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477396"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477396",
                                     )
                                 }
                                 data = it.data
@@ -166,7 +165,7 @@ data class AuthenticationExchange(val variable: VariableHeader) :
                         return Properties(
                             Authentication(method!!, data!!),
                             reasonString,
-                            userProperty
+                            userProperty,
                         )
                     } else {
                         return Properties(null, reasonString, userProperty)

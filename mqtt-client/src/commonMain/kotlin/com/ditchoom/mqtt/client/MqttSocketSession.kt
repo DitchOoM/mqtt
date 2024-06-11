@@ -37,7 +37,7 @@ class MqttSocketSession private constructor(
     private val reader: BufferedControlPacketReader,
     private val socketController: SuspendCloseable,
     var allocateSharedMemory: Boolean = false,
-    var sentMessage: (PlatformBuffer) -> Unit
+    var sentMessage: (PlatformBuffer) -> Unit,
 ) : SuspendCloseable {
     var observer: Observer? = null
         set(value) {
@@ -52,6 +52,7 @@ class MqttSocketSession private constructor(
     fun isOpen() = !isClosed && reader.isOpen()
 
     suspend fun write(packet: ControlPacket) = write(listOf(packet))
+
     suspend fun write(controlPackets: Collection<ControlPacket>) {
         val b =
             controlPackets.toBuffer(if (allocateSharedMemory) AllocationZone.SharedMemory else AllocationZone.Direct)
@@ -88,91 +89,100 @@ class MqttSocketSession private constructor(
             sentMessage: (ReadBuffer) -> Unit = {},
             incomingMessage: (UByte, Int, ReadBuffer) -> Unit = { _, _, _ -> },
         ): MqttSocketSession {
-            val zone = if (allocateSharedMemory) {
-                AllocationZone.SharedMemory
-            } else {
-                AllocationZone.Direct
-            }
+            val zone =
+                if (allocateSharedMemory) {
+                    AllocationZone.SharedMemory
+                } else {
+                    AllocationZone.Direct
+                }
             val connect = connectionRequest.toBuffer(zone)
             connect.resetForWrite()
             val reader: Reader
             val writer: Writer
-            val socket = withContext(Dispatchers.Default) {
-                when (connectionOps) {
-                    is MqttConnectionOptions.SocketConnection -> {
-                        try {
-                            val s = ClientSocket.connect(
-                                connectionOps.port,
-                                connectionOps.host,
-                                connectionOps.tls,
-                                connectionOps.connectionTimeout,
-                                zone
-                            )
-                            reader = object : Reader {
-                                override fun isOpen() = s.isOpen()
-                                override suspend fun read(timeout: Duration) = s.read(timeout)
-                            }
-                            writer = object : Writer {
-                                override suspend fun write(
-                                    buffer: ReadBuffer,
-                                    timeout: Duration
-                                ): Int =  s.write(buffer, timeout)
-                            }
-                            s.write(connect, connectionOps.writeTimeout)
-                            s
-                        } catch (e: Exception) {
-                            throw e
-                        }
-                    }
+            val socket =
+                withContext(Dispatchers.Default) {
+                    when (connectionOps) {
+                        is MqttConnectionOptions.SocketConnection -> {
+                            try {
+                                val s =
+                                    ClientSocket.connect(
+                                        connectionOps.port,
+                                        connectionOps.host,
+                                        connectionOps.tls,
+                                        connectionOps.connectionTimeout,
+                                        zone,
+                                    )
+                                reader =
+                                    object : Reader {
+                                        override fun isOpen() = s.isOpen()
 
-                    is MqttConnectionOptions.WebSocketConnectionOptions -> {
-                        val wsSocketConnectionOptions = WebSocketConnectionOptions(
-                            connectionOps.host,
-                            connectionOps.port,
-                            connectionOps.tls,
-                            connectionOps.connectionTimeout,
-                            connectionOps.readTimeout,
-                            connectionOps.writeTimeout,
-                            connectionOps.websocketEndpoint,
-                            connectionOps.protocols
-                        )
-                        val client = WebSocketClient.allocate(
-                            wsSocketConnectionOptions,
-                            zone
-                        )
-                        try {
-                            reader = object : Reader {
-                                override fun isOpen(): Boolean =
-                                    client.connectionState.value == ConnectionState.Connected
-
-                                override suspend fun read(timeout: Duration): ReadBuffer =
-                                    client
-                                        .incomingMessages
-                                        .filterIsInstance<WebSocketMessage.Binary>()
-                                        .take(1)
-                                        .first()
-                                        .value
+                                        override suspend fun read(timeout: Duration) = s.read(timeout)
+                                    }
+                                writer =
+                                    object : Writer {
+                                        override suspend fun write(
+                                            buffer: ReadBuffer,
+                                            timeout: Duration,
+                                        ): Int = s.write(buffer, timeout)
+                                    }
+                                s.write(connect, connectionOps.writeTimeout)
+                                s
+                            } catch (e: Exception) {
+                                throw e
                             }
-                            writer = object : Writer {
-                                override suspend fun write(
-                                    buffer: ReadBuffer,
-                                    timeout: Duration
-                                ): Int {
-                                    val remaining = buffer.remaining()
-                                    client.write(buffer)
-                                    return remaining
-                                }
-                            }
-                            client.connect()
-                            client.write(connect)
-                        } catch (e: Throwable) {
-                            client.close()
-                            throw e
                         }
-                        client
+
+                        is MqttConnectionOptions.WebSocketConnectionOptions -> {
+                            val wsSocketConnectionOptions =
+                                WebSocketConnectionOptions(
+                                    connectionOps.host,
+                                    connectionOps.port,
+                                    connectionOps.tls,
+                                    connectionOps.connectionTimeout,
+                                    connectionOps.readTimeout,
+                                    connectionOps.writeTimeout,
+                                    connectionOps.websocketEndpoint,
+                                    connectionOps.protocols,
+                                )
+                            val client =
+                                WebSocketClient.allocate(
+                                    wsSocketConnectionOptions,
+                                    zone,
+                                )
+                            try {
+                                reader =
+                                    object : Reader {
+                                        override fun isOpen(): Boolean = client.connectionState.value == ConnectionState.Connected
+
+                                        override suspend fun read(timeout: Duration): ReadBuffer =
+                                            client
+                                                .incomingMessages
+                                                .filterIsInstance<WebSocketMessage.Binary>()
+                                                .take(1)
+                                                .first()
+                                                .value
+                                    }
+                                writer =
+                                    object : Writer {
+                                        override suspend fun write(
+                                            buffer: ReadBuffer,
+                                            timeout: Duration,
+                                        ): Int {
+                                            val remaining = buffer.remaining()
+                                            client.write(buffer)
+                                            return remaining
+                                        }
+                                    }
+                                client.connect()
+                                client.write(connect)
+                            } catch (e: Throwable) {
+                                client.close()
+                                throw e
+                            }
+                            client
+                        }
                     }
                 }
-            }
             sentMessage(connect)
 
             val bufferedControlPacketReader =
@@ -182,26 +192,27 @@ class MqttSocketSession private constructor(
                     connectionOps.readTimeout,
                     reader,
                     observer,
-                    incomingMessage
+                    incomingMessage,
                 )
             val response = bufferedControlPacketReader.readControlPacket()
             if (response is IConnectionAcknowledgment && response.isSuccessful) {
-                val s = MqttSocketSession(
-                    brokerId,
-                    response,
-                    connectionOps.writeTimeout,
-                    writer,
-                    bufferedControlPacketReader,
-                    socket,
-                    allocateSharedMemory,
-                    sentMessage
-                )
+                val s =
+                    MqttSocketSession(
+                        brokerId,
+                        response,
+                        connectionOps.writeTimeout,
+                        writer,
+                        bufferedControlPacketReader,
+                        socket,
+                        allocateSharedMemory,
+                        sentMessage,
+                    )
                 s.observer = observer
                 return s
             }
             throw MqttException(
                 "Invalid response received. Expected successful ConnectionAcknowledgment, instead received $response",
-                ReasonCode.MALFORMED_PACKET.byte
+                ReasonCode.MALFORMED_PACKET.byte,
             )
         }
     }

@@ -44,7 +44,10 @@ class JsRemoteMqttServiceWorker(private val serviceServer: RemoteMqttServiceWork
         return null
     }
 
-    private suspend fun requestClientAndPostMessage(obj: dynamic, port: MessagePort) {
+    private suspend fun requestClientAndPostMessage(
+        obj: dynamic,
+        port: MessagePort,
+    ) {
         val (brokerId, protocolVersion) = readBrokerIdProtocolVersionMessage(obj) ?: return
         val client = serviceServer.requestClientOrNull(brokerId, protocolVersion)
         if (client != null || client?.client?.isStopped() == true) {
@@ -54,16 +57,17 @@ class JsRemoteMqttServiceWorker(private val serviceServer: RemoteMqttServiceWork
                 buildBrokerIdProtocolVersionMessage(
                     MESSAGE_TYPE_REGISTER_CLIENT_SUCCESS,
                     brokerId,
-                    protocolVersion
-                )
+                    protocolVersion,
+                ),
             )
             client.observers += { incoming, byte1, remaining, buffer ->
 
-                val packetMessage = if (incoming) {
-                    sendIncomingControlPacketMessage(byte1, remaining, buffer as JsBuffer)
-                } else {
-                    buildOutgoingControlPacketMessage(buffer as JsBuffer)
-                }
+                val packetMessage =
+                    if (incoming) {
+                        sendIncomingControlPacketMessage(byte1, remaining, buffer as JsBuffer)
+                    } else {
+                        buildOutgoingControlPacketMessage(buffer as JsBuffer)
+                    }
                 port.postMessage(packetMessage)
             }
         } else {

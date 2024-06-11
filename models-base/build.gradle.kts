@@ -21,9 +21,8 @@ group = "com.ditchoom"
 val libraryVersion = getNextVersion().toString()
 println(
     "Version: ${libraryVersion}\nisRunningOnGithub: $isRunningOnGithub\nisMainBranchGithub: $isMainBranchGithub\n" +
-            "OS:$isMacOS\nLoad All Platforms: $loadAllPlatforms",
+        "OS:$isMacOS\nLoad All Platforms: $loadAllPlatforms",
 )
-
 
 repositories {
     google()
@@ -163,16 +162,17 @@ if (isRunningOnGithub) {
 ktlint {
     verbose.set(true)
     outputToConsole.set(true)
+    disabledRules.set(setOf("standard:property-naming"))
 }
 
 class Version(val major: UInt, val minor: UInt, val patch: UInt, val snapshot: Boolean) {
     constructor(string: String, snapshot: Boolean) :
-            this(
-                string.split('.')[0].toUInt(),
-                string.split('.')[1].toUInt(),
-                string.split('.')[2].toUInt(),
-                snapshot,
-            )
+        this(
+            string.split('.')[0].toUInt(),
+            string.split('.')[1].toUInt(),
+            string.split('.')[2].toUInt(),
+            snapshot,
+        )
 
     fun incrementMajor() = Version(major + 1u, 0u, 0u, snapshot)
 

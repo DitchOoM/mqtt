@@ -31,7 +31,6 @@ import kotlin.test.assertTrue
 import kotlin.test.fail
 
 class PublishMessageTests {
-
     @Test
     fun serialize() {
         val buffer = PlatformBuffer.allocate(9)
@@ -43,7 +42,7 @@ class PublishMessageTests {
         assertEquals(
             "a",
             buffer.readMqttUtf8StringNotValidatedSized().second.toString(),
-            "topic name"
+            "topic name",
         )
         assertEquals(1u, buffer.readUnsignedShort(), "packet identifier")
         assertEquals(0, buffer.readProperties()?.count() ?: 0, "properties")
@@ -79,7 +78,7 @@ class PublishMessageTests {
         assertEquals(
             "t",
             buffer.readMqttUtf8StringNotValidatedSized().second.toString(),
-            "topic name"
+            "topic name",
         )
         assertEquals(0, buffer.readProperties()?.count() ?: 0, "properties")
         buffer.resetForRead()
@@ -100,13 +99,13 @@ class PublishMessageTests {
         assertEquals(
             "t",
             buffer.readMqttUtf8StringNotValidatedSized().second.toString(),
-            "topic name"
+            "topic name",
         )
         val propertiesActual = buffer.readProperties()
         assertEquals(1, propertiesActual?.count() ?: 0, "properties")
         assertEquals(
             props.payloadFormatIndicator,
-            (propertiesActual?.first() as PayloadFormatIndicator).willMessageIsUtf8
+            (propertiesActual?.first() as PayloadFormatIndicator).willMessageIsUtf8,
         )
         buffer.resetForRead()
         val publish = ControlPacketV5.from(buffer) as PublishMessage
@@ -126,7 +125,7 @@ class PublishMessageTests {
         assertEquals(
             "t",
             buffer.readMqttUtf8StringNotValidatedSized().second.toString(),
-            "topic name"
+            "topic name",
         )
         val propertiesActual = buffer.readProperties()
         assertEquals(0, propertiesActual?.count() ?: 0, "properties")
@@ -165,13 +164,13 @@ class PublishMessageTests {
         assertEquals(
             "t",
             buffer.readMqttUtf8StringNotValidatedSized().second.toString(),
-            "topic name"
+            "topic name",
         )
         val propertiesActual = buffer.readProperties()
         assertEquals(1, propertiesActual?.count() ?: 0, "properties")
         assertEquals(
             props.messageExpiryInterval,
-            (propertiesActual?.firstOrNull() as? MessageExpiryInterval)?.seconds
+            (propertiesActual?.firstOrNull() as? MessageExpiryInterval)?.seconds,
         )
         buffer.resetForRead()
         val publish = ControlPacketV5.from(buffer) as PublishMessage
@@ -207,7 +206,7 @@ class PublishMessageTests {
         assertEquals(
             "t",
             buffer.readMqttUtf8StringNotValidatedSized().second.toString(),
-            "topic name"
+            "topic name",
         )
         val propertiesActual = buffer.readProperties()
         assertEquals(1, propertiesActual?.count() ?: 0, "properties")
@@ -226,10 +225,11 @@ class PublishMessageTests {
         }
         assertFails {
             PublishMessage(
-                variable = VariableHeader(
-                    properties = VariableHeader.Properties(topicAlias = 0),
-                    topicName = Topic.fromOrThrow("t", Topic.Type.Name)
-                )
+                variable =
+                    VariableHeader(
+                        properties = VariableHeader.Properties(topicAlias = 0),
+                        topicName = Topic.fromOrThrow("t", Topic.Type.Name),
+                    ),
             )
         }
     }
@@ -263,14 +263,14 @@ class PublishMessageTests {
         assertEquals(
             "t",
             buffer.readMqttUtf8StringNotValidatedSized().second.toString(),
-            "topic name"
+            "topic name",
         )
         assertEquals(7, buffer.readVariableByteInteger(), "property length")
         assertEquals(0x08, buffer.readByte(), "property identifier response topic")
         assertEquals(
             "t/as",
             buffer.readMqttUtf8StringNotValidatedSized().second.toString(),
-            "response topic value"
+            "response topic value",
         )
         buffer.resetForRead()
         val publish = ControlPacketV5.from(buffer) as PublishMessage
@@ -293,8 +293,9 @@ class PublishMessageTests {
         }
     }
 
-    val yoyoBuffer = PlatformBuffer.allocate(4)
-        .also { it.writeString("yoyo", Charset.UTF8) }
+    val yoyoBuffer =
+        PlatformBuffer.allocate(4)
+            .also { it.writeString("yoyo", Charset.UTF8) }
 
     @Test
     fun correlationData() {
@@ -309,21 +310,21 @@ class PublishMessageTests {
         assertEquals(
             "t",
             buffer.readMqttUtf8StringNotValidatedSized().second.toString(),
-            "topic name"
+            "topic name",
         )
         assertEquals(7, buffer.readVariableByteInteger(), "property length")
         assertEquals(0x09, buffer.readByte(), "property identifier correlation data")
         assertEquals(
             4u,
             buffer.readUnsignedShort(),
-            "property binary data size for correlation data"
+            "property binary data size for correlation data",
         )
         assertEquals("yoyo", buffer.readString(4, Charset.UTF8), "correlation data payload")
         buffer.resetForRead()
         val publish = ControlPacketV5.from(buffer) as PublishMessage
         assertEquals(
             "yoyo",
-            publish.variable.properties.correlationData?.readString(4, Charset.UTF8).toString()
+            publish.variable.properties.correlationData?.readString(4, Charset.UTF8).toString(),
         )
     }
 

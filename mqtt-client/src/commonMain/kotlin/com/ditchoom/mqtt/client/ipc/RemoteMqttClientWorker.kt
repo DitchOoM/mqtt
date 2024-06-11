@@ -15,26 +15,35 @@ class RemoteMqttClientWorker(
     internal val observers = ArrayList<(Boolean, UByte, Int, ReadBuffer) -> Unit>()
 
     suspend fun currentConnack(): IConnectionAcknowledgment? = client.currentConnectionAcknowledgment()
+
     fun currentConnectionAck(): IConnectionAcknowledgment? = client.connectivityManager.currentConnack()
+
     suspend fun awaitConnectivity(): IConnectionAcknowledgment = client.awaitConnectivity()
 
     suspend fun onSubscribeQueued(packetId: Int) {
         client.sendQueuedSubscribeMessage(packetId)
     }
 
-    suspend fun onPublishQueued(packetId: Int, buffer: ReadBuffer?) {
+    suspend fun onPublishQueued(
+        packetId: Int,
+        buffer: ReadBuffer?,
+    ) {
         try {
-            val pub0 = buffer?.let {
-                it.resetForRead()
-                factory.from(it) as? IPublishMessage
-            }
+            val pub0 =
+                buffer?.let {
+                    it.resetForRead()
+                    factory.from(it) as? IPublishMessage
+                }
             client.sendQueuedPublishMessage(packetId, pub0)
         } catch (e: Exception) {
             e.printStackTrace()
         }
     }
 
-    suspend fun onPublishQueued(packetId: Int, pub0: IPublishMessage?) {
+    suspend fun onPublishQueued(
+        packetId: Int,
+        pub0: IPublishMessage?,
+    ) {
         client.sendQueuedPublishMessage(packetId, pub0)
     }
 

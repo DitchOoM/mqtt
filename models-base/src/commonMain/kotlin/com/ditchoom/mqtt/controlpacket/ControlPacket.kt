@@ -48,8 +48,11 @@ interface ControlPacket {
     }
 
     fun variableHeader(writeBuffer: WriteBuffer) {}
+
     fun payload(writeBuffer: WriteBuffer) {}
+
     fun packetSize() = 2 + remainingLength()
+
     fun remainingLength() = 0
 
     fun serialize(allocationZone: AllocationZone = AllocationZone.Heap): PlatformBuffer {
@@ -66,7 +69,6 @@ interface ControlPacket {
     }
 
     companion object {
-
         private const val VARIABLE_BYTE_INT_MAX = 268435455
 
         fun isValidFirstByte(uByte: UByte): Boolean {

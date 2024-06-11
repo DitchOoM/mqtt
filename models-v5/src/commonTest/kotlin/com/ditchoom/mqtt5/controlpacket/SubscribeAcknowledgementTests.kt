@@ -208,11 +208,12 @@ class SubscribeAcknowledgementTests {
         }
         assertEquals(userPropertyResult.size, 1)
 
-        val request = SubscribeAcknowledgement(
-            packetIdentifier.toUShort(),
-            props,
-            WILDCARD_SUBSCRIPTIONS_NOT_SUPPORTED
-        )
+        val request =
+            SubscribeAcknowledgement(
+                packetIdentifier.toUShort(),
+                props,
+                WILDCARD_SUBSCRIPTIONS_NOT_SUPPORTED,
+            )
         val buffer = PlatformBuffer.allocate(19)
         request.serialize(buffer)
         buffer.resetForRead()

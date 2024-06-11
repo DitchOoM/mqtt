@@ -11,16 +11,16 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class UnsubscribeRequestTests {
-
     private val packetIdentifier = 2
 
     @Test
     fun basicTest() {
         val buffer = PlatformBuffer.allocate(11)
-        val unsub = UnsubscribeRequest(
-            VariableHeader(packetIdentifier),
-            setOf(Topic.fromOrThrow("yolo", Topic.Type.Filter))
-        )
+        val unsub =
+            UnsubscribeRequest(
+                VariableHeader(packetIdentifier),
+                setOf(Topic.fromOrThrow("yolo", Topic.Type.Filter)),
+            )
         unsub.serialize(buffer)
         buffer.resetForRead()
         assertEquals(0b10100010.toByte(), buffer.readByte(), "fixed header byte 1")
@@ -28,13 +28,13 @@ class UnsubscribeRequestTests {
         assertEquals(
             packetIdentifier.toUShort(),
             buffer.readUnsignedShort(),
-            "variable header byte 1-2 packet identifier"
+            "variable header byte 1-2 packet identifier",
         )
         assertEquals(0, buffer.readVariableByteInteger(), "variable header byte 3 property length")
         assertEquals(
             "yolo",
             buffer.readMqttUtf8StringNotValidatedSized().second.toString(),
-            "payload topic"
+            "payload topic",
         )
         buffer.resetForRead()
         val result = ControlPacketV5.from(buffer) as UnsubscribeRequest
@@ -55,7 +55,7 @@ class UnsubscribeRequestTests {
         val request =
             UnsubscribeRequest(
                 VariableHeader(packetIdentifier, properties = props),
-                setOf(Topic.fromOrThrow("test", Topic.Type.Filter))
+                setOf(Topic.fromOrThrow("test", Topic.Type.Filter)),
             )
         val buffer = PlatformBuffer.allocate(24)
         request.serialize(buffer)

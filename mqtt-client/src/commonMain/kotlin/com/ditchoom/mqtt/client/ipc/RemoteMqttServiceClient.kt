@@ -17,7 +17,7 @@ abstract class RemoteMqttServiceClient(
 
     override suspend fun addBroker(
         connectionOps: Collection<MqttConnectionOptions>,
-        connectionRequest: IConnectionRequest
+        connectionRequest: IConnectionRequest,
     ): MqttBroker {
         val persistence = service.getPersistence(connectionRequest)
         return persistence.addBroker(connectionOps, connectionRequest)
@@ -25,7 +25,10 @@ abstract class RemoteMqttServiceClient(
 
     override suspend fun allBrokers() = service.allBrokers()
 
-    override suspend fun removeBroker(brokerId: Int, protocolVersion: Byte) {
+    override suspend fun removeBroker(
+        brokerId: Int,
+        protocolVersion: Byte,
+    ) {
         service.removeBroker(brokerId, protocolVersion)
     }
 

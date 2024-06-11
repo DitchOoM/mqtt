@@ -30,7 +30,7 @@ fun String.validateMqttUTF8String(): Boolean {
 class InvalidMqttUtf8StringMalformedPacketException(
     msg: String,
     indexOfError: Int,
-    originalString: String
+    originalString: String,
 ) :
     MalformedPacketException("Fails to match MQTT Spec for a UTF-8 String. Error:($msg) at index $indexOfError of $originalString")
 
@@ -49,43 +49,48 @@ fun String.validateMqttString(includeWarnings: Boolean): InvalidMqttUtf8StringMa
         return InvalidMqttUtf8StringMalformedPacketException(
             "MQTT UTF-8 String too large",
             65_535,
-            substring(0, 65_535)
+            substring(0, 65_535),
         )
     }
     forEachIndexed { index, c ->
-        if (c == '\u0000')
+        if (c == '\u0000') {
             return InvalidMqttUtf8StringMalformedPacketException(
                 "Invalid Control Character null \\u0000",
                 index,
-                this
+                this,
             )
-        if (c in controlCharactersRange)
+        }
+        if (c in controlCharactersRange) {
             return InvalidMqttUtf8StringMalformedPacketException(
                 "Invalid Control Character (\\uD800..\\uDFFF)",
                 index,
-                this
+                this,
             )
+        }
     }
     if (includeWarnings) {
         forEachIndexed { index, c ->
-            if (c in shouldNotIncludeCharRange1)
+            if (c in shouldNotIncludeCharRange1) {
                 return InvalidMqttUtf8StringMalformedPacketException(
                     "Invalid Character in range (\\u0001..\\u001F)",
                     index,
-                    this
+                    this,
                 )
-            if (c in shouldNotIncludeCharRange2)
+            }
+            if (c in shouldNotIncludeCharRange2) {
                 return InvalidMqttUtf8StringMalformedPacketException(
                     "Invalid Character in range (\\u007F..\\u009F)",
                     index,
-                    this
+                    this,
                 )
-            if (c in privateUseCharRange)
+            }
+            if (c in privateUseCharRange) {
                 return InvalidMqttUtf8StringMalformedPacketException(
                     "Invalid Character in range (\\uE000..\\uF8FF)",
                     index,
-                    this
+                    this,
                 )
+            }
         }
     }
     return null

@@ -31,7 +31,7 @@ class PublishReleaseTests {
         assertEquals(
             packetIdentifier,
             buffer.readUnsignedShort().toInt(),
-            "variable header byte 1-2"
+            "variable header byte 1-2",
         )
         buffer.resetForRead()
         val pubrelResult = ControlPacketV5.from(buffer) as PublishRelease
@@ -63,12 +63,13 @@ class PublishReleaseTests {
 
     @Test
     fun reasonString() {
-        val expected = PublishRelease(
-            VariableHeader(
-                packetIdentifier,
-                properties = VariableHeader.Properties(reasonString = "yolo")
+        val expected =
+            PublishRelease(
+                VariableHeader(
+                    packetIdentifier,
+                    properties = VariableHeader.Properties(reasonString = "yolo"),
+                ),
             )
-        )
         val buffer = PlatformBuffer.allocate(13)
         expected.serialize(buffer)
         buffer.resetForRead()
@@ -77,7 +78,7 @@ class PublishReleaseTests {
         assertEquals(
             packetIdentifier,
             buffer.readUnsignedShort().toInt(),
-            "variable header byte 1-2"
+            "variable header byte 1-2",
         )
         assertEquals(ReasonCode.SUCCESS.byte, buffer.readUnsignedByte(), "reason code")
         assertEquals(7, buffer.readVariableByteInteger(), "property length")
@@ -85,7 +86,7 @@ class PublishReleaseTests {
         assertEquals(
             "yolo",
             buffer.readMqttUtf8StringNotValidatedSized().second.toString(),
-            "reason string"
+            "reason string",
         )
         buffer.resetForRead()
         val pubrelResult = ControlPacketV5.from(buffer) as PublishRelease

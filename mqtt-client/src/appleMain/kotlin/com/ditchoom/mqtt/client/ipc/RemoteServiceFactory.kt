@@ -4,5 +4,5 @@ import com.ditchoom.mqtt.client.MqttService
 
 actual suspend fun remoteMqttServiceWorkerClient(
     androidContextOrAbstractWorker: Any?,
-    inMemory: Boolean
+    inMemory: Boolean,
 ): MqttService? = null

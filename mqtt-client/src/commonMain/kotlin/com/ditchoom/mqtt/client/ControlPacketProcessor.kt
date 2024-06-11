@@ -37,9 +37,8 @@ class ControlPacketProcessor(
     private val broker: MqttBroker,
     internal val readChannel: SharedFlow<ControlPacket>,
     private val writeChannel: Channel<Collection<ControlPacket>>,
-    internal val persistence: Persistence
+    internal val persistence: Persistence,
 ) {
-
     var observer: Observer? = null
     private var currentPingJob: Job? = null
     var pingCount = 0L
@@ -47,41 +46,53 @@ class ControlPacketProcessor(
     var pingResponseCount = 0L
         private set
 
-    suspend fun publish(pub: IPublishMessage, persist: Boolean = true): IPublishMessage {
-        val publishMessageOnWire = if (persist && pub.qualityOfService.isGreaterThan(QualityOfService.AT_MOST_ONCE)) {
-            val packetId = persistence.writePubGetPacketId(broker, pub)
-            pub.maybeCopyWithNewPacketIdentifier(packetId)
-        } else {
-            pub
-        }
+    suspend fun publish(
+        pub: IPublishMessage,
+        persist: Boolean = true,
+    ): IPublishMessage {
+        val publishMessageOnWire =
+            if (persist && pub.qualityOfService.isGreaterThan(QualityOfService.AT_MOST_ONCE)) {
+                val packetId = persistence.writePubGetPacketId(broker, pub)
+                pub.maybeCopyWithNewPacketIdentifier(packetId)
+            } else {
+                pub
+            }
         write(publishMessageOnWire)
         return publishMessageOnWire
     }
 
-    suspend fun subscribe(sub: ISubscribeRequest, persist: Boolean = true): ISubscribeRequest {
-        val persistedPacket = if (persist) {
-            persistence.writeSubUpdatePacketIdAndSimplifySubscriptions(broker, sub)
-        } else {
-            sub
-        }
+    suspend fun subscribe(
+        sub: ISubscribeRequest,
+        persist: Boolean = true,
+    ): ISubscribeRequest {
+        val persistedPacket =
+            if (persist) {
+                persistence.writeSubUpdatePacketIdAndSimplifySubscriptions(broker, sub)
+            } else {
+                sub
+            }
         write(persistedPacket)
         return persistedPacket
     }
 
-    suspend fun unsubscribe(unsub: IUnsubscribeRequest, persist: Boolean = true): IUnsubscribeRequest {
-        val persistedPacket = if (persist) {
-            val packetId = persistence.writeUnsubGetPacketId(broker, unsub)
-            unsub.copyWithNewPacketIdentifier(packetId)
-        } else {
-            unsub
-        }
+    suspend fun unsubscribe(
+        unsub: IUnsubscribeRequest,
+        persist: Boolean = true,
+    ): IUnsubscribeRequest {
+        val persistedPacket =
+            if (persist) {
+                val packetId = persistence.writeUnsubGetPacketId(broker, unsub)
+                unsub.copyWithNewPacketIdentifier(packetId)
+            } else {
+                unsub
+            }
         write(persistedPacket)
         return persistedPacket
     }
 
     internal suspend inline fun <reified R : ControlPacket> awaitIncomingPacketId(
         packetIdentifier: Int,
-        controlPacketValue: Byte
+        controlPacketValue: Byte,
     ): R {
         return readChannel
             .transformWhile {
@@ -94,9 +105,10 @@ class ControlPacketProcessor(
             }.last()
     }
 
-    suspend fun queueMessagesOnReconnect() = persistence.messagesToSendOnReconnect(broker).map {
-        (it as? IPublishMessage)?.setDupFlagNewPubMessage() ?: it
-    }
+    suspend fun queueMessagesOnReconnect() =
+        persistence.messagesToSendOnReconnect(broker).map {
+            (it as? IPublishMessage)?.setDupFlagNewPubMessage() ?: it
+        }
 
     suspend fun processIncomingMessages() {
         readChannel.collect { packet ->
@@ -142,17 +154,18 @@ class ControlPacketProcessor(
         observer?.resetPingTimer(broker.identifier, broker.connectionRequest.protocolVersion.toByte())
         val delayDuration = broker.connectionRequest.keepAliveTimeoutSeconds.toInt().seconds
         cancelPingTimer()
-        currentPingJob = scope.launch {
-            observer?.delayPing(broker.identifier, broker.connectionRequest.protocolVersion.toByte(), delayDuration)
-            delay(delayDuration)
-            while (isActive) {
-                observer?.sendingPing(broker.identifier, broker.connectionRequest.protocolVersion.toByte())
-                writeChannel.send(listOf(broker.connectionRequest.controlPacketFactory.pingRequest()))
-                pingCount++
+        currentPingJob =
+            scope.launch {
                 observer?.delayPing(broker.identifier, broker.connectionRequest.protocolVersion.toByte(), delayDuration)
                 delay(delayDuration)
+                while (isActive) {
+                    observer?.sendingPing(broker.identifier, broker.connectionRequest.protocolVersion.toByte())
+                    writeChannel.send(listOf(broker.connectionRequest.controlPacketFactory.pingRequest()))
+                    pingCount++
+                    observer?.delayPing(broker.identifier, broker.connectionRequest.protocolVersion.toByte(), delayDuration)
+                    delay(delayDuration)
+                }
             }
-        }
     }
 
     fun cancelPingTimer() {
@@ -162,6 +175,7 @@ class ControlPacketProcessor(
     }
 
     private suspend fun write(packet: ControlPacket) = write(listOf(packet))
+
     private suspend fun write(packets: Collection<ControlPacket>) {
         writeChannel.send(packets)
         resetPingTimer()

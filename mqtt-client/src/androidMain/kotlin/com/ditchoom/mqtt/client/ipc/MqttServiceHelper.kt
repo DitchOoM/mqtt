@@ -18,20 +18,25 @@ import kotlin.coroutines.resumeWithException
 object MqttServiceHelper {
     private var serviceConnection: MqttServiceConnection? = null
     private var ipcClient: AndroidRemoteMqttServiceClient? = null
-    suspend fun registerService(context: Context, inMemory: Boolean = false): MqttService {
+
+    suspend fun registerService(
+        context: Context,
+        inMemory: Boolean = false,
+    ): MqttService {
         val ipcClient = ipcClient
         if (ipcClient != null) {
             return ipcClient
         }
         val i = Intent(context, MqttManagerService::class.java)
         context.startService(i)
-        val serviceBinder = suspendCancellableCoroutine {
-            val serviceConnection = MqttServiceConnection(context, it)
-            if (!context.bindService(i, serviceConnection, Context.BIND_AUTO_CREATE)) {
-                it.resumeWithException(RemoteException("Failed to allocate bind mqtt service"))
+        val serviceBinder =
+            suspendCancellableCoroutine {
+                val serviceConnection = MqttServiceConnection(context, it)
+                if (!context.bindService(i, serviceConnection, Context.BIND_AUTO_CREATE)) {
+                    it.resumeWithException(RemoteException("Failed to allocate bind mqtt service"))
+                }
+                this.serviceConnection = serviceConnection
             }
-            this.serviceConnection = serviceConnection
-        }
         val c = AndroidRemoteMqttServiceClient(serviceBinder, LocalMqttService.buildService(context, inMemory))
         this.ipcClient = c
         return c
@@ -44,7 +49,7 @@ object MqttServiceHelper {
 
     class MqttServiceConnection(
         context: Context,
-        private val cont: CancellableContinuation<IBinder>
+        private val cont: CancellableContinuation<IBinder>,
     ) : ServiceConnection {
         init {
             cont.invokeOnCancellation {
@@ -52,7 +57,10 @@ object MqttServiceHelper {
             }
         }
 
-        override fun onServiceConnected(name: ComponentName, service: IBinder) {
+        override fun onServiceConnected(
+            name: ComponentName,
+            service: IBinder,
+        ) {
             cont.resume(service)
         }
 
@@ -60,8 +68,8 @@ object MqttServiceHelper {
             cont.resumeWithException(
                 MqttException(
                     "Failed to connect to service $name",
-                    ReasonCode.NOT_AUTHORIZED.byte
-                )
+                    ReasonCode.NOT_AUTHORIZED.byte,
+                ),
             )
         }
 

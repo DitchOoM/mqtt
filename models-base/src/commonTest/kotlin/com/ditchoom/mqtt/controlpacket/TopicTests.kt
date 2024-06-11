@@ -9,7 +9,6 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class TopicTests {
-
     @Test
     fun multiLevelWildcard() {
         val topic = Topic.fromOrThrow("sport/tennis/player1/#", Topic.Type.Filter)
@@ -19,8 +18,8 @@ class TopicTests {
         assertTrue(
             validateMatchBothWays(
                 topic,
-                Topic.fromOrThrow("sport/tennis/player1/score/wimbledon", Topic.Type.Name)
-            )
+                Topic.fromOrThrow("sport/tennis/player1/score/wimbledon", Topic.Type.Name),
+            ),
         )
 
         assertTrue(validateMatchBothWays(topic, Topic.fromOrThrow("#", Topic.Type.Filter)))
@@ -33,7 +32,10 @@ class TopicTests {
         }
     }
 
-    private fun validateMatchBothWays(left: Topic?, right: Topic?): Boolean {
+    private fun validateMatchBothWays(
+        left: Topic?,
+        right: Topic?,
+    ): Boolean {
         val leftMatches = left?.matches(right) ?: false
         val rightMatches = right?.matches(left) ?: false
         return leftMatches && rightMatches

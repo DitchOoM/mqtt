@@ -69,8 +69,11 @@ data class ConnectionAcknowledgment(val header: VariableHeader = VariableHeader(
     override val isSuccessful: Boolean = header.connectReason == SUCCESS
     override val connectionReason: String = header.connectReason.name
     override val sessionPresent: Boolean = header.sessionPresent
+
     override fun variableHeader(writeBuffer: WriteBuffer) = header.serialize(writeBuffer)
+
     override fun remainingLength() = header.size()
+
     override val sessionExpiryInterval: ULong = header.properties.sessionExpiryIntervalSeconds ?: 0uL
     override val assignedClientIdentifier: String? = header.properties.assignedClientIdentifier
     override val maxPacketSize: ULong = header.properties.maximumPacketSize ?: ULong.MAX_VALUE
@@ -141,9 +144,8 @@ data class ConnectionAcknowledgment(val header: VariableHeader = VariableHeader(
          * the connection has not been authorized it might be unwise to indicate that this is an MQTT Server.
          */
         val connectReason: ReasonCode = SUCCESS,
-        val properties: Properties = Properties()
+        val properties: Properties = Properties(),
     ) {
-
         data class Properties(
             /**
              * 3.2.2.3.2 Session Expiry Interval
@@ -420,7 +422,7 @@ data class ConnectionAcknowledgment(val header: VariableHeader = VariableHeader(
              * Refer to section 4.11 Server redirection for information about how Server Reference is used.
              */
             val serverReference: String? = null,
-            val authentication: Authentication? = null
+            val authentication: Authentication? = null,
         ) {
             val props by lazy(LazyThreadSafetyMode.NONE) {
                 val props = ArrayList<Property>(16 + userProperty.size)
@@ -519,7 +521,7 @@ data class ConnectionAcknowledgment(val header: VariableHeader = VariableHeader(
                                 if (sessionExpiryIntervalSeconds != null) {
                                     throw ProtocolError(
                                         "Session Expiry Interval added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477382"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477382",
                                     )
                                 }
                                 sessionExpiryIntervalSeconds = it.seconds
@@ -529,13 +531,13 @@ data class ConnectionAcknowledgment(val header: VariableHeader = VariableHeader(
                                 if (receiveMaximum != null) {
                                     throw ProtocolError(
                                         "Receive Maximum added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477383"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477383",
                                     )
                                 }
                                 if (it.maxQos1Or2ConcurrentMessages == 0) {
                                     throw ProtocolError(
                                         "Receive Maximum cannot be set to 0 see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477383"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477383",
                                     )
                                 }
                                 receiveMaximum = it.maxQos1Or2ConcurrentMessages
@@ -545,7 +547,7 @@ data class ConnectionAcknowledgment(val header: VariableHeader = VariableHeader(
                                 if (maximumQos != null) {
                                     throw ProtocolError(
                                         "Maximum QoS added multiple times see:" +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477384"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477384",
                                     )
                                 }
                                 maximumQos = it.qos
@@ -555,7 +557,7 @@ data class ConnectionAcknowledgment(val header: VariableHeader = VariableHeader(
                                 if (retainAvailable != null) {
                                     throw ProtocolError(
                                         "Retain Available added multiple times see:" +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477385"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477385",
                                     )
                                 }
                                 retainAvailable = it.serverSupported
@@ -565,13 +567,13 @@ data class ConnectionAcknowledgment(val header: VariableHeader = VariableHeader(
                                 if (maximumPacketSize != null) {
                                     throw ProtocolError(
                                         "Maximum Packet Size added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477386"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477386",
                                     )
                                 }
                                 if (it.packetSizeLimitationBytes == 0uL) {
                                     throw ProtocolError(
                                         "Maximum Packet Size cannot be set to 0 see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477350"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477350",
                                     )
                                 }
                                 maximumPacketSize = it.packetSizeLimitationBytes
@@ -581,7 +583,7 @@ data class ConnectionAcknowledgment(val header: VariableHeader = VariableHeader(
                                 if (assignedClientIdentifier != null) {
                                     throw ProtocolError(
                                         "Assigned Client Identifier added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477387"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477387",
                                     )
                                 }
                                 assignedClientIdentifier = it.value
@@ -591,7 +593,7 @@ data class ConnectionAcknowledgment(val header: VariableHeader = VariableHeader(
                                 if (topicAlias != null) {
                                     throw ProtocolError(
                                         "Topic Alias Maximum added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477388"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477388",
                                     )
                                 }
                                 topicAlias = it.value
@@ -601,7 +603,7 @@ data class ConnectionAcknowledgment(val header: VariableHeader = VariableHeader(
                                 if (topicAlias != null) {
                                     throw ProtocolError(
                                         "Topic Alias Maximum added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477388"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477388",
                                     )
                                 }
                                 topicAlias = it.highestValueSupported
@@ -611,7 +613,7 @@ data class ConnectionAcknowledgment(val header: VariableHeader = VariableHeader(
                                 if (reasonString != null) {
                                     throw ProtocolError(
                                         "Reason String added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477389"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477389",
                                     )
                                 }
                                 reasonString = it.diagnosticInfoDontParse
@@ -622,7 +624,7 @@ data class ConnectionAcknowledgment(val header: VariableHeader = VariableHeader(
                                 if (supportsWildcardSubscriptions != null) {
                                     throw ProtocolError(
                                         "Wildcard Subscription Available added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477391"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477391",
                                     )
                                 }
                                 supportsWildcardSubscriptions = it.serverSupported
@@ -632,7 +634,7 @@ data class ConnectionAcknowledgment(val header: VariableHeader = VariableHeader(
                                 if (subscriptionIdentifiersAvailable != null) {
                                     throw ProtocolError(
                                         "Subscription Identifier Available added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477392"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477392",
                                     )
                                 }
                                 subscriptionIdentifiersAvailable = it.serverSupported
@@ -642,7 +644,7 @@ data class ConnectionAcknowledgment(val header: VariableHeader = VariableHeader(
                                 if (sharedSubscriptionAvailable != null) {
                                     throw ProtocolError(
                                         "Shared Subscription Available added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477393"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477393",
                                     )
                                 }
                                 sharedSubscriptionAvailable = it.serverSupported
@@ -652,7 +654,7 @@ data class ConnectionAcknowledgment(val header: VariableHeader = VariableHeader(
                                 if (serverKeepAlive != null) {
                                     throw ProtocolError(
                                         "Server Keep Alive added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477394"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477394",
                                     )
                                 }
                                 serverKeepAlive = it.seconds
@@ -662,7 +664,7 @@ data class ConnectionAcknowledgment(val header: VariableHeader = VariableHeader(
                                 if (responseInformation != null) {
                                     throw ProtocolError(
                                         "Response Information added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477395"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477395",
                                     )
                                 }
                                 responseInformation = it.requestResponseInformationInConnack
@@ -672,7 +674,7 @@ data class ConnectionAcknowledgment(val header: VariableHeader = VariableHeader(
                                 if (serverReference != null) {
                                     throw ProtocolError(
                                         "Server Reference added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477396"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477396",
                                     )
                                 }
                                 serverReference = it.otherServer
@@ -682,7 +684,7 @@ data class ConnectionAcknowledgment(val header: VariableHeader = VariableHeader(
                                 if (authenticationMethod != null) {
                                     throw ProtocolError(
                                         "Authentication Method added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477397"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477397",
                                     )
                                 }
                                 authenticationMethod = it.value
@@ -692,7 +694,7 @@ data class ConnectionAcknowledgment(val header: VariableHeader = VariableHeader(
                                 if (authenticationData != null) {
                                     throw ProtocolError(
                                         "Authentication Data added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477398"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477398",
                                     )
                                 }
                                 authenticationData = it.data
@@ -703,11 +705,12 @@ data class ConnectionAcknowledgment(val header: VariableHeader = VariableHeader(
                     }
                     val authMethod = authenticationMethod
                     val authData = authenticationData
-                    val auth = if (authMethod != null && authData != null) {
-                        Authentication(authMethod, authData)
-                    } else {
-                        null
-                    }
+                    val auth =
+                        if (authMethod != null && authData != null) {
+                            Authentication(authMethod, authData)
+                        } else {
+                            null
+                        }
                     return Properties(
                         sessionExpiryIntervalSeconds, receiveMaximum ?: UShort.MAX_VALUE.toInt(),
                         maximumQos ?: QualityOfService.EXACTLY_ONCE, retainAvailable ?: true,
@@ -715,7 +718,7 @@ data class ConnectionAcknowledgment(val header: VariableHeader = VariableHeader(
                         reasonString, userProperty, supportsWildcardSubscriptions ?: true,
                         subscriptionIdentifiersAvailable ?: true,
                         sharedSubscriptionAvailable ?: true,
-                        serverKeepAlive, responseInformation, serverReference, auth
+                        serverKeepAlive, responseInformation, serverReference, auth,
                     )
                 }
             }
@@ -730,28 +733,33 @@ data class ConnectionAcknowledgment(val header: VariableHeader = VariableHeader(
         fun size() = 2 + properties.size()
 
         companion object {
-
-            fun from(buffer: ReadBuffer, remainingLength: Int): VariableHeader {
+            fun from(
+                buffer: ReadBuffer,
+                remainingLength: Int,
+            ): VariableHeader {
                 val sessionPresent = buffer.readByte() == 1.toByte()
                 val connectionReasonByte = buffer.readUnsignedByte()
                 val connectionReason = connackConnectReason[connectionReasonByte]
                 if (connectionReason == null) {
                     throw MalformedPacketException("Invalid property type found in MQTT payload $connectionReason")
                 }
-                val propeties = if (remainingLength - 2 > 0) {
-                    val properties = buffer.readProperties()
-                    Properties.from(properties)
-                } else {
-                    Properties()
-                }
+                val propeties =
+                    if (remainingLength - 2 > 0) {
+                        val properties = buffer.readProperties()
+                        Properties.from(properties)
+                    } else {
+                        Properties()
+                    }
                 return VariableHeader(sessionPresent, connectionReason, propeties)
             }
         }
     }
 
     companion object {
-        fun from(buffer: ReadBuffer, remainingLength: Int) =
-            ConnectionAcknowledgment(VariableHeader.from(buffer, remainingLength))
+        fun from(
+            buffer: ReadBuffer,
+            remainingLength: Int,
+        ) = ConnectionAcknowledgment(VariableHeader.from(buffer, remainingLength))
     }
 }
 
@@ -778,6 +786,6 @@ val connackConnectReason by lazy(LazyThreadSafetyMode.NONE) {
         Pair(QOS_NOT_SUPPORTED.byte, QOS_NOT_SUPPORTED),
         Pair(USE_ANOTHER_SERVER.byte, USE_ANOTHER_SERVER),
         Pair(SERVER_MOVED.byte, SERVER_MOVED),
-        Pair(CONNECTION_RATE_EXCEEDED.byte, CONNECTION_RATE_EXCEEDED)
+        Pair(CONNECTION_RATE_EXCEEDED.byte, CONNECTION_RATE_EXCEEDED),
     )
 }

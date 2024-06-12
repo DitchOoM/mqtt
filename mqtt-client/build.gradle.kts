@@ -116,6 +116,9 @@ android {
             withJavadocJar()
         }
     }
+    lint {
+        disable += "EnsureInitializerMetadata"
+    }
     namespace = "com.ditchoom.mqtt.client"
 }
 

@@ -109,11 +109,12 @@ if (isRunningOnGithub) {
         publications.withType(MavenPublication::class) {
             groupId = publishedGroupId
             version = libraryVersion
-            artifactId = if (artifactId == "models-base") {
-                artifactName
-            } else {
-                artifactId.replaceBeforeLast('-', artifactName)
-            }
+            artifactId =
+                if (artifactId == "models-base") {
+                    artifactName
+                } else {
+                    artifactId.replaceBeforeLast('-', artifactName)
+                }
             artifact(tasks["javadocJar"])
 
             pom {

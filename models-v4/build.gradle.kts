@@ -8,7 +8,6 @@ plugins {
     id("com.android.library")
     `maven-publish`
     signing
-    id("org.jlleitschuh.gradle.ktlint")
     id("io.codearte.nexus-staging")
     id("app.cash.sqldelight")
 }
@@ -141,11 +140,12 @@ if (isRunningOnGithub) {
         publications.withType(MavenPublication::class) {
             groupId = publishedGroupId
             version = libraryVersion
-            artifactId = if (artifactId == "models-v4") {
-                artifactName
-            } else {
-                artifactId.replaceBeforeLast('-', artifactName)
-            }
+            artifactId =
+                if (artifactId == "models-v4") {
+                    artifactName
+                } else {
+                    artifactId.replaceBeforeLast('-', artifactName)
+                }
             artifact(tasks["javadocJar"])
 
             pom {
@@ -194,11 +194,6 @@ if (isRunningOnGithub) {
         password = ossPassword
         packageGroup = publishedGroupId
     }
-}
-
-ktlint {
-    verbose.set(true)
-    outputToConsole.set(true)
 }
 
 class Version(val major: UInt, val minor: UInt, val patch: UInt, val snapshot: Boolean) {

@@ -179,7 +179,7 @@ class PersistenceTests {
             val p = newDefaultPersistence(inMemory = true)
             assertEquals(0, p.allBrokers().size, "initial broker size")
             val broker = p.addBroker(setOf(testMqttConnectionOptions, testWsMqttConnectionOptions), connectionRequestMqtt4)
-            assertEquals(broker, p.brokerWithId(broker.identifier))
+            assertEquals(broker, p.brokerWithId(broker.identifier), "broker with id")
             val allBrokers = p.allBrokers()
             assertEquals(1, allBrokers.size, "single broker size")
             assertEquals(broker.toString(), allBrokers.first().toString(), "broker match")

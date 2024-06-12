@@ -108,7 +108,7 @@ android {
         aidl = true
     }
     defaultConfig {
-        minSdk = 19
+        minSdk = 21
     }
     publishing {
         singleVariant("release") {

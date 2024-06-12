@@ -82,7 +82,7 @@ android {
     compileSdk = 34
     sourceSets["main"].manifest.srcFile("src/androidMain/AndroidManifest.xml")
     defaultConfig {
-        minSdk = 19
+        minSdk = 21
     }
     namespace = "com.ditchoom.mqtt5"
     publishing {

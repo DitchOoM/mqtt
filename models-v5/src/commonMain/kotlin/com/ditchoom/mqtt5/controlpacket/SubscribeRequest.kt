@@ -39,10 +39,9 @@ import com.ditchoom.mqtt5.controlpacket.properties.readPropertiesSized
 
 data class SubscribeRequest(
     val variable: VariableHeader,
-    override val subscriptions: Set<ISubscription>
+    override val subscriptions: Set<ISubscription>,
 ) :
     ControlPacketV5(8, DirectionOfFlow.CLIENT_TO_SERVER, 0b10), ISubscribeRequest {
-
     constructor(
         packetIdentifier: UShort,
         topic: String,
@@ -50,11 +49,11 @@ data class SubscribeRequest(
         props: Properties = Properties(),
         noLocal: Boolean = false,
         retainAsPublished: Boolean = false,
-        retainHandling: RetainHandling = SEND_RETAINED_MESSAGES_AT_TIME_OF_SUBSCRIBE
+        retainHandling: RetainHandling = SEND_RETAINED_MESSAGES_AT_TIME_OF_SUBSCRIBE,
     ) :
         this(
             VariableHeader(packetIdentifier.toInt(), props),
-            setOf(Subscription.from(topic, qos, noLocal, retainAsPublished, retainHandling))
+            setOf(Subscription.from(topic, qos, noLocal, retainAsPublished, retainHandling)),
         )
 
     constructor(
@@ -64,7 +63,7 @@ data class SubscribeRequest(
         props: Properties = Properties(),
         noLocalList: List<Boolean>? = null,
         retainAsPublishedList: List<Boolean>? = null,
-        retainHandlingList: List<RetainHandling>? = null
+        retainHandlingList: List<RetainHandling>? = null,
     ) :
         this(
             VariableHeader(packetIdentifier, props),
@@ -73,18 +72,17 @@ data class SubscribeRequest(
                 qos,
                 noLocalList,
                 retainAsPublishedList,
-                retainHandlingList
-            )
+                retainHandlingList,
+            ),
         )
 
     override val packetIdentifier = variable.packetIdentifier
+
     override fun variableHeader(writeBuffer: WriteBuffer) = variable.serialize(writeBuffer)
 
-    override fun expectedResponse() =
-        SubscribeAcknowledgement(variable.packetIdentifier.toUShort(), ReasonCode.SUCCESS)
+    override fun expectedResponse() = SubscribeAcknowledgement(variable.packetIdentifier.toUShort(), ReasonCode.SUCCESS)
 
-    override fun payload(writeBuffer: WriteBuffer) =
-        subscriptions.forEach { (it as Subscription).serialize(writeBuffer) }
+    override fun payload(writeBuffer: WriteBuffer) = subscriptions.forEach { (it as Subscription).serialize(writeBuffer) }
 
     override fun remainingLength(): Int {
         val variableSize = variable.size()
@@ -109,10 +107,9 @@ data class SubscribeRequest(
 
     data class VariableHeader(
         val packetIdentifier: Int,
-        val properties: Properties = Properties()
+        val properties: Properties = Properties(),
     ) {
-        fun size() =
-            UShort.SIZE_BYTES + variableByteSize(properties.size()) + properties.size()
+        fun size() = UShort.SIZE_BYTES + variableByteSize(properties.size()) + properties.size()
 
         fun serialize(writeBuffer: WriteBuffer) {
             writeBuffer.writeUShort(packetIdentifier.toUShort())
@@ -155,7 +152,7 @@ data class SubscribeRequest(
              * User Properties on the SUBSCRIBE packet can be used to send subscription related properties from
              * the Client to the Server. The meaning of these properties is not defined by this specification.
              */
-            val userProperty: List<Pair<String, String>> = emptyList()
+            val userProperty: List<Pair<String, String>> = emptyList(),
         ) {
             val props by lazy(LazyThreadSafetyMode.NONE) {
                 val props = ArrayList<Property>(1 + userProperty.size)
@@ -193,7 +190,7 @@ data class SubscribeRequest(
                                 if (reasonString != null) {
                                     throw ProtocolError(
                                         "Reason String added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477427"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477427",
                                     )
                                 }
                                 reasonString = it.diagnosticInfoDontParse
@@ -209,7 +206,10 @@ data class SubscribeRequest(
         }
 
         companion object {
-            fun from(buffer: ReadBuffer, remainingLength: Int): Pair<Int, VariableHeader> {
+            fun from(
+                buffer: ReadBuffer,
+                remainingLength: Int,
+            ): Pair<Int, VariableHeader> {
                 val packetIdentifier = buffer.readUnsignedShort().toInt()
                 var size = 2
                 return if (remainingLength == 2) {
@@ -225,7 +225,10 @@ data class SubscribeRequest(
     }
 
     companion object {
-        fun from(buffer: ReadBuffer, remainingLength: Int): SubscribeRequest {
+        fun from(
+            buffer: ReadBuffer,
+            remainingLength: Int,
+        ): SubscribeRequest {
             val header = VariableHeader.from(buffer, remainingLength)
             val subscriptions = Subscription.fromMany(buffer, remainingLength - header.first)
             return SubscribeRequest(header.second, subscriptions)
@@ -271,9 +274,8 @@ data class Subscription(
      *
      * It is a Protocol Error to send a Retain Handling value of 3.
      */
-    override val retainHandling: RetainHandling = SEND_RETAINED_MESSAGES_AT_TIME_OF_SUBSCRIBE
+    override val retainHandling: RetainHandling = SEND_RETAINED_MESSAGES_AT_TIME_OF_SUBSCRIBE,
 ) : ISubscription {
-
     fun serialize(writeBuffer: WriteBuffer) {
         writeBuffer.writeMqttUtf8String(topicFilter.toString())
         val qosInt = maximumQos.integerValue
@@ -287,7 +289,10 @@ data class Subscription(
     fun size() = topicFilter.toString().utf8Length() + UShort.SIZE_BYTES + Byte.SIZE_BYTES
 
     companion object {
-        fun fromMany(buffer: ReadBuffer, remainingLength: Int): Set<Subscription> {
+        fun fromMany(
+            buffer: ReadBuffer,
+            remainingLength: Int,
+        ): Set<Subscription> {
             val subscriptions = HashSet<Subscription>()
             var bytesRead = 0
             while (bytesRead < remainingLength) {
@@ -315,15 +320,16 @@ data class Subscription(
             }
             val retainHandlingBit5 = subOptionsInt.shl(2).shr(7) == 1
             val retainHandlingBit4 = subOptionsInt.shl(3).shr(7) == 1
-            val retainHandling = if (retainHandlingBit5 && retainHandlingBit4) {
-                throw ProtocolError("Retain Handling Value cannot be set to 3")
-            } else if (retainHandlingBit5 && !retainHandlingBit4) {
-                DO_NOT_SEND_RETAINED_MESSAGES
-            } else if (!retainHandlingBit5 && retainHandlingBit4) {
-                SEND_RETAINED_MESSAGES_AT_SUBSCRIBE_ONLY_IF_SUBSCRIBE_DOESNT_EXISTS
-            } else {
-                SEND_RETAINED_MESSAGES_AT_TIME_OF_SUBSCRIBE
-            }
+            val retainHandling =
+                if (retainHandlingBit5 && retainHandlingBit4) {
+                    throw ProtocolError("Retain Handling Value cannot be set to 3")
+                } else if (retainHandlingBit5 && !retainHandlingBit4) {
+                    DO_NOT_SEND_RETAINED_MESSAGES
+                } else if (!retainHandlingBit5 && retainHandlingBit4) {
+                    SEND_RETAINED_MESSAGES_AT_SUBSCRIBE_ONLY_IF_SUBSCRIBE_DOESNT_EXISTS
+                } else {
+                    SEND_RETAINED_MESSAGES_AT_TIME_OF_SUBSCRIBE
+                }
             val rapBit3 = subOptionsInt.shl(4).shr(7) == 1
             val nlBit2 = subOptionsInt.shl(5).shr(7) == 1
             val qosBit1 = subOptionsInt.shl(6).shr(7) == 1
@@ -331,7 +337,7 @@ data class Subscription(
             val qos = QualityOfService.fromBooleans(qosBit1, qosBit0)
             return Pair(
                 size,
-                Subscription(topicFilter, qos, nlBit2, rapBit3, retainHandling)
+                Subscription(topicFilter, qos, nlBit2, rapBit3, retainHandling),
             )
         }
 
@@ -341,22 +347,21 @@ data class Subscription(
             noLocal: Boolean = false,
             retainAsPublished: Boolean = false,
             retainHandlingList: RetainHandling =
-                SEND_RETAINED_MESSAGES_AT_TIME_OF_SUBSCRIBE
-        ) =
-            from(
-                listOf(Topic.fromOrThrow(topic, Topic.Type.Filter)),
-                listOf(qos),
-                listOf(noLocal),
-                listOf(retainAsPublished),
-                listOf(retainHandlingList)
-            ).first()
+                SEND_RETAINED_MESSAGES_AT_TIME_OF_SUBSCRIBE,
+        ) = from(
+            listOf(Topic.fromOrThrow(topic, Topic.Type.Filter)),
+            listOf(qos),
+            listOf(noLocal),
+            listOf(retainAsPublished),
+            listOf(retainHandlingList),
+        ).first()
 
         fun from(
             topics: List<Topic>,
             qos: List<QualityOfService>,
             noLocalList: List<Boolean>? = null,
             retainAsPublishedList: List<Boolean>? = null,
-            retainHandlingList: List<RetainHandling>? = null
+            retainHandlingList: List<RetainHandling>? = null,
         ): Set<Subscription> {
             if (topics.size != qos.size) {
                 throw IllegalArgumentException("Non matching topics collection size with the QoS collection size")
@@ -376,13 +381,14 @@ data class Subscription(
                 val retainAsPublished = retainAsPublishedList?.get(index) ?: false
                 val retainHandling =
                     retainHandlingList?.get(index) ?: SEND_RETAINED_MESSAGES_AT_TIME_OF_SUBSCRIBE
-                subscriptions += Subscription(
-                    topic,
-                    qos[index],
-                    noLocal,
-                    retainAsPublished,
-                    retainHandling
-                )
+                subscriptions +=
+                    Subscription(
+                        topic,
+                        qos[index],
+                        noLocal,
+                        retainAsPublished,
+                        retainHandling,
+                    )
             }
             return subscriptions
         }

@@ -15,9 +15,14 @@ interface ControlPacketFactory {
         return from(buffer, byte1, remainingLength)
     }
 
-    fun from(buffer: ReadBuffer, byte1: UByte, remainingLength: Int): ControlPacket
+    fun from(
+        buffer: ReadBuffer,
+        byte1: UByte,
+        remainingLength: Int,
+    ): ControlPacket
 
     fun pingRequest(): IPingRequest
+
     fun pingResponse(): IPingResponse
 
     fun subscribe(
@@ -50,17 +55,17 @@ interface ControlPacketFactory {
         correlationData: ReadBuffer? = null,
         userProperty: List<Pair<String, String>> = emptyList(),
         subscriptionIdentifier: Set<Long> = emptySet(),
-        contentType: String? = null
+        contentType: String? = null,
     ): IPublishMessage
 
     fun unsubscribe(
         topic: Topic,
-        userProperty: List<Pair<String, String>> = emptyList()
+        userProperty: List<Pair<String, String>> = emptyList(),
     ) = unsubscribe(setOf(topic), userProperty)
 
     fun unsubscribe(
         topics: Set<Topic>,
-        userProperty: List<Pair<String, String>> = emptyList()
+        userProperty: List<Pair<String, String>> = emptyList(),
     ): IUnsubscribeRequest
 
     fun disconnect(
@@ -73,6 +78,6 @@ interface ControlPacketFactory {
     suspend fun defaultPersistence(
         androidContext: Any? = null,
         name: String = "mqtt$protocolVersion.db",
-        inMemory: Boolean = false
+        inMemory: Boolean = false,
     ): Persistence
 }

@@ -27,12 +27,12 @@ import kotlin.test.assertFailsWith
 import kotlin.test.fail
 
 class AuthenticationExchangeTests {
-
     private val emptyStringBuffer = PlatformBuffer.allocate(0)
-    private val buffer123 = PlatformBuffer.allocate(3).also {
-        it.write("123".toReadBuffer(Charset.UTF8))
-        it.resetForRead()
-    }
+    private val buffer123 =
+        PlatformBuffer.allocate(3).also {
+            it.write("123".toReadBuffer(Charset.UTF8))
+            it.resetForRead()
+        }
 
     @Test
     fun serializationByteVerification() {
@@ -50,7 +50,7 @@ class AuthenticationExchangeTests {
         assertEquals(
             0x15.toUByte(),
             buffer.readUnsignedByte(),
-            "identifier of the authentication method"
+            "identifier of the authentication method",
         )
         assertEquals(4u, buffer.readUnsignedShort())
         assertEquals("test", buffer.readString(4, Charset.UTF8), "authentication method value")
@@ -69,7 +69,7 @@ class AuthenticationExchangeTests {
         assertEquals(
             "hello",
             buffer.readMqttUtf8StringNotValidatedSized().second.toString(),
-            "auth method string"
+            "auth method string",
         )
         assertEquals(0x16, buffer.readVariableByteInteger(), "property identifier auth data")
         assertEquals(3u, buffer.readUnsignedShort(), "auth data size")
@@ -94,7 +94,7 @@ class AuthenticationExchangeTests {
         assertEquals(
             "test",
             buffer.readMqttUtf8StringNotValidatedSized().second.toString(),
-            "auth method string"
+            "auth method string",
         )
         assertEquals(0x16, buffer.readVariableByteInteger(), "property identifier auth data")
         assertEquals(0u, buffer.readUnsignedShort(), "auth data size")
@@ -113,10 +113,11 @@ class AuthenticationExchangeTests {
     @Test
     fun reasonString() {
         val buffer = PlatformBuffer.allocate(18)
-        val props = Properties(
-            Authentication("2", emptyStringBuffer),
-            reasonString = "yolo"
-        )
+        val props =
+            Properties(
+                Authentication("2", emptyStringBuffer),
+                reasonString = "yolo",
+            )
         val header = VariableHeader(SUCCESS, properties = props)
         val expected = AuthenticationExchange(header)
         expected.serialize(buffer)
@@ -144,12 +145,13 @@ class AuthenticationExchangeTests {
 
     @Test
     fun variableHeaderPropertyByteValidation() {
-        val props = Properties.from(
-            setOf(
-                AuthenticationMethod("2"),
-                UserProperty("key", "value")
+        val props =
+            Properties.from(
+                setOf(
+                    AuthenticationMethod("2"),
+                    UserProperty("key", "value"),
+                ),
             )
-        )
         val userPropertyResult = props.userProperty
         for ((key, value) in userPropertyResult) {
             assertEquals(key, "key")
@@ -170,23 +172,24 @@ class AuthenticationExchangeTests {
         assertEquals(
             "key",
             buffer.readMqttUtf8StringNotValidatedSized().second.toString(),
-            "user property key"
+            "user property key",
         )
         assertEquals(
             "value",
             buffer.readMqttUtf8StringNotValidatedSized().second.toString(),
-            "user property value"
+            "user property value",
         )
     }
 
     @Test
     fun variableHeaderPropertyUserProperty() {
-        val props = Properties.from(
-            setOf(
-                AuthenticationMethod("2"),
-                UserProperty("key", "value")
+        val props =
+            Properties.from(
+                setOf(
+                    AuthenticationMethod("2"),
+                    UserProperty("key", "value"),
+                ),
             )
-        )
         val userPropertyResult = props.userProperty
         for ((key, value) in userPropertyResult) {
             assertEquals(key, "key")

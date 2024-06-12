@@ -6,7 +6,7 @@ import com.ditchoom.mqtt.controlpacket.IUnsubscribeAcknowledgment
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
 
 data class UnsubscribeAcknowledgment(override val packetIdentifier: Int) :
-    ControlPacketV4(IUnsubscribeAcknowledgment.controlPacketValue, DirectionOfFlow.SERVER_TO_CLIENT),
+    ControlPacketV4(IUnsubscribeAcknowledgment.CONTROL_PACKET_VALUE, DirectionOfFlow.SERVER_TO_CLIENT),
     IUnsubscribeAcknowledgment {
     override fun remainingLength() = 2
 

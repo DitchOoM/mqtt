@@ -27,7 +27,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.take
 
 class LocalMqttClient(
-    internal val connectivityManager: ConnectivityManager
+    internal val connectivityManager: ConnectivityManager,
 ) : MqttClient {
     internal val scope: CoroutineScope = connectivityManager.scope
     internal val processor: ControlPacketProcessor = connectivityManager.processor
@@ -48,8 +48,7 @@ class LocalMqttClient(
         }
     override val packetFactory: ControlPacketFactory = connectivityManager.broker.connectionRequest.controlPacketFactory
 
-    override suspend fun currentConnectionAcknowledgment(): IConnectionAcknowledgment? =
-        connectivityManager.currentConnack()
+    override suspend fun currentConnectionAcknowledgment(): IConnectionAcknowledgment? = connectivityManager.currentConnack()
 
     override suspend fun awaitConnectivity(): IConnectionAcknowledgment {
         var c = currentConnectionAcknowledgment()
@@ -60,16 +59,21 @@ class LocalMqttClient(
     }
 
     override suspend fun pingCount() = connectivityManager.processor.pingCount
+
     override suspend fun pingResponseCount() = connectivityManager.processor.pingResponseCount
 
-    suspend fun sendQueuedPublishMessage(packetId: Int, pubQos0: IPublishMessage?) {
-        val pub = if (pubQos0 != null && pubQos0.qualityOfService == QualityOfService.AT_MOST_ONCE) {
-            pubQos0
-        } else {
-            connectivityManager.persistence.getPubWithPacketId(
-                connectivityManager.broker, packetId
-            )
-        } ?: return
+    suspend fun sendQueuedPublishMessage(
+        packetId: Int,
+        pubQos0: IPublishMessage?,
+    ) {
+        val pub =
+            if (pubQos0 != null && pubQos0.qualityOfService == QualityOfService.AT_MOST_ONCE) {
+                pubQos0
+            } else {
+                connectivityManager.persistence.getPubWithPacketId(
+                    connectivityManager.broker, packetId,
+                )
+            } ?: return
         processor.publish(pub, false)
     }
 
@@ -86,28 +90,31 @@ class LocalMqttClient(
             QualityOfService.AT_LEAST_ONCE -> {
                 check(publishMessage.packetIdentifier != NO_PACKET_ID) { "PacketId must be set by the persistence" }
                 val packetId = publishMessage.packetIdentifier
-                val pubAck = scope.async {
-                    processor.awaitIncomingPacketId<IPublishAcknowledgment>(
-                        packetId,
-                        IPublishAcknowledgment.controlPacketValue
-                    )
-                }
+                val pubAck =
+                    scope.async {
+                        processor.awaitIncomingPacketId<IPublishAcknowledgment>(
+                            packetId,
+                            IPublishAcknowledgment.CONTROL_PACKET_VALUE,
+                        )
+                    }
                 PublishOperation.QoSAtLeastOnce(packetId, pubAck)
             }
 
             QualityOfService.EXACTLY_ONCE -> {
                 val packetId = publishMessage.packetIdentifier
                 check(publishMessage.packetIdentifier != NO_PACKET_ID) { "PacketId must be set by the persistence" }
-                val pubRecReceived = scope.async {
-                    processor.awaitIncomingPacketId(
-                        packetId,
-                        IPublishReceived.controlPacketValue
-                    ) as IPublishReceived
-                }
-                val pubCompReceived = scope.async {
-                    pubRecReceived.await()
-                    processor.awaitIncomingPacketId<IPublishComplete>(packetId, IPublishComplete.controlPacketValue)
-                }
+                val pubRecReceived =
+                    scope.async {
+                        processor.awaitIncomingPacketId(
+                            packetId,
+                            IPublishReceived.CONTROL_PACKET_VALUE,
+                        ) as IPublishReceived
+                    }
+                val pubCompReceived =
+                    scope.async {
+                        pubRecReceived.await()
+                        processor.awaitIncomingPacketId<IPublishComplete>(packetId, IPublishComplete.CONTROL_PACKET_VALUE)
+                    }
                 PublishOperation.QoSExactlyOnce(packetId, pubRecReceived, pubCompReceived)
             }
         }
@@ -135,9 +142,9 @@ class LocalMqttClient(
             scope.async {
                 processor.awaitIncomingPacketId(
                     subscribeRequestSent.packetIdentifier,
-                    ISubscribeAcknowledgement.controlPacketValue
+                    ISubscribeAcknowledgement.CONTROL_PACKET_VALUE,
                 ) as ISubscribeAcknowledgement
-            }
+            },
         )
     }
 
@@ -157,9 +164,9 @@ class LocalMqttClient(
             scope.async {
                 processor.awaitIncomingPacketId(
                     unsubscribeRequestSent.packetIdentifier,
-                    IUnsubscribeAcknowledgment.controlPacketValue
+                    IUnsubscribeAcknowledgment.CONTROL_PACKET_VALUE,
                 ) as IUnsubscribeAcknowledgment
-            }
+            },
         )
     }
 
@@ -172,11 +179,12 @@ class LocalMqttClient(
     }
 
     internal fun isStopped() = connectivityManager.isStopped
+
     override suspend fun connectionCount(): Long = connectivityManager.connectionCount
+
     override suspend fun connectionAttempts(): Long = connectivityManager.connectionAttempts
 
     companion object {
-
         fun stayConnected(
             scope: CoroutineScope = CoroutineScope(Dispatchers.Default + CoroutineName("MQTT Stay Connected")),
             broker: MqttBroker,
@@ -184,16 +192,17 @@ class LocalMqttClient(
             allocateSharedMemoryInitial: Boolean = false,
             observer: Observer? = null,
             sentMessage: (ReadBuffer) -> Unit = {},
-            incomingMessage: (UByte, Int, ReadBuffer) -> Unit = { _, _, _ -> }
+            incomingMessage: (UByte, Int, ReadBuffer) -> Unit = { _, _, _ -> },
         ): LocalMqttClient {
-            val connectivityManager = ConnectivityManager(
-                scope,
-                persistence,
-                broker,
-                allocateSharedMemoryInitial,
-                sentMessage,
-                incomingMessage
-            )
+            val connectivityManager =
+                ConnectivityManager(
+                    scope,
+                    persistence,
+                    broker,
+                    allocateSharedMemoryInitial,
+                    sentMessage,
+                    incomingMessage,
+                )
             val c = LocalMqttClient(connectivityManager)
             c.observer = observer
             connectivityManager.stayConnected()
@@ -207,16 +216,17 @@ class LocalMqttClient(
             allocateSharedMemoryInitial: Boolean = false,
             observer: Observer? = null,
             sentMessage: (ReadBuffer) -> Unit = {},
-            incomingMessage: (UByte, Int, ReadBuffer) -> Unit = { _, _, _ -> }
+            incomingMessage: (UByte, Int, ReadBuffer) -> Unit = { _, _, _ -> },
         ): LocalMqttClient {
-            val connectivityManager = ConnectivityManager(
-                scope,
-                persistence,
-                broker,
-                allocateSharedMemoryInitial,
-                sentMessage,
-                incomingMessage
-            )
+            val connectivityManager =
+                ConnectivityManager(
+                    scope,
+                    persistence,
+                    broker,
+                    allocateSharedMemoryInitial,
+                    sentMessage,
+                    incomingMessage,
+                )
             val c = LocalMqttClient(connectivityManager)
             c.observer = observer
             connectivityManager.connectOnce()

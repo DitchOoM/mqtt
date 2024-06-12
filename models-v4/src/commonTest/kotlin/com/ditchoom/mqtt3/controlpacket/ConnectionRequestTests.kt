@@ -16,7 +16,6 @@ import kotlin.test.assertTrue
 import kotlin.test.fail
 
 class ConnectionRequestTests {
-
     @Test
     fun fixedHeaderByte1() {
         val connectionRequest = ConnectionRequest()
@@ -37,7 +36,7 @@ class ConnectionRequestTests {
         assertEquals(
             remainingLength.toInt(),
             12,
-            "invalid remaining length on the CONNECT fixed header"
+            "invalid remaining length on the CONNECT fixed header",
         )
     }
 
@@ -172,57 +171,58 @@ class ConnectionRequestTests {
         val usernameFlag = connectFlagsPackedInByte.shr(7) == 1
         assertFalse(
             usernameFlag,
-            "invalid byte 8 bit 7 on the CONNECT variable header for username flag"
+            "invalid byte 8 bit 7 on the CONNECT variable header for username flag",
         )
         val passwordFlag = connectFlagsPackedInByte.shl(1).shr(7) == 1
         assertFalse(
             passwordFlag,
-            "invalid byte 8 bit 6 on the CONNECT variable header for password flag"
+            "invalid byte 8 bit 6 on the CONNECT variable header for password flag",
         )
         val willRetain = connectFlagsPackedInByte.shl(2).shr(7) == 1
         assertFalse(
             willRetain,
-            "invalid byte 8 bit 5 on the CONNECT variable header for willRetain flag"
+            "invalid byte 8 bit 5 on the CONNECT variable header for willRetain flag",
         )
         val willQosBit4 = connectFlagsPackedInByte.shl(3).shr(7) == 1
         assertFalse(
             willQosBit4,
-            "invalid byte 8 bit 4 on the CONNECT variable header for willQosBit4 flag"
+            "invalid byte 8 bit 4 on the CONNECT variable header for willQosBit4 flag",
         )
         val willQosBit3 = connectFlagsPackedInByte.shl(4).shr(7) == 1
         assertFalse(
             willQosBit3,
-            "invalid byte 8 bit 3 on the CONNECT variable header for willQosBit3 flag"
+            "invalid byte 8 bit 3 on the CONNECT variable header for willQosBit3 flag",
         )
         val willQos = QualityOfService.fromBooleans(willQosBit4, willQosBit3)
         assertEquals(
             willQos,
             AT_MOST_ONCE,
-            "invalid byte 8 qos on the CONNECT variable header for willQos flag"
+            "invalid byte 8 qos on the CONNECT variable header for willQos flag",
         )
         val willFlag = connectFlagsPackedInByte.shl(5).shr(7) == 1
         assertFalse(
             willFlag,
-            "invalid byte 8 bit 2 on the CONNECT variable header for willFlag flag"
+            "invalid byte 8 bit 2 on the CONNECT variable header for willFlag flag",
         )
         val cleanStart = connectFlagsPackedInByte.shl(6).shr(7) == 1
         assertFalse(
             cleanStart,
-            "invalid byte 8 bit 1 on the CONNECT variable header for cleanSession flag"
+            "invalid byte 8 bit 1 on the CONNECT variable header for cleanSession flag",
         )
         val reserved = connectFlagsPackedInByte.shl(7).shr(7) == 1
         assertFalse(
             reserved,
-            "invalid byte 8 bit 0 on the CONNECT variable header for reserved flag"
+            "invalid byte 8 bit 0 on the CONNECT variable header for reserved flag",
         )
     }
 
     @Test
     fun variableHeaderConnectFlagsByte8HasUsername() {
-        val connectionRequest = ConnectionRequest(
-            VariableHeader(willQos = AT_MOST_ONCE, hasUserName = true),
-            ConnectionRequest.Payload(userName = "yolo")
-        )
+        val connectionRequest =
+            ConnectionRequest(
+                VariableHeader(willQos = AT_MOST_ONCE, hasUserName = true),
+                ConnectionRequest.Payload(userName = "yolo"),
+            )
         val buffer = PlatformBuffer.allocate(20)
         connectionRequest.serialize(buffer)
         buffer.resetForRead()
@@ -240,57 +240,58 @@ class ConnectionRequestTests {
         val usernameFlag = connectFlagsPackedInByte.shr(7) == 1
         assertTrue(
             usernameFlag,
-            "invalid byte 8 bit 7 on the CONNECT variable header for username flag"
+            "invalid byte 8 bit 7 on the CONNECT variable header for username flag",
         )
         val passwordFlag = connectFlagsPackedInByte.shl(1).shr(7) == 1
         assertFalse(
             passwordFlag,
-            "invalid byte 8 bit 6 on the CONNECT variable header for password flag"
+            "invalid byte 8 bit 6 on the CONNECT variable header for password flag",
         )
         val willRetain = connectFlagsPackedInByte.shl(2).shr(7) == 1
         assertFalse(
             willRetain,
-            "invalid byte 8 bit 5 on the CONNECT variable header for willRetain flag"
+            "invalid byte 8 bit 5 on the CONNECT variable header for willRetain flag",
         )
         val willQosBit4 = connectFlagsPackedInByte.shl(3).shr(7) == 1
         assertFalse(
             willQosBit4,
-            "invalid byte 8 bit 4 on the CONNECT variable header for willQosBit4 flag"
+            "invalid byte 8 bit 4 on the CONNECT variable header for willQosBit4 flag",
         )
         val willQosBit3 = connectFlagsPackedInByte.shl(4).shr(7) == 1
         assertFalse(
             willQosBit3,
-            "invalid byte 8 bit 3 on the CONNECT variable header for willQosBit3 flag"
+            "invalid byte 8 bit 3 on the CONNECT variable header for willQosBit3 flag",
         )
         val willQos = QualityOfService.fromBooleans(willQosBit4, willQosBit3)
         assertEquals(
             willQos,
             AT_MOST_ONCE,
-            "invalid byte 8 qos on the CONNECT variable header for willQos flag"
+            "invalid byte 8 qos on the CONNECT variable header for willQos flag",
         )
         val willFlag = connectFlagsPackedInByte.shl(5).shr(7) == 1
         assertFalse(
             willFlag,
-            "invalid byte 8 bit 2 on the CONNECT variable header for willFlag flag"
+            "invalid byte 8 bit 2 on the CONNECT variable header for willFlag flag",
         )
         val cleanStart = connectFlagsPackedInByte.shl(6).shr(7) == 1
         assertFalse(
             cleanStart,
-            "invalid byte 8 bit 1 on the CONNECT variable header for cleanSession flag"
+            "invalid byte 8 bit 1 on the CONNECT variable header for cleanSession flag",
         )
         val reserved = connectFlagsPackedInByte.shl(7).shr(7) == 1
         assertFalse(
             reserved,
-            "invalid byte 8 bit 0 on the CONNECT variable header for reserved flag"
+            "invalid byte 8 bit 0 on the CONNECT variable header for reserved flag",
         )
     }
 
     @Test
     fun variableHeaderConnectFlagsByte8HasPassword() {
-        val connectionRequest = ConnectionRequest(
-            VariableHeader(willQos = AT_MOST_ONCE, hasPassword = true),
-            ConnectionRequest.Payload(password = "yolo")
-        )
+        val connectionRequest =
+            ConnectionRequest(
+                VariableHeader(willQos = AT_MOST_ONCE, hasPassword = true),
+                ConnectionRequest.Payload(password = "yolo"),
+            )
         val buffer = PlatformBuffer.allocate(20)
         connectionRequest.serialize(buffer)
         buffer.resetForRead()
@@ -311,48 +312,48 @@ class ConnectionRequestTests {
         val usernameFlag = connectFlagsPackedInByte.shr(7) == 1
         assertFalse(
             usernameFlag,
-            "invalid byte 8 bit 7 on the CONNECT variable header for username flag"
+            "invalid byte 8 bit 7 on the CONNECT variable header for username flag",
         )
         val passwordFlag = connectFlagsPackedInByte.shl(1).shr(7) == 1
         assertTrue(
             passwordFlag,
-            "invalid byte 8 bit 6 on the CONNECT variable header for password flag"
+            "invalid byte 8 bit 6 on the CONNECT variable header for password flag",
         )
         val willRetain = connectFlagsPackedInByte.shl(2).shr(7) == 1
         assertFalse(
             willRetain,
-            "invalid byte 8 bit 5 on the CONNECT variable header for willRetain flag"
+            "invalid byte 8 bit 5 on the CONNECT variable header for willRetain flag",
         )
         val willQosBit4 = connectFlagsPackedInByte.shl(3).shr(7) == 1
         assertFalse(
             willQosBit4,
-            "invalid byte 8 bit 4 on the CONNECT variable header for willQosBit4 flag"
+            "invalid byte 8 bit 4 on the CONNECT variable header for willQosBit4 flag",
         )
         val willQosBit3 = connectFlagsPackedInByte.shl(4).shr(7) == 1
         assertFalse(
             willQosBit3,
-            "invalid byte 8 bit 3 on the CONNECT variable header for willQosBit3 flag"
+            "invalid byte 8 bit 3 on the CONNECT variable header for willQosBit3 flag",
         )
         val willQos = QualityOfService.fromBooleans(willQosBit4, willQosBit3)
         assertEquals(
             willQos,
             AT_MOST_ONCE,
-            "invalid byte 8 qos on the CONNECT variable header for willQos flag"
+            "invalid byte 8 qos on the CONNECT variable header for willQos flag",
         )
         val willFlag = connectFlagsPackedInByte.shl(5).shr(7) == 1
         assertFalse(
             willFlag,
-            "invalid byte 8 bit 2 on the CONNECT variable header for willFlag flag"
+            "invalid byte 8 bit 2 on the CONNECT variable header for willFlag flag",
         )
         val cleanStart = connectFlagsPackedInByte.shl(6).shr(7) == 1
         assertFalse(
             cleanStart,
-            "invalid byte 8 bit 1 on the CONNECT variable header for cleanSession flag"
+            "invalid byte 8 bit 1 on the CONNECT variable header for cleanSession flag",
         )
         val reserved = connectFlagsPackedInByte.shl(7).shr(7) == 1
         assertFalse(
             reserved,
-            "invalid byte 8 bit 0 on the CONNECT variable header for reserved flag"
+            "invalid byte 8 bit 0 on the CONNECT variable header for reserved flag",
         )
     }
 
@@ -360,7 +361,7 @@ class ConnectionRequestTests {
     fun variableHeaderConnectFlagsByte8HasWillRetainCheckWarning() {
         assertNotNull(
             VariableHeader(willQos = AT_MOST_ONCE, willRetain = true).validateOrGetWarning(),
-            "should of provided an warning"
+            "should of provided an warning",
         )
     }
 
@@ -385,48 +386,48 @@ class ConnectionRequestTests {
         val usernameFlag = connectFlagsPackedInByte.shr(7) == 1
         assertFalse(
             usernameFlag,
-            "invalid byte 8 bit 7 on the CONNECT variable header for username flag"
+            "invalid byte 8 bit 7 on the CONNECT variable header for username flag",
         )
         val passwordFlag = connectFlagsPackedInByte.shl(1).shr(7) == 1
         assertFalse(
             passwordFlag,
-            "invalid byte 8 bit 6 on the CONNECT variable header for password flag"
+            "invalid byte 8 bit 6 on the CONNECT variable header for password flag",
         )
         val willRetain = connectFlagsPackedInByte.shl(2).shr(7) == 1
         assertTrue(
             willRetain,
-            "invalid byte 8 bit 5 on the CONNECT variable header for willRetain flag"
+            "invalid byte 8 bit 5 on the CONNECT variable header for willRetain flag",
         )
         val willQosBit4 = connectFlagsPackedInByte.shl(3).shr(7) == 1
         assertFalse(
             willQosBit4,
-            "invalid byte 8 bit 4 on the CONNECT variable header for willQosBit4 flag"
+            "invalid byte 8 bit 4 on the CONNECT variable header for willQosBit4 flag",
         )
         val willQosBit3 = connectFlagsPackedInByte.shl(4).shr(7) == 1
         assertFalse(
             willQosBit3,
-            "invalid byte 8 bit 3 on the CONNECT variable header for willQosBit3 flag"
+            "invalid byte 8 bit 3 on the CONNECT variable header for willQosBit3 flag",
         )
         val willQos = QualityOfService.fromBooleans(willQosBit4, willQosBit3)
         assertEquals(
             willQos,
             AT_MOST_ONCE,
-            "invalid byte 8 qos on the CONNECT variable header for willQos flag"
+            "invalid byte 8 qos on the CONNECT variable header for willQos flag",
         )
         val willFlag = connectFlagsPackedInByte.shl(5).shr(7) == 1
         assertFalse(
             willFlag,
-            "invalid byte 8 bit 2 on the CONNECT variable header for willFlag flag"
+            "invalid byte 8 bit 2 on the CONNECT variable header for willFlag flag",
         )
         val cleanStart = connectFlagsPackedInByte.shl(6).shr(7) == 1
         assertFalse(
             cleanStart,
-            "invalid byte 8 bit 1 on the CONNECT variable header for cleanSession flag"
+            "invalid byte 8 bit 1 on the CONNECT variable header for cleanSession flag",
         )
         val reserved = connectFlagsPackedInByte.shl(7).shr(7) == 1
         assertFalse(
             reserved,
-            "invalid byte 8 bit 0 on the CONNECT variable header for reserved flag"
+            "invalid byte 8 bit 0 on the CONNECT variable header for reserved flag",
         )
     }
 
@@ -450,48 +451,48 @@ class ConnectionRequestTests {
         val usernameFlag = connectFlagsPackedInByte.shr(7) == 1
         assertFalse(
             usernameFlag,
-            "invalid byte 8 bit 7 on the CONNECT variable header for username flag"
+            "invalid byte 8 bit 7 on the CONNECT variable header for username flag",
         )
         val passwordFlag = connectFlagsPackedInByte.shl(1).shr(7) == 1
         assertFalse(
             passwordFlag,
-            "invalid byte 8 bit 6 on the CONNECT variable header for password flag"
+            "invalid byte 8 bit 6 on the CONNECT variable header for password flag",
         )
         val willRetain = connectFlagsPackedInByte.shl(2).shr(7) == 1
         assertFalse(
             willRetain,
-            "invalid byte 8 bit 5 on the CONNECT variable header for willRetain flag"
+            "invalid byte 8 bit 5 on the CONNECT variable header for willRetain flag",
         )
         val willQosBit4 = connectFlagsPackedInByte.shl(3).shr(7) == 1
         assertFalse(
             willQosBit4,
-            "invalid byte 8 bit 4 on the CONNECT variable header for willQosBit4 flag"
+            "invalid byte 8 bit 4 on the CONNECT variable header for willQosBit4 flag",
         )
         val willQosBit3 = connectFlagsPackedInByte.shl(4).shr(7) == 1
         assertFalse(
             willQosBit3,
-            "invalid byte 8 bit 3 on the CONNECT variable header for willQosBit3 flag"
+            "invalid byte 8 bit 3 on the CONNECT variable header for willQosBit3 flag",
         )
         val willQos = QualityOfService.fromBooleans(willQosBit4, willQosBit3)
         assertEquals(
             willQos,
             AT_MOST_ONCE,
-            "invalid byte 8 qos on the CONNECT variable header for willQos flag"
+            "invalid byte 8 qos on the CONNECT variable header for willQos flag",
         )
         val willFlag = connectFlagsPackedInByte.shl(5).shr(7) == 1
         assertFalse(
             willFlag,
-            "invalid byte 8 bit 2 on the CONNECT variable header for willFlag flag"
+            "invalid byte 8 bit 2 on the CONNECT variable header for willFlag flag",
         )
         val cleanStart = connectFlagsPackedInByte.shl(6).shr(7) == 1
         assertFalse(
             cleanStart,
-            "invalid byte 8 bit 1 on the CONNECT variable header for cleanSession flag"
+            "invalid byte 8 bit 1 on the CONNECT variable header for cleanSession flag",
         )
         val reserved = connectFlagsPackedInByte.shl(7).shr(7) == 1
         assertFalse(
             reserved,
-            "invalid byte 8 bit 0 on the CONNECT variable header for reserved flag"
+            "invalid byte 8 bit 0 on the CONNECT variable header for reserved flag",
         )
     }
 
@@ -515,48 +516,48 @@ class ConnectionRequestTests {
         val usernameFlag = connectFlagsPackedInByte.shr(7) == 1
         assertFalse(
             usernameFlag,
-            "invalid byte 8 bit 7 on the CONNECT variable header for username flag"
+            "invalid byte 8 bit 7 on the CONNECT variable header for username flag",
         )
         val passwordFlag = connectFlagsPackedInByte.shl(1).shr(7) == 1
         assertFalse(
             passwordFlag,
-            "invalid byte 8 bit 6 on the CONNECT variable header for password flag"
+            "invalid byte 8 bit 6 on the CONNECT variable header for password flag",
         )
         val willRetain = connectFlagsPackedInByte.shl(2).shr(7) == 1
         assertFalse(
             willRetain,
-            "invalid byte 8 bit 5 on the CONNECT variable header for willRetain flag"
+            "invalid byte 8 bit 5 on the CONNECT variable header for willRetain flag",
         )
         val willQosBit4 = connectFlagsPackedInByte.shl(3).shr(7) == 1
         assertTrue(
             willQosBit4,
-            "invalid byte 8 bit 4 on the CONNECT variable header for willQosBit4 flag"
+            "invalid byte 8 bit 4 on the CONNECT variable header for willQosBit4 flag",
         )
         val willQosBit3 = connectFlagsPackedInByte.shl(4).shr(7) == 1
         assertFalse(
             willQosBit3,
-            "invalid byte 8 bit 3 on the CONNECT variable header for willQosBit3 flag"
+            "invalid byte 8 bit 3 on the CONNECT variable header for willQosBit3 flag",
         )
         val willQos = QualityOfService.fromBooleans(willQosBit4, willQosBit3)
         assertEquals(
             willQos,
             EXACTLY_ONCE,
-            "invalid byte 8 qos on the CONNECT variable header for willQos flag"
+            "invalid byte 8 qos on the CONNECT variable header for willQos flag",
         )
         val willFlag = connectFlagsPackedInByte.shl(5).shr(7) == 1
         assertFalse(
             willFlag,
-            "invalid byte 8 bit 2 on the CONNECT variable header for willFlag flag"
+            "invalid byte 8 bit 2 on the CONNECT variable header for willFlag flag",
         )
         val cleanStart = connectFlagsPackedInByte.shl(6).shr(7) == 1
         assertFalse(
             cleanStart,
-            "invalid byte 8 bit 1 on the CONNECT variable header for cleanSession flag"
+            "invalid byte 8 bit 1 on the CONNECT variable header for cleanSession flag",
         )
         val reserved = connectFlagsPackedInByte.shl(7).shr(7) == 1
         assertFalse(
             reserved,
-            "invalid byte 8 bit 0 on the CONNECT variable header for reserved flag"
+            "invalid byte 8 bit 0 on the CONNECT variable header for reserved flag",
         )
     }
 
@@ -581,48 +582,48 @@ class ConnectionRequestTests {
         val usernameFlag = connectFlagsPackedInByte.shr(7) == 1
         assertFalse(
             usernameFlag,
-            "invalid byte 8 bit 7 on the CONNECT variable header for username flag"
+            "invalid byte 8 bit 7 on the CONNECT variable header for username flag",
         )
         val passwordFlag = connectFlagsPackedInByte.shl(1).shr(7) == 1
         assertFalse(
             passwordFlag,
-            "invalid byte 8 bit 6 on the CONNECT variable header for password flag"
+            "invalid byte 8 bit 6 on the CONNECT variable header for password flag",
         )
         val willRetain = connectFlagsPackedInByte.shl(2).shr(7) == 1
         assertFalse(
             willRetain,
-            "invalid byte 8 bit 5 on the CONNECT variable header for willRetain flag"
+            "invalid byte 8 bit 5 on the CONNECT variable header for willRetain flag",
         )
         val willQosBit4 = connectFlagsPackedInByte.shl(3).shr(7) == 1
         assertFalse(
             willQosBit4,
-            "invalid byte 8 bit 4 on the CONNECT variable header for willQosBit4 flag"
+            "invalid byte 8 bit 4 on the CONNECT variable header for willQosBit4 flag",
         )
         val willQosBit3 = connectFlagsPackedInByte.shl(4).shr(7) == 1
         assertFalse(
             willQosBit3,
-            "invalid byte 8 bit 3 on the CONNECT variable header for willQosBit3 flag"
+            "invalid byte 8 bit 3 on the CONNECT variable header for willQosBit3 flag",
         )
         val willQos = QualityOfService.fromBooleans(willQosBit4, willQosBit3)
         assertEquals(
             willQos,
             AT_MOST_ONCE,
-            "invalid byte 8 qos on the CONNECT variable header for willQos flag"
+            "invalid byte 8 qos on the CONNECT variable header for willQos flag",
         )
         val willFlag = connectFlagsPackedInByte.shl(5).shr(7) == 1
         assertTrue(
             willFlag,
-            "invalid byte 8 bit 2 on the CONNECT variable header for willFlag flag"
+            "invalid byte 8 bit 2 on the CONNECT variable header for willFlag flag",
         )
         val cleanStart = connectFlagsPackedInByte.shl(6).shr(7) == 1
         assertFalse(
             cleanStart,
-            "invalid byte 8 bit 1 on the CONNECT variable header for cleanSession flag"
+            "invalid byte 8 bit 1 on the CONNECT variable header for cleanSession flag",
         )
         val reserved = connectFlagsPackedInByte.shl(7).shr(7) == 1
         assertFalse(
             reserved,
-            "invalid byte 8 bit 0 on the CONNECT variable header for reserved flag"
+            "invalid byte 8 bit 0 on the CONNECT variable header for reserved flag",
         )
     }
 
@@ -647,48 +648,48 @@ class ConnectionRequestTests {
         val usernameFlag = connectFlagsPackedInByte.shr(7) == 1
         assertFalse(
             usernameFlag,
-            "invalid byte 8 bit 7 on the CONNECT variable header for username flag"
+            "invalid byte 8 bit 7 on the CONNECT variable header for username flag",
         )
         val passwordFlag = connectFlagsPackedInByte.shl(1).shr(7) == 1
         assertFalse(
             passwordFlag,
-            "invalid byte 8 bit 6 on the CONNECT variable header for password flag"
+            "invalid byte 8 bit 6 on the CONNECT variable header for password flag",
         )
         val willRetain = connectFlagsPackedInByte.shl(2).shr(7) == 1
         assertFalse(
             willRetain,
-            "invalid byte 8 bit 5 on the CONNECT variable header for willRetain flag"
+            "invalid byte 8 bit 5 on the CONNECT variable header for willRetain flag",
         )
         val willQosBit4 = connectFlagsPackedInByte.shl(3).shr(7) == 1
         assertFalse(
             willQosBit4,
-            "invalid byte 8 bit 4 on the CONNECT variable header for willQosBit4 flag"
+            "invalid byte 8 bit 4 on the CONNECT variable header for willQosBit4 flag",
         )
         val willQosBit3 = connectFlagsPackedInByte.shl(4).shr(7) == 1
         assertFalse(
             willQosBit3,
-            "invalid byte 8 bit 3 on the CONNECT variable header for willQosBit3 flag"
+            "invalid byte 8 bit 3 on the CONNECT variable header for willQosBit3 flag",
         )
         val willQos = QualityOfService.fromBooleans(willQosBit4, willQosBit3)
         assertEquals(
             willQos,
             AT_MOST_ONCE,
-            "invalid byte 8 qos on the CONNECT variable header for willQos flag"
+            "invalid byte 8 qos on the CONNECT variable header for willQos flag",
         )
         val willFlag = connectFlagsPackedInByte.shl(5).shr(7) == 1
         assertFalse(
             willFlag,
-            "invalid byte 8 bit 2 on the CONNECT variable header for willFlag flag"
+            "invalid byte 8 bit 2 on the CONNECT variable header for willFlag flag",
         )
         val cleanStart = connectFlagsPackedInByte.shl(6).shr(7) == 1
         assertTrue(
             cleanStart,
-            "invalid byte 8 bit 1 on the CONNECT variable header for cleanSession flag"
+            "invalid byte 8 bit 1 on the CONNECT variable header for cleanSession flag",
         )
         val reserved = connectFlagsPackedInByte.shl(7).shr(7) == 1
         assertFalse(
             reserved,
-            "invalid byte 8 bit 0 on the CONNECT variable header for reserved flag"
+            "invalid byte 8 bit 0 on the CONNECT variable header for reserved flag",
         )
     }
 
@@ -782,9 +783,10 @@ class ConnectionRequestTests {
     @Test
     fun usernameFlagMatchesPayloadFailureCaseNoFlagWithUsername() {
         try {
-            val connectionRequest = ConnectionRequest(
-                payload = ConnectionRequest.Payload(userName = "yolo")
-            )
+            val connectionRequest =
+                ConnectionRequest(
+                    payload = ConnectionRequest.Payload(userName = "yolo"),
+                )
             val warning = connectionRequest.validate()
             if (warning != null) throw warning
             fail()
@@ -806,9 +808,10 @@ class ConnectionRequestTests {
     @Test
     fun passwordFlagMatchesPayloadFailureCaseNoFlagWithUsername() {
         try {
-            val connectionRequest = ConnectionRequest(
-                payload = ConnectionRequest.Payload(password = "yolo")
-            )
+            val connectionRequest =
+                ConnectionRequest(
+                    payload = ConnectionRequest.Payload(password = "yolo"),
+                )
             val warning = connectionRequest.validate()
             if (warning != null) throw warning
             fail()

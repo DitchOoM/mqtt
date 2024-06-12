@@ -9,21 +9,32 @@ class AndroidRemoteMqttServiceWorker(private val serviceServer: RemoteMqttServic
 
     constructor(service: LocalMqttService) : this(RemoteMqttServiceWorker(service))
 
-    override fun startAll(callback: MqttCompletionCallback) = wrapResultWithCallback(callback) {
-        serviceServer.startAll()
-    }
+    override fun startAll(callback: MqttCompletionCallback) =
+        wrapResultWithCallback(callback) {
+            serviceServer.startAll()
+        }
 
-    override fun start(brokerId: Int, protocolVersion: Byte, callback: MqttCompletionCallback) =
-        wrapResultWithCallback(callback) { serviceServer.start(brokerId, protocolVersion) }
+    override fun start(
+        brokerId: Int,
+        protocolVersion: Byte,
+        callback: MqttCompletionCallback,
+    ) = wrapResultWithCallback(callback) { serviceServer.start(brokerId, protocolVersion) }
 
-    override fun stopAll(callback: MqttCompletionCallback) = wrapResultWithCallback(callback) {
-        serviceServer.stopAll()
-    }
+    override fun stopAll(callback: MqttCompletionCallback) =
+        wrapResultWithCallback(callback) {
+            serviceServer.stopAll()
+        }
 
-    override fun stop(brokerId: Int, protocolVersion: Byte, callback: MqttCompletionCallback) =
-        wrapResultWithCallback(callback) { serviceServer.stop(brokerId, protocolVersion) }
+    override fun stop(
+        brokerId: Int,
+        protocolVersion: Byte,
+        callback: MqttCompletionCallback,
+    ) = wrapResultWithCallback(callback) { serviceServer.stop(brokerId, protocolVersion) }
 
-    private fun wrapResultWithCallback(callback: MqttCompletionCallback, block: suspend () -> Unit) {
+    private fun wrapResultWithCallback(
+        callback: MqttCompletionCallback,
+        block: suspend () -> Unit,
+    ) {
         scope.launch {
             try {
                 block()
@@ -35,7 +46,11 @@ class AndroidRemoteMqttServiceWorker(private val serviceServer: RemoteMqttServic
         }
     }
 
-    override fun requestClientOrNull(brokerId: Int, protocolVersion: Byte, callback: MqttGetClientCallback) {
+    override fun requestClientOrNull(
+        brokerId: Int,
+        protocolVersion: Byte,
+        callback: MqttGetClientCallback,
+    ) {
         scope.launch {
             val client = serviceServer.requestClientOrNull(brokerId, protocolVersion)
             client?.client?.allocateSharedMemory = true

@@ -20,21 +20,19 @@ import kotlin.test.assertEquals
 class FlagTests {
     private val packetIdentifier = 1
 
-    private val controlPacketSpectMatchError = "doesn't match the spec from " +
-        "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477323"
+    private val controlPacketSpectMatchError =
+        "doesn't match the spec from " +
+            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477323"
 
     // Control packet types flagBits.matchesEmptyBits() matching spec
     @Test
-    fun controlPacketFlagsMatchSpecForCONNECT() =
-        assertEquals(ConnectionRequest().flags, 0b0, controlPacketSpectMatchError)
+    fun controlPacketFlagsMatchSpecForCONNECT() = assertEquals(ConnectionRequest().flags, 0b0, controlPacketSpectMatchError)
 
     @Test
-    fun byte1CONNECT() =
-        assertEquals(ConnectionRequest().flags, 0b0, controlPacketSpectMatchError)
+    fun byte1CONNECT() = assertEquals(ConnectionRequest().flags, 0b0, controlPacketSpectMatchError)
 
     @Test
-    fun controlPacketFlagsMatchSpecForCONNACK() =
-        assertEquals(ConnectionAcknowledgment().flags, 0b0, controlPacketSpectMatchError)
+    fun controlPacketFlagsMatchSpecForCONNACK() = assertEquals(ConnectionAcknowledgment().flags, 0b0, controlPacketSpectMatchError)
 
     @Test
     fun controlPacketFlagsMatchSpecForPUBLISH_dup_false_Qos_AtMostOnce_Retain_false() {
@@ -89,7 +87,7 @@ class FlagTests {
         assertEquals(
             detailed.controlPacketValue,
             0x03,
-            "Invalid Byte 1 in the fixed header: Control Packet Value"
+            "Invalid Byte 1 in the fixed header: Control Packet Value",
         )
         val buffer = PlatformBuffer.allocate(8)
         detailed.serialize(buffer)
@@ -99,13 +97,13 @@ class FlagTests {
         assertEquals(
             byteAsUInt.shr(4),
             0x03.toUInt(),
-            "Invalid Byte 1 in the fixed header: Control Packet Value serialize shift right 4 times"
+            "Invalid Byte 1 in the fixed header: Control Packet Value serialize shift right 4 times",
         )
         val expectedFlagMatch = byteAsUInt.shl(4).toByte().toInt().shr(4).toByte()
         assertEquals(
             expectedFlagMatch,
             0b0010,
-            "Invalid Byte 1 in the fixed header: Flags dont match"
+            "Invalid Byte 1 in the fixed header: Flags dont match",
         )
         assertEquals(expected, detailed.flags, controlPacketSpectMatchError)
     }
@@ -185,7 +183,7 @@ class FlagTests {
         assertEquals(
             PublishAcknowledgment(PublishAcknowledgment.VariableHeader(packetIdentifier)).flags,
             0b0,
-            controlPacketSpectMatchError
+            controlPacketSpectMatchError,
         )
 
     @Test
@@ -193,7 +191,7 @@ class FlagTests {
         assertEquals(
             PublishReceived(PublishReceived.VariableHeader(packetIdentifier)).flags,
             0b0,
-            controlPacketSpectMatchError
+            controlPacketSpectMatchError,
         )
 
     @Test
@@ -201,7 +199,7 @@ class FlagTests {
         assertEquals(
             PublishRelease(PublishRelease.VariableHeader(packetIdentifier)).flags,
             0b10,
-            controlPacketSpectMatchError
+            controlPacketSpectMatchError,
         )
 
     @Test
@@ -209,7 +207,7 @@ class FlagTests {
         assertEquals(
             PublishComplete(PublishComplete.VariableHeader(packetIdentifier)).flags,
             0b0,
-            controlPacketSpectMatchError
+            controlPacketSpectMatchError,
         )
 
     @Test
@@ -218,9 +216,9 @@ class FlagTests {
             0b10,
             SubscribeRequest(
                 SubscribeRequest.VariableHeader(packetIdentifier),
-                setOf(Subscription(Topic.fromOrThrow("yolo", Topic.Type.Filter)))
+                setOf(Subscription(Topic.fromOrThrow("yolo", Topic.Type.Filter))),
             ).flags,
-            controlPacketSpectMatchError
+            controlPacketSpectMatchError,
         )
 
     @Test
@@ -228,7 +226,7 @@ class FlagTests {
         assertEquals(
             SubscribeAcknowledgement(packetIdentifier.toUShort(), GRANTED_QOS_0).flags,
             0b0,
-            controlPacketSpectMatchError
+            controlPacketSpectMatchError,
         )
 
     @Test
@@ -236,10 +234,10 @@ class FlagTests {
         assertEquals(
             UnsubscribeAcknowledgment(
                 UnsubscribeAcknowledgment.VariableHeader(packetIdentifier),
-                listOf(GRANTED_QOS_1)
+                listOf(GRANTED_QOS_1),
             ).flags,
             0b0,
-            controlPacketSpectMatchError
+            controlPacketSpectMatchError,
         )
 
     @Test
@@ -247,26 +245,24 @@ class FlagTests {
         assertEquals(
             UnsubscribeAcknowledgment(
                 UnsubscribeAcknowledgment.VariableHeader(packetIdentifier),
-                listOf(GRANTED_QOS_1)
+                listOf(GRANTED_QOS_1),
             ).flags,
             0b0,
-            controlPacketSpectMatchError
+            controlPacketSpectMatchError,
         )
 
     @Test
-    fun controlPacketFlagsMatchSpecForPINGREQ() =
-        assertEquals(PingRequest.flags, 0b0, controlPacketSpectMatchError)
+    fun controlPacketFlagsMatchSpecForPINGREQ() = assertEquals(PingRequest.flags, 0b0, controlPacketSpectMatchError)
 
     @Test
-    fun controlPacketFlagsMatchSpecForPINGRESP() =
-        assertEquals(PingResponse.flags, 0b0, controlPacketSpectMatchError)
+    fun controlPacketFlagsMatchSpecForPINGRESP() = assertEquals(PingResponse.flags, 0b0, controlPacketSpectMatchError)
 
     @Test
     fun controlPacketFlagsMatchSpecForDISCONNECT() =
         assertEquals(
             DisconnectNotification(DisconnectNotification.VariableHeader(NORMAL_DISCONNECTION)).flags,
             0b0,
-            controlPacketSpectMatchError
+            controlPacketSpectMatchError,
         )
 
     @Test
@@ -278,13 +274,13 @@ class FlagTests {
                     AuthenticationExchange.VariableHeader.Properties(
                         Authentication(
                             "yolo",
-                            PlatformBuffer.allocate(0)
-                        )
-                    )
-                )
+                            PlatformBuffer.allocate(0),
+                        ),
+                    ),
+                ),
             ).flags,
             0b0,
-            controlPacketSpectMatchError
+            controlPacketSpectMatchError,
         )
 
     @Test

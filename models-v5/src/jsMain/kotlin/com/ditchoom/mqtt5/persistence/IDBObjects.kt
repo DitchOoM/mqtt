@@ -1,3 +1,6 @@
+@file:OptIn(ExperimentalJsExport::class)
+@file:Suppress("NON_EXPORTABLE_TYPE")
+
 package com.ditchoom.mqtt5.persistence
 
 import com.ditchoom.buffer.JsBuffer
@@ -10,7 +13,7 @@ import com.ditchoom.mqtt5.controlpacket.PublishMessage
 import com.ditchoom.mqtt5.controlpacket.Subscription
 import com.ditchoom.mqtt5.controlpacket.UnsubscribeRequest
 import com.ditchoom.mqtt5.controlpacket.properties.Authentication
-import org.khronos.webgl.Uint8Array
+import org.khronos.webgl.Int8Array
 import kotlin.time.Duration.Companion.milliseconds
 
 @JsExport
@@ -24,7 +27,7 @@ data class PersistableUserProperty(
     @JsName("key")
     val key: String,
     @JsName("value")
-    val value: String
+    val value: String,
 )
 
 @JsExport
@@ -40,7 +43,7 @@ data class PersistableQos2Message(
     @JsName("reasonCode")
     val reasonCode: Int,
     @JsName("reasonString")
-    val reasonString: String?
+    val reasonString: String?,
 )
 
 @JsExport
@@ -48,7 +51,7 @@ data class PersistableUnsubscribe(
     @JsName("brokerId")
     val brokerId: Int,
     @JsName("packetId")
-    val packetId: Int
+    val packetId: Int,
 ) {
     @JsName("constuct")
     constructor(brokerId: Int, unsub: UnsubscribeRequest) :
@@ -65,7 +68,7 @@ data class PersistableSubscribe(
     @JsName("packetId")
     val packetId: Int,
     @JsName("reasonString")
-    val reasonString: String?
+    val reasonString: String?,
 )
 
 @JsExport
@@ -85,7 +88,7 @@ data class PersistableSubscription(
     @JsName("retainAsPublished")
     val retainAsPublished: Boolean,
     @JsName("retainHandling")
-    val retainHandling: Int
+    val retainHandling: Int,
 ) {
     @JsName("construct")
     constructor(brokerId: Int, subscribeId: Int, sub: Subscription) :
@@ -97,7 +100,7 @@ data class PersistableSubscription(
             sub.maximumQos.integerValue,
             sub.noLocal,
             sub.retainAsPublished,
-            sub.retainHandling.value.toInt()
+            sub.retainHandling.value.toInt(),
         )
 }
 
@@ -111,7 +114,7 @@ fun toSubscription(s: PersistableSubscription) =
             1 -> ISubscription.RetainHandling.SEND_RETAINED_MESSAGES_AT_SUBSCRIBE_ONLY_IF_SUBSCRIBE_DOESNT_EXISTS
             2 -> ISubscription.RetainHandling.DO_NOT_SEND_RETAINED_MESSAGES
             else -> ISubscription.RetainHandling.SEND_RETAINED_MESSAGES_AT_TIME_OF_SUBSCRIBE
-        }
+        },
     )
 
 @JsExport
@@ -139,13 +142,13 @@ data class PersistablePublishMessage(
     @JsName("responseTopic")
     val responseTopic: String?,
     @JsName("correlationData")
-    val correlationData: Uint8Array?,
+    val correlationData: Int8Array?,
     @JsName("subscriptionIdentifier")
     val subscriptionIdentifier: String?,
     @JsName("contentType")
     val contentType: String?,
     @JsName("payload")
-    val payload: Uint8Array?
+    val payload: Int8Array?,
 ) {
     @JsName("construct")
     constructor(brokerId: Int, incoming: Boolean, pub: PublishMessage) : this(
@@ -167,11 +170,14 @@ data class PersistablePublishMessage(
             null
         },
         pub.variable.properties.contentType,
-        pub.payload?.let { (it as JsBuffer).buffer }
+        pub.payload?.let { (it as JsBuffer).buffer },
     )
 }
 
-fun toPub(p: PersistablePublishMessage, userProperty: List<Pair<String, String>>) = PublishMessage(
+fun toPub(
+    p: PersistablePublishMessage,
+    userProperty: List<Pair<String, String>>,
+) = PublishMessage(
     PublishMessage.FixedHeader(p.dup, p.qos.toQos(), p.retain),
     PublishMessage.VariableHeader(
         Topic.fromOrThrow(p.topicName, Topic.Type.Name),
@@ -185,10 +191,10 @@ fun toPub(p: PersistablePublishMessage, userProperty: List<Pair<String, String>>
                 ?.also { it.resetForRead() },
             userProperty,
             p.subscriptionIdentifier?.split(", ")?.map { it.toLong() }?.toSet() ?: emptySet(),
-            p.contentType
-        )
+            p.contentType,
+        ),
     ),
-    p.payload?.let { JsBuffer(it, position = it.length, limit = it.length) }?.also { it.resetForRead() }
+    p.payload?.let { JsBuffer(it, position = it.length, limit = it.length) }?.also { it.resetForRead() },
 )
 
 @JsExport
@@ -198,7 +204,7 @@ data class PersistableBroker(
     @JsName("connectionOptions")
     val connectionOptions: Array<PersistableSocketConnection>,
     @JsName("connectionRequest")
-    val connectionRequest: PersistableConnectionRequest
+    val connectionRequest: PersistableConnectionRequest,
 )
 
 @JsExport
@@ -220,40 +226,41 @@ data class PersistableSocketConnection(
     @JsName("websocketEndpoint")
     val websocketEndpoint: String?,
     @JsName("websocketProtocols")
-    val websocketProtocols: String?
+    val websocketProtocols: String?,
 ) {
     companion object {
-        fun from(connectionOps: Collection<MqttConnectionOptions>) = connectionOps.map {
-            when (it) {
-                is MqttConnectionOptions.SocketConnection -> {
-                    PersistableSocketConnection(
-                        "tcp",
-                        it.host,
-                        it.port,
-                        it.tls,
-                        it.connectionTimeout.inWholeMilliseconds.toString(),
-                        it.readTimeout.inWholeMilliseconds.toString(),
-                        it.writeTimeout.inWholeMilliseconds.toString(),
-                        null,
-                        null
-                    )
-                }
+        fun from(connectionOps: Collection<MqttConnectionOptions>) =
+            connectionOps.map {
+                when (it) {
+                    is MqttConnectionOptions.SocketConnection -> {
+                        PersistableSocketConnection(
+                            "tcp",
+                            it.host,
+                            it.port,
+                            it.tls,
+                            it.connectionTimeout.inWholeMilliseconds.toString(),
+                            it.readTimeout.inWholeMilliseconds.toString(),
+                            it.writeTimeout.inWholeMilliseconds.toString(),
+                            null,
+                            null,
+                        )
+                    }
 
-                is MqttConnectionOptions.WebSocketConnectionOptions -> {
-                    PersistableSocketConnection(
-                        "websocket",
-                        it.host,
-                        it.port,
-                        it.tls,
-                        it.connectionTimeout.inWholeMilliseconds.toString(),
-                        it.readTimeout.inWholeMilliseconds.toString(),
-                        it.writeTimeout.inWholeMilliseconds.toString(),
-                        it.websocketEndpoint,
-                        it.protocols.joinToString()
-                    )
+                    is MqttConnectionOptions.WebSocketConnectionOptions -> {
+                        PersistableSocketConnection(
+                            "websocket",
+                            it.host,
+                            it.port,
+                            it.tls,
+                            it.connectionTimeout.inWholeMilliseconds.toString(),
+                            it.readTimeout.inWholeMilliseconds.toString(),
+                            it.writeTimeout.inWholeMilliseconds.toString(),
+                            it.websocketEndpoint,
+                            it.protocols.joinToString(),
+                        )
+                    }
                 }
-            }
-        }.toTypedArray()
+            }.toTypedArray()
     }
 }
 
@@ -266,7 +273,7 @@ fun toSocketConnection(a: Any?): MqttConnectionOptions {
             p.tls.unsafeCast<Boolean>(),
             (p.connectionTimeoutMs as String).toLong().milliseconds,
             (p.readTimeoutMs as String).toLong().milliseconds,
-            (p.writeTimeoutMs as String).toLong().milliseconds
+            (p.writeTimeoutMs as String).toLong().milliseconds,
         )
     } else {
         MqttConnectionOptions.WebSocketConnectionOptions(
@@ -313,7 +320,7 @@ data class PersistableConnectionRequest(
     @JsName("authMethod")
     val authMethod: String?,
     @JsName("authData")
-    val authData: Uint8Array?,
+    val authData: Int8Array?,
     @JsName("clientId")
     val clientId: String,
     @JsName("hasWillProperties")
@@ -321,7 +328,7 @@ data class PersistableConnectionRequest(
     @JsName("willTopic")
     val willTopic: String?,
     @JsName("willPayload")
-    val willPayload: Uint8Array?,
+    val willPayload: Int8Array?,
     @JsName("username")
     val username: String?,
     @JsName("password")
@@ -337,7 +344,7 @@ data class PersistableConnectionRequest(
     @JsName("willPropertyResponseTopic")
     val willPropertyResponseTopic: String?,
     @JsName("willPropertyCorrelationData")
-    val willPropertyCorrelationData: Uint8Array?
+    val willPropertyCorrelationData: Int8Array?,
 ) {
     companion object {
         fun from(connectionRequest: ConnectionRequest): PersistableConnectionRequest {
@@ -369,7 +376,7 @@ data class PersistableConnectionRequest(
                 props?.messageExpiryIntervalSeconds?.toString(),
                 props?.contentType,
                 props?.responseTopic?.toString(),
-                props?.correlationData?.let { (it as JsBuffer).buffer }
+                props?.correlationData?.let { (it as JsBuffer).buffer },
             )
         }
     }
@@ -378,40 +385,43 @@ data class PersistableConnectionRequest(
 fun toConnectionRequest(
     a: Any?,
     userProperty: List<Pair<String, String>>,
-    willUserProperty: List<Pair<String, String>>
+    willUserProperty: List<Pair<String, String>>,
 ): ConnectionRequest {
     val p = a.asDynamic()
     val authMethod = p.authMethod as String?
-    val authData = (p.authData as Uint8Array?)?.let { JsBuffer(it, position = it.length, limit = it.length) }
-    val auth = if (authMethod != null && authData != null) {
-        Authentication(authMethod, authData)
-    } else {
-        null
-    }
-    val willProps = if (p.hasWillProperties as Boolean) {
-        ConnectionRequest.Payload.WillProperties(
-            (p.willPropertyWillDelayIntervalSeconds as Int).toLong(),
-            p.willPropertyPayloadFormatIndicator as Boolean,
-            (p.willPropertyMessageExpiryIntervalSeconds as String?)?.toLong(),
-            p.willPropertyContentType as String?,
-            (p.willPropertyResponseTopic as String?)?.let { Topic.fromOrThrow(it, Topic.Type.Name) },
-            p.willPropertyCorrelationData?.unsafeCast<Uint8Array>()
-                ?.let { JsBuffer(it, position = 0, limit = it.length) },
-            willUserProperty
+    val authData = (p.authData as Int8Array?)?.let { JsBuffer(it, position = it.length, limit = it.length) }
+    val auth =
+        if (authMethod != null && authData != null) {
+            Authentication(authMethod, authData)
+        } else {
+            null
+        }
+    val willProps =
+        if (p.hasWillProperties as Boolean) {
+            ConnectionRequest.Payload.WillProperties(
+                (p.willPropertyWillDelayIntervalSeconds as Int).toLong(),
+                p.willPropertyPayloadFormatIndicator as Boolean,
+                (p.willPropertyMessageExpiryIntervalSeconds as String?)?.toLong(),
+                p.willPropertyContentType as String?,
+                (p.willPropertyResponseTopic as String?)?.let { Topic.fromOrThrow(it, Topic.Type.Name) },
+                p.willPropertyCorrelationData?.unsafeCast<Int8Array>()
+                    ?.let { JsBuffer(it, position = 0, limit = it.length) },
+                willUserProperty,
+            )
+        } else {
+            null
+        }
+    val variableHeaderProps =
+        ConnectionRequest.VariableHeader.Properties(
+            (p.sessionExpiryIntervalSeconds as String?)?.toULong(),
+            p.receiveMaximum as Int?,
+            (p.maximumPacketSize as String?)?.toULong(),
+            p.topicAliasMaximum as Int?,
+            p.requestResponseInformation as Boolean?,
+            p.requestProblemInformation as Boolean?,
+            userProperty,
+            auth,
         )
-    } else {
-        null
-    }
-    val variableHeaderProps = ConnectionRequest.VariableHeader.Properties(
-        (p.sessionExpiryIntervalSeconds as String?)?.toULong(),
-        p.receiveMaximum as Int?,
-        (p.maximumPacketSize as String?)?.toULong(),
-        p.topicAliasMaximum as Int?,
-        p.requestResponseInformation as Boolean?,
-        p.requestProblemInformation as Boolean?,
-        userProperty,
-        auth
-    )
     return ConnectionRequest(
         ConnectionRequest.VariableHeader(
             p.protocolName as String,
@@ -423,17 +433,17 @@ fun toConnectionRequest(
             p.willFlag as Boolean,
             p.cleanSession as Boolean,
             p.keepAliveSeconds as Int,
-            variableHeaderProps
+            variableHeaderProps,
         ),
         ConnectionRequest.Payload(
             p.clientId as String,
             willProps,
             (p.willTopic as? String)?.let { Topic.fromOrThrow(it, Topic.Type.Name) },
-            p.willPayload?.unsafeCast<Uint8Array>()
+            p.willPayload?.unsafeCast<Int8Array>()
                 ?.let { JsBuffer(it, position = it.length, limit = it.length) },
             p.username as? String,
-            p.password as? String
-        )
+            p.password as? String,
+        ),
     )
 }
 

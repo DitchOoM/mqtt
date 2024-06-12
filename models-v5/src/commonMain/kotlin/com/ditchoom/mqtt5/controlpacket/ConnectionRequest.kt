@@ -65,9 +65,8 @@ data class ConnectionRequest(
      * Properties section 2.2.2.</a>
      */
     val variableHeader: VariableHeader = VariableHeader(),
-    val payload: Payload = Payload()
+    val payload: Payload = Payload(),
 ) : ControlPacketV5(1, DirectionOfFlow.CLIENT_TO_SERVER), IConnectionRequest {
-
     constructor(
         clientId: String,
         keepAliveSeconds: Int = 3600,
@@ -93,7 +92,7 @@ data class ConnectionRequest(
             willRetain = willRetain,
             willFlag = willPayload != null && willTopic != null,
             willQos = willQos,
-            properties = props
+            properties = props,
         ),
         Payload(
             clientId,
@@ -105,8 +104,8 @@ data class ConnectionRequest(
             },
             willPayload,
             userName,
-            password
-        )
+            password,
+        ),
     )
 
     constructor(
@@ -116,27 +115,29 @@ data class ConnectionRequest(
         willTopic: Topic? = null,
         willPayload: PlatformBuffer? = null,
         willRetain: Boolean = false,
-        willQos: QualityOfService = QualityOfService.AT_MOST_ONCE
+        willQos: QualityOfService = QualityOfService.AT_MOST_ONCE,
     ) : this(
         VariableHeader(
             hasUserName = userName != null,
             hasPassword = password != null,
             willRetain = willRetain,
             willFlag = willPayload != null && willTopic != null,
-            willQos = willQos
+            willQos = willQos,
         ),
         Payload(
             clientId,
             willTopic = willTopic,
             willPayload = willPayload,
             userName = userName,
-            password = password
-        )
+            password = password,
+        ),
     )
 
     override val clientIdentifier = payload.clientId
     override val keepAliveTimeoutSeconds: UShort = variableHeader.keepAliveSeconds.toUShort()
+
     override fun variableHeader(writeBuffer: WriteBuffer) = variableHeader.serialize(writeBuffer)
+
     override val cleanStart: Boolean = variableHeader.cleanStart
     override val userName = payload.userName
     override val protocolName = variableHeader.protocolName
@@ -162,6 +163,7 @@ data class ConnectionRequest(
     override val willTopic: Topic? = payload.willTopic
 
     override fun payload(writeBuffer: WriteBuffer) = payload.serialize(writeBuffer)
+
     override fun validate(): MqttWarning? {
         if (variableHeader.willFlag &&
             (payload.willPayload == null || payload.willTopic == null || payload.willProperties == null)
@@ -170,35 +172,35 @@ data class ConnectionRequest(
                 "[MQTT-3.1.2-9]",
                 "If the Will Flag is set to " +
                     "1, the Will QoS and Will Retain fields in the Connect Flags will be used by the Server, " +
-                    "and the Will Properties, Will Topic and Will Message fields MUST be present in the Payload."
+                    "and the Will Properties, Will Topic and Will Message fields MUST be present in the Payload.",
             )
         }
         if (variableHeader.hasUserName && payload.userName == null) {
             return MqttWarning(
                 "[MQTT-3.1.2-17]",
                 "If the User Name Flag is set" +
-                    " to 1, a User Name MUST be present in the Payload"
+                    " to 1, a User Name MUST be present in the Payload",
             )
         }
         if (!variableHeader.hasUserName && payload.userName != null) {
             return MqttWarning(
                 "[MQTT-3.1.2-16]",
                 "If the User Name Flag is set " +
-                    "to 0, a User Name MUST NOT be present in the Payload"
+                    "to 0, a User Name MUST NOT be present in the Payload",
             )
         }
         if (variableHeader.hasPassword && payload.password == null) {
             return MqttWarning(
                 "[MQTT-3.1.2-19]",
                 "If the Password Flag is set" +
-                    " to 1, a Password MUST be present in the Payload"
+                    " to 1, a Password MUST be present in the Payload",
             )
         }
         if (!variableHeader.hasPassword && payload.password != null) {
             return MqttWarning(
                 "[MMQTT-3.1.2-18]",
                 "If the Password Flag is set " +
-                    "to 0, a Password MUST NOT be present in the Payload"
+                    "to 0, a Password MUST NOT be present in the Payload",
             )
         }
         return variableHeader.validateOrGetWarning()
@@ -408,14 +410,14 @@ data class ConnectionRequest(
          * @see <a href="https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477346">
          *     3.1.2.11 CONNECT Properties</a>
          */
-        val properties: Properties = Properties()
+        val properties: Properties = Properties(),
     ) {
         fun validateOrGetWarning(): MqttWarning? {
             if (!willFlag && willRetain) {
                 return MqttWarning(
                     "[MQTT-3.1.2-13]",
                     "If the Will Flag is set" +
-                        " to 0, then Will Retain MUST be set to 0"
+                        " to 0, then Will Retain MUST be set to 0",
                 )
             }
             return null
@@ -658,9 +660,8 @@ data class ConnectionRequest(
              * @see Authentication.method
              * @see Authentication.data
              */
-            val authentication: Authentication? = null
+            val authentication: Authentication? = null,
         ) {
-
             init {
                 if (maximumPacketSize == 0uL) {
                     throw ProtocolError("Maximum Packet Size cannot be set to 0")
@@ -730,7 +731,7 @@ data class ConnectionRequest(
                                 if (sessionExpiryIntervalSeconds != null) {
                                     throw ProtocolError(
                                         "Session Expiry Interval added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477348"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477348",
                                     )
                                 }
                                 sessionExpiryIntervalSeconds = it.seconds
@@ -740,13 +741,13 @@ data class ConnectionRequest(
                                 if (receiveMaximum != null) {
                                     throw ProtocolError(
                                         "Receive Maximum added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477349"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477349",
                                     )
                                 }
                                 if (it.maxQos1Or2ConcurrentMessages == 0) {
                                     throw ProtocolError(
                                         "Receive Maximum cannot be set to 0 see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477349"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477349",
                                     )
                                 }
                                 receiveMaximum = it.maxQos1Or2ConcurrentMessages
@@ -756,13 +757,13 @@ data class ConnectionRequest(
                                 if (maximumPacketSize != null) {
                                     throw ProtocolError(
                                         "Maximum Packet Size added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477350"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477350",
                                     )
                                 }
                                 if (it.packetSizeLimitationBytes == 0uL) {
                                     throw ProtocolError(
                                         "Maximum Packet Size cannot be set to 0 see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477350"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477350",
                                     )
                                 }
                                 maximumPacketSize = it.packetSizeLimitationBytes
@@ -772,7 +773,7 @@ data class ConnectionRequest(
                                 if (topicAliasMaximum != null) {
                                     throw ProtocolError(
                                         "Topic Alias Maximum added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477351"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477351",
                                     )
                                 }
                                 topicAliasMaximum = it.highestValueSupported
@@ -782,7 +783,7 @@ data class ConnectionRequest(
                                 if (requestResponseInformation != null) {
                                     throw ProtocolError(
                                         "Request Response Information added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477352"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477352",
                                     )
                                 }
                                 requestResponseInformation = it.requestServerToReturnInfoInConnack
@@ -792,7 +793,7 @@ data class ConnectionRequest(
                                 if (requestProblemInformation != null) {
                                     throw ProtocolError(
                                         "Request Problem Information added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477353"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477353",
                                     )
                                 }
                                 requestProblemInformation =
@@ -804,7 +805,7 @@ data class ConnectionRequest(
                                 if (authenticationMethod != null) {
                                     throw ProtocolError(
                                         "Authentication Method added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477355"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477355",
                                     )
                                 }
                                 authenticationMethod = it.value
@@ -814,7 +815,7 @@ data class ConnectionRequest(
                                 if (authenticationData != null) {
                                     throw ProtocolError(
                                         "Authentication Data added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477356"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477356",
                                     )
                                 }
                                 authenticationData = it.data
@@ -825,11 +826,12 @@ data class ConnectionRequest(
                     }
                     val authMethod = authenticationMethod
                     val authData = authenticationData
-                    val auth = if (authMethod != null && authData != null) {
-                        Authentication(authMethod, authData)
-                    } else {
-                        null
-                    }
+                    val auth =
+                        if (authMethod != null && authData != null) {
+                            Authentication(authMethod, authData)
+                        } else {
+                            null
+                        }
                     val finalUserProperty = if (userProperty.isEmpty()) emptyList() else userProperty
                     return Properties(
                         sessionExpiryIntervalSeconds,
@@ -839,7 +841,7 @@ data class ConnectionRequest(
                         requestResponseInformation,
                         requestProblemInformation,
                         finalUserProperty,
-                        auth
+                        auth,
                     )
                 }
             }
@@ -889,7 +891,7 @@ data class ConnectionRequest(
                 val hasUsername = connectFlags.get(7)
                 if (reserved) {
                     throw MalformedPacketException(
-                        "Reserved flag in Connect Variable Header packet is set incorrectly to 1"
+                        "Reserved flag in Connect Variable Header packet is set incorrectly to 1",
                     )
                 }
                 val keepAliveSeconds = buffer.readUnsignedShort().toInt()
@@ -897,7 +899,7 @@ data class ConnectionRequest(
                 val properties = Properties.from(propertiesRaw)
                 return VariableHeader(
                     protocolName, protocolVersion, hasUsername, hasPassword, willRetain, willQos,
-                    willFlag, cleanStart, keepAliveSeconds, properties
+                    willFlag, cleanStart, keepAliveSeconds, properties,
                 )
             }
         }
@@ -1004,9 +1006,8 @@ data class ConnectionRequest(
          * @see <a href="https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477372">
          *     3.1.3.6 Password</a>
          */
-        val password: String? = null
+        val password: String? = null,
     ) {
-
         data class WillProperties(
             /**
              * 3.1.3.2.2 Will Delay Interval
@@ -1139,7 +1140,7 @@ data class ConnectionRequest(
              * @see <a href="https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477368">
              *     3.1.3.2.8 User Property</a>
              */
-            val userProperty: List<Pair<String, String>> = emptyList()
+            val userProperty: List<Pair<String, String>> = emptyList(),
         ) {
             val props by lazy(LazyThreadSafetyMode.NONE) {
                 val properties = ArrayList<Property>(6 + userProperty.count())
@@ -1183,7 +1184,6 @@ data class ConnectionRequest(
             }
 
             companion object {
-
                 fun from(buffer: ReadBuffer): WillProperties {
                     var willDelayIntervalSeconds: Long? = null
                     var payloadFormatIndicator: Boolean? = null
@@ -1199,7 +1199,7 @@ data class ConnectionRequest(
                                 if (willDelayIntervalSeconds != null) {
                                     throw ProtocolError(
                                         "Will Delay Interval added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477362"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477362",
                                     )
                                 }
                                 willDelayIntervalSeconds = it.seconds
@@ -1209,7 +1209,7 @@ data class ConnectionRequest(
                                 if (payloadFormatIndicator != null) {
                                     throw ProtocolError(
                                         "Payload Format Indicator added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477363"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477363",
                                     )
                                 }
                                 payloadFormatIndicator = it.willMessageIsUtf8
@@ -1219,7 +1219,7 @@ data class ConnectionRequest(
                                 if (messageExpiryIntervalSeconds != null) {
                                     throw ProtocolError(
                                         "Message Expiry Interval added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477363"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477363",
                                     )
                                 }
                                 messageExpiryIntervalSeconds = it.seconds
@@ -1229,7 +1229,7 @@ data class ConnectionRequest(
                                 if (contentType != null) {
                                     throw ProtocolError(
                                         "Content Type added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477365"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477365",
                                     )
                                 }
                                 contentType = it.value
@@ -1239,7 +1239,7 @@ data class ConnectionRequest(
                                 if (responseTopic != null) {
                                     throw ProtocolError(
                                         "Response Topic added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477366"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477366",
                                     )
                                 }
                                 responseTopic = it.value
@@ -1249,7 +1249,7 @@ data class ConnectionRequest(
                                 if (correlationData != null) {
                                     throw ProtocolError(
                                         "Coorelation data added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477367"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477367",
                                     )
                                 }
                                 correlationData = it.data
@@ -1271,7 +1271,7 @@ data class ConnectionRequest(
                         contentType,
                         responseTopic,
                         correlationData,
-                        userProperty
+                        userProperty,
                     )
                 }
             }
@@ -1317,35 +1317,42 @@ data class ConnectionRequest(
         }
 
         companion object {
-
-            fun from(buffer: ReadBuffer, variableHeader: VariableHeader): Payload {
+            fun from(
+                buffer: ReadBuffer,
+                variableHeader: VariableHeader,
+            ): Payload {
                 val clientId = buffer.readMqttUtf8StringNotValidatedSized().second
-                val willProperties = if (variableHeader.willFlag) {
-                    WillProperties.from(buffer)
-                } else {
-                    null
-                }
-                val willTopic = if (variableHeader.willFlag) {
-                    Topic.fromOrThrow(buffer.readMqttUtf8StringNotValidatedSized().second, Topic.Type.Name)
-                } else {
-                    null
-                }
-                val willPayload = if (variableHeader.willFlag) {
-                    val size = buffer.readUnsignedShort().toInt()
-                    buffer.readBytes(size)
-                } else {
-                    null
-                }
-                val username = if (variableHeader.hasUserName) {
-                    buffer.readMqttUtf8StringNotValidatedSized().second
-                } else {
-                    null
-                }
-                val password = if (variableHeader.hasPassword) {
-                    buffer.readMqttUtf8StringNotValidatedSized().second
-                } else {
-                    null
-                }
+                val willProperties =
+                    if (variableHeader.willFlag) {
+                        WillProperties.from(buffer)
+                    } else {
+                        null
+                    }
+                val willTopic =
+                    if (variableHeader.willFlag) {
+                        Topic.fromOrThrow(buffer.readMqttUtf8StringNotValidatedSized().second, Topic.Type.Name)
+                    } else {
+                        null
+                    }
+                val willPayload =
+                    if (variableHeader.willFlag) {
+                        val size = buffer.readUnsignedShort().toInt()
+                        buffer.readBytes(size)
+                    } else {
+                        null
+                    }
+                val username =
+                    if (variableHeader.hasUserName) {
+                        buffer.readMqttUtf8StringNotValidatedSized().second
+                    } else {
+                        null
+                    }
+                val password =
+                    if (variableHeader.hasPassword) {
+                        buffer.readMqttUtf8StringNotValidatedSized().second
+                    } else {
+                        null
+                    }
                 return Payload(clientId, willProperties, willTopic, willPayload, username, password)
             }
         }

@@ -28,35 +28,40 @@ interface MqttClient {
         topicName: String,
         qos: QualityOfService = QualityOfService.AT_MOST_ONCE,
         payload: ReadBuffer? = null,
-        retain: Boolean = false
-    ): PublishOperation = publish(
-        packetFactory.publish(
-            topicName = Topic.fromOrThrow(topicName, Topic.Type.Name),
-            qos = qos,
-            retain = retain,
-            payload = payload
+        retain: Boolean = false,
+    ): PublishOperation =
+        publish(
+            packetFactory.publish(
+                topicName = Topic.fromOrThrow(topicName, Topic.Type.Name),
+                qos = qos,
+                retain = retain,
+                payload = payload,
+            ),
         )
-    )
 
     suspend fun publish(pub: IPublishMessage): PublishOperation
 
     fun observe(filter: Topic): Flow<IPublishMessage>
 
-    suspend fun subscribe(topicFilter: String, maxQos: QualityOfService): SubscribeOperation =
-        subscribe(packetFactory.subscribe(Topic.fromOrThrow(topicFilter, Topic.Type.Filter), maxQos))
+    suspend fun subscribe(
+        topicFilter: String,
+        maxQos: QualityOfService,
+    ): SubscribeOperation = subscribe(packetFactory.subscribe(Topic.fromOrThrow(topicFilter, Topic.Type.Filter), maxQos))
 
-    suspend fun subscribe(subscriptions: Set<ISubscription>): SubscribeOperation = subscribe(
-        packetFactory.subscribe(subscriptions)
-    )
+    suspend fun subscribe(subscriptions: Set<ISubscription>): SubscribeOperation =
+        subscribe(
+            packetFactory.subscribe(subscriptions),
+        )
 
     suspend fun subscribe(sub: ISubscribeRequest): SubscribeOperation
 
     suspend fun unsubscribe(topicFilter: String): UnsubscribeOperation =
         unsubscribe(packetFactory.unsubscribe(Topic.fromOrThrow(topicFilter, Topic.Type.Filter)))
 
-    suspend fun unsubscribe(subscriptions: Set<Topic>): UnsubscribeOperation = unsubscribe(
-        packetFactory.unsubscribe(subscriptions)
-    )
+    suspend fun unsubscribe(subscriptions: Set<Topic>): UnsubscribeOperation =
+        unsubscribe(
+            packetFactory.unsubscribe(subscriptions),
+        )
 
     suspend fun unsubscribe(unsub: IUnsubscribeRequest): UnsubscribeOperation
 

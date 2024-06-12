@@ -11,7 +11,6 @@ import kotlin.test.assertTrue
  * MQTT Conformance Character data in a UTF-8 Encoded String MUST be well-formed UTF-8 as defined by the Unicode specification Unicode and restated in RFC 3629
  */
 class StringTests {
-
     @Test
     fun invalidMqttString() = assertFalse("abc\u0001def".validateMqttUTF8String())
 
@@ -41,10 +40,12 @@ class StringTests {
 //        assertEquals(0xFEFF.toChar().code, string[0].code)
 //    }
 
+    // The string AuD869uDED4 which is LATIN CAPITAL Letter A followed by the code point U+2A6D4
+    // which represents a CJK IDEOGRAPH EXTENSION B character is encoded
     @Test
     @JsName("latinCaptialNoNormativeTest")
     @JvmName("latinCaptialNoNormativeTest")
-    fun `The string AuD869uDED4 which is LATIN CAPITAL Letter A followed by the code point U+2A6D4 which represents a CJK IDEOGRAPH EXTENSION B character is encoded`() {
+    fun latinTest() {
         val string = "A\uD869\uDED4"
         assertFalse { string.validateMqttUTF8String() }
         assertEquals("A𪛔", "A\uD869\uDED4")

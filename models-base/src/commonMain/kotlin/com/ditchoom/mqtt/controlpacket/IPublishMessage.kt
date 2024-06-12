@@ -11,13 +11,14 @@ interface IPublishMessage : ControlPacket {
     fun expectedResponse(
         reasonCode: ReasonCode = ReasonCode.SUCCESS,
         reasonString: String? = null,
-        userProperty: List<Pair<String, String>> = emptyList()
+        userProperty: List<Pair<String, String>> = emptyList(),
     ): ControlPacket?
 
     fun setDupFlagNewPubMessage(): IPublishMessage
+
     fun maybeCopyWithNewPacketIdentifier(packetIdentifier: Int): IPublishMessage
 
     companion object {
-        const val controlPacketValue: Byte = 3
+        const val CONTROL_PACKET_VALUE: Byte = 3
     }
 }

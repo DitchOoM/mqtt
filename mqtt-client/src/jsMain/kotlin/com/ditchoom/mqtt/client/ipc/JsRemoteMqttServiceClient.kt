@@ -32,8 +32,8 @@ class JsRemoteMqttServiceClient(service: LocalMqttService, private val port: Mes
                 MESSAGE_TYPE_SERVICE_START,
                 brokerId,
                 protocolVersion,
-                messageId
-            )
+                messageId,
+            ),
         )
         awaitMessage(MESSAGE_TYPE_SERVICE_START_RESPONSE, messageId)
     }
@@ -49,14 +49,17 @@ class JsRemoteMqttServiceClient(service: LocalMqttService, private val port: Mes
                 MESSAGE_TYPE_SERVICE_STOP,
                 brokerId,
                 protocolVersion,
-                messageId
-            )
+                messageId,
+            ),
         )
         awaitMessage(MESSAGE_TYPE_SERVICE_STOP_RESPONSE, messageId)
         clients[protocolVersion]?.remove(brokerId)
     }
 
-    private suspend fun awaitMessage(messageType: String, messageId: Int) {
+    private suspend fun awaitMessage(
+        messageType: String,
+        messageId: Int,
+    ) {
         val obj = channel.receive().data?.asDynamic()
         obj[MESSAGE_TYPE_KEY] == messageType && obj[MESSAGE_INT_KEY] == messageId
     }
@@ -70,34 +73,35 @@ class JsRemoteMqttServiceClient(service: LocalMqttService, private val port: Mes
         if (clientsMap[brokerId]?.isStopped == true) {
             clientsMap.remove(brokerId)
         }
-        val c = clientsMap
-            .getOrPut(brokerId) {
-                val messageChannel = MessageChannel()
-                port.postMessage(
-                    buildBrokerIdProtocolVersionMessage(
-                        MESSAGE_TYPE_REGISTER_CLIENT,
-                        brokerId,
-                        protocolVersion
-                    ),
-                    arrayOf(messageChannel.port2)
-                )
-                val c = JsRemoteMqttClient(service.scope, messageChannel.port1, broker, persistence)
-                messageChannel.port1.onmessage = {
-                    c.processMessage(it)
-                }
+        val c =
+            clientsMap
+                .getOrPut(brokerId) {
+                    val messageChannel = MessageChannel()
+                    port.postMessage(
+                        buildBrokerIdProtocolVersionMessage(
+                            MESSAGE_TYPE_REGISTER_CLIENT,
+                            brokerId,
+                            protocolVersion,
+                        ),
+                        arrayOf(messageChannel.port2),
+                    )
+                    val c = JsRemoteMqttClient(service.scope, messageChannel.port1, broker, persistence)
+                    messageChannel.port1.onmessage = {
+                        c.processMessage(it)
+                    }
 
-                val message = c.messageFlow.first()
+                    val message = c.messageFlow.first()
 
-                val obj = message.data?.asDynamic()
-                if (obj[MESSAGE_TYPE_KEY] == MESSAGE_TYPE_REGISTER_CLIENT_SUCCESS) {
-                    c
-                } else if (obj[MESSAGE_TYPE_KEY] == MESSAGE_TYPE_REGISTER_CLIENT_NOT_FOUND) {
-                    return null
-                } else {
-                    console.error("Invalid message received when requesting client", obj)
-                    throw IllegalStateException("Invalid message received when requesting client $obj")
+                    val obj = message.data?.asDynamic()
+                    if (obj[MESSAGE_TYPE_KEY] == MESSAGE_TYPE_REGISTER_CLIENT_SUCCESS) {
+                        c
+                    } else if (obj[MESSAGE_TYPE_KEY] == MESSAGE_TYPE_REGISTER_CLIENT_NOT_FOUND) {
+                        return null
+                    } else {
+                        console.error("Invalid message received when requesting client", obj)
+                        throw IllegalStateException("Invalid message received when requesting client $obj")
+                    }
                 }
-            }
         return c
     }
 }

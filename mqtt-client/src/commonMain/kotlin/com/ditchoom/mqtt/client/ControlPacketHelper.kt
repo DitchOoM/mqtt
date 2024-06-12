@@ -8,9 +8,10 @@ import com.ditchoom.mqtt.controlpacket.ControlPacket
 fun ControlPacket.toBuffer(zone: AllocationZone = AllocationZone.Direct) = listOf(this).toBuffer(zone)
 
 fun Collection<ControlPacket>.toBuffer(zone: AllocationZone = AllocationZone.Direct): PlatformBuffer {
-    val packetSize = fold(0) { currentPacketSize, controlPacket ->
-        currentPacketSize + controlPacket.packetSize()
-    }
+    val packetSize =
+        fold(0) { currentPacketSize, controlPacket ->
+            currentPacketSize + controlPacket.packetSize()
+        }
     return fold(PlatformBuffer.allocate(packetSize, zone)) { buffer, controlPacket ->
         controlPacket.serialize(buffer)
         buffer

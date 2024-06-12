@@ -50,143 +50,137 @@ import kotlin.test.assertEquals
 
 class ReasonCodeTests {
     @Test
-    fun Success() = assertEquals(SUCCESS.byte, 0x00.toUByte())
+    fun success() = assertEquals(SUCCESS.byte, 0x00.toUByte())
 
     @Test
-    fun NormalDisconnection() = assertEquals(NORMAL_DISCONNECTION.byte, 0x00.toUByte())
+    fun normalDisconnection() = assertEquals(NORMAL_DISCONNECTION.byte, 0x00.toUByte())
 
     @Test
-    fun GrantedQos0() = assertEquals(GRANTED_QOS_0.byte, 0x00.toUByte())
+    fun grantedQos0() = assertEquals(GRANTED_QOS_0.byte, 0x00.toUByte())
 
     @Test
-    fun GrantedQos1() = assertEquals(GRANTED_QOS_1.byte, 0x01.toUByte())
+    fun grantedQos1() = assertEquals(GRANTED_QOS_1.byte, 0x01.toUByte())
 
     @Test
-    fun GrantedQos2() = assertEquals(GRANTED_QOS_2.byte, 0x02.toUByte())
+    fun grantedQos2() = assertEquals(GRANTED_QOS_2.byte, 0x02.toUByte())
 
     @Test
-    fun DisconnectwithWillMessage() =
-        assertEquals(DISCONNECT_WITH_WILL_MESSAGE.byte, 0x04.toUByte())
+    fun disconnectwithWillMessage() = assertEquals(DISCONNECT_WITH_WILL_MESSAGE.byte, 0x04.toUByte())
 
     @Test
-    fun NoMatchingSubscribers() = assertEquals(NO_MATCHING_SUBSCRIBERS.byte, 0x10.toUByte())
+    fun noMatchingSubscribers() = assertEquals(NO_MATCHING_SUBSCRIBERS.byte, 0x10.toUByte())
 
     @Test
-    fun NoSubscriptionExisted() = assertEquals(NO_SUBSCRIPTIONS_EXISTED.byte, 0x11.toUByte())
+    fun noSubscriptionExisted() = assertEquals(NO_SUBSCRIPTIONS_EXISTED.byte, 0x11.toUByte())
 
     @Test
-    fun ContinueAuthentication() = assertEquals(CONTINUE_AUTHENTICATION.byte, 0x18.toUByte())
+    fun continueAuthentication() = assertEquals(CONTINUE_AUTHENTICATION.byte, 0x18.toUByte())
 
     @Test
-    fun Reauthenticate() = assertEquals(REAUTHENTICATE.byte, 0x19.toUByte())
+    fun reauthenticate() = assertEquals(REAUTHENTICATE.byte, 0x19.toUByte())
 
     @Test
-    fun UnspecifiedError() = assertEquals(UNSPECIFIED_ERROR.byte, 0x80.toUByte())
+    fun unspecifiedError() = assertEquals(UNSPECIFIED_ERROR.byte, 0x80.toUByte())
 
     @Test
-    fun MalformedPacket() = assertEquals(MALFORMED_PACKET.byte, 0x81.toUByte())
+    fun malformedPacket() = assertEquals(MALFORMED_PACKET.byte, 0x81.toUByte())
 
     @Test
-    fun ProtocolError() = assertEquals(PROTOCOL_ERROR.byte, 0x82.toUByte())
+    fun protocolError() = assertEquals(PROTOCOL_ERROR.byte, 0x82.toUByte())
 
     @Test
-    fun ImplementationSpecificError() =
-        assertEquals(IMPLEMENTATION_SPECIFIC_ERROR.byte, 0x83.toUByte())
+    fun implementationSpecificError() = assertEquals(IMPLEMENTATION_SPECIFIC_ERROR.byte, 0x83.toUByte())
 
     @Test
-    fun UnsupportedProtocolVersion() =
-        assertEquals(UNSUPPORTED_PROTOCOL_VERSION.byte, 0x84.toUByte())
+    fun unsupportedProtocolVersion() = assertEquals(UNSUPPORTED_PROTOCOL_VERSION.byte, 0x84.toUByte())
 
     @Test
-    fun ClientIdentifierNotValid() = assertEquals(CLIENT_IDENTIFIER_NOT_VALID.byte, 0x85.toUByte())
+    fun clientIdentifierNotValid() = assertEquals(CLIENT_IDENTIFIER_NOT_VALID.byte, 0x85.toUByte())
 
     @Test
-    fun BadUserNameOrPassword() = assertEquals(BAD_USER_NAME_OR_PASSWORD.byte, 0x86.toUByte())
+    fun badUserNameOrPassword() = assertEquals(BAD_USER_NAME_OR_PASSWORD.byte, 0x86.toUByte())
 
     @Test
-    fun NotAuthorized() = assertEquals(NOT_AUTHORIZED.byte, 0x87.toUByte())
+    fun notAuthorized() = assertEquals(NOT_AUTHORIZED.byte, 0x87.toUByte())
 
     @Test
-    fun ServerUnavailable() = assertEquals(SERVER_UNAVAILABLE.byte, 0x88.toUByte())
+    fun serverUnavailable() = assertEquals(SERVER_UNAVAILABLE.byte, 0x88.toUByte())
 
     @Test
-    fun ServerBusy() = assertEquals(SERVER_BUSY.byte, 0x89.toUByte())
+    fun serverBusy() = assertEquals(SERVER_BUSY.byte, 0x89.toUByte())
 
     @Test
-    fun Banned() = assertEquals(BANNED.byte, 0x8A.toUByte())
+    fun banned() = assertEquals(BANNED.byte, 0x8A.toUByte())
 
     @Test
-    fun ServerShuttingDown() = assertEquals(SERVER_SHUTTING_DOWN.byte, 0x8B.toUByte())
+    fun serverShuttingDown() = assertEquals(SERVER_SHUTTING_DOWN.byte, 0x8B.toUByte())
 
     @Test
-    fun BadAuthenticationMethod() = assertEquals(BAD_AUTHENTICATION_METHOD.byte, 0x8C.toUByte())
+    fun badAuthenticationMethod() = assertEquals(BAD_AUTHENTICATION_METHOD.byte, 0x8C.toUByte())
 
     @Test
-    fun KeepAliveTimeout() = assertEquals(KEEP_ALIVE_TIMEOUT.byte, 0x8D.toUByte())
+    fun keepAliveTimeout() = assertEquals(KEEP_ALIVE_TIMEOUT.byte, 0x8D.toUByte())
 
     @Test
-    fun SessionTakenOver() = assertEquals(SESSION_TAKE_OVER.byte, 0x8E.toUByte())
+    fun sessionTakenOver() = assertEquals(SESSION_TAKE_OVER.byte, 0x8E.toUByte())
 
     @Test
-    fun TopicFilterInvalid() = assertEquals(TOPIC_FILTER_INVALID.byte, 0x8F.toUByte())
+    fun topicFilterInvalid() = assertEquals(TOPIC_FILTER_INVALID.byte, 0x8F.toUByte())
 
     @Test
-    fun TopicNameInvalid() = assertEquals(TOPIC_NAME_INVALID.byte, 0x90.toUByte())
+    fun topicNameInvalid() = assertEquals(TOPIC_NAME_INVALID.byte, 0x90.toUByte())
 
     @Test
-    fun PacketIdentifierInUse() = assertEquals(PACKET_IDENTIFIER_IN_USE.byte, 0x91.toUByte())
+    fun packetIdentifierInUse() = assertEquals(PACKET_IDENTIFIER_IN_USE.byte, 0x91.toUByte())
 
     @Test
-    fun PacketIdentifierNotFound() = assertEquals(PACKET_IDENTIFIER_NOT_FOUND.byte, 0x92.toUByte())
+    fun packetIdentifierNotFound() = assertEquals(PACKET_IDENTIFIER_NOT_FOUND.byte, 0x92.toUByte())
 
     @Test
-    fun ReceiveMaximumExceeded() = assertEquals(RECEIVE_MAXIMUM_EXCEEDED.byte, 0x93.toUByte())
+    fun receiveMaximumExceeded() = assertEquals(RECEIVE_MAXIMUM_EXCEEDED.byte, 0x93.toUByte())
 
     @Test
-    fun TopicAliasInvalid() = assertEquals(TOPIC_ALIAS_INVALID.byte, 0x94.toUByte())
+    fun topicAliasInvalid() = assertEquals(TOPIC_ALIAS_INVALID.byte, 0x94.toUByte())
 
     @Test
-    fun PacketTooLarge() = assertEquals(PACKET_TOO_LARGE.byte, 0x95.toUByte())
+    fun packetTooLarge() = assertEquals(PACKET_TOO_LARGE.byte, 0x95.toUByte())
 
     @Test
-    fun MessageRateTooHigh() = assertEquals(MESSAGE_RATE_TOO_HIGH.byte, 0x96.toUByte())
+    fun messageRateTooHigh() = assertEquals(MESSAGE_RATE_TOO_HIGH.byte, 0x96.toUByte())
 
     @Test
-    fun QuotaExceeded() = assertEquals(QUOTA_EXCEEDED.byte, 0x97.toUByte())
+    fun quotaExceeded() = assertEquals(QUOTA_EXCEEDED.byte, 0x97.toUByte())
 
     @Test
-    fun AdministrativeAction() = assertEquals(ADMINISTRATIVE_ACTION.byte, 0x98.toUByte())
+    fun administrativeAction() = assertEquals(ADMINISTRATIVE_ACTION.byte, 0x98.toUByte())
 
     @Test
-    fun PayloadFormatInvalid() = assertEquals(PAYLOAD_FORMAT_INVALID.byte, 0x99.toUByte())
+    fun payloadFormatInvalid() = assertEquals(PAYLOAD_FORMAT_INVALID.byte, 0x99.toUByte())
 
     @Test
-    fun RetainNotSupported() = assertEquals(RETAIN_NOT_SUPPORTED.byte, 0x9A.toUByte())
+    fun retainNotSupported() = assertEquals(RETAIN_NOT_SUPPORTED.byte, 0x9A.toUByte())
 
     @Test
-    fun QoSNotSupported() = assertEquals(QOS_NOT_SUPPORTED.byte, 0x9B.toUByte())
+    fun qoSNotSupported() = assertEquals(QOS_NOT_SUPPORTED.byte, 0x9B.toUByte())
 
     @Test
-    fun UseAnotherServer() = assertEquals(USE_ANOTHER_SERVER.byte, 0x9C.toUByte())
+    fun useAnotherServer() = assertEquals(USE_ANOTHER_SERVER.byte, 0x9C.toUByte())
 
     @Test
-    fun ServerMoved() = assertEquals(SERVER_MOVED.byte, 0x9D.toUByte())
+    fun serverMoved() = assertEquals(SERVER_MOVED.byte, 0x9D.toUByte())
 
     @Test
-    fun SharedSubscriptionsNotSupported() =
-        assertEquals(SHARED_SUBSCRIPTIONS_NOT_SUPPORTED.byte, 0x9E.toUByte())
+    fun sharedSubscriptionsNotSupported() = assertEquals(SHARED_SUBSCRIPTIONS_NOT_SUPPORTED.byte, 0x9E.toUByte())
 
     @Test
-    fun ConnectionRateExceeded() = assertEquals(CONNECTION_RATE_EXCEEDED.byte, 0x9F.toUByte())
+    fun connectionRateExceeded() = assertEquals(CONNECTION_RATE_EXCEEDED.byte, 0x9F.toUByte())
 
     @Test
-    fun MaximumConnectTime() = assertEquals(MAXIMUM_CONNECTION_TIME.byte, 0xA0.toUByte())
+    fun maximumConnectTime() = assertEquals(MAXIMUM_CONNECTION_TIME.byte, 0xA0.toUByte())
 
     @Test
-    fun SubscriptionIdentifierNotSupported() =
-        assertEquals(SUBSCRIPTION_IDENTIFIERS_NOT_SUPPORTED.byte, 0xA1.toUByte())
+    fun subscriptionIdentifierNotSupported() = assertEquals(SUBSCRIPTION_IDENTIFIERS_NOT_SUPPORTED.byte, 0xA1.toUByte())
 
     @Test
-    fun WildcardSubscriptionsNotSupported() =
-        assertEquals(WILDCARD_SUBSCRIPTIONS_NOT_SUPPORTED.byte, 0xA2.toUByte())
+    fun wildcardSubscriptionsNotSupported() = assertEquals(WILDCARD_SUBSCRIPTIONS_NOT_SUPPORTED.byte, 0xA2.toUByte())
 }

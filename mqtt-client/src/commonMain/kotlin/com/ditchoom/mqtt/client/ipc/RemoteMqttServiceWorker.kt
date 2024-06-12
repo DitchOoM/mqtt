@@ -25,7 +25,10 @@ class RemoteMqttServiceWorker(
         }
     }
 
-    private suspend fun findBroker(brokerId: Int, protocolVersion: Byte): MqttBroker? {
+    private suspend fun findBroker(
+        brokerId: Int,
+        protocolVersion: Byte,
+    ): MqttBroker? {
         val persistence = service.getPersistence(protocolVersion)
         return persistence.brokerWithId(brokerId)
     }
@@ -34,12 +37,18 @@ class RemoteMqttServiceWorker(
         service.start()
     }
 
-    suspend fun start(brokerId: Int, protocolVersion: Byte) {
+    suspend fun start(
+        brokerId: Int,
+        protocolVersion: Byte,
+    ) {
         val brokerFound = findBroker(brokerId, protocolVersion) ?: return
         service.start(brokerFound)
     }
 
-    suspend fun stop(brokerId: Int, protocolVersion: Byte) {
+    suspend fun stop(
+        brokerId: Int,
+        protocolVersion: Byte,
+    ) {
         val brokerFound = findBroker(brokerId, protocolVersion) ?: return
         service.stop(brokerFound)
         clients[protocolVersion]?.remove(brokerId)
@@ -50,7 +59,10 @@ class RemoteMqttServiceWorker(
         clients.clear()
     }
 
-    suspend fun requestClientOrNull(brokerId: Int, protocolVersion: Byte): RemoteMqttClientWorker? {
+    suspend fun requestClientOrNull(
+        brokerId: Int,
+        protocolVersion: Byte,
+    ): RemoteMqttClientWorker? {
         val cached = clients[protocolVersion]?.get(brokerId)
         if (cached != null && !cached.client.isStopped()) {
             return cached

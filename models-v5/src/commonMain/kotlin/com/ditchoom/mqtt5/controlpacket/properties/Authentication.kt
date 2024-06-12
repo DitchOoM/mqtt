@@ -35,9 +35,8 @@ data class Authentication(
      * The contents of this data are defined by the authentication method. Refer to section 4.12 for
      * more information about extended authentication.
      */
-    val data: ReadBuffer
+    val data: ReadBuffer,
 ) {
-
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other == null || this::class != other::class) return false

@@ -5,7 +5,7 @@ import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.ControlPacketFactory
 import js.buffer.SharedArrayBuffer
 import org.khronos.webgl.ArrayBuffer
-import org.khronos.webgl.Uint8Array
+import org.khronos.webgl.Int8Array
 import org.w3c.dom.MessageEvent
 
 internal const val MESSAGE_TYPE_KEY = "mqtt-message-type"
@@ -58,7 +58,11 @@ internal const val MESSAGE_BOOLEAN_KEY = "mqtt-boolean-key"
 internal const val MESSAGE_INT_KEY = "mqtt-int-key"
 private const val MESSAGE_LONG_KEY = "mqtt-long-key"
 
-fun buildSimpleMessage(messageType: String, optionalBoolean: Boolean? = null, optionalInt: Int? = null): dynamic {
+fun buildSimpleMessage(
+    messageType: String,
+    optionalBoolean: Boolean? = null,
+    optionalInt: Int? = null,
+): dynamic {
     val obj = js("({})")
     obj[MESSAGE_TYPE_KEY] = messageType
     if (optionalBoolean != null) {
@@ -70,18 +74,28 @@ fun buildSimpleMessage(messageType: String, optionalBoolean: Boolean? = null, op
     return obj
 }
 
-fun buildSimpleMessage(messageType: String, int: Int): dynamic {
+fun buildSimpleMessage(
+    messageType: String,
+    int: Int,
+): dynamic {
     val obj = js("({})")
     obj[MESSAGE_TYPE_KEY] = messageType
     obj[MESSAGE_INT_KEY] = int
     return obj
 }
 
-fun messageMatches(messageType: String, int: Int, obj: dynamic): Boolean {
+fun messageMatches(
+    messageType: String,
+    int: Int,
+    obj: dynamic,
+): Boolean {
     return obj[MESSAGE_TYPE_KEY] == messageType && obj[MESSAGE_INT_KEY] == int
 }
 
-fun buildLongMessage(messageType: String, long: Long): dynamic {
+fun buildLongMessage(
+    messageType: String,
+    long: Long,
+): dynamic {
     val obj = js("({})")
     obj[MESSAGE_TYPE_KEY] = messageType
     obj[MESSAGE_LONG_KEY] = long.toString()
@@ -92,7 +106,7 @@ fun buildBrokerIdProtocolVersionMessage(
     messageType: String,
     brokerId: Int,
     protocolVersion: Byte,
-    optionalInt: Int? = null
+    optionalInt: Int? = null,
 ): dynamic {
     val obj = js("({})")
     obj[MESSAGE_TYPE_KEY] = messageType
@@ -117,7 +131,7 @@ fun buildPacketIdMessage(
     messageType: String,
     packetId: Int,
     buffer: JsBuffer? = null,
-    optionalInt: Int? = null
+    optionalInt: Int? = null,
 ): dynamic {
     val obj = js("({})")
     obj[MESSAGE_TYPE_KEY] = messageType
@@ -131,41 +145,47 @@ fun buildPacketIdMessage(
 
 fun readLongDataFromMessage(data: dynamic): Long = data[MESSAGE_LONG_KEY].toString().toLong()
 
-fun readPacketIdMessage(factory: ControlPacketFactory, data: dynamic): Pair<Int, ControlPacket?>? {
+fun readPacketIdMessage(
+    factory: ControlPacketFactory,
+    data: dynamic,
+): Pair<Int, ControlPacket?>? {
     if (data[MESSAGE_TYPE_KEY] == null || data[MESSAGE_TYPE_KEY] == undefined) {
         return null
     }
-    val packetId = if (data[MESSAGE_PACKET_ID_KEY] == null || data[MESSAGE_PACKET_ID_KEY] == undefined) {
-        return null
-    } else {
-        data[MESSAGE_PACKET_ID_KEY] as Int
-    }
-    val packet = if (data[MESSAGE_IS_SHARED_BUFFER_KEY] == null || data[MESSAGE_IS_SHARED_BUFFER_KEY] == undefined ||
-        data[MESSAGE_BUFFER_KEY] == null || data[MESSAGE_BUFFER_KEY] == undefined ||
-        data[MESSAGE_POSITION_KEY] == null || data[MESSAGE_POSITION_KEY] == undefined ||
-        data[MESSAGE_LIMIT_KEY] == null || data[MESSAGE_LIMIT_KEY] == undefined
-    ) {
-        null
-    } else {
-        val position = data[MESSAGE_POSITION_KEY] as Int
-        val limit = data[MESSAGE_LIMIT_KEY] as Int
-        val buffer = if (data[MESSAGE_IS_SHARED_BUFFER_KEY] == true) {
-            val sharedArrayBuffer = data[MESSAGE_BUFFER_KEY].unsafeCast<SharedArrayBuffer>()
-            JsBuffer(
-                Uint8Array(sharedArrayBuffer as ArrayBuffer),
-                false,
-                position,
-                limit,
-                sharedArrayBuffer.byteLength,
-                sharedArrayBuffer
-            )
+    val packetId =
+        if (data[MESSAGE_PACKET_ID_KEY] == null || data[MESSAGE_PACKET_ID_KEY] == undefined) {
+            return null
         } else {
-            val arrayBuffer = data[MESSAGE_BUFFER_KEY].unsafeCast<ArrayBuffer>()
-            JsBuffer(Uint8Array(arrayBuffer), false, position, limit, arrayBuffer.byteLength)
+            data[MESSAGE_PACKET_ID_KEY] as Int
         }
-        buffer.resetForRead()
-        factory.from(buffer)
-    }
+    val packet =
+        if (data[MESSAGE_IS_SHARED_BUFFER_KEY] == null || data[MESSAGE_IS_SHARED_BUFFER_KEY] == undefined ||
+            data[MESSAGE_BUFFER_KEY] == null || data[MESSAGE_BUFFER_KEY] == undefined ||
+            data[MESSAGE_POSITION_KEY] == null || data[MESSAGE_POSITION_KEY] == undefined ||
+            data[MESSAGE_LIMIT_KEY] == null || data[MESSAGE_LIMIT_KEY] == undefined
+        ) {
+            null
+        } else {
+            val position = data[MESSAGE_POSITION_KEY] as Int
+            val limit = data[MESSAGE_LIMIT_KEY] as Int
+            val buffer =
+                if (data[MESSAGE_IS_SHARED_BUFFER_KEY] == true) {
+                    val sharedArrayBuffer = data[MESSAGE_BUFFER_KEY].unsafeCast<SharedArrayBuffer>()
+                    JsBuffer(
+                        Int8Array(sharedArrayBuffer as ArrayBuffer),
+                        false,
+                        position,
+                        limit,
+                        sharedArrayBuffer.byteLength,
+                        sharedArrayBuffer,
+                    )
+                } else {
+                    val arrayBuffer = data[MESSAGE_BUFFER_KEY].unsafeCast<ArrayBuffer>()
+                    JsBuffer(Int8Array(arrayBuffer), false, position, limit, arrayBuffer.byteLength)
+                }
+            buffer.resetForRead()
+            factory.from(buffer)
+        }
     return Pair(packetId, packet)
 }
 
@@ -177,7 +197,11 @@ fun buildOutgoingControlPacketMessage(jsBuffer: JsBuffer): dynamic {
     return obj
 }
 
-fun sendIncomingControlPacketMessage(byte1: UByte, remainingLength: Int, jsBuffer: JsBuffer): dynamic {
+fun sendIncomingControlPacketMessage(
+    byte1: UByte,
+    remainingLength: Int,
+    jsBuffer: JsBuffer,
+): dynamic {
     val obj = js("({})")
     obj[MESSAGE_TYPE_KEY] = MESSAGE_TYPE_CONTROL_PACKET
     obj[MESSAGE_INCOMING_KEY] = true
@@ -187,7 +211,10 @@ fun sendIncomingControlPacketMessage(byte1: UByte, remainingLength: Int, jsBuffe
     return obj
 }
 
-fun writeBufferInMessage(obj: dynamic, jsBuffer: JsBuffer?) {
+fun writeBufferInMessage(
+    obj: dynamic,
+    jsBuffer: JsBuffer?,
+) {
     if (jsBuffer != null) {
         obj[MESSAGE_IS_SHARED_BUFFER_KEY] = jsBuffer.sharedArrayBuffer != null
         obj[MESSAGE_POSITION_KEY] = jsBuffer.position()
@@ -196,58 +223,66 @@ fun writeBufferInMessage(obj: dynamic, jsBuffer: JsBuffer?) {
     }
 }
 
-fun sendControlPacketFromMessageEvent(factory: ControlPacketFactory, m: MessageEvent): Pair<Boolean, ControlPacket>? {
+fun sendControlPacketFromMessageEvent(
+    factory: ControlPacketFactory,
+    m: MessageEvent,
+): Pair<Boolean, ControlPacket>? {
     val data = m.data ?: return null
     val obj = data.asDynamic()
     if (obj[MESSAGE_TYPE_KEY] != MESSAGE_TYPE_CONTROL_PACKET) {
         return null
     }
-    val incoming = if (obj[MESSAGE_INCOMING_KEY] != undefined && obj[MESSAGE_INCOMING_KEY] != null) {
-        obj[MESSAGE_INCOMING_KEY] == true
-    } else {
-        return null
-    }
-    val position = if (obj[MESSAGE_POSITION_KEY] != undefined && obj[MESSAGE_POSITION_KEY] != null) {
-        obj[MESSAGE_POSITION_KEY] as? Int ?: return null
-    } else {
-        return null
-    }
-    val limit = if (obj[MESSAGE_LIMIT_KEY] != undefined && obj[MESSAGE_LIMIT_KEY] != null) {
-        obj[MESSAGE_LIMIT_KEY] as? Int ?: return null
-    } else {
-        return null
-    }
+    val incoming =
+        if (obj[MESSAGE_INCOMING_KEY] != undefined && obj[MESSAGE_INCOMING_KEY] != null) {
+            obj[MESSAGE_INCOMING_KEY] == true
+        } else {
+            return null
+        }
+    val position =
+        if (obj[MESSAGE_POSITION_KEY] != undefined && obj[MESSAGE_POSITION_KEY] != null) {
+            obj[MESSAGE_POSITION_KEY] as? Int ?: return null
+        } else {
+            return null
+        }
+    val limit =
+        if (obj[MESSAGE_LIMIT_KEY] != undefined && obj[MESSAGE_LIMIT_KEY] != null) {
+            obj[MESSAGE_LIMIT_KEY] as? Int ?: return null
+        } else {
+            return null
+        }
     val isSharedBuffer =
         if (obj[MESSAGE_IS_SHARED_BUFFER_KEY] != undefined && obj[MESSAGE_IS_SHARED_BUFFER_KEY] != null) {
             obj[MESSAGE_IS_SHARED_BUFFER_KEY] == true
         } else {
             false
         }
-    val buffer = if (obj[MESSAGE_BUFFER_KEY] != undefined && obj[MESSAGE_BUFFER_KEY] != null) {
-        if (isSharedBuffer) {
-            val arrayBuffer = obj[MESSAGE_BUFFER_KEY].unsafeCast<SharedArrayBuffer>()
-            JsBuffer(
-                Uint8Array(arrayBuffer.unsafeCast<ArrayBuffer>()),
-                false,
-                position,
-                limit,
-                arrayBuffer.byteLength,
-                arrayBuffer
-            )
+    val buffer =
+        if (obj[MESSAGE_BUFFER_KEY] != undefined && obj[MESSAGE_BUFFER_KEY] != null) {
+            if (isSharedBuffer) {
+                val arrayBuffer = obj[MESSAGE_BUFFER_KEY].unsafeCast<SharedArrayBuffer>()
+                JsBuffer(
+                    Int8Array(arrayBuffer.unsafeCast<ArrayBuffer>()),
+                    false,
+                    position,
+                    limit,
+                    arrayBuffer.byteLength,
+                    arrayBuffer,
+                )
+            } else {
+                val arrayBuffer = obj[MESSAGE_BUFFER_KEY].unsafeCast<ArrayBuffer>()
+                JsBuffer(Int8Array(arrayBuffer), false, position, limit, arrayBuffer.byteLength, null)
+            }
         } else {
-            val arrayBuffer = obj[MESSAGE_BUFFER_KEY].unsafeCast<ArrayBuffer>()
-            JsBuffer(Uint8Array(arrayBuffer), false, position, limit, arrayBuffer.byteLength, null)
+            return null
         }
-    } else {
-        return null
-    }
     buffer.resetForRead()
-    val packet = if (incoming) {
-        val byte1 = obj[MESSAGE_BYTE_1_KEY] as Int
-        val remainingLength = obj[MESSAGE_REMAINING_LENGTH_KEY] as Int
-        factory.from(buffer, byte1.toUByte(), remainingLength)
-    } else {
-        factory.from(buffer)
-    }
+    val packet =
+        if (incoming) {
+            val byte1 = obj[MESSAGE_BYTE_1_KEY] as Int
+            val remainingLength = obj[MESSAGE_REMAINING_LENGTH_KEY] as Int
+            factory.from(buffer, byte1.toUByte(), remainingLength)
+        } else {
+            factory.from(buffer)
+        }
     return Pair(incoming, packet)
 }

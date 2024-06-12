@@ -37,11 +37,10 @@ import com.ditchoom.mqtt5.controlpacket.properties.readPropertiesSized
 data class PublishMessage(
     val fixed: FixedHeader = FixedHeader(),
     val variable: VariableHeader,
-    override val payload: ReadBuffer? = null
+    override val payload: ReadBuffer? = null,
 ) :
-    ControlPacketV5(IPublishMessage.controlPacketValue, DirectionOfFlow.BIDIRECTIONAL, fixed.flags),
-    IPublishMessage {
-
+    ControlPacketV5(IPublishMessage.CONTROL_PACKET_VALUE, DirectionOfFlow.BIDIRECTIONAL, fixed.flags),
+        IPublishMessage {
     constructor(
         dup: Boolean = false,
         qos: QualityOfService = AT_MOST_ONCE,
@@ -56,7 +55,7 @@ data class PublishMessage(
         userProperty: List<Pair<String, String>> = emptyList(),
         subscriptionIdentifier: Set<Long> = emptySet(),
         contentType: String? = null,
-        payload: ReadBuffer? = null
+        payload: ReadBuffer? = null,
     ) : this(
         FixedHeader(dup, qos, retain),
         VariableHeader(
@@ -70,13 +69,14 @@ data class PublishMessage(
                 correlationData,
                 userProperty,
                 subscriptionIdentifier,
-                contentType
-            )
+                contentType,
+            ),
         ),
-        payload
+        payload,
     )
 
     override val packetIdentifier = variable.packetIdentifier
+
     override fun setDupFlagNewPubMessage(): IPublishMessage {
         return if (fixed.qos == AT_MOST_ONCE && fixed.dup) {
             copy(fixed = fixed.copy(dup = false), variable = variable, payload = payload)
@@ -88,7 +88,9 @@ data class PublishMessage(
     }
 
     override val qualityOfService: QualityOfService = fixed.qos
+
     override fun variableHeader(writeBuffer: WriteBuffer) = variable.serialize(writeBuffer)
+
     override fun payload(writeBuffer: WriteBuffer) {
         if (payload != null) {
             writeBuffer.write(payload)
@@ -108,15 +110,15 @@ data class PublishMessage(
     override fun expectedResponse(
         reasonCode: ReasonCode,
         reasonString: String?,
-        userProperty: List<Pair<String, String>>
+        userProperty: List<Pair<String, String>>,
     ) = when (fixed.qos) {
         AT_LEAST_ONCE -> {
             PublishAcknowledgment(
                 PublishAcknowledgment.VariableHeader(
                     variable.packetIdentifier,
                     reasonCode,
-                    PublishAcknowledgment.VariableHeader.Properties(reasonString, userProperty)
-                )
+                    PublishAcknowledgment.VariableHeader.Properties(reasonString, userProperty),
+                ),
             )
         }
 
@@ -125,19 +127,21 @@ data class PublishMessage(
                 PublishReceived.VariableHeader(
                     packetIdentifier,
                     reasonCode,
-                    PublishReceived.VariableHeader.Properties(reasonString, userProperty)
-                )
+                    PublishReceived.VariableHeader.Properties(reasonString, userProperty),
+                ),
             )
         }
 
         else -> null
     }
 
-    override fun maybeCopyWithNewPacketIdentifier(packetIdentifier: Int): IPublishMessage = when (qualityOfService) {
-        AT_MOST_ONCE -> this
-        AT_LEAST_ONCE,
-        QualityOfService.EXACTLY_ONCE -> copy(variable = variable.copy(packetIdentifier = packetIdentifier))
-    }
+    override fun maybeCopyWithNewPacketIdentifier(packetIdentifier: Int): IPublishMessage =
+        when (qualityOfService) {
+            AT_MOST_ONCE -> this
+            AT_LEAST_ONCE,
+            QualityOfService.EXACTLY_ONCE,
+            -> copy(variable = variable.copy(packetIdentifier = packetIdentifier))
+        }
 
     data class FixedHeader(
         /**
@@ -247,7 +251,7 @@ data class PublishMessage(
          * Retained messages are useful where publishers send state messages on an irregular basis. A new non-shared
          * subscriber will receive the most recent state.
          */
-        val retain: Boolean = false
+        val retain: Boolean = false,
     ) {
         val flags by lazy(LazyThreadSafetyMode.NONE) {
             val dupInt = if (dup) 0b1000 else 0b0
@@ -267,7 +271,7 @@ data class PublishMessage(
                         "A PUBLISH Packet MUST NOT have both QoS bits set to 1 [MQTT-3.3.1-4]." +
                             " If a Server or Client receives a PUBLISH packet which has both QoS bits set to 1 it is a " +
                             "Malformed Packet. Use DISCONNECT with Reason Code 0x81 (Malformed Packet) as described in" +
-                            " section 4.13."
+                            " section 4.13.",
                     )
                 }
                 val qos = QualityOfService.fromBooleans(qosBit2, qosBit1)
@@ -287,14 +291,13 @@ data class PublishMessage(
     data class VariableHeader(
         val topicName: Topic,
         val packetIdentifier: Int = NO_PACKET_ID,
-        val properties: Properties = Properties()
+        val properties: Properties = Properties(),
     ) {
-
         init {
             if (properties.topicAlias == 0) {
                 throw ProtocolError(
                     "Topic Alias not permitted to be set to 0:" +
-                        "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477413"
+                        "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477413",
                 )
             }
         }
@@ -543,14 +546,13 @@ data class PublishMessage(
              * Figure 3-9 shows an example of a PUBLISH packet with the Topic Name set to “a/b”, the Packet
              * Identifier set to 10, and having no properties.
              */
-            val contentType: String? = null
+            val contentType: String? = null,
         ) {
-
             init {
                 if (topicAlias == 0) {
                     throw ProtocolError(
                         "Topic Alias not permitted to be set to 0:" +
-                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477413"
+                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477413",
                     )
                 }
             }
@@ -632,13 +634,13 @@ data class PublishMessage(
                                 if (topicAlias != null) {
                                     throw ProtocolError(
                                         "Topic Alias found twice see:" +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477413"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477413",
                                     )
                                 }
                                 if (it.value == 0) {
                                     throw ProtocolError(
                                         "Topic Alias not permitted to be set to 0:" +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477413"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477413",
                                     )
                                 }
                                 topicAlias = it.value
@@ -648,7 +650,7 @@ data class PublishMessage(
                                 if (responseTopic != null) {
                                     throw ProtocolError(
                                         "Response Topic found twice see:" +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477414"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477414",
                                     )
                                 }
                                 responseTopic = it.value
@@ -658,7 +660,7 @@ data class PublishMessage(
                                 if (correlationData != null) {
                                     throw ProtocolError(
                                         "Correlation Data found twice see:" +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477415"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477415",
                                     )
                                 }
                                 correlationData = it.data
@@ -669,7 +671,7 @@ data class PublishMessage(
                                 if (it.value == 0L) {
                                     throw ProtocolError(
                                         "Subscription Identifier not permitted to be set to 0:" +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477417"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477417",
                                     )
                                 }
                                 subscriptionIdentifier.add(it.value)
@@ -679,7 +681,7 @@ data class PublishMessage(
                                 if (contentType != null) {
                                     throw ProtocolError(
                                         "Content Type found twice see:" +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477417"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477417",
                                     )
                                 }
                                 contentType = it.value
@@ -696,48 +698,56 @@ data class PublishMessage(
                         correlationData,
                         userProperty,
                         subscriptionIdentifier,
-                        contentType
+                        contentType,
                     )
                 }
             }
         }
 
         companion object {
-
-            fun from(buffer: ReadBuffer, isQos0: Boolean): Pair<Int, VariableHeader> {
+            fun from(
+                buffer: ReadBuffer,
+                isQos0: Boolean,
+            ): Pair<Int, VariableHeader> {
                 val result = buffer.readMqttUtf8StringNotValidatedSized()
                 var size = result.first + UShort.SIZE_BYTES
                 val topicName = result.second
-                val packetIdentifier = if (isQos0) {
-                    NO_PACKET_ID
-                } else {
-                    size += 2
-                    buffer.readUnsignedShort().toInt()
-                }
+                val packetIdentifier =
+                    if (isQos0) {
+                        NO_PACKET_ID
+                    } else {
+                        size += 2
+                        buffer.readUnsignedShort().toInt()
+                    }
                 val propertiesSized = buffer.readPropertiesSized()
                 size += 1
                 size += propertiesSized.first
                 val props = Properties.from(propertiesSized.second)
                 return Pair(
                     size,
-                    VariableHeader(Topic.fromOrThrow(topicName, Topic.Type.Name), packetIdentifier, props)
+                    VariableHeader(Topic.fromOrThrow(topicName, Topic.Type.Name), packetIdentifier, props),
                 )
             }
         }
     }
 
     companion object {
-        fun from(buffer: ReadBuffer, byte1: UByte, remainingLength: Int): PublishMessage {
+        fun from(
+            buffer: ReadBuffer,
+            byte1: UByte,
+            remainingLength: Int,
+        ): PublishMessage {
             val fixedHeader = FixedHeader.fromByte(byte1)
             val variableHeaderSized = VariableHeader.from(buffer, fixedHeader.qos == AT_MOST_ONCE)
             val variableHeader = variableHeaderSized.second
             val variableSize = variableHeaderSized.first
             val size = remainingLength - variableSize
-            val payloadBuffer = if (size > 0) {
-                buffer.readBytes(size)
-            } else {
-                null
-            }
+            val payloadBuffer =
+                if (size > 0) {
+                    buffer.readBytes(size)
+                } else {
+                    null
+                }
             return PublishMessage(fixedHeader, variableHeader, payloadBuffer)
         }
     }

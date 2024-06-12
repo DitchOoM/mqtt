@@ -9,7 +9,6 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class ConnectionAcknowledgmentTests {
-
     @Test
     fun serializeDeserializeDefault() {
         val buffer = PlatformBuffer.allocate(4)

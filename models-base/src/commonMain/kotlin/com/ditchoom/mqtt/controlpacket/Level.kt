@@ -1,5 +1,8 @@
+@file:OptIn(ExperimentalJsExport::class)
+
 package com.ditchoom.mqtt.controlpacket
 
+import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
 @JsExport
@@ -8,14 +11,17 @@ sealed class Level {
     open val nextLevel: Level? = null
     var isPrefixedWithSlash = false
     var isPostfixedWithSlash = false
+
     abstract fun matches(other: Level): Boolean
+
     fun stringValue(): String {
         val next = nextLevel
-        val postFix = if (next != null) {
-            "/$next"
-        } else {
-            ""
-        }
+        val postFix =
+            if (next != null) {
+                "/$next"
+            } else {
+                ""
+            }
         return value + postFix
     }
 
@@ -32,8 +38,10 @@ sealed class Level {
                         value == other.value
                     } else if (nextLevel != null && otherNextLevel != null) {
                         value == other.value && nextLevel.matches(otherNextLevel)
-                    } else (nextLevel is MultiLevelWildcard && otherNextLevel == null) ||
-                        (otherNextLevel is MultiLevelWildcard && nextLevel == null)
+                    } else {
+                        (nextLevel is MultiLevelWildcard && otherNextLevel == null) ||
+                            (otherNextLevel is MultiLevelWildcard && nextLevel == null)
+                    }
                 }
             }
         }
@@ -43,22 +51,26 @@ sealed class Level {
 
     object MultiLevelWildcard : Level() {
         override val value: String = "#"
-        override fun matches(other: Level): Boolean = when (other) {
-            MultiLevelWildcard -> true
-            is SingleLevelWildcard -> false
-            is StringLevel -> other.matches(this)
-        }
+
+        override fun matches(other: Level): Boolean =
+            when (other) {
+                MultiLevelWildcard -> true
+                is SingleLevelWildcard -> false
+                is StringLevel -> other.matches(this)
+            }
 
         override fun toString(): String = stringValue()
     }
 
     data class SingleLevelWildcard(override val nextLevel: Level? = null) : Level() {
         override val value: String = "+"
-        override fun matches(other: Level): Boolean = when (other) {
-            MultiLevelWildcard -> false
-            is SingleLevelWildcard -> true
-            is StringLevel -> other.matches(this)
-        }
+
+        override fun matches(other: Level): Boolean =
+            when (other) {
+                MultiLevelWildcard -> false
+                is SingleLevelWildcard -> true
+                is StringLevel -> other.matches(this)
+            }
 
         override fun toString(): String = stringValue()
     }

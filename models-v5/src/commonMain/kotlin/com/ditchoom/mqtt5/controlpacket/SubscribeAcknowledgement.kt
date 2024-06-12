@@ -42,26 +42,27 @@ data class SubscribeAcknowledgement(val variable: VariableHeader, val payload: L
     constructor(
         packetIdentifier: UShort,
         properties: Properties = Properties(),
-        payload: ReasonCode = SUCCESS
+        payload: ReasonCode = SUCCESS,
     ) : this(VariableHeader(packetIdentifier.toInt(), properties), listOf(payload))
 
     constructor(
         packetIdentifier: Int,
         reasonString: String? = null,
         userProperty: List<Pair<String, String>> = emptyList(),
-        payload: List<ReasonCode>
+        payload: List<ReasonCode>,
     ) : this(VariableHeader(packetIdentifier, Properties(reasonString, userProperty)), payload)
 
     constructor(
         packetIdentifier: UShort,
         payload: ReasonCode = SUCCESS,
-        properties: Properties = Properties()
+        properties: Properties = Properties(),
     ) : this(VariableHeader(packetIdentifier.toInt(), properties), listOf(payload))
 
     override val packetIdentifier: Int = variable.packetIdentifier
+
     override fun variableHeader(writeBuffer: WriteBuffer) = variable.serialize(writeBuffer)
-    override fun payload(writeBuffer: WriteBuffer) =
-        payload.forEach { writeBuffer.writeUByte(it.byte) }
+
+    override fun payload(writeBuffer: WriteBuffer) = payload.forEach { writeBuffer.writeUByte(it.byte) }
 
     override fun remainingLength() = variable.size() + payload.size
 
@@ -82,7 +83,7 @@ data class SubscribeAcknowledgement(val variable: VariableHeader, val payload: L
 
     data class VariableHeader(
         val packetIdentifier: Int,
-        val properties: Properties = Properties()
+        val properties: Properties = Properties(),
     ) {
         fun serialize(writeBuffer: WriteBuffer) {
             writeBuffer.writeUShort(packetIdentifier.toUShort())
@@ -125,7 +126,7 @@ data class SubscribeAcknowledgement(val variable: VariableHeader, val payload: L
              * Property is allowed to appear multiple times to represent multiple name, value pairs. The same
              * name is allowed to appear more than once.
              */
-            val userProperty: List<Pair<String, String>> = emptyList()
+            val userProperty: List<Pair<String, String>> = emptyList(),
         ) {
             val props by lazy(LazyThreadSafetyMode.NONE) {
                 val props = ArrayList<Property>(1 + userProperty.size)
@@ -163,7 +164,7 @@ data class SubscribeAcknowledgement(val variable: VariableHeader, val payload: L
                                 if (reasonString != null) {
                                     throw ProtocolError(
                                         "Reason String added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477476"
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477476",
                                     )
                                 }
                                 reasonString = it.diagnosticInfoDontParse
@@ -179,45 +180,53 @@ data class SubscribeAcknowledgement(val variable: VariableHeader, val payload: L
         }
 
         companion object {
-            fun from(buffer: ReadBuffer, remainingLength: Int): Pair<Int, VariableHeader> {
+            fun from(
+                buffer: ReadBuffer,
+                remainingLength: Int,
+            ): Pair<Int, VariableHeader> {
                 val packetIdentifier = buffer.readUnsignedShort()
                 var bytesRead = 3
-                val props = if (remainingLength > bytesRead) {
-                    val sized = buffer.readPropertiesSized()
-                    bytesRead += sized.first
-                    Properties.from(sized.second)
-                } else {
-                    Properties()
-                }
+                val props =
+                    if (remainingLength > bytesRead) {
+                        val sized = buffer.readPropertiesSized()
+                        bytesRead += sized.first
+                        Properties.from(sized.second)
+                    } else {
+                        Properties()
+                    }
                 return Pair(bytesRead, VariableHeader(packetIdentifier.toInt(), props))
             }
         }
     }
 
     companion object {
-        fun from(buffer: ReadBuffer, remainingLength: Int): SubscribeAcknowledgement {
+        fun from(
+            buffer: ReadBuffer,
+            remainingLength: Int,
+        ): SubscribeAcknowledgement {
             val variableHeader = VariableHeader.from(buffer, remainingLength)
             val max = remainingLength - variableHeader.first
             val codes = ArrayList<ReasonCode>(max)
             while (codes.size < max) {
-                val reasonCode = when (val reasonCodeByte = buffer.readUnsignedByte()) {
-                    GRANTED_QOS_0.byte -> GRANTED_QOS_0
-                    GRANTED_QOS_1.byte -> GRANTED_QOS_1
-                    GRANTED_QOS_2.byte -> GRANTED_QOS_2
-                    UNSPECIFIED_ERROR.byte -> UNSPECIFIED_ERROR
-                    IMPLEMENTATION_SPECIFIC_ERROR.byte -> IMPLEMENTATION_SPECIFIC_ERROR
-                    NOT_AUTHORIZED.byte -> NOT_AUTHORIZED
-                    TOPIC_FILTER_INVALID.byte -> TOPIC_FILTER_INVALID
-                    PACKET_IDENTIFIER_IN_USE.byte -> PACKET_IDENTIFIER_IN_USE
-                    QUOTA_EXCEEDED.byte -> QUOTA_EXCEEDED
-                    SHARED_SUBSCRIPTIONS_NOT_SUPPORTED.byte -> SHARED_SUBSCRIPTIONS_NOT_SUPPORTED
-                    SUBSCRIPTION_IDENTIFIERS_NOT_SUPPORTED.byte -> SUBSCRIPTION_IDENTIFIERS_NOT_SUPPORTED
-                    WILDCARD_SUBSCRIPTIONS_NOT_SUPPORTED.byte -> WILDCARD_SUBSCRIPTIONS_NOT_SUPPORTED
-                    else -> throw MalformedPacketException(
-                        "Invalid reason code $reasonCodeByte " +
-                            "see: https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477478"
-                    )
-                }
+                val reasonCode =
+                    when (val reasonCodeByte = buffer.readUnsignedByte()) {
+                        GRANTED_QOS_0.byte -> GRANTED_QOS_0
+                        GRANTED_QOS_1.byte -> GRANTED_QOS_1
+                        GRANTED_QOS_2.byte -> GRANTED_QOS_2
+                        UNSPECIFIED_ERROR.byte -> UNSPECIFIED_ERROR
+                        IMPLEMENTATION_SPECIFIC_ERROR.byte -> IMPLEMENTATION_SPECIFIC_ERROR
+                        NOT_AUTHORIZED.byte -> NOT_AUTHORIZED
+                        TOPIC_FILTER_INVALID.byte -> TOPIC_FILTER_INVALID
+                        PACKET_IDENTIFIER_IN_USE.byte -> PACKET_IDENTIFIER_IN_USE
+                        QUOTA_EXCEEDED.byte -> QUOTA_EXCEEDED
+                        SHARED_SUBSCRIPTIONS_NOT_SUPPORTED.byte -> SHARED_SUBSCRIPTIONS_NOT_SUPPORTED
+                        SUBSCRIPTION_IDENTIFIERS_NOT_SUPPORTED.byte -> SUBSCRIPTION_IDENTIFIERS_NOT_SUPPORTED
+                        WILDCARD_SUBSCRIPTIONS_NOT_SUPPORTED.byte -> WILDCARD_SUBSCRIPTIONS_NOT_SUPPORTED
+                        else -> throw MalformedPacketException(
+                            "Invalid reason code $reasonCodeByte " +
+                                "see: https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477478",
+                        )
+                    }
                 codes += reasonCode
             }
             return SubscribeAcknowledgement(variableHeader.second, codes)
@@ -238,6 +247,6 @@ private val validSubscribeCodes by lazy(LazyThreadSafetyMode.NONE) {
         QUOTA_EXCEEDED,
         SHARED_SUBSCRIPTIONS_NOT_SUPPORTED,
         SUBSCRIPTION_IDENTIFIERS_NOT_SUPPORTED,
-        WILDCARD_SUBSCRIPTIONS_NOT_SUPPORTED
+        WILDCARD_SUBSCRIPTIONS_NOT_SUPPORTED,
     )
 }

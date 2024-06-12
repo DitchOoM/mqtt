@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalJsExport::class)
+
 package com.ditchoom.mqtt3.persistence
 
 import com.ditchoom.buffer.JsBuffer
@@ -10,7 +12,7 @@ import com.ditchoom.mqtt3.controlpacket.ConnectionRequest
 import com.ditchoom.mqtt3.controlpacket.PublishMessage
 import com.ditchoom.mqtt3.controlpacket.Subscription
 import com.ditchoom.mqtt3.controlpacket.UnsubscribeRequest
-import org.khronos.webgl.Uint8Array
+import org.khronos.webgl.Int8Array
 import kotlin.time.Duration.Companion.milliseconds
 
 data class PersistableQos2Message(
@@ -21,14 +23,14 @@ data class PersistableQos2Message(
     @JsName("type")
     val type: Byte,
     @JsName("incoming")
-    val incoming: Int
+    val incoming: Int,
 )
 
 data class PersistableUnsubscribe(
     @JsName("brokerId")
     val brokerId: Int,
     @JsName("packetId")
-    val packetId: Int
+    val packetId: Int,
 ) {
     constructor(brokerId: Int, unsub: UnsubscribeRequest) :
         this(brokerId, unsub.packetIdentifier)
@@ -41,7 +43,7 @@ data class PersistableSubscribe(
     @JsName("brokerId")
     val brokerId: Int,
     @JsName("packetId")
-    val packetId: Int
+    val packetId: Int,
 )
 
 @JsExport
@@ -55,15 +57,14 @@ data class PersistableSubscription(
     @JsName("unsubscribeId")
     val unsubscribeId: Int,
     @JsName("qos")
-    val qos: Byte
+    val qos: Byte,
 ) {
     @JsName("build")
     constructor(brokerId: Int, subscribeId: Int, sub: ISubscription) :
         this(brokerId, sub.topicFilter.toString(), subscribeId, -1, sub.maximumQos.integerValue)
 }
 
-fun toSubscription(s: PersistableSubscription) =
-    Subscription(Topic.fromOrThrow(s.topicFilter, Topic.Type.Filter), s.qos.toQos())
+fun toSubscription(s: PersistableSubscription) = Subscription(Topic.fromOrThrow(s.topicFilter, Topic.Type.Filter), s.qos.toQos())
 
 data class PersistablePublishMessage(
     @JsName("brokerId")
@@ -81,7 +82,7 @@ data class PersistablePublishMessage(
     @JsName("packetId")
     val packetId: Int,
     @JsName("payload")
-    val payload: Uint8Array?
+    val payload: Int8Array?,
 ) {
     constructor(brokerId: Int, incoming: Boolean, pub: PublishMessage) : this(
         brokerId,
@@ -91,15 +92,16 @@ data class PersistablePublishMessage(
         pub.fixed.retain,
         pub.variable.topicName.toString(),
         pub.variable.packetIdentifier,
-        pub.payload?.let { (it as JsBuffer).buffer }
+        pub.payload?.let { (it as JsBuffer).buffer },
     )
 }
 
-fun toPub(p: PersistablePublishMessage) = PublishMessage(
-    PublishMessage.FixedHeader(p.dup, p.qos.toQos(), p.retain),
-    PublishMessage.VariableHeader(Topic.fromOrThrow(p.topicName, Topic.Type.Name), p.packetId),
-    p.payload?.let { JsBuffer(it, position = it.length, limit = it.length) }?.also { it.resetForRead() }
-)
+fun toPub(p: PersistablePublishMessage) =
+    PublishMessage(
+        PublishMessage.FixedHeader(p.dup, p.qos.toQos(), p.retain),
+        PublishMessage.VariableHeader(Topic.fromOrThrow(p.topicName, Topic.Type.Name), p.packetId),
+        p.payload?.let { JsBuffer(it, position = it.length, limit = it.length) }?.also { it.resetForRead() },
+    )
 
 data class PersistableBroker(
     @JsName("id")
@@ -107,7 +109,7 @@ data class PersistableBroker(
     @JsName("connectionOptions")
     val connectionOptions: Array<PersistableSocketConnection>,
     @JsName("connectionRequest")
-    val connectionRequest: PersistableConnectionRequest
+    val connectionRequest: PersistableConnectionRequest,
 )
 
 data class PersistableSocketConnection(
@@ -128,40 +130,41 @@ data class PersistableSocketConnection(
     @JsName("websocketEndpoint")
     val websocketEndpoint: String?,
     @JsName("websocketProtocols")
-    val websocketProtocols: String?
+    val websocketProtocols: String?,
 ) {
     companion object {
-        fun from(connectionOps: Collection<MqttConnectionOptions>) = connectionOps.map {
-            when (it) {
-                is MqttConnectionOptions.SocketConnection -> {
-                    PersistableSocketConnection(
-                        "tcp",
-                        it.host,
-                        it.port,
-                        it.tls,
-                        it.connectionTimeout.inWholeMilliseconds.toString(),
-                        it.readTimeout.inWholeMilliseconds.toString(),
-                        it.writeTimeout.inWholeMilliseconds.toString(),
-                        null,
-                        null
-                    )
-                }
+        fun from(connectionOps: Collection<MqttConnectionOptions>) =
+            connectionOps.map {
+                when (it) {
+                    is MqttConnectionOptions.SocketConnection -> {
+                        PersistableSocketConnection(
+                            "tcp",
+                            it.host,
+                            it.port,
+                            it.tls,
+                            it.connectionTimeout.inWholeMilliseconds.toString(),
+                            it.readTimeout.inWholeMilliseconds.toString(),
+                            it.writeTimeout.inWholeMilliseconds.toString(),
+                            null,
+                            null,
+                        )
+                    }
 
-                is MqttConnectionOptions.WebSocketConnectionOptions -> {
-                    PersistableSocketConnection(
-                        "websocket",
-                        it.host,
-                        it.port,
-                        it.tls,
-                        it.connectionTimeout.inWholeMilliseconds.toString(),
-                        it.readTimeout.inWholeMilliseconds.toString(),
-                        it.writeTimeout.inWholeMilliseconds.toString(),
-                        it.websocketEndpoint,
-                        it.protocols.joinToString()
-                    )
+                    is MqttConnectionOptions.WebSocketConnectionOptions -> {
+                        PersistableSocketConnection(
+                            "websocket",
+                            it.host,
+                            it.port,
+                            it.tls,
+                            it.connectionTimeout.inWholeMilliseconds.toString(),
+                            it.readTimeout.inWholeMilliseconds.toString(),
+                            it.writeTimeout.inWholeMilliseconds.toString(),
+                            it.websocketEndpoint,
+                            it.protocols.joinToString(),
+                        )
+                    }
                 }
-            }
-        }.toTypedArray()
+            }.toTypedArray()
     }
 }
 
@@ -174,7 +177,7 @@ fun toSocketConnection(a: Any?): MqttConnectionOptions {
             p.tls.unsafeCast<Boolean>(),
             (p.connectionTimeoutMs as String).toLong().milliseconds,
             (p.readTimeoutMs as String).toLong().milliseconds,
-            (p.writeTimeoutMs as String).toLong().milliseconds
+            (p.writeTimeoutMs as String).toLong().milliseconds,
         )
     } else {
         MqttConnectionOptions.WebSocketConnectionOptions(
@@ -210,11 +213,11 @@ data class PersistableConnectionRequest(
     @JsName("willTopic")
     val willTopic: String?,
     @JsName("willPayload")
-    val willPayload: Uint8Array?,
+    val willPayload: Int8Array?,
     @JsName("username")
     val username: String?,
     @JsName("password")
-    val password: String?
+    val password: String?,
 ) {
     companion object {
         fun from(connectionRequest: ConnectionRequest): PersistableConnectionRequest =
@@ -230,7 +233,7 @@ data class PersistableConnectionRequest(
                 connectionRequest.payload.willTopic?.toString(),
                 (connectionRequest.payload.willPayload as? JsBuffer)?.buffer,
                 connectionRequest.payload.userName,
-                connectionRequest.payload.password
+                connectionRequest.payload.password,
             )
     }
 }
@@ -247,15 +250,15 @@ fun toConnectionRequest(a: Any?): ConnectionRequest {
             (p.willQos as Byte).toQos(),
             p.willFlag as Boolean,
             p.cleanSession as Boolean,
-            p.keepAliveSeconds as Int
+            p.keepAliveSeconds as Int,
         ),
         ConnectionRequest.Payload(
             p.clientId as String,
             (p.willTopic as? String)?.let { Topic.fromOrThrow(it, Topic.Type.Name) },
-            (p.willPayload as? Uint8Array)?.let { JsBuffer(it, limit = it.length) } as? ReadBuffer,
+            (p.willPayload as? Int8Array)?.let { JsBuffer(it, limit = it.length) } as? ReadBuffer,
             p.username as? String,
-            p.password as? String
-        )
+            p.password as? String,
+        ),
     )
 }
 

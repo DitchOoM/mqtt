@@ -6,20 +6,17 @@
       <GradleProjectSettings>
         <option name="distributionType" value="WRAPPED" />
         <option name="externalProjectPath" value="$PROJECT_DIR$" />
+        <option name="gradleJvm" value="#GRADLE_LOCAL_JAVA_HOME" />
         <option name="modules">
           <set>
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/models-base" />
             <option value="$PROJECT_DIR$/models-v4" />
             <option value="$PROJECT_DIR$/models-v5" />
-            <option value="$PROJECT_DIR$/monitor" />
-            <option value="$PROJECT_DIR$/monitor/android" />
-            <option value="$PROJECT_DIR$/monitor/common" />
-            <option value="$PROJECT_DIR$/monitor/desktop" />
-            <option value="$PROJECT_DIR$/monitor/web" />
             <option value="$PROJECT_DIR$/mqtt-client" />
           </set>
         </option>
+        <option name="resolveExternalAnnotations" value="false" />
       </GradleProjectSettings>
     </option>
   </component>

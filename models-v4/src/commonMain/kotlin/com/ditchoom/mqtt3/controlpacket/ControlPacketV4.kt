@@ -17,13 +17,12 @@ import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
 abstract class ControlPacketV4(
     override val controlPacketValue: Byte,
     override val direction: DirectionOfFlow,
-    override val flags: Byte = 0b0
+    override val flags: Byte = 0b0,
 ) : ControlPacket {
     override val mqttVersion: Byte = 4
     override val controlPacketFactory = ControlPacketV4Factory
 
     companion object {
-
         inline fun <reified WillPayload : Any, reified PublishPayload : Any> fromTyped(buffer: ReadBuffer): ControlPacketV4 {
             val byte1 = buffer.readUnsignedByte()
             val remainingLength = buffer.readVariableByteInteger()
@@ -32,13 +31,16 @@ abstract class ControlPacketV4(
 
         fun from(buffer: ReadBuffer) = fromTyped<Unit, Unit>(buffer)
 
-        fun from(buffer: ReadBuffer, byte1: UByte, remainingLength: Int) =
-            fromTyped<Unit, Unit>(buffer, byte1, remainingLength)
+        fun from(
+            buffer: ReadBuffer,
+            byte1: UByte,
+            remainingLength: Int,
+        ) = fromTyped<Unit, Unit>(buffer, byte1, remainingLength)
 
         inline fun <reified WillPayload : Any, reified PublishPayload : Any> fromTyped(
             buffer: ReadBuffer,
             byte1: UByte,
-            remainingLength: Int
+            remainingLength: Int,
         ): ControlPacketV4 {
             val byte1AsUInt = byte1.toUInt()
             val packetValue = byte1AsUInt.shr(4).toInt()
@@ -58,7 +60,9 @@ abstract class ControlPacketV4(
                 12 -> PingRequest
                 13 -> PingResponse
                 14 -> DisconnectNotification
-                else -> throw MalformedPacketException("Invalid MQTT Control Packet Type: $packetValue Should be in range between 0 and 15 inclusive")
+                else -> throw MalformedPacketException(
+                    "Invalid MQTT Control Packet Type: $packetValue Should be in range between 0 and 15 inclusive",
+                )
             }
         }
     }

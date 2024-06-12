@@ -109,12 +109,13 @@ class DisconnectTests {
 
     @Test
     fun variableHeaderPropertyUserProperty() {
-        val props = Properties.from(
-            setOf(
-                UserProperty("key", "value"),
-                UserProperty("key", "value")
+        val props =
+            Properties.from(
+                setOf(
+                    UserProperty("key", "value"),
+                    UserProperty("key", "value"),
+                ),
             )
-        )
         val userPropertyResult = props.userProperty
         for ((key, value) in userPropertyResult) {
             assertEquals(key, "key")
@@ -143,9 +144,10 @@ class DisconnectTests {
 
     @Test
     fun serverReference() {
-        val expected = DisconnectNotification(
-            VariableHeader(properties = Properties(serverReference = "yolo"))
-        )
+        val expected =
+            DisconnectNotification(
+                VariableHeader(properties = Properties(serverReference = "yolo")),
+            )
         val buffer = PlatformBuffer.allocate(11)
         expected.serialize(buffer)
         buffer.resetForRead()

@@ -2,6 +2,6 @@ package com.ditchoom.mqtt.controlpacket
 
 interface IPublishComplete : ControlPacket {
     companion object {
-        const val controlPacketValue: Byte = 7
+        const val CONTROL_PACKET_VALUE: Byte = 7
     }
 }

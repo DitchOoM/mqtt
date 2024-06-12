@@ -20,7 +20,7 @@ sealed interface MqttConnectionOptions {
         writeTimeout: Duration = this.writeTimeout,
         isWebsocket: Boolean = this is WebSocketConnectionOptions,
         websocketEndpoint: String = if (this is WebSocketConnectionOptions) this.websocketEndpoint else "/mqtt",
-        protocols: List<String> = if (this is WebSocketConnectionOptions) this.protocols else emptyList()
+        protocols: List<String> = if (this is WebSocketConnectionOptions) this.protocols else emptyList(),
     ): MqttConnectionOptions {
         return if (isWebsocket) {
             WebSocketConnectionOptions(
@@ -31,7 +31,7 @@ sealed interface MqttConnectionOptions {
                 readTimeout,
                 writeTimeout,
                 websocketEndpoint,
-                protocols
+                protocols,
             )
         } else {
             SocketConnection(host, port, tls, connectionTimeout, readTimeout, writeTimeout)
@@ -58,11 +58,12 @@ sealed interface MqttConnectionOptions {
         val protocols: List<String> = listOf("mqtt"),
     ) : MqttConnectionOptions {
         internal fun buildUrl(): String {
-            val prefix = if (tls) {
-                "wss://"
-            } else {
-                "ws://"
-            }
+            val prefix =
+                if (tls) {
+                    "wss://"
+                } else {
+                    "ws://"
+                }
             val postfix = "$host:$port$websocketEndpoint"
             return prefix + postfix
         }

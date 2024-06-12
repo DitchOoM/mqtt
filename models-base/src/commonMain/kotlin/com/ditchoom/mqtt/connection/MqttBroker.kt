@@ -5,7 +5,7 @@ import com.ditchoom.mqtt.controlpacket.IConnectionRequest
 data class MqttBroker(
     val identifier: Int,
     val connectionOps: Collection<MqttConnectionOptions>,
-    val connectionRequest: IConnectionRequest
+    val connectionRequest: IConnectionRequest,
 ) {
     val brokerId = identifier
     val protocolVersion = connectionRequest.protocolVersion.toByte()

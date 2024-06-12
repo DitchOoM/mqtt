@@ -1,12 +1,12 @@
 package com.ditchoom.mqtt.client
 
 import com.ditchoom.buffer.ReadBuffer
+import com.ditchoom.buffer.ReadBuffer.Companion.EMPTY_BUFFER
 import com.ditchoom.data.Reader
 import com.ditchoom.mqtt.MalformedInvalidVariableByteInteger
 import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.ControlPacketFactory
 import com.ditchoom.mqtt.controlpacket.IDisconnectNotification
-import com.ditchoom.socket.EMPTY_BUFFER
 import com.ditchoom.socket.SuspendingSocketInputStream
 import kotlinx.coroutines.flow.flow
 import kotlin.experimental.and
@@ -18,27 +18,28 @@ class BufferedControlPacketReader(
     readTimeout: Duration,
     private val reader: Reader,
     var observer: Observer? = null,
-    private var incomingMessage: (UByte, Int, ReadBuffer) -> Unit
+    private var incomingMessage: (UByte, Int, ReadBuffer) -> Unit,
 ) {
     private val inputStream = SuspendingSocketInputStream(readTimeout, reader)
-    val incomingControlPackets = flow {
-        try {
-            while (reader.isOpen()) {
-                try {
-                    val p = readControlPacket()
-                    emit(p)
-                    if (p is IDisconnectNotification) {
+    val incomingControlPackets =
+        flow {
+            try {
+                while (reader.isOpen()) {
+                    try {
+                        val p = readControlPacket()
+                        emit(p)
+                        if (p is IDisconnectNotification) {
+                            return@flow
+                        }
+                    } catch (e: Exception) {
                         return@flow
                     }
-                } catch (e: Exception) {
-                    return@flow
                 }
+            } finally {
+                incomingMessage = { _, _, _ -> }
+                observer?.onReaderClosed(brokerId, factory.protocolVersion.toByte())
             }
-        } finally {
-            incomingMessage = { _, _, _ -> }
-            observer?.onReaderClosed(brokerId, factory.protocolVersion.toByte())
         }
-    }
 
     fun isOpen() = reader.isOpen()
 
@@ -46,16 +47,18 @@ class BufferedControlPacketReader(
         val byte1 = inputStream.readUnsignedByte()
         observer?.readFirstByteFromStream(brokerId, factory.protocolVersion.toByte())
         val remainingLength = readVariableByteInteger()
-        val buffer = if (remainingLength < 1) {
-            EMPTY_BUFFER
-        } else {
-            inputStream.readBuffer(remainingLength)
-        }
-        val packet = factory.from(
-            buffer,
-            byte1,
-            remainingLength
-        )
+        val buffer =
+            if (remainingLength < 1) {
+                EMPTY_BUFFER
+            } else {
+                inputStream.readBuffer(remainingLength)
+            }
+        val packet =
+            factory.from(
+                buffer,
+                byte1,
+                remainingLength,
+            )
         buffer.resetForRead()
         incomingMessage(byte1, remainingLength, buffer)
         observer?.incomingPacket(brokerId, factory.protocolVersion.toByte(), packet)

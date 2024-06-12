@@ -6,7 +6,7 @@ class UnavailableMqttServiceException(connectionOptions: Collection<MqttConnecti
     Exception(
         connectionOptions.joinToString(
             prefix = "Failed to connect to services:",
-            postfix = (" " + cause?.message)
+            postfix = (" " + cause?.message),
         ),
-        cause
+        cause,
     )

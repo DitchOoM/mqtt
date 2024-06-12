@@ -6,13 +6,13 @@ import androidx.test.filters.MediumTest
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.rule.ServiceTestRule
 import androidx.test.runner.AndroidJUnit4
-import block
 import com.ditchoom.mqtt.client.LocalMqttService
 import com.ditchoom.mqtt.client.MqttService
 import com.ditchoom.mqtt.client.net.sendAllMessageTypes
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.Topic
 import com.ditchoom.mqtt3.controlpacket.ConnectionRequest
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.junit.Rule
 import org.junit.Test
@@ -44,7 +44,7 @@ class IPCTest {
 
     @Test
     fun testIpcAllTypes() =
-        block {
+        runBlocking {
             val context = InstrumentationRegistry.getInstrumentation().context
             val i = Intent(context, MqttManagerService::class.java)
             val serviceBinder =

@@ -87,13 +87,15 @@ kotlin {
             implementation("androidx.startup:startup-runtime:1.1.1")
         }
 
-//        androidUnitTest.dependencies {
-//            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutinesVersion")
-//            implementation("androidx.test:runner:1.5.2")
-//            implementation("androidx.test:rules:1.5.0")
-//            implementation("androidx.test:core-ktx:1.5.0")
-//            implementation("androidx.test:monitor:1.6.1")
-//        }
+        val androidInstrumentedTest by getting
+        androidInstrumentedTest.dependsOn(commonTest.get())
+        androidInstrumentedTest.dependencies {
+            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutinesVersion")
+            implementation("androidx.test:runner:1.5.2")
+            implementation("androidx.test:rules:1.5.0")
+            implementation("androidx.test:core-ktx:1.5.0")
+            implementation("androidx.test:monitor:1.6.1")
+        }
 
 //        jsMain.dependencies {
 //            implementation("org.jetbrains.kotlin-wrappers:kotlin-js:1.0.0-pre.521")

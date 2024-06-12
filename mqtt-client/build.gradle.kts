@@ -37,10 +37,10 @@ kotlin {
         publishLibraryVariants("release")
     }
     jvm()
-//    js {
-//        browser()
-//        nodejs()
-//    }
+    js {
+        browser()
+        nodejs()
+    }
     macosX64()
     macosArm64()
     iosArm64()

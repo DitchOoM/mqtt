@@ -98,3 +98,36 @@ android {
     }
     namespace = "com.ditchoom.mqtt.client"
 }
+
+// SQLDelight native linker fix (transitive dependency via models-v4/v5)
+afterEvaluate {
+    project.extensions
+        .findByType<org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension>()
+        ?.let { kmpExt ->
+            kmpExt.targets
+                .filterIsInstance<org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget>()
+                .forEach { target ->
+                    target.binaries.forEach { binary ->
+                        if (target.konanTarget == org.jetbrains.kotlin.konan.target.KonanTarget.LINUX_X64) {
+                            binary.linkerOpts(
+                                "-L/usr/lib/x86_64-linux-gnu",
+                                "-l:libsqlite3.a",
+                                "-lpthread",
+                                "-ldl",
+                                "-lm",
+                            )
+                        } else if (target.konanTarget == org.jetbrains.kotlin.konan.target.KonanTarget.LINUX_ARM64) {
+                            binary.linkerOpts(
+                                "-L/usr/lib/aarch64-linux-gnu",
+                                "-l:libsqlite3.a",
+                                "-lpthread",
+                                "-ldl",
+                                "-lm",
+                            )
+                        } else {
+                            binary.linkerOpts("-lsqlite3")
+                        }
+                    }
+                }
+        }
+}

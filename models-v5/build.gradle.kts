@@ -101,7 +101,27 @@ afterEvaluate {
         ?.let { kmpExt ->
             kmpExt.targets
                 .filterIsInstance<org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget>()
-                .flatMap { it.binaries }
-                .forEach { it.linkerOpts("-lsqlite3") }
+                .forEach { target ->
+                    target.binaries.forEach { binary ->
+                        binary.linkerOpts("-lsqlite3")
+                        if (target.konanTarget == org.jetbrains.kotlin.konan.target.KonanTarget.LINUX_X64) {
+                            binary.linkerOpts(
+                                "-L/usr/lib/x86_64-linux-gnu",
+                                "-lpthread",
+                                "-ldl",
+                                "-lm",
+                                "--allow-shlib-undefined",
+                            )
+                        } else if (target.konanTarget == org.jetbrains.kotlin.konan.target.KonanTarget.LINUX_ARM64) {
+                            binary.linkerOpts(
+                                "-L/usr/lib/aarch64-linux-gnu",
+                                "-lpthread",
+                                "-ldl",
+                                "-lm",
+                                "--allow-shlib-undefined",
+                            )
+                        }
+                    }
+                }
         }
 }

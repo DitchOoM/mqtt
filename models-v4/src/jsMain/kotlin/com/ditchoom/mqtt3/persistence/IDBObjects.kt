@@ -100,7 +100,13 @@ fun toPub(p: PersistablePublishMessage) =
     PublishMessage(
         PublishMessage.FixedHeader(p.dup, p.qos.toQos(), p.retain),
         PublishMessage.VariableHeader(Topic.fromOrThrow(p.topicName, Topic.Type.Name), p.packetId),
-        p.payload?.let { JsBuffer(it, position = it.length, limit = it.length) }?.also { it.resetForRead() },
+        p.payload
+            ?.let {
+                JsBuffer(it).also { buf ->
+                    buf.position(it.length)
+                    buf.setLimit(it.length)
+                }
+            }?.also { it.resetForRead() },
     )
 
 data class PersistableBroker(
@@ -256,7 +262,7 @@ fun toConnectionRequest(a: Any?): ConnectionRequest {
         ConnectionRequest.Payload(
             p.clientId as String,
             (p.willTopic as? String)?.let { Topic.fromOrThrow(it, Topic.Type.Name) },
-            (p.willPayload as? Int8Array)?.let { JsBuffer(it, limit = it.length) } as? ReadBuffer,
+            (p.willPayload as? Int8Array)?.let { JsBuffer(it).also { buf -> buf.setLimit(it.length) } } as? ReadBuffer,
             p.username as? String,
             p.password as? String,
         ),

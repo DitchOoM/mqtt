@@ -38,6 +38,9 @@ import web.idb.IDBRequestReadyState
 import web.idb.IDBTransaction
 import web.idb.IDBTransactionMode
 import web.idb.IDBValidKey
+import web.idb.done
+import web.idb.readonly
+import web.idb.readwrite
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
@@ -410,7 +413,7 @@ class IDBPersistence(
         val propStore = tx.objectStore(USER_PROPERTIES)
         val index = propStore.index(PROP_PACKET_ID_INDEX)
         return try {
-            val resultRequest = store[IDBValidKey(arrayOf(IDBValidKey(identifier)))]
+            val resultRequest = store.get(IDBValidKey(arrayOf(IDBValidKey(identifier))))
             val userPropertiesRequest =
                 index.getAll(
                     IDBValidKey(
@@ -749,7 +752,7 @@ class IDBPersistence(
         try {
             val queuedMsgStore = tx.objectStore(PUB_MSG)
             val pubRequest =
-                queuedMsgStore[
+                queuedMsgStore.get(
                     IDBValidKey(
                         arrayOf(
                             IDBValidKey(broker.identifier),
@@ -757,7 +760,7 @@ class IDBPersistence(
                             IDBValidKey(0),
                         ),
                     ),
-                ]
+                )
             val propStore = tx.objectStore(USER_PROPERTIES)
             val propIndex = propStore.index(PROP_PACKET_ID_INDEX)
             val userPropertyRequest =
@@ -783,7 +786,7 @@ class IDBPersistence(
         val tx = db.transaction(arrayOf(PACKET_ID), IDBTransactionMode.readwrite)
         val packetIdStore = tx.objectStore(PACKET_ID)
         val brokerIdKey = IDBKeyRange.only(broker.identifier)
-        val packetIdCurrentRequest = packetIdStore[brokerIdKey]
+        val packetIdCurrentRequest = packetIdStore.get(brokerIdKey)
         return suspendCoroutine { cont ->
             packetIdCurrentRequest.onsuccess =
                 EventHandler {
@@ -837,13 +840,13 @@ class IDBPersistence(
         val tx = db.transaction(arrayOf(SUB_MSG, SUBSCRIPTION, USER_PROPERTIES), IDBTransactionMode.readonly)
         val subStore = tx.objectStore(SUB_MSG)
         val subscriptionStore = tx.objectStore(SUBSCRIPTION)
-        val subIndex = subscriptionStore.index(ALL_SUB_INDEx)
+        val subIndex = subscriptionStore.index(ALL_SUB_INDEX)
         val objRequest =
-            subStore[
+            subStore.get(
                 IDBValidKey(
                     arrayOf(IDBValidKey(broker.identifier), IDBValidKey(packetId)),
                 ),
-            ]
+            )
         val subscriptionsRequest =
             subIndex.getAll(
                 IDBValidKey(arrayOf(IDBValidKey(broker.identifier), IDBValidKey(packetId))),
@@ -906,11 +909,11 @@ class IDBPersistence(
             }
             unsub.topics.map { topic ->
                 val request =
-                    subscriptions[
+                    subscriptions.get(
                         IDBValidKey(
                             arrayOf(IDBValidKey(broker.identifier), IDBValidKey(topic.toString())),
                         ),
-                    ]
+                    )
                 request.onsuccess =
                     EventHandler {
                         val persistableSubscription = request.result
@@ -1096,7 +1099,7 @@ class IDBPersistence(
         private const val QOS2MSG = "QoS2Msg"
         private const val SUB_MSG = "SubMsg"
         private const val SUB_INDEX = "sub"
-        private const val ALL_SUB_INDEx = "allSub"
+        private const val ALL_SUB_INDEX = "allSub"
         private const val UNSUB_MSG = "UnsubMsg"
         private const val UNSUB_INDEX = "unsub"
         private const val PROP_PACKET_ID_INDEX = "prop"
@@ -1132,7 +1135,7 @@ class IDBPersistence(
                             unsubStore.createIndex(BROKER_INDEX, "brokerId")
                             subscriptionStore.createIndex(BROKER_INDEX, "brokerId")
                             subscriptionStore.createIndex(SUB_INDEX, arrayOf("brokerId", "topicFilter", "subscribeId"))
-                            subscriptionStore.createIndex(ALL_SUB_INDEx, arrayOf("brokerId", "subscribeId"))
+                            subscriptionStore.createIndex(ALL_SUB_INDEX, arrayOf("brokerId", "subscribeId"))
                             subscriptionStore.createIndex(UNSUB_INDEX, arrayOf("brokerId", "unsubscribeId"))
                             propStore.createIndex(PROP_PACKET_ID_INDEX, arrayOf("brokerId", "packetId", "incoming"))
                             propStore.createIndex(BROKER_INDEX, "brokerId")

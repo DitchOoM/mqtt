@@ -35,6 +35,9 @@ import web.idb.IDBRequestReadyState
 import web.idb.IDBTransaction
 import web.idb.IDBTransactionMode
 import web.idb.IDBValidKey
+import web.idb.done
+import web.idb.readonly
+import web.idb.readwrite
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
@@ -282,7 +285,7 @@ class IDBPersistence(
     override suspend fun brokerWithId(identifier: Int): MqttBroker? {
         val tx = db.transaction(BROKER, IDBTransactionMode.readonly)
         val store = tx.objectStore(BROKER)
-        val brokerObjRequest = store[IDBValidKey(arrayOf(IDBValidKey(identifier)))]
+        val brokerObjRequest = store.get(IDBValidKey(arrayOf(IDBValidKey(identifier))))
         commitTransaction(tx, "brokerWithId v4")
         try {
             await(brokerObjRequest)
@@ -512,7 +515,7 @@ class IDBPersistence(
     ): IPublishMessage? {
         val tx = db.transaction(arrayOf(PUB_MSG), IDBTransactionMode.readonly)
         val pubRequest =
-            tx.objectStore(PUB_MSG)[
+            tx.objectStore(PUB_MSG).get(
                 IDBValidKey(
                     arrayOf(
                         IDBValidKey(broker.identifier),
@@ -520,7 +523,7 @@ class IDBPersistence(
                         IDBValidKey(0),
                     ),
                 ),
-            ]
+            )
         commitTransaction(tx, "getPubWithPacketId")
         await(pubRequest)
         val persistablePub = pubRequest.result?.unsafeCast<PersistablePublishMessage>() ?: return null
@@ -531,7 +534,7 @@ class IDBPersistence(
         val tx = db.transaction(arrayOf(PACKET_ID), IDBTransactionMode.readwrite)
         val packetIdStore = tx.objectStore(PACKET_ID)
         val brokerIdKey = IDBKeyRange.only(broker.identifier)
-        val packetIdCurrentRequest = packetIdStore[brokerIdKey]
+        val packetIdCurrentRequest = packetIdStore.get(brokerIdKey)
         return suspendCoroutine { cont ->
             packetIdCurrentRequest.onsuccess =
                 EventHandler {
@@ -581,14 +584,14 @@ class IDBPersistence(
         val subStore = tx.objectStore(SUB_MSG)
 
         val objRequest =
-            subStore[
+            subStore.get(
                 IDBValidKey(
                     arrayOf(
                         IDBValidKey(broker.identifier),
                         IDBValidKey(packetId),
                     ),
                 ),
-            ]
+            )
         val subscriptionStore = tx.objectStore(SUBSCRIPTION)
         val subIndex = subscriptionStore.index(BROKER_ID_PACKET_ID_SUB_INDEX)
         val allSubRequest =
@@ -636,14 +639,14 @@ class IDBPersistence(
             unsub.topics.forEach { topicObj ->
                 val topic = topicObj.toString()
                 val request =
-                    subscriptions[
+                    subscriptions.get(
                         IDBValidKey(
                             arrayOf(
                                 IDBValidKey(broker.identifier),
                                 IDBValidKey(topic),
                             ),
                         ),
-                    ]
+                    )
                 request.onsuccess =
                     EventHandler {
                         val persistableSubscription = request.result.asDynamic()

@@ -92,24 +92,3 @@ fun String.validateMqttString(includeWarnings: Boolean): InvalidMqttUtf8StringMa
     }
     return null
 }
-
-fun CharSequence.utf8Length(): Int {
-    var count = 0
-    var i = 0
-    val len = length
-    while (i < len) {
-        val ch = get(i)
-        when {
-            ch.code <= 0x7F -> count++
-            ch.code <= 0x7FF -> count += 2
-            ch >= Char.MIN_HIGH_SURROGATE && ch.code < Char.MAX_HIGH_SURROGATE.code + 1 -> {
-                count += 4
-                ++i
-            }
-
-            else -> count += 3
-        }
-        i++
-    }
-    return count
-}

@@ -176,16 +176,18 @@ fun readPacketIdMessage(
                 if (data[MESSAGE_IS_SHARED_BUFFER_KEY] == true) {
                     val sharedArrayBuffer = data[MESSAGE_BUFFER_KEY].unsafeCast<SharedArrayBuffer>()
                     JsBuffer(
-                        Int8Array(sharedArrayBuffer as ArrayBuffer),
-                        false,
-                        position,
-                        limit,
-                        sharedArrayBuffer.byteLength,
-                        sharedArrayBuffer,
-                    )
+                        Int8Array(sharedArrayBuffer.unsafeCast<ArrayBuffer>()),
+                        sharedArrayBuffer = sharedArrayBuffer,
+                    ).also {
+                        it.position(position)
+                        it.setLimit(limit)
+                    }
                 } else {
                     val arrayBuffer = data[MESSAGE_BUFFER_KEY].unsafeCast<ArrayBuffer>()
-                    JsBuffer(Int8Array(arrayBuffer), false, position, limit, arrayBuffer.byteLength)
+                    JsBuffer(Int8Array(arrayBuffer)).also {
+                        it.position(position)
+                        it.setLimit(limit)
+                    }
                 }
             buffer.resetForRead()
             factory.from(buffer)
@@ -266,15 +268,17 @@ fun sendControlPacketFromMessageEvent(
                 val arrayBuffer = obj[MESSAGE_BUFFER_KEY].unsafeCast<SharedArrayBuffer>()
                 JsBuffer(
                     Int8Array(arrayBuffer.unsafeCast<ArrayBuffer>()),
-                    false,
-                    position,
-                    limit,
-                    arrayBuffer.byteLength,
-                    arrayBuffer,
-                )
+                    sharedArrayBuffer = arrayBuffer,
+                ).also {
+                    it.position(position)
+                    it.setLimit(limit)
+                }
             } else {
                 val arrayBuffer = obj[MESSAGE_BUFFER_KEY].unsafeCast<ArrayBuffer>()
-                JsBuffer(Int8Array(arrayBuffer), false, position, limit, arrayBuffer.byteLength, null)
+                JsBuffer(Int8Array(arrayBuffer)).also {
+                    it.position(position)
+                    it.setLimit(limit)
+                }
             }
         } else {
             return null

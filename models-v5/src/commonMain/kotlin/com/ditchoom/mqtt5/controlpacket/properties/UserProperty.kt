@@ -1,8 +1,8 @@
 package com.ditchoom.mqtt5.controlpacket.properties
 
 import com.ditchoom.buffer.WriteBuffer
+import com.ditchoom.buffer.utf8Length
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.writeMqttUtf8String
-import com.ditchoom.mqtt.controlpacket.utf8Length
 
 data class UserProperty(
     val key: String,

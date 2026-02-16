@@ -59,6 +59,10 @@ kotlin {
             implementation(project(":models-v5"))
         }
 
+        jsMain.dependencies {
+            implementation(libs.kotlin.js)
+        }
+
         androidMain.dependencies {
             implementation(libs.androidx.startup)
         }

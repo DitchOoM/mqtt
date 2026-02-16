@@ -62,6 +62,7 @@ kotlin {
         }
         jsMain.dependencies {
             implementation(libs.kotlin.web)
+            implementation(libs.kotlin.browser)
             implementation(libs.kotlin.js)
         }
         nativeMain.dependencies {

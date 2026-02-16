@@ -101,6 +101,11 @@ class DitchoomModulePlugin : Plugin<Project> {
         project.extensions.configure<org.jlleitschuh.gradle.ktlint.KtlintExtension> {
             verbose.set(true)
             outputToConsole.set(true)
+            filter {
+                exclude { element ->
+                    element.file.path.contains("/build/")
+                }
+            }
         }
 
         project.tasks.register("nextVersion") {

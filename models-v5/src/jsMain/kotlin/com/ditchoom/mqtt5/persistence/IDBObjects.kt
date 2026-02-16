@@ -196,8 +196,12 @@ fun toPub(
             p.topicAlias,
             p.responseTopic?.let { Topic.fromOrThrow(it, Topic.Type.Name) },
             p.correlationData
-                ?.let { JsBuffer(it, position = it.length, limit = it.length) }
-                ?.also { it.resetForRead() },
+                ?.let {
+                    JsBuffer(it).also { buf ->
+                        buf.position(it.length)
+                        buf.setLimit(it.length)
+                    }
+                }?.also { it.resetForRead() },
             userProperty,
             p.subscriptionIdentifier
                 ?.split(", ")
@@ -206,7 +210,13 @@ fun toPub(
             p.contentType,
         ),
     ),
-    p.payload?.let { JsBuffer(it, position = it.length, limit = it.length) }?.also { it.resetForRead() },
+    p.payload
+        ?.let {
+            JsBuffer(it).also { buf ->
+                buf.position(it.length)
+                buf.setLimit(it.length)
+            }
+        }?.also { it.resetForRead() },
 )
 
 @JsExport
@@ -407,7 +417,13 @@ fun toConnectionRequest(
 ): ConnectionRequest {
     val p = a.asDynamic()
     val authMethod = p.authMethod as String?
-    val authData = (p.authData as Int8Array?)?.let { JsBuffer(it, position = it.length, limit = it.length) }
+    val authData =
+        (p.authData as Int8Array?)?.let {
+            JsBuffer(it).also { buf ->
+                buf.position(it.length)
+                buf.setLimit(it.length)
+            }
+        }
     val auth =
         if (authMethod != null && authData != null) {
             Authentication(authMethod, authData)
@@ -424,7 +440,7 @@ fun toConnectionRequest(
                 (p.willPropertyResponseTopic as String?)?.let { Topic.fromOrThrow(it, Topic.Type.Name) },
                 p.willPropertyCorrelationData
                     ?.unsafeCast<Int8Array>()
-                    ?.let { JsBuffer(it, position = 0, limit = it.length) },
+                    ?.let { JsBuffer(it).also { buf -> buf.setLimit(it.length) } },
                 willUserProperty,
             )
         } else {
@@ -460,7 +476,12 @@ fun toConnectionRequest(
             (p.willTopic as? String)?.let { Topic.fromOrThrow(it, Topic.Type.Name) },
             p.willPayload
                 ?.unsafeCast<Int8Array>()
-                ?.let { JsBuffer(it, position = it.length, limit = it.length) },
+                ?.let {
+                    JsBuffer(it).also { buf ->
+                        buf.position(it.length)
+                        buf.setLimit(it.length)
+                    }
+                },
             p.username as? String,
             p.password as? String,
         ),

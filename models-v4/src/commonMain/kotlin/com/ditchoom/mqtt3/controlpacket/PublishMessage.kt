@@ -3,6 +3,7 @@ package com.ditchoom.mqtt3.controlpacket
 import com.ditchoom.buffer.PlatformBuffer
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
+import com.ditchoom.buffer.utf8Length
 import com.ditchoom.mqtt.MalformedPacketException
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readMqttUtf8StringNotValidatedSized
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.writeMqttUtf8String
@@ -15,7 +16,6 @@ import com.ditchoom.mqtt.controlpacket.QualityOfService.EXACTLY_ONCE
 import com.ditchoom.mqtt.controlpacket.Topic
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
-import com.ditchoom.mqtt.controlpacket.utf8Length
 import com.ditchoom.mqtt.controlpacket.validControlPacketIdentifierRange
 
 /**

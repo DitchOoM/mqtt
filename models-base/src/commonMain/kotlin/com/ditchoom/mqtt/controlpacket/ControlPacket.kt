@@ -1,15 +1,17 @@
 package com.ditchoom.mqtt.controlpacket
 
 import com.ditchoom.buffer.AllocationZone
-import com.ditchoom.buffer.Charset
 import com.ditchoom.buffer.PlatformBuffer
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
 import com.ditchoom.buffer.allocate
+import com.ditchoom.buffer.readLengthPrefixedUtf8String
+import com.ditchoom.buffer.writeLengthPrefixedUtf8String
 import com.ditchoom.mqtt.MalformedInvalidVariableByteInteger
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
-import kotlin.experimental.and
-import kotlin.experimental.or
+import com.ditchoom.buffer.readVariableByteInteger as bufferReadVariableByteInteger
+import com.ditchoom.buffer.variableByteSize as bufferVariableByteSize
+import com.ditchoom.buffer.writeVariableByteInteger as bufferWriteVariableByteInteger
 
 interface ControlPacket {
     val controlPacketValue: Byte
@@ -68,79 +70,34 @@ interface ControlPacket {
     }
 
     companion object {
-        private const val VARIABLE_BYTE_INT_MAX = 268435455
-
         fun isValidFirstByte(uByte: UByte): Boolean {
             val byte1AsUInt = uByte.toUInt()
             return byte1AsUInt.shr(4).toInt() in 1..15
         }
 
-        fun WriteBuffer.writeVariableByteInteger(int: Int): WriteBuffer {
-            if (int !in 0..VARIABLE_BYTE_INT_MAX) {
-                throw MalformedInvalidVariableByteInteger(int)
-            }
-            var numBytes = 0
-            var no = int.toLong()
-            do {
-                var digit = (no % 128).toByte()
-                no /= 128
-                if (no > 0) {
-                    digit = digit or 0x80.toByte()
-                }
-                writeByte(digit)
-                numBytes++
-            } while (no > 0 && numBytes < 4)
-            return this
-        }
-
-        fun WriteBuffer.writeMqttUtf8String(string: String): WriteBuffer {
-            val sizePosition = position()
-            position(sizePosition + UShort.SIZE_BYTES)
-            val startStringPosition = position()
-            writeString(string, Charset.UTF8)
-            val stringLength = (position() - startStringPosition).toUShort()
-            set(sizePosition, stringLength)
-            return this
-        }
-
-        fun ReadBuffer.readMqttUtf8StringNotValidatedSized(): Pair<Int, String> {
-            val length = readUnsignedShort().toInt()
-            val decoded = readString(length, Charset.UTF8)
-            return Pair(length, decoded)
-        }
-
-        fun ReadBuffer.readVariableByteInteger(): Int {
-            var digit: Byte
-            var value = 0L
-            var multiplier = 1L
-            var count = 0L
+        fun WriteBuffer.writeVariableByteInteger(int: Int): WriteBuffer =
             try {
-                do {
-                    digit = readByte()
-                    count++
-                    value += (digit and 0x7F).toLong() * multiplier
-                    multiplier *= 128
-                } while ((digit and 0x80.toByte()).toInt() != 0)
-            } catch (e: Exception) {
-                throw MalformedInvalidVariableByteInteger(value.toInt())
-            }
-            if (value < 0 || value > VARIABLE_BYTE_INT_MAX.toLong()) {
-                throw MalformedInvalidVariableByteInteger(value.toInt())
-            }
-            return value.toInt()
-        }
-
-        fun variableByteSize(int: Int): Byte {
-            if (int !in 0..VARIABLE_BYTE_INT_MAX) {
+                bufferWriteVariableByteInteger(int)
+            } catch (e: IllegalArgumentException) {
                 throw MalformedInvalidVariableByteInteger(int)
             }
-            var numBytes = 0.toByte()
-            var no = int
-            do {
-                no /= 128
-                numBytes++
-            } while (no > 0 && numBytes < 4)
-            return numBytes
-        }
+
+        fun ReadBuffer.readVariableByteInteger(): Int =
+            try {
+                bufferReadVariableByteInteger()
+            } catch (e: IllegalArgumentException) {
+                throw MalformedInvalidVariableByteInteger(0)
+            }
+
+        fun variableByteSize(int: Int): Byte =
+            try {
+                bufferVariableByteSize(int)
+            } catch (e: IllegalArgumentException) {
+                throw MalformedInvalidVariableByteInteger(int)
+            }
+
+        fun WriteBuffer.writeMqttUtf8String(string: String): WriteBuffer = writeLengthPrefixedUtf8String(string)
+
+        fun ReadBuffer.readMqttUtf8StringNotValidatedSized(): Pair<Int, String> = readLengthPrefixedUtf8String()
     }
 }

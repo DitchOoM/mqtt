@@ -3,6 +3,10 @@ plugins {
     id("org.jetbrains.dokka")
 }
 
+repositories {
+    mavenCentral()
+}
+
 // Aggregate tasks for convenience
 tasks.register("allTests") {
     description = "Run tests for all modules and platforms"
@@ -19,7 +23,7 @@ tasks.register("buildAll") {
 tasks.register<Copy>("copyDokkaToDocusaurus") {
     description = "Generate and copy API documentation to Docusaurus"
     group = "documentation"
-    dependsOn("dokkaHtmlMultiModule")
-    from(layout.buildDirectory.dir("dokka/htmlMultiModule"))
+    dependsOn("dokkaGeneratePublicationHtml")
+    from(layout.buildDirectory.dir("dokka/html"))
     into(layout.projectDirectory.dir("docs/static/api"))
 }

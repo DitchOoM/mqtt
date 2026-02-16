@@ -116,11 +116,10 @@ abstract class RemoteMqttClient(
     private suspend fun awaitControlPacketReceivedMatching(
         packetId: Int,
         controlPacketValue: Byte,
-    ): ControlPacket {
-        return _incomingPackets.first {
+    ): ControlPacket =
+        _incomingPackets.first {
             it.packetIdentifier == packetId && it.controlPacketValue == controlPacketValue
         }
-    }
 
     protected fun onIncomingControlPacket(c: ControlPacket) {
         scope.launch { _incomingPackets.emit(c) }

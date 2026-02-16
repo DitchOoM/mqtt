@@ -167,7 +167,11 @@ class PublishAcknowledgementTest {
         expected.serialize(buffer)
         buffer.resetForRead()
 //        val actual = ControlPacketV5.from(buffer) as PublishAcknowledgment
-        assertEquals(expected.variable.properties.reasonString.toString(), "yolo")
+        assertEquals(
+            expected.variable.properties.reasonString
+                .toString(),
+            "yolo",
+        )
     }
 
     @Test
@@ -200,7 +204,9 @@ class PublishAcknowledgementTest {
         request.serialize(buffer)
         buffer.resetForRead()
         val requestRead = ControlPacketV5.from(buffer) as PublishAcknowledgment
-        val (key, value) = requestRead.variable.properties.userProperty.first()
+        val (key, value) =
+            requestRead.variable.properties.userProperty
+                .first()
         assertEquals(key.toString(), "key")
         assertEquals(value.toString(), "value")
     }

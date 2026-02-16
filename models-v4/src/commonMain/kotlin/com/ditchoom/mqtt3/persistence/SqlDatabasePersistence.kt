@@ -36,7 +36,9 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlin.time.Duration.Companion.milliseconds
 
-class SqlDatabasePersistence(driver: SqlDriver) : Persistence {
+class SqlDatabasePersistence(
+    driver: SqlDriver,
+) : Persistence {
     private val packetIdMutex = Mutex()
     private val database = Mqtt4(driver)
     private val brokerQueries = database.brokerQueries
@@ -112,8 +114,8 @@ class SqlDatabasePersistence(driver: SqlDriver) : Persistence {
     override suspend fun activeSubscriptions(
         broker: MqttBroker,
         includePendingUnsub: Boolean,
-    ): Map<Topic, ISubscription> {
-        return withContext(dispatcher) {
+    ): Map<Topic, ISubscription> =
+        withContext(dispatcher) {
             if (includePendingUnsub) {
                 subscriptionQueries
                     .allSubscriptions(broker.identifier.toLong())
@@ -124,7 +126,6 @@ class SqlDatabasePersistence(driver: SqlDriver) : Persistence {
                 .map { Subscription(Topic.fromOrThrow(it.topic_filter, Topic.Type.Filter), it.qos.toQos()) }
                 .associateBy { it.topicFilter }
         }
-    }
 
     override suspend fun addBroker(
         connectionOps: Collection<MqttConnectionOptions>,
@@ -143,7 +144,8 @@ class SqlDatabasePersistence(driver: SqlDriver) : Persistence {
                     connect.protocolName,
                     connect.protocolVersion.toLong(),
                     connect.variableHeader.willRetain.toLong(),
-                    connect.variableHeader.willQos.integerValue.toLong(),
+                    connect.variableHeader.willQos.integerValue
+                        .toLong(),
                     connect.variableHeader.willFlag.toLong(),
                     connect.variableHeader.cleanSession.toLong(),
                     connect.variableHeader.keepAliveSeconds.toLong(),
@@ -222,7 +224,8 @@ class SqlDatabasePersistence(driver: SqlDriver) : Persistence {
                 connectionRequestDatabaseRecord.protocol_level.toUByte(),
             )
         val connectionOps =
-            socketConnections.executeAsList()
+            socketConnections
+                .executeAsList()
                 .map {
                     if (it.type == "websocket") {
                         MqttConnectionOptions.WebSocketConnectionOptions(
@@ -289,13 +292,12 @@ class SqlDatabasePersistence(driver: SqlDriver) : Persistence {
         )
     }
 
-    private fun Long.toQos(): QualityOfService {
-        return when (this) {
+    private fun Long.toQos(): QualityOfService =
+        when (this) {
             1L -> QualityOfService.AT_LEAST_ONCE
             2L -> QualityOfService.EXACTLY_ONCE
             else -> QualityOfService.AT_MOST_ONCE
         }
-    }
 
     override suspend fun messagesToSendOnReconnect(broker: MqttBroker): Collection<ControlPacket> {
         val map = ArrayList<ControlPacket>()
@@ -328,18 +330,22 @@ class SqlDatabasePersistence(driver: SqlDriver) : Persistence {
                 val subs =
                     subscriptionQueries
                         .queuedSubscriptions(subscribeRequest.broker_id, subscribeRequest.packet_id)
-                        .executeAsList().map {
+                        .executeAsList()
+                        .map {
                             Subscription(Topic.fromOrThrow(it.topic_filter, Topic.Type.Filter), it.qos.toQos())
                         }.toSet()
                 SubscribeRequest(subscribeRequest.packet_id.toInt(), subs)
             }
         map +=
-            unsubQueries.queuedUnsubMessages(broker.identifier.toLong()).executeAsList()
+            unsubQueries
+                .queuedUnsubMessages(broker.identifier.toLong())
+                .executeAsList()
                 .mapNotNull { unsubscribeRequest ->
                     val subscriptions =
                         subscriptionQueries
                             .queuedUnsubscriptions(unsubscribeRequest.broker_id, unsubscribeRequest.packet_id)
-                            .executeAsList().map {
+                            .executeAsList()
+                            .map {
                                 Topic.fromOrThrow(it.topic_filter, Topic.Type.Filter)
                             }.toSet()
                     if (subscriptions.isNotEmpty()) {
@@ -384,7 +390,8 @@ class SqlDatabasePersistence(driver: SqlDriver) : Persistence {
                             broker.identifier.toLong(),
                             0L,
                             if (p.fixed.dup) 1L else 0L,
-                            p.fixed.qos.integerValue.toLong(),
+                            p.fixed.qos.integerValue
+                                .toLong(),
                             if (p.fixed.retain) 1L else 0L,
                             p.topic.toString(),
                             packetId,
@@ -402,7 +409,8 @@ class SqlDatabasePersistence(driver: SqlDriver) : Persistence {
         packetId: Int,
     ): IPublishMessage? {
         val pub =
-            pubQueries.messageWithId(broker.identifier.toLong(), 0L, packetId.toLong())
+            pubQueries
+                .messageWithId(broker.identifier.toLong(), 0L, packetId.toLong())
                 .executeAsOneOrNull() ?: return null
         val payload =
             if (pub.payload != null) {
@@ -448,12 +456,14 @@ class SqlDatabasePersistence(driver: SqlDriver) : Persistence {
         packetId: Int,
     ): ISubscribeRequest? {
         val subscribeRequest =
-            subQueries.messageWithId(broker.identifier.toLong(), packetId.toLong())
+            subQueries
+                .messageWithId(broker.identifier.toLong(), packetId.toLong())
                 .executeAsOneOrNull() ?: return null
         val subs =
             subscriptionQueries
                 .queuedSubscriptions(subscribeRequest.broker_id, subscribeRequest.packet_id)
-                .executeAsList().map {
+                .executeAsList()
+                .map {
                     Subscription(Topic.fromOrThrow(it.topic_filter, Topic.Type.Filter), it.qos.toQos())
                 }.toSet()
         return SubscribeRequest(subscribeRequest.packet_id.toInt(), subs)
@@ -462,8 +472,8 @@ class SqlDatabasePersistence(driver: SqlDriver) : Persistence {
     override suspend fun writeUnsubGetPacketId(
         broker: MqttBroker,
         unsub: IUnsubscribeRequest,
-    ): Int {
-        return withContext(dispatcher) {
+    ): Int =
+        withContext(dispatcher) {
             packetIdMutex.withLock {
                 unsubQueries.transactionWithResult {
                     val packetId = brokerQueries.nextPacketId(broker.identifier.toLong()).executeAsOne().toLong()
@@ -480,19 +490,20 @@ class SqlDatabasePersistence(driver: SqlDriver) : Persistence {
                 }
             }
         }
-    }
 
     override suspend fun getUnsubWithPacketId(
         broker: MqttBroker,
         packetId: Int,
     ): IUnsubscribeRequest? {
         val unsubscribeRequest =
-            unsubQueries.messageWithId(broker.identifier.toLong(), packetId.toLong())
+            unsubQueries
+                .messageWithId(broker.identifier.toLong(), packetId.toLong())
                 .executeAsOneOrNull() ?: return null
         val subscriptions =
             subscriptionQueries
                 .queuedUnsubscriptions(unsubscribeRequest.broker_id, unsubscribeRequest.packet_id)
-                .executeAsList().map {
+                .executeAsList()
+                .map {
                     Topic.fromOrThrow(it.topic_filter, Topic.Type.Filter)
                 }.toSet()
         return if (subscriptions.isNotEmpty()) {
@@ -526,10 +537,9 @@ class SqlDatabasePersistence(driver: SqlDriver) : Persistence {
     }
 }
 
-fun Boolean.toLong(): Long {
-    return if (this) {
+fun Boolean.toLong(): Long =
+    if (this) {
         1L
     } else {
         0L
     }
-}

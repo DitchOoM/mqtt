@@ -93,8 +93,8 @@ class ControlPacketProcessor(
     internal suspend inline fun <reified R : ControlPacket> awaitIncomingPacketId(
         packetIdentifier: Int,
         controlPacketValue: Byte,
-    ): R {
-        return readChannel
+    ): R =
+        readChannel
             .transformWhile {
                 if (it.controlPacketValue == controlPacketValue && it.packetIdentifier.toString() == packetIdentifier.toString()) {
                     emit(it as R)
@@ -103,7 +103,6 @@ class ControlPacketProcessor(
                     true
                 }
             }.last()
-    }
 
     suspend fun queueMessagesOnReconnect() =
         persistence.messagesToSendOnReconnect(broker).map {
@@ -152,7 +151,10 @@ class ControlPacketProcessor(
 
     fun resetPingTimer() {
         observer?.resetPingTimer(broker.identifier, broker.connectionRequest.protocolVersion.toByte())
-        val delayDuration = broker.connectionRequest.keepAliveTimeoutSeconds.toInt().seconds
+        val delayDuration =
+            broker.connectionRequest.keepAliveTimeoutSeconds
+                .toInt()
+                .seconds
         cancelPingTimer()
         currentPingJob =
             scope.launch {

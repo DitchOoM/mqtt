@@ -15,7 +15,10 @@ import kotlinx.coroutines.flow.combine
 sealed interface PublishOperation {
     object QoSAtMostOnceComplete : PublishOperation
 
-    data class QoSAtLeastOnce(val packetId: Int, val pubAck: Deferred<IPublishAcknowledgment>) : PublishOperation {
+    data class QoSAtLeastOnce(
+        val packetId: Int,
+        val pubAck: Deferred<IPublishAcknowledgment>,
+    ) : PublishOperation {
         override suspend fun awaitAll(): QoSAtLeastOnce {
             pubAck.await()
             return this
@@ -48,4 +51,7 @@ data class SubscribeOperation(
     }
 }
 
-data class UnsubscribeOperation(val packetId: Int, val unsubAck: Deferred<IUnsubscribeAcknowledgment>)
+data class UnsubscribeOperation(
+    val packetId: Int,
+    val unsubAck: Deferred<IUnsubscribeAcknowledgment>,
+)

@@ -1,0 +1,126 @@
+name: "Validate Merged Artifacts"
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: "Version string to validate"
+        required: true
+        type: string
+
+jobs:
+  validate:
+    name: "Validate Artifacts"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Download Linux artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: maven-local-linux
+          path: /tmp/maven-local/com/ditchoom
+
+      - name: Download Apple artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: maven-local-apple
+          path: /tmp/maven-local/com/ditchoom
+
+      - name: Validate artifacts
+        run: |
+          version="${{ inputs.version }}"
+          FAILED=false
+          BASE="/tmp/maven-local/com/ditchoom"
+
+          echo "=== Validating v${version} Merged Artifacts ==="
+          echo ""
+
+          PLATFORMS="jvm js linuxx64 linuxarm64 macosarm64 macosx64 iosarm64 iossimulatorarm64"
+
+          for module in mqtt-base-models mqtt-4-models mqtt-5-models mqtt-client; do
+            echo "--- ${module} module metadata ---"
+            MODULE_FILE="${BASE}/${module}/${version}/${module}-${version}.module"
+            if [ ! -f "$MODULE_FILE" ]; then
+              echo "FAIL: ${MODULE_FILE} not found"
+              FAILED=true
+              continue
+            fi
+            for platform in $PLATFORMS; do
+              if grep -q "$platform" "$MODULE_FILE"; then
+                echo "  $platform variant present"
+              else
+                echo "  FAIL: ${platform} variant not found in ${module} metadata"
+                FAILED=true
+              fi
+            done
+            echo ""
+          done
+
+          # Apple klibs
+          echo "--- Apple klibs ---"
+          for module in mqtt-base-models mqtt-4-models mqtt-5-models mqtt-client; do
+            for target in macosarm64 macosx64 iosarm64 iossimulatorarm64; do
+              KLIB=$(find "${BASE}/${module}-${target}" -name "${module}-${target}-${version}.klib" 2>/dev/null | head -1)
+              if [ -z "$KLIB" ]; then
+                echo "FAIL: ${module} ${target} klib not found"
+                FAILED=true
+              else
+                echo "  ${module} ${target} klib present"
+              fi
+            done
+          done
+          echo ""
+
+          echo "--- Signing Coverage Check ---"
+          KNOWN_SIGNABLE="jar klib pom module aar json"
+          KNOWN_METADATA="xml repositories"
+          UNCOVERED=0
+          while IFS= read -r file; do
+            ext="${file##*.}"
+            COVERED=false
+            for known in $KNOWN_SIGNABLE $KNOWN_METADATA; do
+              if [ "$ext" = "$known" ]; then
+                COVERED=true
+                break
+              fi
+            done
+            if [ "$COVERED" = "false" ]; then
+              REL=$(echo "$file" | sed "s|${BASE}/||")
+              echo "  FAIL: Unsignable file type '.${ext}': ${REL}"
+              UNCOVERED=$((UNCOVERED + 1))
+            fi
+          done < <(find "${BASE}" -type f ! -name "*.md5" ! -name "*.sha1" ! -name "*.asc")
+          if [ "$UNCOVERED" -gt 0 ]; then
+            echo "  ${UNCOVERED} files with types not covered by publish signing glob"
+            FAILED=true
+          else
+            echo "  All artifact file types covered by signing glob"
+          fi
+          echo ""
+
+          echo "--- Android & Metadata Artifacts ---"
+          for module in mqtt-base-models mqtt-4-models mqtt-5-models mqtt-client; do
+            AAR_DIR="${BASE}/${module}-android/${version}"
+            if [ -d "$AAR_DIR" ]; then
+              AAR=$(find "$AAR_DIR" -name "*.aar" | head -1)
+              if [ -z "$AAR" ]; then
+                echo "  FAIL: ${module}-android AAR not found in ${AAR_DIR}"
+                FAILED=true
+              else
+                echo "  ${module}-android AAR present"
+              fi
+            fi
+            METADATA="${BASE}/${module}/${version}/${module}-${version}-kotlin-tooling-metadata.json"
+            if [ -f "$METADATA" ]; then
+              echo "  ${module} kotlin-tooling-metadata.json present"
+            else
+              echo "  WARN: ${module} kotlin-tooling-metadata.json not found (may not be generated for all modules)"
+            fi
+          done
+          echo ""
+
+          if [ "$FAILED" = true ]; then
+            echo "=== VALIDATION FAILED ==="
+            exit 1
+          fi
+          echo "=== ALL VALIDATIONS PASSED ==="

@@ -10,8 +10,9 @@ import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
  *
  * The PUBCOMP packet is the response to a PUBREL packet. It is the fourth and final packet of the QoS 2 protocol exchange.
  */
-data class PublishComplete(override val packetIdentifier: Int) :
-    ControlPacketV4(IPublishComplete.CONTROL_PACKET_VALUE, DirectionOfFlow.BIDIRECTIONAL),
+data class PublishComplete(
+    override val packetIdentifier: Int,
+) : ControlPacketV4(IPublishComplete.CONTROL_PACKET_VALUE, DirectionOfFlow.BIDIRECTIONAL),
     IPublishComplete {
     override fun variableHeader(writeBuffer: WriteBuffer) {
         writeBuffer.writeUShort(packetIdentifier.toUShort())

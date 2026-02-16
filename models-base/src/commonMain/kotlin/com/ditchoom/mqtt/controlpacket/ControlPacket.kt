@@ -22,13 +22,12 @@ interface ControlPacket {
 
     val controlPacketFactory: ControlPacketFactory
 
-    fun validateOrNull(): ControlPacket? {
-        return try {
+    fun validateOrNull(): ControlPacket? =
+        try {
             validateOrThrow()
         } catch (e: Exception) {
             null
         }
-    }
 
     fun validateOrThrow(): ControlPacket {
         val exception = validate() ?: return this

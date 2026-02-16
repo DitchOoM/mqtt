@@ -87,8 +87,8 @@ class AndroidRemoteMqttClient(
         return packetFactory.from(buffer) as? IConnectionAcknowledgment
     }
 
-    override suspend fun awaitConnectivity(): IConnectionAcknowledgment {
-        return suspendCoroutine {
+    override suspend fun awaitConnectivity(): IConnectionAcknowledgment =
+        suspendCoroutine {
             aidl.awaitConnectivity(
                 object : MqttMessageCallback.Stub() {
                     override fun onMessage(buffer: JvmBuffer) {
@@ -98,15 +98,10 @@ class AndroidRemoteMqttClient(
                 },
             )
         }
-    }
 
-    override suspend fun pingCount(): Long {
-        return aidl.pingCount()
-    }
+    override suspend fun pingCount(): Long = aidl.pingCount()
 
-    override suspend fun pingResponseCount(): Long {
-        return aidl.pingResponseCount()
-    }
+    override suspend fun pingResponseCount(): Long = aidl.pingResponseCount()
 
     override fun observe(filter: Topic): Flow<IPublishMessage> =
         incomingPackets.filterIsInstance<IPublishMessage>().filter { filter.matches(it.topic) }
@@ -115,13 +110,9 @@ class AndroidRemoteMqttClient(
         suspendCoroutine { aidl.sendDisconnect(SuspendingMqttCompletionCallback("sendDisconnect", it)) }
     }
 
-    override suspend fun connectionCount(): Long {
-        return aidl.connectionCount()
-    }
+    override suspend fun connectionCount(): Long = aidl.connectionCount()
 
-    override suspend fun connectionAttempts(): Long {
-        return aidl.connectionAttempts()
-    }
+    override suspend fun connectionAttempts(): Long = aidl.connectionAttempts()
 
     override suspend fun shutdown(sendDisconnect: Boolean) {
         aidl.unregisterObserver(cb)

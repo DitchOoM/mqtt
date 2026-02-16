@@ -22,8 +22,10 @@ import com.ditchoom.mqtt5.controlpacket.properties.readProperties
  * The PUBCOMP packet is the response to a PUBREL packet. It is the fourth and final packet of the QoS 2 protocol exchange.
  */
 
-data class PublishComplete(val variable: VariableHeader) :
-    ControlPacketV5(7, DirectionOfFlow.BIDIRECTIONAL), IPublishComplete {
+data class PublishComplete(
+    val variable: VariableHeader,
+) : ControlPacketV5(7, DirectionOfFlow.BIDIRECTIONAL),
+    IPublishComplete {
     constructor(packetIdentifier: UShort, reasonCode: ReasonCode = SUCCESS) :
         this(VariableHeader(packetIdentifier.toInt(), reasonCode))
 

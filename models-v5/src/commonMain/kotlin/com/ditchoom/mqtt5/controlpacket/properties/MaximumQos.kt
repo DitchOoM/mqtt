@@ -7,7 +7,9 @@ import com.ditchoom.mqtt.controlpacket.QualityOfService.AT_LEAST_ONCE
 import com.ditchoom.mqtt.controlpacket.QualityOfService.AT_MOST_ONCE
 import com.ditchoom.mqtt.controlpacket.QualityOfService.EXACTLY_ONCE
 
-data class MaximumQos(val qos: QualityOfService) : Property(0x24, Type.BYTE) {
+data class MaximumQos(
+    val qos: QualityOfService,
+) : Property(0x24, Type.BYTE) {
     override fun size(): Int = 2
 
     override fun write(buffer: WriteBuffer): Int =

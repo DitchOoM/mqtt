@@ -1,0 +1,43 @@
+
+[versions]
+kotlin = "2.3.0"
+androidGradlePlugin = "8.13.2"
+ktlint = "14.0.1"
+mavenPublish = "0.35.0"
+dokka = "2.1.0"
+kotlinxCoroutines = "1.10.2"
+kotlinWrappers = "2025.12.6"
+buffer = "3.0.1-SNAPSHOT"
+socket = "2.0.1-SNAPSHOT"
+websocket = "1.1.1-SNAPSHOT"
+sqldelight = "2.0.2"
+androidxStartup = "1.1.1"
+androidxTestRunner = "1.7.0"
+androidxTestRules = "1.7.0"
+androidxTestCore = "1.7.0"
+
+[libraries]
+buffer = { module = "com.ditchoom:buffer", version.ref = "buffer" }
+socket = { module = "com.ditchoom:socket", version.ref = "socket" }
+websocket = { module = "com.ditchoom:websocket", version.ref = "websocket" }
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
+kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinxCoroutines" }
+kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlinxCoroutines" }
+kotlin-web = { module = "org.jetbrains.kotlin-wrappers:kotlin-web", version.ref = "kotlinWrappers" }
+kotlin-js = { module = "org.jetbrains.kotlin-wrappers:kotlin-js", version.ref = "kotlinWrappers" }
+sqldelight-android-driver = { module = "app.cash.sqldelight:android-driver", version.ref = "sqldelight" }
+sqldelight-sqlite-driver = { module = "app.cash.sqldelight:sqlite-driver", version.ref = "sqldelight" }
+sqldelight-native-driver = { module = "app.cash.sqldelight:native-driver", version.ref = "sqldelight" }
+sqldelight-web-worker-driver = { module = "app.cash.sqldelight:web-worker-driver", version.ref = "sqldelight" }
+androidx-startup = { module = "androidx.startup:startup-runtime", version.ref = "androidxStartup" }
+androidx-test-runner = { module = "androidx.test:runner", version.ref = "androidxTestRunner" }
+androidx-test-rules = { module = "androidx.test:rules", version.ref = "androidxTestRules" }
+androidx-test-core-ktx = { module = "androidx.test:core-ktx", version.ref = "androidxTestCore" }
+
+[plugins]
+kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+android-library = { id = "com.android.library", version.ref = "androidGradlePlugin" }
+ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint" }
+maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "mavenPublish" }
+dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
+sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }

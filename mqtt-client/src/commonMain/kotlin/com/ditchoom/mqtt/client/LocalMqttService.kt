@@ -43,13 +43,12 @@ class LocalMqttService private constructor(
 
     fun getPersistence(protocolVersion: Byte) = getPersistence(protocolVersion.toInt())
 
-    fun getPersistence(protocolVersion: Int): Persistence {
-        return if (protocolVersion == 5) {
+    fun getPersistence(protocolVersion: Int): Persistence =
+        if (protocolVersion == 5) {
             persistenceV5
         } else {
             persistenceV4
         }
-    }
 
     override suspend fun start(broker: MqttBroker) {
         val client = brokerClientMap[broker.protocolVersion]?.get(broker.identifier)
@@ -79,7 +78,9 @@ class LocalMqttService private constructor(
     override suspend fun start() {
         val allBrokers = allBrokers().associateBy { Pair(it.protocolVersion, it.brokerId) }
         val currentBrokers =
-            brokerClientMap.values.map { it.values }.flatten()
+            brokerClientMap.values
+                .map { it.values }
+                .flatten()
                 .associateBy { Pair(it.broker.protocolVersion, it.broker.brokerId) }
 
         val newBrokers = allBrokers.keys - currentBrokers.keys
@@ -161,7 +162,8 @@ class LocalMqttService private constructor(
                     try {
                         val p =
                             ConnectionRequest("")
-                                .controlPacketFactory.defaultPersistence(androidContext, inMemory = inMemory)
+                                .controlPacketFactory
+                                .defaultPersistence(androidContext, inMemory = inMemory)
                         p
                     } catch (e: Exception) {
                         println("\r\nFailed to allocate default persistence, using InMemory")
@@ -170,8 +172,10 @@ class LocalMqttService private constructor(
                 val persistenceV5 =
                     try {
                         val p =
-                            com.ditchoom.mqtt5.controlpacket.ConnectionRequest("")
-                                .controlPacketFactory.defaultPersistence(androidContext, inMemory = inMemory)
+                            com.ditchoom.mqtt5.controlpacket
+                                .ConnectionRequest("")
+                                .controlPacketFactory
+                                .defaultPersistence(androidContext, inMemory = inMemory)
                         p
                     } catch (e: Exception) {
                         println("\r\nFailed to allocate default persistence, using InMemory")

@@ -88,9 +88,7 @@ fun messageMatches(
     messageType: String,
     int: Int,
     obj: dynamic,
-): Boolean {
-    return obj[MESSAGE_TYPE_KEY] == messageType && obj[MESSAGE_INT_KEY] == int
-}
+): Boolean = obj[MESSAGE_TYPE_KEY] == messageType && obj[MESSAGE_INT_KEY] == int
 
 fun buildLongMessage(
     messageType: String,
@@ -119,8 +117,10 @@ fun buildBrokerIdProtocolVersionMessage(
 }
 
 fun readBrokerIdProtocolVersionMessage(data: dynamic): Pair<Int, Byte>? {
-    if (data[MESSAGE_BROKER_ID_KEY] == null || data[MESSAGE_BROKER_ID_KEY] == undefined ||
-        data[MESSAGE_PROTOCOL_VERSION_KEY] == null || data[MESSAGE_PROTOCOL_VERSION_KEY] == undefined
+    if (data[MESSAGE_BROKER_ID_KEY] == null ||
+        data[MESSAGE_BROKER_ID_KEY] == undefined ||
+        data[MESSAGE_PROTOCOL_VERSION_KEY] == null ||
+        data[MESSAGE_PROTOCOL_VERSION_KEY] == undefined
     ) {
         return null
     }
@@ -159,10 +159,14 @@ fun readPacketIdMessage(
             data[MESSAGE_PACKET_ID_KEY] as Int
         }
     val packet =
-        if (data[MESSAGE_IS_SHARED_BUFFER_KEY] == null || data[MESSAGE_IS_SHARED_BUFFER_KEY] == undefined ||
-            data[MESSAGE_BUFFER_KEY] == null || data[MESSAGE_BUFFER_KEY] == undefined ||
-            data[MESSAGE_POSITION_KEY] == null || data[MESSAGE_POSITION_KEY] == undefined ||
-            data[MESSAGE_LIMIT_KEY] == null || data[MESSAGE_LIMIT_KEY] == undefined
+        if (data[MESSAGE_IS_SHARED_BUFFER_KEY] == null ||
+            data[MESSAGE_IS_SHARED_BUFFER_KEY] == undefined ||
+            data[MESSAGE_BUFFER_KEY] == null ||
+            data[MESSAGE_BUFFER_KEY] == undefined ||
+            data[MESSAGE_POSITION_KEY] == null ||
+            data[MESSAGE_POSITION_KEY] == undefined ||
+            data[MESSAGE_LIMIT_KEY] == null ||
+            data[MESSAGE_LIMIT_KEY] == undefined
         ) {
             null
         } else {

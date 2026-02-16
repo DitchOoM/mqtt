@@ -259,7 +259,11 @@ class PublishReceivedTests {
         )
         buffer.resetForRead()
         val pubrecResult = ControlPacketV5.from(buffer) as PublishReceived
-        assertEquals(expected.variable.properties.reasonString.toString(), "yolo")
+        assertEquals(
+            expected.variable.properties.reasonString
+                .toString(),
+            "yolo",
+        )
         assertEquals(expected.toString(), pubrecResult.toString())
     }
 
@@ -290,7 +294,9 @@ class PublishReceivedTests {
         request.serialize(buffer)
         buffer.resetForRead()
         val requestRead = ControlPacketV5.from(buffer) as PublishReceived
-        val (key, value) = requestRead.variable.properties.userProperty.first()
+        val (key, value) =
+            requestRead.variable.properties.userProperty
+                .first()
         assertEquals(key.toString(), "key")
         assertEquals(value.toString(), "value")
     }

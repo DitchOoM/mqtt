@@ -102,15 +102,17 @@ class MqttSocketSessionTest {
                 if (version == 4) {
                     ConnectionRequest(payload = ConnectionRequest.Payload(clientId = "taco123-" + Random.nextInt()))
                 } else {
-                    com.ditchoom.mqtt5.controlpacket.ConnectionRequest(clientId = "taco123-" + Random.nextInt())
+                    com.ditchoom.mqtt5.controlpacket
+                        .ConnectionRequest(clientId = "taco123-" + Random.nextInt())
                 }
             val socketSession = MqttSocketSession.open(-1, connectionRequest, connectionOptions)
             assertTrue(socketSession.connectionAcknowledgement.isSuccessful)
             val publish =
-                connectionRequest.controlPacketFactory.publish(
-                    topicName = Topic.fromOrThrow("testtt", Topic.Type.Name),
-                    qos = QualityOfService.AT_LEAST_ONCE,
-                ).maybeCopyWithNewPacketIdentifier(1)
+                connectionRequest.controlPacketFactory
+                    .publish(
+                        topicName = Topic.fromOrThrow("testtt", Topic.Type.Name),
+                        qos = QualityOfService.AT_LEAST_ONCE,
+                    ).maybeCopyWithNewPacketIdentifier(1)
             socketSession.write(publish)
             val controlPacketAck = socketSession.read()
             assertTrue { controlPacketAck is IPublishAcknowledgment }

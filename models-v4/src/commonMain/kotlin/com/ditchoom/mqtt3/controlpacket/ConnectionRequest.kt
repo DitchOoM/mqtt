@@ -35,7 +35,8 @@ data class ConnectionRequest(
      */
     val variableHeader: VariableHeader = VariableHeader(),
     val payload: Payload = Payload(),
-) : ControlPacketV4(1, DirectionOfFlow.CLIENT_TO_SERVER), IConnectionRequest {
+) : ControlPacketV4(1, DirectionOfFlow.CLIENT_TO_SERVER),
+    IConnectionRequest {
     constructor(
         clientId: String,
         keepAliveSeconds: Int = 3600,

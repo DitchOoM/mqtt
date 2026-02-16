@@ -3,7 +3,9 @@ package com.ditchoom.mqtt5.controlpacket.properties
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
 
-data class AuthenticationData(val data: ReadBuffer) : Property(0x16, Type.BINARY_DATA) {
+data class AuthenticationData(
+    val data: ReadBuffer,
+) : Property(0x16, Type.BINARY_DATA) {
     override fun size(): Int {
         data.position(0)
         return 1 + UShort.SIZE_BYTES + data.remaining()

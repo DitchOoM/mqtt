@@ -128,12 +128,11 @@ class JsRemoteMqttClient(
         return readLongDataFromMessage(messageEvent.data.asDynamic())
     }
 
-    private suspend fun awaitMessage(messageType: String): MessageEvent {
-        return messageFlow.first {
+    private suspend fun awaitMessage(messageType: String): MessageEvent =
+        messageFlow.first {
             val obj = it.data?.asDynamic()
             obj[MESSAGE_TYPE_KEY] == messageType
         }
-    }
 
     private suspend fun awaitMessage(
         messageType: String,

@@ -99,7 +99,13 @@ class FlagTests {
             0x03.toUInt(),
             "Invalid Byte 1 in the fixed header: Control Packet Value serialize shift right 4 times",
         )
-        val expectedFlagMatch = byteAsUInt.shl(4).toByte().toInt().shr(4).toByte()
+        val expectedFlagMatch =
+            byteAsUInt
+                .shl(4)
+                .toByte()
+                .toInt()
+                .shr(4)
+                .toByte()
         assertEquals(
             expectedFlagMatch,
             0b0010,

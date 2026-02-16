@@ -29,8 +29,10 @@ import com.ditchoom.mqtt5.controlpacket.properties.readProperties
  * [MQTT-3.14.0-1].
  */
 
-data class DisconnectNotification(val variable: VariableHeader = VariableHeader()) :
-    ControlPacketV5(14, DirectionOfFlow.BIDIRECTIONAL), IDisconnectNotification {
+data class DisconnectNotification(
+    val variable: VariableHeader = VariableHeader(),
+) : ControlPacketV5(14, DirectionOfFlow.BIDIRECTIONAL),
+    IDisconnectNotification {
     override fun packetSize(): Int = 2 + remainingLength()
 
     override fun variableHeader(writeBuffer: WriteBuffer) = variable.serialize(writeBuffer)
@@ -218,8 +220,8 @@ data class DisconnectNotification(val variable: VariableHeader = VariableHeader(
     }
 }
 
-private fun getDisconnectCode(byte: UByte): ReasonCode {
-    return when (byte) {
+private fun getDisconnectCode(byte: UByte): ReasonCode =
+    when (byte) {
         ReasonCode.NORMAL_DISCONNECTION.byte -> ReasonCode.NORMAL_DISCONNECTION
         ReasonCode.DISCONNECT_WITH_WILL_MESSAGE.byte -> ReasonCode.DISCONNECT_WITH_WILL_MESSAGE
         ReasonCode.UNSPECIFIED_ERROR.byte -> ReasonCode.UNSPECIFIED_ERROR
@@ -251,4 +253,3 @@ private fun getDisconnectCode(byte: UByte): ReasonCode {
         ReasonCode.WILDCARD_SUBSCRIPTIONS_NOT_SUPPORTED.byte -> ReasonCode.WILDCARD_SUBSCRIPTIONS_NOT_SUPPORTED
         else -> throw MalformedPacketException("Invalid disconnect reason code $byte")
     }
-}

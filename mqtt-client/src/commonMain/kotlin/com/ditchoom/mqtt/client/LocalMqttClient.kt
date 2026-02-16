@@ -71,18 +71,17 @@ class LocalMqttClient(
                 pubQos0
             } else {
                 connectivityManager.persistence.getPubWithPacketId(
-                    connectivityManager.broker, packetId,
+                    connectivityManager.broker,
+                    packetId,
                 )
             } ?: return
         processor.publish(pub, false)
     }
 
-    override suspend fun publish(pub: IPublishMessage): PublishOperation {
-        return observePub(processor.publish(pub))
-    }
+    override suspend fun publish(pub: IPublishMessage): PublishOperation = observePub(processor.publish(pub))
 
-    private fun observePub(publishMessage: IPublishMessage): PublishOperation {
-        return when (publishMessage.qualityOfService) {
+    private fun observePub(publishMessage: IPublishMessage): PublishOperation =
+        when (publishMessage.qualityOfService) {
             QualityOfService.AT_MOST_ONCE -> {
                 PublishOperation.QoSAtMostOnceComplete
             }
@@ -118,13 +117,11 @@ class LocalMqttClient(
                 PublishOperation.QoSExactlyOnce(packetId, pubRecReceived, pubCompReceived)
             }
         }
-    }
 
-    override fun observe(filter: Topic): Flow<IPublishMessage> {
-        return processor.readChannel.filterIsInstance<IPublishMessage>().filter {
+    override fun observe(filter: Topic): Flow<IPublishMessage> =
+        processor.readChannel.filterIsInstance<IPublishMessage>().filter {
             filter.matches(it.topic)
         }
-    }
 
     suspend fun sendQueuedSubscribeMessage(packetId: Int) {
         val sub =
@@ -154,12 +151,10 @@ class LocalMqttClient(
         processor.unsubscribe(unsub, false)
     }
 
-    override suspend fun unsubscribe(unsub: IUnsubscribeRequest): UnsubscribeOperation {
-        return observeUnsubscribe(processor.unsubscribe(unsub))
-    }
+    override suspend fun unsubscribe(unsub: IUnsubscribeRequest): UnsubscribeOperation = observeUnsubscribe(processor.unsubscribe(unsub))
 
-    private fun observeUnsubscribe(unsubscribeRequestSent: IUnsubscribeRequest): UnsubscribeOperation {
-        return UnsubscribeOperation(
+    private fun observeUnsubscribe(unsubscribeRequestSent: IUnsubscribeRequest): UnsubscribeOperation =
+        UnsubscribeOperation(
             unsubscribeRequestSent.packetIdentifier,
             scope.async {
                 processor.awaitIncomingPacketId(
@@ -168,7 +163,6 @@ class LocalMqttClient(
                 ) as IUnsubscribeAcknowledgment
             },
         )
-    }
 
     override suspend fun sendDisconnect() {
         connectivityManager.sendDisconnect()

@@ -29,8 +29,9 @@ import com.ditchoom.mqtt5.controlpacket.properties.readProperties
  * A PUBACK packet is the response to a PUBLISH packet with QoS 1.
  */
 
-data class PublishAcknowledgment(val variable: VariableHeader) :
-    ControlPacketV5(4, DirectionOfFlow.BIDIRECTIONAL),
+data class PublishAcknowledgment(
+    val variable: VariableHeader,
+) : ControlPacketV5(4, DirectionOfFlow.BIDIRECTIONAL),
     IPublishAcknowledgment {
     constructor(packetIdentifier: UShort) : this(VariableHeader(packetIdentifier.toInt()))
     constructor(

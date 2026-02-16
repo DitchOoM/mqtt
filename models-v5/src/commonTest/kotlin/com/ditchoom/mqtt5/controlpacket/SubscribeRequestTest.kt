@@ -26,7 +26,11 @@ class SubscribeRequestTest {
         val subscribeRequest = SubscribeRequest(2.toUShort(), "test", AT_LEAST_ONCE)
         assertEquals(subscribeRequest.variable.packetIdentifier, 2)
         assertEquals(
-            subscribeRequest.subscriptions.first().topicFilter.toString().validateMqttUTF8StringOrThrow(),
+            subscribeRequest.subscriptions
+                .first()
+                .topicFilter
+                .toString()
+                .validateMqttUTF8StringOrThrow(),
             "test",
         )
         val buffer = PlatformBuffer.allocate(12)
@@ -65,7 +69,11 @@ class SubscribeRequestTest {
         buffer.resetForRead()
         val requestRead = ControlPacketV5.from(buffer) as SubscribeRequest
         assertEquals(
-            requestRead.subscriptions.first().topicFilter.toString().validateMqttUTF8StringOrThrow(),
+            requestRead.subscriptions
+                .first()
+                .topicFilter
+                .toString()
+                .validateMqttUTF8StringOrThrow(),
             "test",
         )
         assertEquals(AT_LEAST_ONCE, requestRead.subscriptions.first().maximumQos)
@@ -152,7 +160,11 @@ class SubscribeRequestTest {
         actual.serialize(buffer)
         buffer.resetForRead()
         val expected = ControlPacketV5.from(buffer) as SubscribeRequest
-        assertEquals(expected.variable.properties.reasonString.toString(), "yolo")
+        assertEquals(
+            expected.variable.properties.reasonString
+                .toString(),
+            "yolo",
+        )
     }
 
     @Test
@@ -186,7 +198,9 @@ class SubscribeRequestTest {
         request.serialize(buffer)
         buffer.resetForRead()
         val requestRead = ControlPacketV5.from(buffer) as SubscribeRequest
-        val (key, value) = requestRead.variable.properties.userProperty.first()
+        val (key, value) =
+            requestRead.variable.properties.userProperty
+                .first()
         assertEquals("key", key)
         assertEquals("value", value)
     }

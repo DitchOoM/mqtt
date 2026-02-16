@@ -7,7 +7,9 @@ package com.ditchoom.mqtt.controlpacket.format
  * The ConnectionAcknowledgment, PublishAcknowledgment, PublishReceived, PublishRelease, PublishCompleteNotification and AuthenticationExchange Control Packets have a single Reason Code as part
  * of the Variable Header. The SubscribeAcknowledgement and UnsubscribeAcknowledgment packets contain a list of one or more Reason Codes in the Payload.
  */
-enum class ReasonCode(val byte: UByte) {
+enum class ReasonCode(
+    val byte: UByte,
+) {
     SUCCESS(0x00.toUByte()),
     NORMAL_DISCONNECTION(0x00.toUByte()),
     GRANTED_QOS_0(0x00.toUByte()),

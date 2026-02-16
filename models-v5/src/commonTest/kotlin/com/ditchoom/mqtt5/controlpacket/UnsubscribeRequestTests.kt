@@ -61,7 +61,9 @@ class UnsubscribeRequestTests {
         request.serialize(buffer)
         buffer.resetForRead()
         val requestRead = ControlPacketV5.from(buffer) as UnsubscribeRequest
-        val (key, value) = requestRead.variable.properties.userProperty.first()
+        val (key, value) =
+            requestRead.variable.properties.userProperty
+                .first()
         assertEquals("key", key.toString())
         assertEquals("value", value.toString())
     }

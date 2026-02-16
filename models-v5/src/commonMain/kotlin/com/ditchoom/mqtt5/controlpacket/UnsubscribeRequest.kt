@@ -25,9 +25,8 @@ import com.ditchoom.mqtt5.controlpacket.properties.readPropertiesSized
 data class UnsubscribeRequest(
     val variable: VariableHeader,
     override val topics: Set<Topic>,
-) :
-    ControlPacketV5(IUnsubscribeRequest.controlPacketValue, DirectionOfFlow.CLIENT_TO_SERVER, 0b10),
-        IUnsubscribeRequest {
+) : ControlPacketV5(IUnsubscribeRequest.controlPacketValue, DirectionOfFlow.CLIENT_TO_SERVER, 0b10),
+    IUnsubscribeRequest {
     constructor(
         topics: Set<Topic>,
         userProperty: List<Pair<String, String>> = emptyList(),

@@ -5,7 +5,10 @@ import com.ditchoom.mqtt.controlpacket.IPublishMessage
 import kotlinx.coroutines.launch
 import org.w3c.dom.MessagePort
 
-class JsRemoteMqttClientWorker(private val delegate: RemoteMqttClientWorker, private val port: MessagePort) {
+class JsRemoteMqttClientWorker(
+    private val delegate: RemoteMqttClientWorker,
+    private val port: MessagePort,
+) {
     fun registerOnMessageObserver() {
         port.onmessage = {
             val obj = it.data?.asDynamic()

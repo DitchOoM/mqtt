@@ -72,7 +72,9 @@ class MqttClientTest {
                     cleanStart = true,
                     keepAliveSeconds = 1,
                 ),
-            payload = com.ditchoom.mqtt5.controlpacket.ConnectionRequest.Payload(clientId = "taco123-" + Random.nextUInt()),
+            payload =
+                com.ditchoom.mqtt5.controlpacket.ConnectionRequest
+                    .Payload(clientId = "taco123-" + Random.nextUInt()),
         )
     private val connectionRequestResumeSessionMqtt4 =
         ConnectionRequest(
@@ -86,7 +88,9 @@ class MqttClientTest {
                     cleanStart = false,
                     keepAliveSeconds = 1,
                 ),
-            payload = com.ditchoom.mqtt5.controlpacket.ConnectionRequest.Payload(clientId = "taco123-" + Random.nextUInt()),
+            payload =
+                com.ditchoom.mqtt5.controlpacket.ConnectionRequest
+                    .Payload(clientId = "taco123-" + Random.nextUInt()),
         )
     private val topic = Topic.fromOrThrow("hello123", Topic.Type.Name)
     private val willTopic4 = Topic.fromOrThrow("willTopicMqtt4", Topic.Type.Name)
@@ -265,19 +269,20 @@ class MqttClientTest {
             buffer.writeString("yolo", Charset.UTF8)
             buffer.resetForRead()
             val lwtConnectionRequest =
-                connectionRequestMqtt4.copy(
-                    connectionRequestMqtt4.variableHeader.copy(
-                        cleanSession = false,
-                        willRetain = true,
-                        willFlag = true,
-                        willQos = QualityOfService.AT_MOST_ONCE,
-                    ),
-                    connectionRequestMqtt4.payload.copy(
-                        clientId = "taco321-${Random.nextUInt()}",
-                        willTopic = willTopic4,
-                        willPayload = buffer,
-                    ),
-                ).validateOrThrow() as IConnectionRequest
+                connectionRequestMqtt4
+                    .copy(
+                        connectionRequestMqtt4.variableHeader.copy(
+                            cleanSession = false,
+                            willRetain = true,
+                            willFlag = true,
+                            willQos = QualityOfService.AT_MOST_ONCE,
+                        ),
+                        connectionRequestMqtt4.payload.copy(
+                            clientId = "taco321-${Random.nextUInt()}",
+                            willTopic = willTopic4,
+                            willPayload = buffer,
+                        ),
+                    ).validateOrThrow() as IConnectionRequest
 
             lastWillTestamentInternal(this, willTopic4, lwtConnectionRequest, connectionRequestMqtt4)
         }
@@ -289,20 +294,23 @@ class MqttClientTest {
             buffer.writeString("yolo", Charset.UTF8)
             buffer.resetForRead()
             val lwtConnectionRequest =
-                connectionRequestMqtt5.copy(
-                    connectionRequestMqtt5.variableHeader.copy(
-                        cleanStart = false,
-                        willRetain = true,
-                        willFlag = true,
-                        willQos = QualityOfService.AT_MOST_ONCE,
-                    ),
-                    connectionRequestMqtt5.payload.copy(
-                        clientId = "taco321-${Random.nextUInt()}",
-                        willTopic = willTopic5,
-                        willPayload = buffer,
-                        willProperties = com.ditchoom.mqtt5.controlpacket.ConnectionRequest.Payload.WillProperties(),
-                    ),
-                ).validateOrThrow() as IConnectionRequest
+                connectionRequestMqtt5
+                    .copy(
+                        connectionRequestMqtt5.variableHeader.copy(
+                            cleanStart = false,
+                            willRetain = true,
+                            willFlag = true,
+                            willQos = QualityOfService.AT_MOST_ONCE,
+                        ),
+                        connectionRequestMqtt5.payload.copy(
+                            clientId = "taco321-${Random.nextUInt()}",
+                            willTopic = willTopic5,
+                            willPayload = buffer,
+                            willProperties =
+                                com.ditchoom.mqtt5.controlpacket.ConnectionRequest.Payload
+                                    .WillProperties(),
+                        ),
+                    ).validateOrThrow() as IConnectionRequest
 
             lastWillTestamentInternal(this, willTopic5, lwtConnectionRequest, connectionRequestMqtt5)
         }

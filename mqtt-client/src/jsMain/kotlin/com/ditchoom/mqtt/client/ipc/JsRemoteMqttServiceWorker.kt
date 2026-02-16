@@ -5,7 +5,9 @@ import kotlinx.coroutines.launch
 import org.w3c.dom.MessageEvent
 import org.w3c.dom.MessagePort
 
-class JsRemoteMqttServiceWorker(private val serviceServer: RemoteMqttServiceWorker) {
+class JsRemoteMqttServiceWorker(
+    private val serviceServer: RemoteMqttServiceWorker,
+) {
     private val scope = serviceServer.service.scope
     internal val mqttService = serviceServer.service
 

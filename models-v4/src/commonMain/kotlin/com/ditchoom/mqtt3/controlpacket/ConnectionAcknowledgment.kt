@@ -25,8 +25,10 @@ typealias CONNACK = ConnectionAcknowledgment
  * SHOULD close the Network Connection. A "reasonable" amount of time depends on the type of application and the
  * communications infrastructure.
  */
-data class ConnectionAcknowledgment(val header: VariableHeader = VariableHeader()) :
-    ControlPacketV4(2, DirectionOfFlow.SERVER_TO_CLIENT), IConnectionAcknowledgment {
+data class ConnectionAcknowledgment(
+    val header: VariableHeader = VariableHeader(),
+) : ControlPacketV4(2, DirectionOfFlow.SERVER_TO_CLIENT),
+    IConnectionAcknowledgment {
     constructor(sessionPresent: Boolean, connectReason: ReturnCode) : this(
         VariableHeader(
             sessionPresent,
@@ -100,7 +102,9 @@ data class ConnectionAcknowledgment(val header: VariableHeader = VariableHeader(
          */
         val connectReason: ReturnCode = CONNECTION_ACCEPTED,
     ) {
-        enum class ReturnCode(val value: UByte) {
+        enum class ReturnCode(
+            val value: UByte,
+        ) {
             CONNECTION_ACCEPTED(0.toUByte()),
             CONNECTION_REFUSED_UNACCEPTABLE_PROTOCOL_VERSION(1.toUByte()),
             CONNECTION_REFUSED_IDENTIFIER_REJECTED(2.toUByte()),

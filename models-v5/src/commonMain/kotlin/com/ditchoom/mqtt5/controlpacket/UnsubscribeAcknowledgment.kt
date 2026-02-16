@@ -24,7 +24,8 @@ import com.ditchoom.mqtt5.controlpacket.properties.readPropertiesSized
 data class UnsubscribeAcknowledgment(
     val variable: VariableHeader,
     val reasonCodes: List<ReasonCode> = listOf(SUCCESS),
-) : ControlPacketV5(11, DirectionOfFlow.SERVER_TO_CLIENT), IUnsubscribeAcknowledgment {
+) : ControlPacketV5(11, DirectionOfFlow.SERVER_TO_CLIENT),
+    IUnsubscribeAcknowledgment {
     init {
         val invalidCodes = reasonCodes.map { it.byte } - validSubscribeCodes
         if (invalidCodes.isEmpty()) {

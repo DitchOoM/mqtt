@@ -38,9 +38,8 @@ data class PublishMessage(
     val fixed: FixedHeader = FixedHeader(),
     val variable: VariableHeader,
     override val payload: ReadBuffer? = null,
-) :
-    ControlPacketV5(IPublishMessage.CONTROL_PACKET_VALUE, DirectionOfFlow.BIDIRECTIONAL, fixed.flags),
-        IPublishMessage {
+) : ControlPacketV5(IPublishMessage.CONTROL_PACKET_VALUE, DirectionOfFlow.BIDIRECTIONAL, fixed.flags),
+    IPublishMessage {
     constructor(
         dup: Boolean = false,
         qos: QualityOfService = AT_MOST_ONCE,
@@ -77,15 +76,14 @@ data class PublishMessage(
 
     override val packetIdentifier = variable.packetIdentifier
 
-    override fun setDupFlagNewPubMessage(): IPublishMessage {
-        return if (fixed.qos == AT_MOST_ONCE && fixed.dup) {
+    override fun setDupFlagNewPubMessage(): IPublishMessage =
+        if (fixed.qos == AT_MOST_ONCE && fixed.dup) {
             copy(fixed = fixed.copy(dup = false), variable = variable, payload = payload)
         } else if (fixed.qos != AT_MOST_ONCE && !fixed.dup) {
             copy(fixed = fixed.copy(dup = true), variable = variable, payload = payload)
         } else {
             this
         }
-    }
 
     override val qualityOfService: QualityOfService = fixed.qos
 
@@ -263,9 +261,24 @@ data class PublishMessage(
         companion object {
             fun fromByte(byte1: UByte): FixedHeader {
                 val byte1Int = byte1.toInt()
-                val dup = byte1Int.shl(4).toUByte().toInt().shr(7) == 1
-                val qosBit2 = byte1Int.shl(5).toUByte().toInt().shr(7) == 1
-                val qosBit1 = byte1Int.shl(6).toUByte().toInt().shr(7) == 1
+                val dup =
+                    byte1Int
+                        .shl(4)
+                        .toUByte()
+                        .toInt()
+                        .shr(7) == 1
+                val qosBit2 =
+                    byte1Int
+                        .shl(5)
+                        .toUByte()
+                        .toInt()
+                        .shr(7) == 1
+                val qosBit1 =
+                    byte1Int
+                        .shl(6)
+                        .toUByte()
+                        .toInt()
+                        .shr(7) == 1
                 if (qosBit2 && qosBit1) {
                     throw MalformedPacketException(
                         "A PUBLISH Packet MUST NOT have both QoS bits set to 1 [MQTT-3.3.1-4]." +
@@ -275,7 +288,12 @@ data class PublishMessage(
                     )
                 }
                 val qos = QualityOfService.fromBooleans(qosBit2, qosBit1)
-                val retain = byte1Int.shl(7).toUByte().toInt().shr(7) == 1
+                val retain =
+                    byte1Int
+                        .shl(7)
+                        .toUByte()
+                        .toInt()
+                        .shr(7) == 1
                 return FixedHeader(dup, qos, retain)
             }
         }

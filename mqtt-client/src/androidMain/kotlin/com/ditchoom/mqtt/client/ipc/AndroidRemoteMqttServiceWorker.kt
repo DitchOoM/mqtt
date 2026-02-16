@@ -4,7 +4,9 @@ import android.util.Log
 import com.ditchoom.mqtt.client.LocalMqttService
 import kotlinx.coroutines.launch
 
-class AndroidRemoteMqttServiceWorker(private val serviceServer: RemoteMqttServiceWorker) : IPCMqttService.Stub() {
+class AndroidRemoteMqttServiceWorker(
+    private val serviceServer: RemoteMqttServiceWorker,
+) : IPCMqttService.Stub() {
     private val scope = serviceServer.service.scope
 
     constructor(service: LocalMqttService) : this(RemoteMqttServiceWorker(service))

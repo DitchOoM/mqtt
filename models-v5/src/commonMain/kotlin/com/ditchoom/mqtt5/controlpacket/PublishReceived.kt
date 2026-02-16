@@ -29,8 +29,9 @@ import com.ditchoom.mqtt5.controlpacket.properties.readProperties
  * A PUBREC packet is the response to a PUBLISH packet with QoS 2. It is the second packet of the QoS 2 protocol exchange.
  */
 
-data class PublishReceived(val variable: VariableHeader) :
-    ControlPacketV5(5, DirectionOfFlow.BIDIRECTIONAL),
+data class PublishReceived(
+    val variable: VariableHeader,
+) : ControlPacketV5(5, DirectionOfFlow.BIDIRECTIONAL),
     IPublishReceived {
     constructor(
         packetIdentifier: Int,

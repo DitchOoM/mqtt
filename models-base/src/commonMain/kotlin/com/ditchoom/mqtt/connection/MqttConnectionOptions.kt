@@ -21,8 +21,8 @@ sealed interface MqttConnectionOptions {
         isWebsocket: Boolean = this is WebSocketConnectionOptions,
         websocketEndpoint: String = if (this is WebSocketConnectionOptions) this.websocketEndpoint else "/mqtt",
         protocols: List<String> = if (this is WebSocketConnectionOptions) this.protocols else emptyList(),
-    ): MqttConnectionOptions {
-        return if (isWebsocket) {
+    ): MqttConnectionOptions =
+        if (isWebsocket) {
             WebSocketConnectionOptions(
                 host,
                 port,
@@ -36,7 +36,6 @@ sealed interface MqttConnectionOptions {
         } else {
             SocketConnection(host, port, tls, connectionTimeout, readTimeout, writeTimeout)
         }
-    }
 
     data class SocketConnection(
         override val host: String,

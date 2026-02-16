@@ -205,7 +205,11 @@ class UnsubscribeAcknowledgmentTests {
         assertEquals(SUCCESS.byte, buffer.readUnsignedByte(), "payload reason code")
         buffer.resetForRead()
         val expected = ControlPacketV5.from(buffer) as UnsubscribeAcknowledgment
-        assertEquals(expected.variable.properties.reasonString.toString(), "yolo")
+        assertEquals(
+            expected.variable.properties.reasonString
+                .toString(),
+            "yolo",
+        )
     }
 
     @Test
@@ -242,7 +246,9 @@ class UnsubscribeAcknowledgmentTests {
         request.serialize(buffer)
         buffer.resetForRead()
         val requestRead = ControlPacketV5.from(buffer) as UnsubscribeAcknowledgment
-        val (key, value) = requestRead.variable.properties.userProperty.first()
+        val (key, value) =
+            requestRead.variable.properties.userProperty
+                .first()
         assertEquals("key", key.toString())
         assertEquals("value", value.toString())
     }

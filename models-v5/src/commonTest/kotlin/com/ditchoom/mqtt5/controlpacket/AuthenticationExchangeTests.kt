@@ -123,7 +123,11 @@ class AuthenticationExchangeTests {
         expected.serialize(buffer)
         buffer.resetForRead()
         val actual = ControlPacketV5.from(buffer) as AuthenticationExchange
-        assertEquals("yolo", actual.variable.properties.reasonString.toString())
+        assertEquals(
+            "yolo",
+            actual.variable.properties.reasonString
+                .toString(),
+        )
     }
 
     @Test
@@ -201,7 +205,9 @@ class AuthenticationExchangeTests {
         AuthenticationExchange(VariableHeader(SUCCESS, properties = props)).serialize(buffer)
         buffer.resetForRead()
         val requestRead = ControlPacketV5.from(buffer) as AuthenticationExchange
-        val (key, value) = requestRead.variable.properties.userProperty.first()
+        val (key, value) =
+            requestRead.variable.properties.userProperty
+                .first()
         assertEquals(key.toString(), "key")
         assertEquals(value.toString(), "value")
     }

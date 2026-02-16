@@ -6,8 +6,10 @@ import com.ditchoom.mqtt.connection.MqttBroker
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
-class AndroidRemoteMqttServiceClient(binder: IBinder, service: LocalMqttService) :
-    RemoteMqttServiceClient(service) {
+class AndroidRemoteMqttServiceClient(
+    binder: IBinder,
+    service: LocalMqttService,
+) : RemoteMqttServiceClient(service) {
     private val aidl = IPCMqttService.Stub.asInterface(binder)
     override val startAllCb: suspend () -> Unit =
         { suspendCoroutine { aidl.startAll(SuspendingMqttCompletionCallback("startAllCb", it)) } }

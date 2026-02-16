@@ -11,8 +11,9 @@ import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
  *
  * A PUBREL packet is the response to a PUBREC packet. It is the third packet of the QoS 2 protocol exchange.
  */
-data class PublishRelease(override val packetIdentifier: Int) :
-    ControlPacketV4(IPublishRelease.CONTROL_PACKET_VALUE, DirectionOfFlow.BIDIRECTIONAL, 0b10),
+data class PublishRelease(
+    override val packetIdentifier: Int,
+) : ControlPacketV4(IPublishRelease.CONTROL_PACKET_VALUE, DirectionOfFlow.BIDIRECTIONAL, 0b10),
     IPublishRelease {
     override fun variableHeader(writeBuffer: WriteBuffer) {
         writeBuffer.writeUShort(packetIdentifier.toUShort())

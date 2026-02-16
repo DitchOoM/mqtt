@@ -274,7 +274,11 @@ class PublishMessageTests {
         )
         buffer.resetForRead()
         val publish = ControlPacketV5.from(buffer) as PublishMessage
-        assertEquals("t/as", publish.variable.properties.responseTopic?.toString())
+        assertEquals(
+            "t/as",
+            publish.variable.properties.responseTopic
+                ?.toString(),
+        )
     }
 
     @Test
@@ -294,7 +298,8 @@ class PublishMessageTests {
     }
 
     val yoyoBuffer =
-        PlatformBuffer.allocate(4)
+        PlatformBuffer
+            .allocate(4)
             .also { it.writeString("yoyo", Charset.UTF8) }
 
     @Test
@@ -324,7 +329,9 @@ class PublishMessageTests {
         val publish = ControlPacketV5.from(buffer) as PublishMessage
         assertEquals(
             "yoyo",
-            publish.variable.properties.correlationData?.readString(4, Charset.UTF8).toString(),
+            publish.variable.properties.correlationData
+                ?.readString(4, Charset.UTF8)
+                .toString(),
         )
     }
 
@@ -360,7 +367,9 @@ class PublishMessageTests {
         request.serialize(buffer)
         buffer.resetForRead()
         val requestRead = ControlPacketV5.from(buffer) as PublishMessage
-        val (key, value) = requestRead.variable.properties.userProperty.first()
+        val (key, value) =
+            requestRead.variable.properties.userProperty
+                .first()
         assertEquals("key", key.toString())
         assertEquals("value", value.toString())
     }
@@ -374,7 +383,11 @@ class PublishMessageTests {
         actual.serialize(buffer)
         buffer.resetForRead()
         val publish = ControlPacketV5.from(buffer) as PublishMessage
-        assertEquals(2, publish.variable.properties.subscriptionIdentifier.first())
+        assertEquals(
+            2,
+            publish.variable.properties.subscriptionIdentifier
+                .first(),
+        )
     }
 
     @Test
@@ -397,7 +410,11 @@ class PublishMessageTests {
         actual.serialize(buffer)
         buffer.resetForRead()
         val publish = ControlPacketV5.from(buffer) as PublishMessage
-        assertEquals("t/as", publish.variable.properties.contentType?.toString())
+        assertEquals(
+            "t/as",
+            publish.variable.properties.contentType
+                ?.toString(),
+        )
     }
 
     @Test

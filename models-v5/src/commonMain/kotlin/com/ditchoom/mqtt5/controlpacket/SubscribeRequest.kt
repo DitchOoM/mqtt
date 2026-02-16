@@ -40,8 +40,8 @@ import com.ditchoom.mqtt5.controlpacket.properties.readPropertiesSized
 data class SubscribeRequest(
     val variable: VariableHeader,
     override val subscriptions: Set<ISubscription>,
-) :
-    ControlPacketV5(8, DirectionOfFlow.CLIENT_TO_SERVER, 0b10), ISubscribeRequest {
+) : ControlPacketV5(8, DirectionOfFlow.CLIENT_TO_SERVER, 0b10),
+    ISubscribeRequest {
     constructor(
         packetIdentifier: UShort,
         topic: String,

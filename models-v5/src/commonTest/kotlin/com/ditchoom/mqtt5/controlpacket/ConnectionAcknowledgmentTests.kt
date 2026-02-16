@@ -347,7 +347,11 @@ class ConnectionAcknowledgmentTests {
         actual.serialize(buffer)
         buffer.resetForRead()
         val expected = ControlPacketV5.from(buffer) as ConnectionAcknowledgment
-        assertEquals(expected.header.properties.assignedClientIdentifier.toString(), "yolo")
+        assertEquals(
+            expected.header.properties.assignedClientIdentifier
+                .toString(),
+            "yolo",
+        )
         assertEquals(expected.toString(), actual.toString())
     }
 
@@ -408,7 +412,11 @@ class ConnectionAcknowledgmentTests {
         actual.serialize(buffer)
         buffer.resetForRead()
         val expected = ControlPacketV5.from(buffer) as ConnectionAcknowledgment
-        assertEquals(expected.header.properties.reasonString.toString(), "yolo")
+        assertEquals(
+            expected.header.properties.reasonString
+                .toString(),
+            "yolo",
+        )
         assertEquals(expected.toString(), actual.toString())
     }
 
@@ -444,7 +452,9 @@ class ConnectionAcknowledgmentTests {
         connack.serialize(buffer)
         buffer.resetForRead()
         val requestRead = ControlPacketV5.from(buffer) as ConnectionAcknowledgment
-        val (key, value) = requestRead.header.properties.userProperty.first()
+        val (key, value) =
+            requestRead.header.properties.userProperty
+                .first()
         assertEquals(key.toString(), "key")
         assertEquals(value.toString(), "value")
     }
@@ -622,7 +632,11 @@ class ConnectionAcknowledgmentTests {
         actual.serialize(buffer)
         buffer.resetForRead()
         val expected = ControlPacketV5.from(buffer) as ConnectionAcknowledgment
-        assertEquals(expected.header.properties.responseInformation.toString(), "yolo")
+        assertEquals(
+            expected.header.properties.responseInformation
+                .toString(),
+            "yolo",
+        )
     }
 
     @Test
@@ -652,7 +666,11 @@ class ConnectionAcknowledgmentTests {
         actual.serialize(buffer)
         buffer.resetForRead()
         val expected = ControlPacketV5.from(buffer) as ConnectionAcknowledgment
-        assertEquals(expected.header.properties.serverReference.toString(), "yolo")
+        assertEquals(
+            expected.header.properties.serverReference
+                .toString(),
+            "yolo",
+        )
     }
 
     @Test
@@ -673,7 +691,8 @@ class ConnectionAcknowledgmentTests {
     }
 
     private val buffer1234 =
-        PlatformBuffer.allocate(4)
+        PlatformBuffer
+            .allocate(4)
             .also { it.write("1234".toReadBuffer(Charset.UTF8)) }
 
     @Test
@@ -692,8 +711,17 @@ class ConnectionAcknowledgmentTests {
         actual.serialize(buffer)
         buffer.resetForRead()
         val expected = ControlPacketV5.from(buffer) as ConnectionAcknowledgment
-        assertEquals(expected.header.properties.authentication?.method?.toString(), "yolo")
-        assertEquals(expected.header.properties.authentication?.data, buffer1234)
+        assertEquals(
+            expected.header.properties.authentication
+                ?.method
+                ?.toString(),
+            "yolo",
+        )
+        assertEquals(
+            expected.header.properties.authentication
+                ?.data,
+            buffer1234,
+        )
     }
 
     @Test

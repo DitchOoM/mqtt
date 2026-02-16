@@ -66,7 +66,8 @@ data class ConnectionRequest(
      */
     val variableHeader: VariableHeader = VariableHeader(),
     val payload: Payload = Payload(),
-) : ControlPacketV5(1, DirectionOfFlow.CLIENT_TO_SERVER), IConnectionRequest {
+) : ControlPacketV5(1, DirectionOfFlow.CLIENT_TO_SERVER),
+    IConnectionRequest {
     constructor(
         clientId: String,
         keepAliveSeconds: Int = 3600,
@@ -898,8 +899,16 @@ data class ConnectionRequest(
                 val propertiesRaw = buffer.readProperties()
                 val properties = Properties.from(propertiesRaw)
                 return VariableHeader(
-                    protocolName, protocolVersion, hasUsername, hasPassword, willRetain, willQos,
-                    willFlag, cleanStart, keepAliveSeconds, properties,
+                    protocolName,
+                    protocolVersion,
+                    hasUsername,
+                    hasPassword,
+                    willRetain,
+                    willQos,
+                    willFlag,
+                    cleanStart,
+                    keepAliveSeconds,
+                    properties,
                 )
             }
         }

@@ -30,9 +30,8 @@ import com.ditchoom.mqtt.controlpacket.utf8Length
 data class SubscribeRequest(
     override val packetIdentifier: Int,
     override val subscriptions: Set<ISubscription>,
-) :
-    ControlPacketV4(ISubscribeRequest.CONTROL_PACKET_VALUE, DirectionOfFlow.CLIENT_TO_SERVER, 0b10),
-        ISubscribeRequest {
+) : ControlPacketV4(ISubscribeRequest.CONTROL_PACKET_VALUE, DirectionOfFlow.CLIENT_TO_SERVER, 0b10),
+    ISubscribeRequest {
     constructor(packetIdentifier: UShort, topic: Topic, qos: QualityOfService) :
         this(
             packetIdentifier.toInt(),

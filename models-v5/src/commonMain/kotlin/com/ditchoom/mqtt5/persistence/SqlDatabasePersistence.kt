@@ -38,7 +38,9 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlin.time.Duration.Companion.milliseconds
 
-class SqlDatabasePersistence(driver: SqlDriver) : Persistence {
+class SqlDatabasePersistence(
+    driver: SqlDriver,
+) : Persistence {
     private val packetIdMutex = Mutex()
     private val database = Mqtt5(driver)
     private val brokerQueries = database.brokerQueries
@@ -78,7 +80,8 @@ class SqlDatabasePersistence(driver: SqlDriver) : Persistence {
                 broker.identifier.toLong(),
                 0L,
                 incomingPubRecv.packetIdentifier.toLong(),
-                publishRelease.variable.reasonCode.byte.toLong(),
+                publishRelease.variable.reasonCode.byte
+                    .toLong(),
                 publishRelease.variable.properties.reasonString,
                 publishRelease.controlPacketValue.toLong(),
             )
@@ -141,8 +144,8 @@ class SqlDatabasePersistence(driver: SqlDriver) : Persistence {
     override suspend fun activeSubscriptions(
         broker: MqttBroker,
         includePendingUnsub: Boolean,
-    ): Map<Topic, ISubscription> {
-        return withContext(dispatcher) {
+    ): Map<Topic, ISubscription> =
+        withContext(dispatcher) {
             if (includePendingUnsub) {
                 subscriptionQueries
                     .allSubscriptions(broker.identifier.toLong())
@@ -153,7 +156,6 @@ class SqlDatabasePersistence(driver: SqlDriver) : Persistence {
                 .map { Subscription(Topic.fromOrThrow(it.topic_filter, Topic.Type.Filter), it.qos.toQos()) }
                 .associateBy { it.topicFilter }
         }
-    }
 
     override suspend fun addBroker(
         connectionOps: Collection<MqttConnectionOptions>,
@@ -167,7 +169,9 @@ class SqlDatabasePersistence(driver: SqlDriver) : Persistence {
                 val willPayload = connect.payload.willPayload
                 val willPayloadByteArray = willPayload?.readByteArray(willPayload.remaining())
                 willPayload?.resetForRead()
-                val authPayload = connect.variableHeader.properties.authentication?.data
+                val authPayload =
+                    connect.variableHeader.properties.authentication
+                        ?.data
                 val authData = authPayload?.let { it.readByteArray(it.remaining()) }
                 authPayload?.resetForRead()
                 val correlationData = connect.payload.willProperties?.correlationData
@@ -178,17 +182,25 @@ class SqlDatabasePersistence(driver: SqlDriver) : Persistence {
                     connect.protocolName,
                     connect.protocolVersion.toLong(),
                     connect.variableHeader.willRetain.toLong(),
-                    connect.variableHeader.willQos.integerValue.toLong(),
+                    connect.variableHeader.willQos.integerValue
+                        .toLong(),
                     connect.variableHeader.willFlag.toLong(),
                     connect.variableHeader.cleanStart.toLong(),
                     connect.variableHeader.keepAliveSeconds.toLong(),
-                    connect.variableHeader.properties.sessionExpiryIntervalSeconds?.toLong(),
-                    connect.variableHeader.properties.receiveMaximum?.toLong(),
-                    connect.variableHeader.properties.maximumPacketSize?.toLong(),
-                    connect.variableHeader.properties.topicAliasMaximum?.toLong(),
-                    connect.variableHeader.properties.requestResponseInformation?.toLong(),
-                    connect.variableHeader.properties.requestProblemInformation?.toLong(),
-                    connect.variableHeader.properties.authentication?.method,
+                    connect.variableHeader.properties.sessionExpiryIntervalSeconds
+                        ?.toLong(),
+                    connect.variableHeader.properties.receiveMaximum
+                        ?.toLong(),
+                    connect.variableHeader.properties.maximumPacketSize
+                        ?.toLong(),
+                    connect.variableHeader.properties.topicAliasMaximum
+                        ?.toLong(),
+                    connect.variableHeader.properties.requestResponseInformation
+                        ?.toLong(),
+                    connect.variableHeader.properties.requestProblemInformation
+                        ?.toLong(),
+                    connect.variableHeader.properties.authentication
+                        ?.method,
                     authData,
                     connect.payload.clientId,
                     (connect.payload.willProperties != null).toLong(),
@@ -197,10 +209,14 @@ class SqlDatabasePersistence(driver: SqlDriver) : Persistence {
                     connect.payload.userName,
                     connect.payload.password,
                     connect.payload.willProperties?.willDelayIntervalSeconds ?: 0L,
-                    connect.payload.willProperties?.payloadFormatIndicator?.toLong(),
+                    connect.payload.willProperties
+                        ?.payloadFormatIndicator
+                        ?.toLong(),
                     connect.payload.willProperties?.messageExpiryIntervalSeconds,
                     connect.payload.willProperties?.contentType,
-                    connect.payload.willProperties?.responseTopic?.toString(),
+                    connect.payload.willProperties
+                        ?.responseTopic
+                        ?.toString(),
                     willPropsCorrelationData,
                 )
                 val userProps = connect.variableHeader.properties.userProperty
@@ -277,13 +293,15 @@ class SqlDatabasePersistence(driver: SqlDriver) : Persistence {
                 null
             }
         val userProps =
-            propertyQueries.allProps(id, 0L, -1) { k, v ->
-                Pair(k, v)
-            }.executeAsList()
+            propertyQueries
+                .allProps(id, 0L, -1) { k, v ->
+                    Pair(k, v)
+                }.executeAsList()
         val willUserProps =
-            propertyQueries.allProps(id, 0L, -2) { k, v ->
-                Pair(k, v)
-            }.executeAsList()
+            propertyQueries
+                .allProps(id, 0L, -2) { k, v ->
+                    Pair(k, v)
+                }.executeAsList()
         val variable =
             ConnectionRequest.VariableHeader(
                 connectionRequestDatabaseRecord.protocol_name,
@@ -337,7 +355,8 @@ class SqlDatabasePersistence(driver: SqlDriver) : Persistence {
         val connectionRequest = ConnectionRequest(variable, payload)
         val socketConnections = socketConnectionQueries.connectionsByBrokerId(id)
         val connectionOps =
-            socketConnections.executeAsList()
+            socketConnections
+                .executeAsList()
                 .map {
                     if (it.type == "websocket") {
                         MqttConnectionOptions.WebSocketConnectionOptions(
@@ -401,19 +420,19 @@ class SqlDatabasePersistence(driver: SqlDriver) : Persistence {
             broker.identifier.toLong(),
             1L,
             packet.packetIdentifier.toLong(),
-            reply.variable.reasonCode.byte.toLong(),
+            reply.variable.reasonCode.byte
+                .toLong(),
             reply.variable.properties.reasonString,
             reply.controlPacketValue.toLong(),
         )
     }
 
-    private fun Long.toQos(): QualityOfService {
-        return when (this) {
+    private fun Long.toQos(): QualityOfService =
+        when (this) {
             1L -> QualityOfService.AT_LEAST_ONCE
             2L -> QualityOfService.EXACTLY_ONCE
             else -> QualityOfService.AT_MOST_ONCE
         }
-    }
 
     private fun Long?.toNullableBoolean(): Boolean? {
         val value = this ?: return null
@@ -431,7 +450,9 @@ class SqlDatabasePersistence(driver: SqlDriver) : Persistence {
                         null
                     }
                 val props =
-                    propertyQueries.allProps(it.broker_id, it.incoming, it.packet_id).executeAsList()
+                    propertyQueries
+                        .allProps(it.broker_id, it.incoming, it.packet_id)
+                        .executeAsList()
                         .map { (key, value) -> Pair(key, value) }
                 val properties =
                     PublishMessage.VariableHeader.Properties(
@@ -441,7 +462,10 @@ class SqlDatabasePersistence(driver: SqlDriver) : Persistence {
                         it.response_topic?.let { t -> Topic.fromOrThrow(t, Topic.Type.Name) },
                         it.correlation_data?.let { c -> PlatformBuffer.wrap(c) },
                         props,
-                        it.subscription_identifier?.split(", ")?.map { i -> i.toLong() }?.toSet() ?: emptySet(),
+                        it.subscription_identifier
+                            ?.split(", ")
+                            ?.map { i -> i.toLong() }
+                            ?.toSet() ?: emptySet(),
                         it.content_type,
                     )
                 PublishMessage(
@@ -460,8 +484,7 @@ class SqlDatabasePersistence(driver: SqlDriver) : Persistence {
                     propertyQueries
                         .allProps(it.broker_id, it.incoming, it.packet_id) { k, v ->
                             Pair(k, v)
-                        }
-                        .executeAsList()
+                        }.executeAsList()
                 when (it.type) {
                     5L ->
                         PublishReceived(
@@ -511,12 +534,12 @@ class SqlDatabasePersistence(driver: SqlDriver) : Persistence {
                     propertyQueries
                         .allProps(subscribeRequest.broker_id, 0L, subscribeRequest.packet_id) { k, v ->
                             Pair(k, v)
-                        }
-                        .executeAsList()
+                        }.executeAsList()
                 val subs =
                     subscriptionQueries
                         .queuedSubscriptions(subscribeRequest.broker_id, subscribeRequest.packet_id)
-                        .executeAsList().map {
+                        .executeAsList()
+                        .map {
                             Subscription(
                                 Topic.fromOrThrow(it.topic_filter, Topic.Type.Filter),
                                 it.qos.toQos(),
@@ -538,12 +561,15 @@ class SqlDatabasePersistence(driver: SqlDriver) : Persistence {
                 )
             }
         map +=
-            unsubQueries.queuedUnsubMessages(broker.identifier.toLong()).executeAsList()
+            unsubQueries
+                .queuedUnsubMessages(broker.identifier.toLong())
+                .executeAsList()
                 .mapNotNull { unsubscribeRequest ->
                     val subscriptions =
                         subscriptionQueries
                             .queuedUnsubscriptions(unsubscribeRequest.broker_id, unsubscribeRequest.packet_id)
-                            .executeAsList().map {
+                            .executeAsList()
+                            .map {
                                 Topic.fromOrThrow(it.topic_filter, Topic.Type.Filter)
                             }.toSet()
                     if (subscriptions.isNotEmpty()) {
@@ -551,8 +577,7 @@ class SqlDatabasePersistence(driver: SqlDriver) : Persistence {
                             propertyQueries
                                 .allProps(unsubscribeRequest.broker_id, 0L, unsubscribeRequest.packet_id) { k, v ->
                                     Pair(k, v)
-                                }
-                                .executeAsList()
+                                }.executeAsList()
                         UnsubscribeRequest(
                             UnsubscribeRequest.VariableHeader(
                                 unsubscribeRequest.packet_id.toInt(),
@@ -605,24 +630,32 @@ class SqlDatabasePersistence(driver: SqlDriver) : Persistence {
                         val packetId = brokerQueries.nextPacketId(brokerId).executeAsOne().toLong()
                         brokerQueries.incrementPacketId(brokerId)
                         val subIds =
-                            if (p.variable.properties.subscriptionIdentifier.isEmpty()) {
+                            if (p.variable.properties.subscriptionIdentifier
+                                    .isEmpty()
+                            ) {
                                 null
                             } else {
-                                p.variable.properties.subscriptionIdentifier.joinToString()
+                                p.variable.properties.subscriptionIdentifier
+                                    .joinToString()
                             }
                         pubQueries.insertPublishMessage(
                             brokerId,
                             incoming,
                             if (p.fixed.dup) 1L else 0L,
-                            p.fixed.qos.integerValue.toLong(),
+                            p.fixed.qos.integerValue
+                                .toLong(),
                             if (p.fixed.retain) 1L else 0L,
                             p.topic.toString(),
                             packetId,
-                            p.variable.properties.payloadFormatIndicator.toLong(),
+                            p.variable.properties.payloadFormatIndicator
+                                .toLong(),
                             p.variable.properties.messageExpiryInterval,
-                            p.variable.properties.topicAlias?.toLong(),
-                            p.variable.properties.responseTopic?.toString(),
-                            p.variable.properties.correlationData?.let { it.readByteArray(it.remaining()) },
+                            p.variable.properties.topicAlias
+                                ?.toLong(),
+                            p.variable.properties.responseTopic
+                                ?.toString(),
+                            p.variable.properties.correlationData
+                                ?.let { it.readByteArray(it.remaining()) },
                             subIds,
                             p.variable.properties.contentType,
                             payload,
@@ -642,7 +675,8 @@ class SqlDatabasePersistence(driver: SqlDriver) : Persistence {
         packetId: Int,
     ): IPublishMessage? {
         val p =
-            pubQueries.messageWithId(broker.identifier.toLong(), 0L, packetId.toLong())
+            pubQueries
+                .messageWithId(broker.identifier.toLong(), 0L, packetId.toLong())
                 .executeAsOneOrNull() ?: return null
         val payload =
             if (p.payload != null) {
@@ -651,7 +685,9 @@ class SqlDatabasePersistence(driver: SqlDriver) : Persistence {
                 null
             }
         val props =
-            propertyQueries.allProps(p.broker_id, p.incoming, p.packet_id).executeAsList()
+            propertyQueries
+                .allProps(p.broker_id, p.incoming, p.packet_id)
+                .executeAsList()
                 .map { (key, value) -> Pair(key, value) }
         val properties =
             PublishMessage.VariableHeader.Properties(
@@ -661,7 +697,10 @@ class SqlDatabasePersistence(driver: SqlDriver) : Persistence {
                 p.response_topic?.let { t -> Topic.fromOrThrow(t, Topic.Type.Name) },
                 p.correlation_data?.let { c -> PlatformBuffer.wrap(c) },
                 props,
-                p.subscription_identifier?.split(", ")?.map { i -> i.toLong() }?.toSet() ?: emptySet(),
+                p.subscription_identifier
+                    ?.split(", ")
+                    ?.map { i -> i.toLong() }
+                    ?.toSet() ?: emptySet(),
                 p.content_type,
             )
         return PublishMessage(
@@ -717,18 +756,19 @@ class SqlDatabasePersistence(driver: SqlDriver) : Persistence {
         packetId: Int,
     ): ISubscribeRequest? {
         val subscribeRequest =
-            subQueries.messageWithId(broker.identifier.toLong(), packetId.toLong())
+            subQueries
+                .messageWithId(broker.identifier.toLong(), packetId.toLong())
                 .executeAsOneOrNull() ?: return null
         val userProps =
             propertyQueries
                 .allProps(subscribeRequest.broker_id, 0L, subscribeRequest.packet_id) { k, v ->
                     Pair(k, v)
-                }
-                .executeAsList()
+                }.executeAsList()
         val subs =
             subscriptionQueries
                 .queuedSubscriptions(subscribeRequest.broker_id, subscribeRequest.packet_id)
-                .executeAsList().map {
+                .executeAsList()
+                .map {
                     Subscription(
                         Topic.fromOrThrow(it.topic_filter, Topic.Type.Filter),
                         it.qos.toQos(),
@@ -753,8 +793,8 @@ class SqlDatabasePersistence(driver: SqlDriver) : Persistence {
     override suspend fun writeUnsubGetPacketId(
         broker: MqttBroker,
         unsub: IUnsubscribeRequest,
-    ): Int {
-        return withContext(dispatcher) {
+    ): Int =
+        withContext(dispatcher) {
             val unsubscribe = unsub as UnsubscribeRequest
 
             packetIdMutex.withLock {
@@ -776,19 +816,20 @@ class SqlDatabasePersistence(driver: SqlDriver) : Persistence {
                 }
             }
         }
-    }
 
     override suspend fun getUnsubWithPacketId(
         broker: MqttBroker,
         packetId: Int,
     ): IUnsubscribeRequest? {
         val unsubscribeRequest =
-            unsubQueries.messageWithId(broker.identifier.toLong(), packetId.toLong())
+            unsubQueries
+                .messageWithId(broker.identifier.toLong(), packetId.toLong())
                 .executeAsOneOrNull() ?: return null
         val subscriptions =
             subscriptionQueries
                 .queuedUnsubscriptions(unsubscribeRequest.broker_id, unsubscribeRequest.packet_id)
-                .executeAsList().map {
+                .executeAsList()
+                .map {
                     Topic.fromOrThrow(it.topic_filter, Topic.Type.Filter)
                 }.toSet()
         return if (subscriptions.isNotEmpty()) {
@@ -796,8 +837,7 @@ class SqlDatabasePersistence(driver: SqlDriver) : Persistence {
                 propertyQueries
                     .allProps(unsubscribeRequest.broker_id, 0L, unsubscribeRequest.packet_id) { k, v ->
                         Pair(k, v)
-                    }
-                    .executeAsList()
+                    }.executeAsList()
             UnsubscribeRequest(
                 UnsubscribeRequest.VariableHeader(
                     unsubscribeRequest.packet_id.toInt(),
@@ -834,10 +874,9 @@ class SqlDatabasePersistence(driver: SqlDriver) : Persistence {
     }
 }
 
-fun Boolean.toLong(): Long {
-    return if (this) {
+fun Boolean.toLong(): Long =
+    if (this) {
         1L
     } else {
         0L
     }
-}

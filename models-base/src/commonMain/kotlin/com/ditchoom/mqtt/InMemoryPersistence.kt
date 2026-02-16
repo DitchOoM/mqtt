@@ -54,9 +54,7 @@ class InMemoryPersistence : Persistence {
     override suspend fun getPubWithPacketId(
         broker: MqttBroker,
         packetId: Int,
-    ): IPublishMessage? {
-        return clientMessages[broker.identifier]?.get(packetId) as? IPublishMessage
-    }
+    ): IPublishMessage? = clientMessages[broker.identifier]?.get(packetId) as? IPublishMessage
 
     override suspend fun writeUnsubGetPacketId(
         broker: MqttBroker,
@@ -71,9 +69,7 @@ class InMemoryPersistence : Persistence {
     override suspend fun getUnsubWithPacketId(
         broker: MqttBroker,
         packetId: Int,
-    ): IUnsubscribeRequest? {
-        return clientMessages[broker.identifier]?.get(packetId) as? IUnsubscribeRequest
-    }
+    ): IUnsubscribeRequest? = clientMessages[broker.identifier]?.get(packetId) as? IUnsubscribeRequest
 
     override suspend fun messagesToSendOnReconnect(broker: MqttBroker): Collection<ControlPacket> {
         val clientMessagesForBroker = clientMessages.getOrPut(broker.identifier) { LinkedHashMap() }
@@ -136,9 +132,7 @@ class InMemoryPersistence : Persistence {
     override suspend fun getSubWithPacketId(
         broker: MqttBroker,
         packetId: Int,
-    ): ISubscribeRequest? {
-        return clientMessages[broker.identifier]?.get(packetId) as? ISubscribeRequest
-    }
+    ): ISubscribeRequest? = clientMessages[broker.identifier]?.get(packetId) as? ISubscribeRequest
 
     override suspend fun ackPubReceivedQueuePubRelease(
         broker: MqttBroker,
@@ -192,13 +186,9 @@ class InMemoryPersistence : Persistence {
         return broker
     }
 
-    override suspend fun allBrokers(): Collection<MqttBroker> {
-        return brokers.values
-    }
+    override suspend fun allBrokers(): Collection<MqttBroker> = brokers.values
 
-    override suspend fun brokerWithId(identifier: Int): MqttBroker? {
-        return brokers[identifier]
-    }
+    override suspend fun brokerWithId(identifier: Int): MqttBroker? = brokers[identifier]
 
     override suspend fun removeBroker(identifier: Int) {
         brokers.remove(identifier)
@@ -220,7 +210,8 @@ class InMemoryPersistence : Persistence {
             .forEach { activeSubscriptions.remove(it.key) }
 
         val isClear =
-            serverMessages.isEmpty() && clientMessages.isEmpty() &&
+            serverMessages.isEmpty() &&
+                clientMessages.isEmpty() &&
                 if (includeSubscriptions) {
                     activeSubscriptions.isEmpty()
                 } else {

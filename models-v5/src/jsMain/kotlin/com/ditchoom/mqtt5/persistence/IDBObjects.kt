@@ -159,13 +159,21 @@ data class PersistablePublishMessage(
         pub.fixed.retain,
         pub.variable.topicName.toString(),
         pub.variable.packetIdentifier,
-        pub.variable.properties.payloadFormatIndicator.toLong().toInt(),
-        pub.variable.properties.messageExpiryInterval?.toString(),
+        pub.variable.properties.payloadFormatIndicator
+            .toLong()
+            .toInt(),
+        pub.variable.properties.messageExpiryInterval
+            ?.toString(),
         pub.variable.properties.topicAlias,
-        pub.variable.properties.responseTopic?.toString(),
-        pub.variable.properties.correlationData?.let { (it as JsBuffer).buffer },
-        if (pub.variable.properties.subscriptionIdentifier.isNotEmpty()) {
-            pub.variable.properties.subscriptionIdentifier.joinToString(", ")
+        pub.variable.properties.responseTopic
+            ?.toString(),
+        pub.variable.properties.correlationData
+            ?.let { (it as JsBuffer).buffer },
+        if (pub.variable.properties.subscriptionIdentifier
+                .isNotEmpty()
+        ) {
+            pub.variable.properties.subscriptionIdentifier
+                .joinToString(", ")
         } else {
             null
         },
@@ -187,10 +195,14 @@ fun toPub(
             p.messageExpiryInterval?.toLong(),
             p.topicAlias,
             p.responseTopic?.let { Topic.fromOrThrow(it, Topic.Type.Name) },
-            p.correlationData?.let { JsBuffer(it, position = it.length, limit = it.length) }
+            p.correlationData
+                ?.let { JsBuffer(it, position = it.length, limit = it.length) }
                 ?.also { it.resetForRead() },
             userProperty,
-            p.subscriptionIdentifier?.split(", ")?.map { it.toLong() }?.toSet() ?: emptySet(),
+            p.subscriptionIdentifier
+                ?.split(", ")
+                ?.map { it.toLong() }
+                ?.toSet() ?: emptySet(),
             p.contentType,
         ),
     ),
@@ -230,37 +242,38 @@ data class PersistableSocketConnection(
 ) {
     companion object {
         fun from(connectionOps: Collection<MqttConnectionOptions>) =
-            connectionOps.map {
-                when (it) {
-                    is MqttConnectionOptions.SocketConnection -> {
-                        PersistableSocketConnection(
-                            "tcp",
-                            it.host,
-                            it.port,
-                            it.tls,
-                            it.connectionTimeout.inWholeMilliseconds.toString(),
-                            it.readTimeout.inWholeMilliseconds.toString(),
-                            it.writeTimeout.inWholeMilliseconds.toString(),
-                            null,
-                            null,
-                        )
-                    }
+            connectionOps
+                .map {
+                    when (it) {
+                        is MqttConnectionOptions.SocketConnection -> {
+                            PersistableSocketConnection(
+                                "tcp",
+                                it.host,
+                                it.port,
+                                it.tls,
+                                it.connectionTimeout.inWholeMilliseconds.toString(),
+                                it.readTimeout.inWholeMilliseconds.toString(),
+                                it.writeTimeout.inWholeMilliseconds.toString(),
+                                null,
+                                null,
+                            )
+                        }
 
-                    is MqttConnectionOptions.WebSocketConnectionOptions -> {
-                        PersistableSocketConnection(
-                            "websocket",
-                            it.host,
-                            it.port,
-                            it.tls,
-                            it.connectionTimeout.inWholeMilliseconds.toString(),
-                            it.readTimeout.inWholeMilliseconds.toString(),
-                            it.writeTimeout.inWholeMilliseconds.toString(),
-                            it.websocketEndpoint,
-                            it.protocols.joinToString(),
-                        )
+                        is MqttConnectionOptions.WebSocketConnectionOptions -> {
+                            PersistableSocketConnection(
+                                "websocket",
+                                it.host,
+                                it.port,
+                                it.tls,
+                                it.connectionTimeout.inWholeMilliseconds.toString(),
+                                it.readTimeout.inWholeMilliseconds.toString(),
+                                it.writeTimeout.inWholeMilliseconds.toString(),
+                                it.websocketEndpoint,
+                                it.protocols.joinToString(),
+                            )
+                        }
                     }
-                }
-            }.toTypedArray()
+                }.toTypedArray()
     }
 }
 
@@ -357,14 +370,19 @@ data class PersistableConnectionRequest(
                 connectionRequest.variableHeader.willFlag,
                 connectionRequest.variableHeader.cleanStart,
                 connectionRequest.variableHeader.keepAliveSeconds,
-                connectionRequest.variableHeader.properties.sessionExpiryIntervalSeconds?.toString(),
+                connectionRequest.variableHeader.properties.sessionExpiryIntervalSeconds
+                    ?.toString(),
                 connectionRequest.variableHeader.properties.receiveMaximum,
-                connectionRequest.variableHeader.properties.maximumPacketSize?.toString(),
+                connectionRequest.variableHeader.properties.maximumPacketSize
+                    ?.toString(),
                 connectionRequest.variableHeader.properties.topicAliasMaximum,
                 connectionRequest.variableHeader.properties.requestResponseInformation,
                 connectionRequest.variableHeader.properties.requestProblemInformation,
-                connectionRequest.variableHeader.properties.authentication?.method,
-                connectionRequest.variableHeader.properties.authentication?.data?.let { (it as JsBuffer).buffer },
+                connectionRequest.variableHeader.properties.authentication
+                    ?.method,
+                connectionRequest.variableHeader.properties.authentication
+                    ?.data
+                    ?.let { (it as JsBuffer).buffer },
                 connectionRequest.payload.clientId,
                 props != null,
                 connectionRequest.payload.willTopic?.toString(),
@@ -404,7 +422,8 @@ fun toConnectionRequest(
                 (p.willPropertyMessageExpiryIntervalSeconds as String?)?.toLong(),
                 p.willPropertyContentType as String?,
                 (p.willPropertyResponseTopic as String?)?.let { Topic.fromOrThrow(it, Topic.Type.Name) },
-                p.willPropertyCorrelationData?.unsafeCast<Int8Array>()
+                p.willPropertyCorrelationData
+                    ?.unsafeCast<Int8Array>()
                     ?.let { JsBuffer(it, position = 0, limit = it.length) },
                 willUserProperty,
             )
@@ -439,7 +458,8 @@ fun toConnectionRequest(
             p.clientId as String,
             willProps,
             (p.willTopic as? String)?.let { Topic.fromOrThrow(it, Topic.Type.Name) },
-            p.willPayload?.unsafeCast<Int8Array>()
+            p.willPayload
+                ?.unsafeCast<Int8Array>()
                 ?.let { JsBuffer(it, position = it.length, limit = it.length) },
             p.username as? String,
             p.password as? String,
@@ -447,10 +467,9 @@ fun toConnectionRequest(
     )
 }
 
-fun Byte.toQos(): QualityOfService {
-    return when (toInt()) {
+fun Byte.toQos(): QualityOfService =
+    when (toInt()) {
         1 -> QualityOfService.AT_LEAST_ONCE
         2 -> QualityOfService.EXACTLY_ONCE
         else -> QualityOfService.AT_MOST_ONCE
     }
-}

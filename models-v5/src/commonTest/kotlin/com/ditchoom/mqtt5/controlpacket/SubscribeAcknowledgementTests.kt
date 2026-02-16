@@ -183,7 +183,11 @@ class SubscribeAcknowledgementTests {
         actual.serialize(buffer)
         buffer.resetForRead()
         val result = ControlPacketV5.from(buffer) as SubscribeAcknowledgement
-        assertEquals("yolo", result.variable.properties.reasonString.toString())
+        assertEquals(
+            "yolo",
+            result.variable.properties.reasonString
+                .toString(),
+        )
     }
 
     @Test
@@ -218,7 +222,9 @@ class SubscribeAcknowledgementTests {
         request.serialize(buffer)
         buffer.resetForRead()
         val requestRead = ControlPacketV5.from(buffer) as SubscribeAcknowledgement
-        val (key, value) = requestRead.variable.properties.userProperty.first()
+        val (key, value) =
+            requestRead.variable.properties.userProperty
+                .first()
         assertEquals("key", key.toString())
         assertEquals("value", value.toString())
     }

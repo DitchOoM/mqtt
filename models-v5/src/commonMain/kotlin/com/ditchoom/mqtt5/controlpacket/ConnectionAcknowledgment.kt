@@ -64,8 +64,10 @@ import com.ditchoom.mqtt5.controlpacket.properties.readProperties
  * communications infrastructure.
  */
 
-data class ConnectionAcknowledgment(val header: VariableHeader = VariableHeader()) :
-    ControlPacketV5(2, DirectionOfFlow.SERVER_TO_CLIENT), IConnectionAcknowledgment {
+data class ConnectionAcknowledgment(
+    val header: VariableHeader = VariableHeader(),
+) : ControlPacketV5(2, DirectionOfFlow.SERVER_TO_CLIENT),
+    IConnectionAcknowledgment {
     override val isSuccessful: Boolean = header.connectReason == SUCCESS
     override val connectionReason: String = header.connectReason.name
     override val sessionPresent: Boolean = header.sessionPresent
@@ -712,13 +714,22 @@ data class ConnectionAcknowledgment(val header: VariableHeader = VariableHeader(
                             null
                         }
                     return Properties(
-                        sessionExpiryIntervalSeconds, receiveMaximum ?: UShort.MAX_VALUE.toInt(),
-                        maximumQos ?: QualityOfService.EXACTLY_ONCE, retainAvailable ?: true,
-                        maximumPacketSize, assignedClientIdentifier, topicAlias ?: 0,
-                        reasonString, userProperty, supportsWildcardSubscriptions ?: true,
+                        sessionExpiryIntervalSeconds,
+                        receiveMaximum ?: UShort.MAX_VALUE.toInt(),
+                        maximumQos ?: QualityOfService.EXACTLY_ONCE,
+                        retainAvailable ?: true,
+                        maximumPacketSize,
+                        assignedClientIdentifier,
+                        topicAlias ?: 0,
+                        reasonString,
+                        userProperty,
+                        supportsWildcardSubscriptions ?: true,
                         subscriptionIdentifiersAvailable ?: true,
                         sharedSubscriptionAvailable ?: true,
-                        serverKeepAlive, responseInformation, serverReference, auth,
+                        serverKeepAlive,
+                        responseInformation,
+                        serverReference,
+                        auth,
                     )
                 }
             }

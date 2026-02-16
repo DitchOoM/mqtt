@@ -29,8 +29,9 @@ import com.ditchoom.mqtt5.controlpacket.properties.readProperties
  * MUST treat any other value as malformed and close the Network Connection [MQTT-3.15.1-1].
  */
 
-data class AuthenticationExchange(val variable: VariableHeader) :
-    ControlPacketV5(15, DirectionOfFlow.BIDIRECTIONAL) {
+data class AuthenticationExchange(
+    val variable: VariableHeader,
+) : ControlPacketV5(15, DirectionOfFlow.BIDIRECTIONAL) {
     override fun remainingLength() = variable.size()
 
     override fun variableHeader(writeBuffer: WriteBuffer) = variable.serialize(writeBuffer)
@@ -189,11 +190,10 @@ data class AuthenticationExchange(val variable: VariableHeader) :
     }
 }
 
-private fun getReasonCode(byte: UByte): ReasonCode {
-    return when (byte) {
+private fun getReasonCode(byte: UByte): ReasonCode =
+    when (byte) {
         SUCCESS.byte -> SUCCESS
         CONTINUE_AUTHENTICATION.byte -> CONTINUE_AUTHENTICATION
         REAUTHENTICATE.byte -> REAUTHENTICATE
         else -> throw MalformedPacketException("Invalid disconnect reason code $byte")
     }
-}

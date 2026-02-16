@@ -1266,7 +1266,9 @@ class ConnectionRequestTests {
         request.serialize(buffer)
         buffer.resetForRead()
         val requestRead = ControlPacketV5.from(buffer) as ConnectionRequest
-        val (key, value) = requestRead.variableHeader.properties.userProperty.first()
+        val (key, value) =
+            requestRead.variableHeader.properties.userProperty
+                .first()
         assertEquals("key", key.toString())
         assertEquals("value", value.toString())
     }
@@ -1307,11 +1309,15 @@ class ConnectionRequestTests {
         val requestRead = ControlPacketV5.from(buffer) as ConnectionRequest
         assertEquals(
             "yolo",
-            requestRead.variableHeader.properties.authentication!!.method.toString(),
+            requestRead.variableHeader.properties.authentication!!
+                .method
+                .toString(),
         )
         assertEquals(
             "123",
-            requestRead.variableHeader.properties.authentication!!.data.readString(3, Charset.UTF8)
+            requestRead.variableHeader.properties.authentication!!
+                .data
+                .readString(3, Charset.UTF8)
                 .toString(),
         )
     }

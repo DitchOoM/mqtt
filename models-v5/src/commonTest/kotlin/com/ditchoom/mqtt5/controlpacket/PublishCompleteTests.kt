@@ -70,7 +70,11 @@ class PublishCompleteTests {
         expected.serialize(buffer)
         buffer.resetForRead()
 //        val actual = ControlPacketV5.from(buffer) as PublishComplete
-        assertEquals(expected.variable.properties.reasonString.toString(), "yolo")
+        assertEquals(
+            expected.variable.properties.reasonString
+                .toString(),
+            "yolo",
+        )
     }
 
     @Test
@@ -111,7 +115,9 @@ class PublishCompleteTests {
         request.serialize(buffer)
         buffer.resetForRead()
         val requestRead = ControlPacketV5.from(buffer) as PublishComplete
-        val (key, value) = requestRead.variable.properties.userProperty.first()
+        val (key, value) =
+            requestRead.variable.properties.userProperty
+                .first()
         assertEquals(key.toString(), "key")
         assertEquals(value.toString(), "value")
         assertEquals(request.toString(), requestRead.toString())

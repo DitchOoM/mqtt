@@ -14,6 +14,8 @@ import com.ditchoom.mqtt.controlpacket.IConnectionRequest
 import com.ditchoom.mqtt.controlpacket.IDisconnectNotification
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
 import com.ditchoom.socket.ClientSocket
+import com.ditchoom.socket.SocketOptions
+import com.ditchoom.socket.TlsConfig
 import com.ditchoom.socket.connect
 import com.ditchoom.websocket.ConnectionState
 import com.ditchoom.websocket.WebSocketClient
@@ -103,33 +105,24 @@ class MqttSocketSession private constructor(
                 withContext(Dispatchers.Default) {
                     when (connectionOps) {
                         is MqttConnectionOptions.SocketConnection -> {
-                            try {
-                                val s =
-                                    ClientSocket.connect(
-                                        connectionOps.port,
-                                        connectionOps.host,
-                                        connectionOps.tls,
-                                        connectionOps.connectionTimeout,
-                                        zone,
-                                    )
-                                reader =
-                                    object : Reader {
-                                        override fun isOpen() = s.isOpen()
-
-                                        override suspend fun read(timeout: Duration) = s.read(timeout)
-                                    }
-                                writer =
-                                    object : Writer {
-                                        override suspend fun write(
-                                            buffer: ReadBuffer,
-                                            timeout: Duration,
-                                        ): Int = s.write(buffer, timeout)
-                                    }
-                                s.write(connect, connectionOps.writeTimeout)
-                                s
-                            } catch (e: Exception) {
-                                throw e
-                            }
+                            val socketOptions =
+                                if (connectionOps.tls) {
+                                    SocketOptions(tls = TlsConfig())
+                                } else {
+                                    SocketOptions()
+                                }
+                            val s =
+                                ClientSocket.connect(
+                                    connectionOps.port,
+                                    connectionOps.host,
+                                    connectionOps.connectionTimeout,
+                                    socketOptions,
+                                    zone,
+                                )
+                            reader = s
+                            writer = s
+                            s.write(connect, connectionOps.writeTimeout)
+                            s
                         }
 
                         is MqttConnectionOptions.WebSocketConnectionOptions -> {

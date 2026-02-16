@@ -23,9 +23,8 @@ import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
 data class SubscribeAcknowledgement(
     override val packetIdentifier: Int,
     val payload: List<ReasonCode>,
-) :
-    ControlPacketV4(ISubscribeAcknowledgement.CONTROL_PACKET_VALUE, DirectionOfFlow.SERVER_TO_CLIENT),
-        ISubscribeAcknowledgement {
+) : ControlPacketV4(ISubscribeAcknowledgement.CONTROL_PACKET_VALUE, DirectionOfFlow.SERVER_TO_CLIENT),
+    ISubscribeAcknowledgement {
     override fun remainingLength() = 2 + payload.size
 
     override fun variableHeader(writeBuffer: WriteBuffer) {

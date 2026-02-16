@@ -37,8 +37,11 @@ import com.ditchoom.mqtt5.controlpacket.properties.readPropertiesSized
  * error which was found for each Subscription that was requested by the SUBSCRIBE.
  */
 
-data class SubscribeAcknowledgement(val variable: VariableHeader, val payload: List<ReasonCode>) :
-    ControlPacketV5(9, DirectionOfFlow.SERVER_TO_CLIENT), ISubscribeAcknowledgement {
+data class SubscribeAcknowledgement(
+    val variable: VariableHeader,
+    val payload: List<ReasonCode>,
+) : ControlPacketV5(9, DirectionOfFlow.SERVER_TO_CLIENT),
+    ISubscribeAcknowledgement {
     constructor(
         packetIdentifier: UShort,
         properties: Properties = Properties(),

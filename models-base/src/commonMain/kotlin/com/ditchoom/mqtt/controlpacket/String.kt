@@ -23,16 +23,13 @@ fun String.validateMqttUTF8StringOrThrow(): String {
     throw e
 }
 
-fun String.validateMqttUTF8String(): Boolean {
-    return validateMqttString(true) == null
-}
+fun String.validateMqttUTF8String(): Boolean = validateMqttString(true) == null
 
 class InvalidMqttUtf8StringMalformedPacketException(
     msg: String,
     indexOfError: Int,
     originalString: String,
-) :
-    MalformedPacketException("Fails to match MQTT Spec for a UTF-8 String. Error:($msg) at index $indexOfError of $originalString")
+) : MalformedPacketException("Fails to match MQTT Spec for a UTF-8 String. Error:($msg) at index $indexOfError of $originalString")
 
 private val controlCharactersRange by lazy(LazyThreadSafetyMode.NONE) { '\uD800'..'\uDFFF' }
 private val shouldNotIncludeCharRange1 by lazy(LazyThreadSafetyMode.NONE) { '\u0001'..'\u001F' }

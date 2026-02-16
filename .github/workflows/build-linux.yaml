@@ -1,0 +1,65 @@
+name: "Build & Test (Linux)"
+
+on:
+  workflow_call:
+    inputs:
+      gradle-args:
+        description: "Extra Gradle arguments (e.g., -PincrementMinor=true)"
+        required: false
+        default: ""
+        type: string
+    outputs:
+      version:
+        description: "Computed next version"
+        value: ${{ jobs.build.outputs.version }}
+
+jobs:
+  build:
+    name: "Linux / JVM / JS / Android"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '21'
+          cache: gradle
+
+      - name: Setup Chrome
+        uses: browser-actions/setup-chrome@v1
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v2
+
+      - name: Cache Konan
+        uses: actions/cache@v4
+        with:
+          path: ~/.konan
+          key: konan-linux-${{ hashFiles('gradle/libs.versions.toml') }}
+          restore-keys: konan-linux-
+
+      - name: Get version
+        id: version
+        run: echo "version=$(./gradlew -q :mqtt-client:nextVersion ${{ inputs.gradle-args }})" >> $GITHUB_OUTPUT
+
+      - name: Run JVM / JS / Android tests
+        run: >-
+          ./gradlew ktlintCheck
+          jvmTest jsNodeTest jsBrowserTest
+          testDebugUnitTest testReleaseUnitTest
+          --no-build-cache ${{ inputs.gradle-args }}
+
+      - name: Publish to Maven Local
+        run: ./gradlew publishToMavenLocal --no-build-cache ${{ inputs.gradle-args }}
+
+      - name: Upload Maven local artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: maven-local-linux
+          path: ~/.m2/repository/com/ditchoom
+          retention-days: 3

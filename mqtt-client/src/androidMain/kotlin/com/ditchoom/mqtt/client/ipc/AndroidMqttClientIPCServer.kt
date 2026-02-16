@@ -4,7 +4,9 @@ import com.ditchoom.buffer.AllocationZone
 import com.ditchoom.buffer.JvmBuffer
 import kotlinx.coroutines.launch
 
-class AndroidMqttClientIPCServer(private val clientServer: RemoteMqttClientWorker) : IPCMqttClient.Stub() {
+class AndroidMqttClientIPCServer(
+    private val clientServer: RemoteMqttClientWorker,
+) : IPCMqttClient.Stub() {
     private val observers = HashMap<Int, MqttMessageTransferredCallback>()
 
     init {
@@ -44,9 +46,8 @@ class AndroidMqttClientIPCServer(private val clientServer: RemoteMqttClientWorke
         observers.remove(observer.id())
     }
 
-    override fun currentConnectionAcknowledgmentOrNull(): JvmBuffer? {
-        return clientServer.currentConnectionAck()?.serialize(AllocationZone.SharedMemory) as? JvmBuffer
-    }
+    override fun currentConnectionAcknowledgmentOrNull(): JvmBuffer? =
+        clientServer.currentConnectionAck()?.serialize(AllocationZone.SharedMemory) as? JvmBuffer
 
     override fun awaitConnectivity(cb: MqttMessageCallback) {
         clientServer.scope.launch {
@@ -54,21 +55,13 @@ class AndroidMqttClientIPCServer(private val clientServer: RemoteMqttClientWorke
         }
     }
 
-    override fun pingCount(): Long {
-        return clientServer.client.connectivityManager.processor.pingCount
-    }
+    override fun pingCount(): Long = clientServer.client.connectivityManager.processor.pingCount
 
-    override fun pingResponseCount(): Long {
-        return clientServer.client.connectivityManager.processor.pingResponseCount
-    }
+    override fun pingResponseCount(): Long = clientServer.client.connectivityManager.processor.pingResponseCount
 
-    override fun connectionCount(): Long {
-        return clientServer.client.connectivityManager.connectionCount
-    }
+    override fun connectionCount(): Long = clientServer.client.connectivityManager.connectionCount
 
-    override fun connectionAttempts(): Long {
-        return clientServer.client.connectivityManager.connectionAttempts
-    }
+    override fun connectionAttempts(): Long = clientServer.client.connectivityManager.connectionAttempts
 
     override fun sendDisconnect(cb: MqttCompletionCallback) = wrapResultWithCallback(cb) { clientServer.client.sendDisconnect() }
 

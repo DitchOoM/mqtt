@@ -42,7 +42,9 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
-class IDBPersistence(private val db: IDBDatabase) : Persistence {
+class IDBPersistence(
+    private val db: IDBDatabase,
+) : Persistence {
     private val dispatcher = defaultDispatcher(0, "unused")
 
     override suspend fun ackPub(
@@ -56,9 +58,9 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
                 arrayOf(
                     IDBValidKey(broker.identifier),
                     IDBValidKey(packet.packetIdentifier),
-                    IDBValidKey(0)
-                )
-            )
+                    IDBValidKey(0),
+                ),
+            ),
         )
         deleteUserProperties(tx, "ackPub", broker.identifier, packet.packetIdentifier, 0)
         commitTransaction(tx, "ackPub")
@@ -71,9 +73,7 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
         packetId: Int,
         incoming: Int,
         postAction: (IDBObjectStore) -> IDBRequest<*>? = { null },
-    ): IDBObjectStore {
-        return deleteUserPropertiesPostAction(tx, logName, brokerId, packetId, incoming, postAction) {}
-    }
+    ): IDBObjectStore = deleteUserPropertiesPostAction(tx, logName, brokerId, packetId, incoming, postAction) {}
 
     private suspend fun deleteUserPropertiesPostAction(
         tx: IDBTransaction,
@@ -87,41 +87,45 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
         val userPropStore = tx.objectStore(USER_PROPERTIES)
         val request = getAllUserPropertyKeysRequest(userPropStore, brokerId, packetId, incoming)
         suspendCoroutine { cont ->
-            request.onsuccess = EventHandler {
-                for (key in request.result) {
-                    userPropStore.delete(key)
-                }
-                val postRequest = postAction(userPropStore)
-                if (postRequest == null) {
-                    cont.resume(Unit)
-                } else {
-                    if (postRequest.readyState == IDBRequestReadyState.done) {
-                        postActionComplete(postRequest)
+            request.onsuccess =
+                EventHandler {
+                    for (key in request.result) {
+                        userPropStore.delete(key)
+                    }
+                    val postRequest = postAction(userPropStore)
+                    if (postRequest == null) {
                         cont.resume(Unit)
                     } else {
-                        postRequest.onsuccess = EventHandler {
+                        if (postRequest.readyState == IDBRequestReadyState.done) {
                             postActionComplete(postRequest)
                             cont.resume(Unit)
-                        }
-                        postRequest.onerror = EventHandler {
-                            cont.resumeWithException(
-                                Exception(
-                                    "Failed to process post request after delete user properties for transaction $logName",
-                                    request.error,
-                                ),
-                            )
+                        } else {
+                            postRequest.onsuccess =
+                                EventHandler {
+                                    postActionComplete(postRequest)
+                                    cont.resume(Unit)
+                                }
+                            postRequest.onerror =
+                                EventHandler {
+                                    cont.resumeWithException(
+                                        Exception(
+                                            "Failed to process post request after delete user properties for transaction $logName",
+                                            request.error,
+                                        ),
+                                    )
+                                }
                         }
                     }
                 }
-            }
-            request.onerror = EventHandler {
-                cont.resumeWithException(
-                    Exception(
-                        "Failed to delete user properties for transaction $logName",
-                        request.error,
-                    ),
-                )
-            }
+            request.onerror =
+                EventHandler {
+                    cont.resumeWithException(
+                        Exception(
+                            "Failed to delete user properties for transaction $logName",
+                            request.error,
+                        ),
+                    )
+                }
         }
         return userPropStore
     }
@@ -137,9 +141,9 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
                 arrayOf(
                     IDBValidKey(broker.identifier),
                     IDBValidKey(packet.packetIdentifier),
-                    IDBValidKey(1)
-                )
-            )
+                    IDBValidKey(1),
+                ),
+            ),
         )
         deleteUserProperties(tx, "ackPubComplete", broker.identifier, packet.packetIdentifier, 1)
         commitTransaction(tx, "ackPubComplete")
@@ -159,9 +163,9 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
                 arrayOf(
                     IDBValidKey(broker.identifier),
                     IDBValidKey(incomingPubRecv.packetIdentifier),
-                    IDBValidKey(0)
-                )
-            )
+                    IDBValidKey(0),
+                ),
+            ),
         )
         deleteUserProperties(
             tx,
@@ -176,7 +180,8 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
                     p.packetIdentifier,
                     p.controlPacketValue,
                     1,
-                    p.variable.reasonCode.byte.toInt(),
+                    p.variable.reasonCode.byte
+                        .toInt(),
                     p.variable.properties.reasonString,
                 ),
             )
@@ -203,7 +208,8 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
                     p.packetIdentifier,
                     p.controlPacketValue,
                     0,
-                    p.variable.reasonCode.byte.toInt(),
+                    p.variable.reasonCode.byte
+                        .toInt(),
                     p.variable.properties.reasonString,
                 ),
             )
@@ -225,9 +231,9 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
             IDBValidKey(
                 arrayOf(
                     IDBValidKey(broker.identifier),
-                    IDBValidKey(subAck.packetIdentifier)
-                )
-            )
+                    IDBValidKey(subAck.packetIdentifier),
+                ),
+            ),
         )
         deleteUserProperties(tx, "ackSub", broker.identifier, subAck.packetIdentifier, 0)
         commitTransaction(tx, "ackSub")
@@ -237,35 +243,38 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
         broker: MqttBroker,
         unsubAck: IUnsubscribeAcknowledgment,
     ) {
-        val key = IDBValidKey(
-            arrayOf(IDBValidKey(broker.identifier), IDBValidKey(unsubAck.packetIdentifier))
-        )
+        val key =
+            IDBValidKey(
+                arrayOf(IDBValidKey(broker.identifier), IDBValidKey(unsubAck.packetIdentifier)),
+            )
         val tx = db.transaction(arrayOf(UNSUB_MSG, SUBSCRIPTION, USER_PROPERTIES), IDBTransactionMode.readwrite)
         val unsubMsgStore = tx.objectStore(UNSUB_MSG)
         unsubMsgStore.delete(
             IDBValidKey(
-                arrayOf(IDBValidKey(broker.identifier), IDBValidKey(unsubAck.packetIdentifier))
-            )
+                arrayOf(IDBValidKey(broker.identifier), IDBValidKey(unsubAck.packetIdentifier)),
+            ),
         )
         val subStore = tx.objectStore(SUBSCRIPTION)
-        deleteUserPropertiesPostAction(tx,
+        deleteUserPropertiesPostAction(
+            tx,
             "ackUnsub",
             broker.identifier,
             unsubAck.packetIdentifier,
             0,
             {
-            val unsubIndex = subStore.index(UNSUB_INDEX)
-            unsubIndex.getAll(key)
-        }) {
+                val unsubIndex = subStore.index(UNSUB_INDEX)
+                unsubIndex.getAll(key)
+            },
+        ) {
             val request = (it.result as ReadonlyArray<dynamic>)
             for (unsubscription in request) {
                 subStore.delete(
                     IDBValidKey(
                         arrayOf(
                             IDBValidKey(broker.identifier),
-                            IDBValidKey(unsubscription.topicFilter.unsafeCast<String>())
-                        )
-                    )
+                            IDBValidKey(unsubscription.topicFilter.unsafeCast<String>()),
+                        ),
+                    ),
                 )
             }
         }
@@ -295,15 +304,13 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
                     d.retainAsPublished as Boolean,
                     d.retainHandling as Int,
                 )
-            }
-            .filter {
+            }.filter {
                 if (includePendingUnsub) {
                     it.unsubscribeId > -1
                 } else {
                     true
                 }
-            }
-            .map { toSubscription(it) }
+            }.map { toSubscription(it) }
             .associateBy { it.topicFilter }
     }
 
@@ -319,22 +326,23 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
         val propStore = tx.objectStore(USER_PROPERTIES)
         val countOp =
             suspendCoroutine { cont ->
-                storeCountRequest.onsuccess = EventHandler {
-                    val countOp = storeCountRequest.result.unsafeCast<Int>()
-                    val broker = PersistableBroker(countOp, connections, persistableRequest)
-                    store.put(broker)
-                    for ((key, value) in connectionRequest.variableHeader.properties.userProperty) {
-                        propStore.put(PersistableUserProperty(countOp, 0, -1, key, value))
-                    }
-                    val willProps = connectionRequest.payload.willProperties?.userProperty
-                    if (!willProps.isNullOrEmpty()) {
-                        for ((key, value) in willProps) {
-                            propStore.put(PersistableUserProperty(countOp, 0, -2, key, value))
+                storeCountRequest.onsuccess =
+                    EventHandler {
+                        val countOp = storeCountRequest.result.unsafeCast<Int>()
+                        val broker = PersistableBroker(countOp, connections, persistableRequest)
+                        store.put(broker)
+                        for ((key, value) in connectionRequest.variableHeader.properties.userProperty) {
+                            propStore.put(PersistableUserProperty(countOp, 0, -1, key, value))
                         }
+                        val willProps = connectionRequest.payload.willProperties?.userProperty
+                        if (!willProps.isNullOrEmpty()) {
+                            for ((key, value) in willProps) {
+                                propStore.put(PersistableUserProperty(countOp, 0, -2, key, value))
+                            }
+                        }
+                        tx.commit()
+                        cont.resume(countOp)
                     }
-                    tx.commit()
-                    cont.resume(countOp)
-                }
             }
         return MqttBroker(countOp.unsafeCast<Int>(), connectionOps, connectionRequest)
     }
@@ -349,25 +357,28 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
         val userWillPropertiesRequests = mutableMapOf<Int, IDBRequest<ReadonlyArray<*>>>()
         val brokers =
             suspendCoroutine { cont ->
-                brokersRequest.onsuccess = EventHandler {
-                    val brokers = brokersRequest.result
-                    brokers.forEach { brokerObj ->
-                        val d = brokerObj.asDynamic()
-                        val id = d.id as Int
-                        userPropertiesRequests[id] = index.getAll(
-                            IDBValidKey(
-                                arrayOf(IDBValidKey(id), IDBValidKey(-1), IDBValidKey(0))
-                            )
-                        )
-                        userWillPropertiesRequests[id] = index.getAll(
-                            IDBValidKey(
-                                arrayOf(IDBValidKey(id), IDBValidKey(-2), IDBValidKey(0))
-                            )
-                        )
+                brokersRequest.onsuccess =
+                    EventHandler {
+                        val brokers = brokersRequest.result
+                        brokers.forEach { brokerObj ->
+                            val d = brokerObj.asDynamic()
+                            val id = d.id as Int
+                            userPropertiesRequests[id] =
+                                index.getAll(
+                                    IDBValidKey(
+                                        arrayOf(IDBValidKey(id), IDBValidKey(-1), IDBValidKey(0)),
+                                    ),
+                                )
+                            userWillPropertiesRequests[id] =
+                                index.getAll(
+                                    IDBValidKey(
+                                        arrayOf(IDBValidKey(id), IDBValidKey(-2), IDBValidKey(0)),
+                                    ),
+                                )
+                        }
+                        tx.commit()
+                        cont.resume(brokers)
                     }
-                    tx.commit()
-                    cont.resume(brokers)
-                }
             }
         awaitAll(userPropertiesRequests.values)
         awaitAll(userWillPropertiesRequests.values)
@@ -377,10 +388,12 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
                 val d = persistableBroker.asDynamic()
                 val id = d.id as Int
                 val userProperties =
-                    userPropertiesRequests[id]?.result
+                    userPropertiesRequests[id]
+                        ?.result
                         ?.map { Pair(it.asDynamic().key as String, it.asDynamic().value as String) } ?: emptyList()
                 val willUserProperties =
-                    userWillPropertiesRequests[id]?.result
+                    userWillPropertiesRequests[id]
+                        ?.result
                         ?.map { Pair(it.asDynamic().key as String, it.asDynamic().value as String) } ?: emptyList()
                 MqttBroker(
                     d.id as Int,
@@ -398,16 +411,18 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
         val index = propStore.index(PROP_PACKET_ID_INDEX)
         return try {
             val resultRequest = store[IDBValidKey(arrayOf(IDBValidKey(identifier)))]
-            val userPropertiesRequest = index.getAll(
-                IDBValidKey(
-                    arrayOf(IDBValidKey(identifier), IDBValidKey(-1), IDBValidKey(0))
+            val userPropertiesRequest =
+                index.getAll(
+                    IDBValidKey(
+                        arrayOf(IDBValidKey(identifier), IDBValidKey(-1), IDBValidKey(0)),
+                    ),
                 )
-            )
-            val willUserPropertiesRequest = index.getAll(
-                IDBValidKey(
-                    arrayOf(IDBValidKey(identifier), IDBValidKey(-2), IDBValidKey(0))
+            val willUserPropertiesRequest =
+                index.getAll(
+                    IDBValidKey(
+                        arrayOf(IDBValidKey(identifier), IDBValidKey(-2), IDBValidKey(0)),
+                    ),
                 )
-            )
             commitTransaction(tx, "broker v5 $identifier")
             await(resultRequest)
             await(userPropertiesRequest)
@@ -455,7 +470,8 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
                 replyMessage.packetIdentifier,
                 replyMessage.controlPacketValue,
                 0,
-                p.variable.reasonCode.byte.toInt(),
+                p.variable.reasonCode.byte
+                    .toInt(),
                 p.variable.properties.reasonString,
             ),
         )
@@ -475,17 +491,30 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
             )
         val propStore = tx.objectStore(USER_PROPERTIES)
         val allProps = propStore.index(BROKER_INDEX).getAll(IDBValidKey(broker.identifier))
-        val pubRequest = tx.objectStore(PUB_MSG).index(BROKER_INCOMING_INDEX).getAll(
-            IDBValidKey(arrayOf(IDBValidKey(broker.identifier), IDBValidKey(0)))
-        )
-        val allSubByBrokerRequest = tx.objectStore(SUBSCRIPTION).index(BROKER_INDEX)
-            .getAll(IDBValidKey(broker.identifier))
-        val subscribeRequests = tx.objectStore(SUB_MSG).index(BROKER_INDEX)
-            .getAll(IDBValidKey(broker.identifier))
-        val unsubscribeRequest = tx.objectStore(UNSUB_MSG).index(BROKER_INDEX)
-            .getAll(IDBValidKey(broker.identifier))
-        val qos2PersistableRequest = tx.objectStore(QOS2MSG).index(BROKER_INDEX)
-            .getAll(IDBValidKey(broker.identifier))
+        val pubRequest =
+            tx.objectStore(PUB_MSG).index(BROKER_INCOMING_INDEX).getAll(
+                IDBValidKey(arrayOf(IDBValidKey(broker.identifier), IDBValidKey(0))),
+            )
+        val allSubByBrokerRequest =
+            tx
+                .objectStore(SUBSCRIPTION)
+                .index(BROKER_INDEX)
+                .getAll(IDBValidKey(broker.identifier))
+        val subscribeRequests =
+            tx
+                .objectStore(SUB_MSG)
+                .index(BROKER_INDEX)
+                .getAll(IDBValidKey(broker.identifier))
+        val unsubscribeRequest =
+            tx
+                .objectStore(UNSUB_MSG)
+                .index(BROKER_INDEX)
+                .getAll(IDBValidKey(broker.identifier))
+        val qos2PersistableRequest =
+            tx
+                .objectStore(QOS2MSG)
+                .index(BROKER_INDEX)
+                .getAll(IDBValidKey(broker.identifier))
 
         commitTransaction(tx, "messagesToSendOnReconnect")
 
@@ -535,7 +564,8 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
                     ),
                     allSubscriptions
                         .filter { it.brokerId == sub.brokerId && it.subscribeId == sub.packetId }
-                        .map { toSubscription(it) }.toSet(),
+                        .map { toSubscription(it) }
+                        .toSet(),
                 )
             }
 
@@ -660,9 +690,9 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
                 arrayOf(
                     IDBValidKey(broker.identifier),
                     IDBValidKey(outPubComp.packetIdentifier),
-                    IDBValidKey(0)
-                )
-            )
+                    IDBValidKey(0),
+                ),
+            ),
         )
         deleteUserProperties(tx, "onPubCompWritten", broker.identifier, outPubComp.packetIdentifier, 0)
         commitTransaction(tx, "onPubCompWritten")
@@ -718,22 +748,24 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
         val tx = db.transaction(arrayOf(PUB_MSG, USER_PROPERTIES), IDBTransactionMode.readonly)
         try {
             val queuedMsgStore = tx.objectStore(PUB_MSG)
-            val pubRequest = queuedMsgStore[
+            val pubRequest =
+                queuedMsgStore[
                     IDBValidKey(
                         arrayOf(
                             IDBValidKey(broker.identifier),
                             IDBValidKey(packetId),
-                            IDBValidKey(0)
-                        )
-                    )
-            ]
+                            IDBValidKey(0),
+                        ),
+                    ),
+                ]
             val propStore = tx.objectStore(USER_PROPERTIES)
             val propIndex = propStore.index(PROP_PACKET_ID_INDEX)
-            val userPropertyRequest = propIndex.getAll(
-                IDBValidKey(
-                    arrayOf(IDBValidKey(broker.identifier), IDBValidKey(packetId), IDBValidKey(0))
+            val userPropertyRequest =
+                propIndex.getAll(
+                    IDBValidKey(
+                        arrayOf(IDBValidKey(broker.identifier), IDBValidKey(packetId), IDBValidKey(0)),
+                    ),
                 )
-            )
             commitTransaction(tx, "getPubWithPacketId")
             await(pubRequest)
             await(userPropertyRequest)
@@ -753,22 +785,24 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
         val brokerIdKey = IDBKeyRange.only(broker.identifier)
         val packetIdCurrentRequest = packetIdStore[brokerIdKey]
         return suspendCoroutine { cont ->
-            packetIdCurrentRequest.onsuccess = EventHandler {
-                val result = packetIdCurrentRequest.result
-                val value =
-                    if (result == undefined) {
-                        1
-                    } else {
-                        result.unsafeCast<Int>()
-                    }
-                val next = value.toString().toInt() + 1
-                packetIdStore.put(next, IDBValidKey(broker.identifier))
-                tx.commit()
-                cont.resume(value.toString().toInt())
-            }
-            packetIdCurrentRequest.onerror = EventHandler {
-                cont.resumeWithException(packetIdCurrentRequest.error!!)
-            }
+            packetIdCurrentRequest.onsuccess =
+                EventHandler {
+                    val result = packetIdCurrentRequest.result
+                    val value =
+                        if (result == undefined) {
+                            1
+                        } else {
+                            result.unsafeCast<Int>()
+                        }
+                    val next = value.toString().toInt() + 1
+                    packetIdStore.put(next, IDBValidKey(broker.identifier))
+                    tx.commit()
+                    cont.resume(value.toString().toInt())
+                }
+            packetIdCurrentRequest.onerror =
+                EventHandler {
+                    cont.resumeWithException(packetIdCurrentRequest.error!!)
+                }
         }
     }
 
@@ -804,21 +838,24 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
         val subStore = tx.objectStore(SUB_MSG)
         val subscriptionStore = tx.objectStore(SUBSCRIPTION)
         val subIndex = subscriptionStore.index(ALL_SUB_INDEx)
-        val objRequest = subStore[
+        val objRequest =
+            subStore[
                 IDBValidKey(
-                    arrayOf(IDBValidKey(broker.identifier), IDBValidKey(packetId))
-                )
-        ]
-        val subscriptionsRequest = subIndex.getAll(
-            IDBValidKey(arrayOf(IDBValidKey(broker.identifier), IDBValidKey(packetId)))
-        )
+                    arrayOf(IDBValidKey(broker.identifier), IDBValidKey(packetId)),
+                ),
+            ]
+        val subscriptionsRequest =
+            subIndex.getAll(
+                IDBValidKey(arrayOf(IDBValidKey(broker.identifier), IDBValidKey(packetId))),
+            )
         val propStore = tx.objectStore(USER_PROPERTIES)
         val propIndex = propStore.index(PROP_PACKET_ID_INDEX)
-        val userPropertiesRequest = propIndex.getAll(
-            IDBValidKey(
-                arrayOf(IDBValidKey(broker.identifier), IDBValidKey(packetId), IDBValidKey(0))
+        val userPropertiesRequest =
+            propIndex.getAll(
+                IDBValidKey(
+                    arrayOf(IDBValidKey(broker.identifier), IDBValidKey(packetId), IDBValidKey(0)),
+                ),
             )
-        )
         commitTransaction(tx, "writeSubUpdatePacketIdAndSimplifySubscriptions")
         awaitAll(objRequest, subscriptionsRequest, userPropertiesRequest)
         val obj = objRequest.result ?: return null
@@ -868,44 +905,49 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
                 propStore.put(PersistableUserProperty(broker.identifier, 0, newPacketId, key, value))
             }
             unsub.topics.map { topic ->
-                val request = subscriptions[
+                val request =
+                    subscriptions[
                         IDBValidKey(
-                            arrayOf(IDBValidKey(broker.identifier), IDBValidKey(topic.toString()))
-                        )
-                ]
-                request.onsuccess = EventHandler {
-                    val persistableSubscription = request.result
-                    val p =
-                        PersistableSubscription(
-                            persistableSubscription.asDynamic().brokerId as Int,
-                            persistableSubscription.asDynamic().topicFilter as String,
-                            persistableSubscription.asDynamic().subscribeId as Int,
-                            newPacketId,
-                            persistableSubscription.asDynamic().qos as Byte,
-                            persistableSubscription.asDynamic().noLocal as Boolean,
-                            persistableSubscription.asDynamic().retainAsPublished as Boolean,
-                            persistableSubscription.asDynamic().retainHandling as Int,
-                        )
-                    val r = subscriptions.put(p)
-                    r.onsuccess = EventHandler {
-                        allTopics -= topic
-                        if (allTopics.isEmpty()) {
-                            tx.commit()
-                            cont.resume(Unit)
-                        }
+                            arrayOf(IDBValidKey(broker.identifier), IDBValidKey(topic.toString())),
+                        ),
+                    ]
+                request.onsuccess =
+                    EventHandler {
+                        val persistableSubscription = request.result
+                        val p =
+                            PersistableSubscription(
+                                persistableSubscription.asDynamic().brokerId as Int,
+                                persistableSubscription.asDynamic().topicFilter as String,
+                                persistableSubscription.asDynamic().subscribeId as Int,
+                                newPacketId,
+                                persistableSubscription.asDynamic().qos as Byte,
+                                persistableSubscription.asDynamic().noLocal as Boolean,
+                                persistableSubscription.asDynamic().retainAsPublished as Boolean,
+                                persistableSubscription.asDynamic().retainHandling as Int,
+                            )
+                        val r = subscriptions.put(p)
+                        r.onsuccess =
+                            EventHandler {
+                                allTopics -= topic
+                                if (allTopics.isEmpty()) {
+                                    tx.commit()
+                                    cont.resume(Unit)
+                                }
+                            }
+                        r.onerror =
+                            EventHandler {
+                                cont.resumeWithException(
+                                    Exception(
+                                        "Failed to update subscription object for $topic",
+                                        request.error,
+                                    ),
+                                )
+                            }
                     }
-                    r.onerror = EventHandler {
-                        cont.resumeWithException(
-                            Exception(
-                                "Failed to update subscription object for $topic",
-                                request.error,
-                            ),
-                        )
+                request.onerror =
+                    EventHandler {
+                        cont.resumeWithException(Exception("Failed to request subscription for $topic", request.error))
                     }
-                }
-                request.onerror = EventHandler {
-                    cont.resumeWithException(Exception("Failed to request subscription for $topic", request.error))
-                }
             }
         }
         return newPacketId
@@ -916,20 +958,27 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
         packetId: Int,
     ): IUnsubscribeRequest? {
         val tx = db.transaction(arrayOf(UNSUB_MSG, SUBSCRIPTION, USER_PROPERTIES), IDBTransactionMode.readonly)
-        val unsubCountRequest = tx.objectStore(UNSUB_MSG).count(
-            IDBValidKey(arrayOf(IDBValidKey(broker.identifier), IDBValidKey(packetId)))
-        )
-        val topicsRequest = tx.objectStore(SUBSCRIPTION).index(UNSUB_INDEX)
-            .getAll(IDBValidKey(arrayOf(IDBValidKey(broker.identifier), IDBValidKey(packetId))))
+        val unsubCountRequest =
+            tx.objectStore(UNSUB_MSG).count(
+                IDBValidKey(arrayOf(IDBValidKey(broker.identifier), IDBValidKey(packetId))),
+            )
+        val topicsRequest =
+            tx
+                .objectStore(SUBSCRIPTION)
+                .index(UNSUB_INDEX)
+                .getAll(IDBValidKey(arrayOf(IDBValidKey(broker.identifier), IDBValidKey(packetId))))
         val userPropertiesRequest =
-            tx.objectStore(USER_PROPERTIES).index(PROP_PACKET_ID_INDEX)
+            tx
+                .objectStore(USER_PROPERTIES)
+                .index(PROP_PACKET_ID_INDEX)
                 .getAll(
                     IDBValidKey(
                         arrayOf(
                             IDBValidKey(broker.identifier),
                             IDBValidKey(packetId),
-                            IDBValidKey(0))
-                    )
+                            IDBValidKey(0),
+                        ),
+                    ),
                 )
         commitTransaction(tx, "getUnsubWithPacketId")
         await(unsubCountRequest)
@@ -976,8 +1025,8 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
         val index = propStore.index(PROP_PACKET_ID_INDEX)
         return index.getAllKeys(
             IDBValidKey(
-                arrayOf(IDBValidKey(brokerId), IDBValidKey(packetId), IDBValidKey(incoming))
-            )
+                arrayOf(IDBValidKey(brokerId), IDBValidKey(packetId), IDBValidKey(incoming)),
+            ),
         )
     }
 
@@ -994,13 +1043,15 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
             return
         }
         suspendCoroutine<Any?> { cont ->
-            request.onsuccess = EventHandler {
-                cont.resume(request.result)
-            }
-            request.onerror = EventHandler { e ->
-                console.error("request error, cast throwable", e)
-                cont.resumeWithException(request.error!!)
-            }
+            request.onsuccess =
+                EventHandler {
+                    cont.resume(request.result)
+                }
+            request.onerror =
+                EventHandler { e ->
+                    console.error("request error, cast throwable", e)
+                    cont.resumeWithException(request.error!!)
+                }
         }
     }
 
@@ -1008,28 +1059,29 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
         tx: IDBTransaction,
         logName: String,
         customBlock: () -> Unit = {},
-    ) {
-        return suspendCancellableCoroutine { cont ->
-            tx.oncomplete = EventHandler {
+    ) = suspendCancellableCoroutine { cont ->
+        tx.oncomplete =
+            EventHandler {
                 customBlock()
                 cont.resume(Unit)
             }
-            tx.onerror = EventHandler {
+        tx.onerror =
+            EventHandler {
                 cont.resumeWithException(Exception("error committing tx $logName", tx.error))
             }
-            tx.onabort = EventHandler {
+        tx.onabort =
+            EventHandler {
                 cont.resumeWithException(Exception("abort committing tx $logName", tx.error))
             }
-            cont.invokeOnCancellation {
-                if (!cont.isCompleted) {
-                    tx.abort()
-                }
+        cont.invokeOnCancellation {
+            if (!cont.isCompleted) {
+                tx.abort()
             }
-            try {
-                tx.commit()
-            } catch (e: Throwable) {
-                console.error("Failed to commit $logName", e)
-            }
+        }
+        try {
+            tx.commit()
+        } catch (e: Throwable) {
+            console.error("Failed to commit $logName", e)
         }
     }
 
@@ -1056,36 +1108,39 @@ class IDBPersistence(private val db: IDBDatabase) : Persistence {
             val database =
                 suspendCoroutine<IDBDatabase> { cont ->
                     val openRequest = indexedDb.open(name, 1.0)
-                    openRequest.onsuccess = EventHandler {
-                        cont.resume(openRequest.result)
-                    }
-                    openRequest.onupgradeneeded = EventHandler {
-                        val db = openRequest.result
-                        db.createObjectStore(BROKER, js("{ keyPath: [\"id\"] }"))
-                        db.createObjectStore(PACKET_ID)
-                        val pubStore =
-                            db.createObjectStore(PUB_MSG, js("{ keyPath: [\"brokerId\", \"packetId\", \"incoming\"] }"))
-                        val subscriptionStore =
-                            db.createObjectStore(SUBSCRIPTION, js("{ keyPath: [\"brokerId\", \"topicFilter\"] }"))
-                        val qos2Store =
-                            db.createObjectStore(QOS2MSG, js("{ keyPath: [\"brokerId\", \"packetId\", \"incoming\"] }"))
-                        val subStore = db.createObjectStore(SUB_MSG, js("{ keyPath: [\"brokerId\", \"packetId\"] }"))
-                        val unsubStore = db.createObjectStore(UNSUB_MSG, js("{ keyPath: [\"brokerId\", \"packetId\"] }"))
-                        val propStore = db.createObjectStore(USER_PROPERTIES, js("{ keyPath: \"id\", autoIncrement:true }"))
-                        pubStore.createIndex(BROKER_INCOMING_INDEX, arrayOf("brokerId", "incoming"))
-                        qos2Store.createIndex(BROKER_INDEX, "brokerId")
-                        subStore.createIndex(BROKER_INDEX, "brokerId")
-                        unsubStore.createIndex(BROKER_INDEX, "brokerId")
-                        subscriptionStore.createIndex(BROKER_INDEX, "brokerId")
-                        subscriptionStore.createIndex(SUB_INDEX, arrayOf("brokerId", "topicFilter", "subscribeId"))
-                        subscriptionStore.createIndex(ALL_SUB_INDEx, arrayOf("brokerId", "subscribeId"))
-                        subscriptionStore.createIndex(UNSUB_INDEX, arrayOf("brokerId", "unsubscribeId"))
-                        propStore.createIndex(PROP_PACKET_ID_INDEX, arrayOf("brokerId", "packetId", "incoming"))
-                        propStore.createIndex(BROKER_INDEX, "brokerId")
-                    }
-                    openRequest.onerror = EventHandler {
-                        cont.resumeWithException(openRequest.error as Throwable)
-                    }
+                    openRequest.onsuccess =
+                        EventHandler {
+                            cont.resume(openRequest.result)
+                        }
+                    openRequest.onupgradeneeded =
+                        EventHandler {
+                            val db = openRequest.result
+                            db.createObjectStore(BROKER, js("{ keyPath: [\"id\"] }"))
+                            db.createObjectStore(PACKET_ID)
+                            val pubStore =
+                                db.createObjectStore(PUB_MSG, js("{ keyPath: [\"brokerId\", \"packetId\", \"incoming\"] }"))
+                            val subscriptionStore =
+                                db.createObjectStore(SUBSCRIPTION, js("{ keyPath: [\"brokerId\", \"topicFilter\"] }"))
+                            val qos2Store =
+                                db.createObjectStore(QOS2MSG, js("{ keyPath: [\"brokerId\", \"packetId\", \"incoming\"] }"))
+                            val subStore = db.createObjectStore(SUB_MSG, js("{ keyPath: [\"brokerId\", \"packetId\"] }"))
+                            val unsubStore = db.createObjectStore(UNSUB_MSG, js("{ keyPath: [\"brokerId\", \"packetId\"] }"))
+                            val propStore = db.createObjectStore(USER_PROPERTIES, js("{ keyPath: \"id\", autoIncrement:true }"))
+                            pubStore.createIndex(BROKER_INCOMING_INDEX, arrayOf("brokerId", "incoming"))
+                            qos2Store.createIndex(BROKER_INDEX, "brokerId")
+                            subStore.createIndex(BROKER_INDEX, "brokerId")
+                            unsubStore.createIndex(BROKER_INDEX, "brokerId")
+                            subscriptionStore.createIndex(BROKER_INDEX, "brokerId")
+                            subscriptionStore.createIndex(SUB_INDEX, arrayOf("brokerId", "topicFilter", "subscribeId"))
+                            subscriptionStore.createIndex(ALL_SUB_INDEx, arrayOf("brokerId", "subscribeId"))
+                            subscriptionStore.createIndex(UNSUB_INDEX, arrayOf("brokerId", "unsubscribeId"))
+                            propStore.createIndex(PROP_PACKET_ID_INDEX, arrayOf("brokerId", "packetId", "incoming"))
+                            propStore.createIndex(BROKER_INDEX, "brokerId")
+                        }
+                    openRequest.onerror =
+                        EventHandler {
+                            cont.resumeWithException(openRequest.error as Throwable)
+                        }
                 }
             return IDBPersistence(database)
         }

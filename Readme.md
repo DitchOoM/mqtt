@@ -1,55 +1,50 @@
-[![Contributors][contributors-shield]][contributors-url]  
-[![Forks][forks-shield]][forks-url]  
-[![Stargazers][stars-shield]][stars-url]  
-[![Issues][issues-shield]][issues-url]  
-[![MIT License][license-shield]][license-url]  
+[![Contributors][contributors-shield]][contributors-url]
+[![Forks][forks-shield]][forks-url]
+[![Stargazers][stars-shield]][stars-url]
+[![Issues][issues-shield]][issues-url]
+[![MIT License][license-shield]][license-url]
 [![LinkedIn][linkedin-shield]][linkedin-url]
 
 
-<!-- PROJECT LOGO -->  
-<!--suppress ALL -->  
+<!-- PROJECT LOGO -->
+<!--suppress ALL -->
 
-<br />  
-<p align="center">  
-<h3 align="center">MQTT Kotlin Multiplatform</h3>  
+<br />
+<p align="center">
+<h3 align="center">MQTT Kotlin Multiplatform</h3>
 
-<p align="center">Buffer based kotlin multiplatform MQTT library. Backed by 5000+ tests</p>  
-<br />  
-<!-- <a href="https://github.com/DitchOoM/buffer"><strong>Explore the docs »</strong></a> -->  
-<br />  
-<br />  
-<!-- <a href="https://github.com/DitchOoM/buffer">View Demo</a>  
-· -->  
+<p align="center">Buffer based kotlin multiplatform MQTT library. Backed by 5000+ tests</p>
+<br />
+<br />
 <a href="https://github.com/DitchOoM/mqtt/issues">Report Bug</a>
-<a href="https://github.com/DitchOoM/mqtt/issues">Request Feature</a>  
-</p>  
+<a href="https://github.com/DitchOoM/mqtt/issues">Request Feature</a>
+</p>
 
 
-<details open="open">  
-  <summary>Table of Contents</summary>  
-  <ol>  
-    <li>  
-      <a href="#about-the-project">About The Project</a>  
-      <ul>  
-        <li><a href="#runtime-dependencies">Runtime Dependencies</a></li>  
-      </ul>  
-      <ul>  
-        <li><a href="#supported-platforms">Supported Platforms</a></li>  
-      </ul>  
-    </li>  
-    <li><a href="#installation">Installation</a></li>  
-    <li>  
+<details open="open">
+  <summary>Table of Contents</summary>
+  <ol>
+    <li>
+      <a href="#about-the-project">About The Project</a>
+      <ul>
+        <li><a href="#runtime-dependencies">Runtime Dependencies</a></li>
+      </ul>
+      <ul>
+        <li><a href="#supported-platforms">Supported Platforms</a></li>
+      </ul>
+    </li>
+    <li><a href="#installation">Installation</a></li>
+    <li>
       <a href="#usage">Usage</a>
-    </li>  
-    <li>  
-      <a href="#building-locally">Building Locally</a>  
-    </li>  
-    <li><a href="#getting-started">Getting Started</a></li>  
-    <li><a href="#roadmap">Roadmap</a></li>  
-    <li><a href="#contributing">Contributing</a></li>  
-    <li><a href="#license">License</a></li>  
-  </ol>  
-</details>  
+    </li>
+    <li>
+      <a href="#building-locally">Building Locally</a>
+    </li>
+    <li><a href="#roadmap">Roadmap</a></li>
+    <li><a href="#contributing">Contributing</a></li>
+    <li><a href="#license">License</a></li>
+  </ol>
+</details>
 
 ## About The Project
 
@@ -67,6 +62,7 @@ Buffer uses native buffers to pass to the socket or websocket module.
 |     Android / JVM      |           ByteBuffer            |
 | iOS/macOS/tvOS/watchOS |             NSData              |
 |    BrowserJS/NodeJS    | ArrayBuffer / SharedArrayBuffer |
+|      Linux x64/arm64   |          NativeBuffer           |
 
 Socket uses native socket API's:
 
@@ -76,6 +72,7 @@ Socket uses native socket API's:
 | iOS/macOS/tvOS/watchOS |                       NWConnection                       |
 |         NodeJS         |                        Net module                        |
 |       BrowserJS        |                       unavailable                        |
+|      Linux x64/arm64   |                    io_uring / epoll                      |
 
 The WebSocket uses:
 
@@ -85,6 +82,7 @@ The WebSocket uses:
 | iOS/macOS/tvOS/watchOS |                       NWConnection                       |
 |         NodeJS         |                        Net module                        |
 |       BrowserJS        |                        WebSocket                         |
+|      Linux x64/arm64   |                    io_uring / epoll                      |
 
 Persistence uses:
 
@@ -94,6 +92,7 @@ Persistence uses:
 | iOS/macOS/tvOS/watchOS |                                               SQLite via SQLdelight using `-lsqlite3`                                                |
 |         NodeJS         |                                                               InMemory                                                               |
 |       BrowserJS        | IndexedDB, [SQLite upcoming](https://developer.chrome.com/blog/sqlite-wasm-in-the-browser-backed-by-the-origin-private-file-system/) |
+|      Linux x64/arm64   |                                               SQLite via SQLdelight using `-lsqlite3`                                                |
 
 ### Runtime Dependencies
 
@@ -114,24 +113,21 @@ Other Kotlin Multiplatform Runtime Dependencies
 
 ### [Supported Platforms](https://kotlinlang.org/docs/reference/mpp-supported-platforms.html)
 
-| Platform  | MQTT 3.1.1 (4) | MQTT 5.0 | LWT | SSL / TLS | Message Persistence | Automatic Reconnect | Offline Buffering | WebSocket Support | Standard TCP Support | Asynchronous API | Coroutines API | High Availability | IPC / Worker Support | 
-|:---------:|:--------------:|:--------:|:---:|:---------:|:-------------------:|:-------------------:|:-----------------:|:-----------------:|:--------------------:|:----------------:|:--------------:|:-----------------:|:--------------------:|
-|   `JVM`   |       🚀       |    🚀    | 🚀  |    🚀     |         🚀          |         🚀          |        🚀         |        🚀         |          🚀          |        📝        |       🚀       |        🚀         |          ❓           |
-| `Browser` |       🚀       |    🚀    | 🚀  |    🚀     |         🚀          |         🚀          |        🚀         |        🚀         |          ⛔           |        📝        |       🚀       |        🚀         |          🚀          |
-| `Node.JS` |       🚀       |    🚀    | 🚀  |    🚀     |         📝          |         🚀          |        🚀         |        🚀         |          🚀          |        📝        |       🚀       |        🚀         |          🧪          |
-| `Android` |       🚀       |    🚀    | 🚀  |    🚀     |         🚀          |         🚀          |        🚀         |        🚀         |          🚀          |        📝        |       🚀       |        🚀         |          🚀          |
-|   `iOS`   |       🚀       |    🚀    | 🚀  |    🚀     |         🚀          |         🚀          |        🚀         |        🚀         |          🚀          |        📝        |       🚀       |        🚀         |          ❓           |
-|  `MacOS`  |       🚀       |    🚀    | 🚀  |    🚀     |         🚀          |         🚀          |        🚀         |        🚀         |          🚀          |        📝        |       🚀       |        🚀         |          ❓           |
-| `WatchOS` |       📴       |    📴    | 📴  |    📴     |         📴          |         📴          |        📴         |        📴         |          📴          |        📝        |       📴       |        📴         |          ❓           |
-|  `TvOS`   |       📴       |    📴    | 📴  |    📴     |         📴          |         📴          |        📴         |        📴         |          📴          |        📝        |       📴       |        📴         |          ❓           |
-| `WatchOS` |       📴       |    📴    | 📴  |    📴     |         📴          |         📴          |        📴         |        📴         |          📴          |        📝        |       📴       |        📴         |          ❓           |
+| Platform  | MQTT 3.1.1 (4) | MQTT 5.0 | LWT | SSL / TLS | Message Persistence | Automatic Reconnect | Offline Buffering | WebSocket Support | Standard TCP Support | Coroutines API | High Availability | IPC / Worker Support |
+|:---------:|:--------------:|:--------:|:---:|:---------:|:-------------------:|:-------------------:|:-----------------:|:-----------------:|:--------------------:|:--------------:|:-----------------:|:--------------------:|
+|   `JVM`   |       🚀       |    🚀    | 🚀  |    🚀     |         🚀          |         🚀          |        🚀         |        🚀         |          🚀          |       🚀       |        🚀         |          ❓           |
+| `Browser` |       🚀       |    🚀    | 🚀  |    🚀     |         🚀          |         🚀          |        🚀         |        🚀         |          ⛔           |       🚀       |        🚀         |          🚀          |
+| `Node.JS` |       🚀       |    🚀    | 🚀  |    🚀     |         📝          |         🚀          |        🚀         |        🚀         |          🚀          |       🚀       |        🚀         |          🧪          |
+| `Android` |       🚀       |    🚀    | 🚀  |    🚀     |         🚀          |         🚀          |        🚀         |        🚀         |          🚀          |       🚀       |        🚀         |          🚀          |
+|   `iOS`   |       🚀       |    🚀    | 🚀  |    🚀     |         🚀          |         🚀          |        🚀         |        🚀         |          🚀          |       🚀       |        🚀         |          ❓           |
+|  `macOS`  |       🚀       |    🚀    | 🚀  |    🚀     |         🚀          |         🚀          |        🚀         |        🚀         |          🚀          |       🚀       |        🚀         |          ❓           |
+| `watchOS` |       🚀       |    🚀    | 🚀  |    🚀     |         🚀          |         🚀          |        🚀         |        🚀         |          🚀          |       🚀       |        🚀         |          ❓           |
+|  `tvOS`   |       🚀       |    🚀    | 🚀  |    🚀     |         🚀          |         🚀          |        🚀         |        🚀         |          🚀          |       🚀       |        🚀         |          ❓           |
+|  `Linux`  |       🚀       |    🚀    | 🚀  |    🚀     |         🚀          |         🚀          |        🚀         |        🚀         |          🚀          |       🚀       |        🚀         |          ❓           |
 
 > 🚀 = Ready.
 >
 > 📝 = TODO or Coming soon
->
-> 📴 = Disabled for now (can be enabled easily, just disabled to speed up build times). File an issue if you need it and
-> it can be easily enabled.
 >
 > 🧪 = Probably will work, but currently undocumented
 >
@@ -149,10 +145,6 @@ Add either 3.1.1(4) or 5 based on what you need (or both)
 
 - [Add `implementation("com.ditchoom:mqtt-4-models:$version")` to your `build.gradle` dependencies](https://search.maven.org/artifact/com.ditchoom/mqtt-4-models)
 - [Add `implementation("com.ditchoom:mqtt-5-models:$version")` to your `build.gradle` dependencies](https://search.maven.org/artifact/com.ditchoom/mqtt-5-models)
-
-- Coming Soon
-
-NPM + Cocoapods
 
 ## Usage
 
@@ -184,7 +176,7 @@ val payloadBuffer = PlatformBuffer.allocate(4, AllocationZone.SharedMemory)
 //Cast to JvmBuffer/JsBuffer/DataBuffer and retrieve underlying ByteBuffer/ArrayBuffer/NSData to modify contents
 payloadBuffer.writeString("taco") // just write utf8 string data for now
 val pubOperation = client.publish("test/123", QualityOfService.EXACTLY_ONCE, payloadBuffer)
-pubOperation.awaitAll() // suspend until 
+pubOperation.awaitAll() // suspend until
 
 val unsubscribeOperation = client.unsubscribe("test/+")
 unsubscribeOperation.unsubAck.await()
@@ -351,17 +343,42 @@ val service: MqttService = MqttService.buildNewService(true, worker)
 
 - `git clone git@github.com:DitchOoM/mqtt.git`
 - Open cloned directory with [Intellij IDEA](https://www.jetbrains.com/idea/download).
-    - Be sure  
+    - Be sure
       to [open with gradle](https://www.jetbrains.com/help/idea/gradle.html#gradle_import_project_start)
+
+### Build Commands
+
+```bash
+# Build & test all platforms
+./gradlew allTests
+
+# Run specific platform tests
+./gradlew jvmTest                 # JVM tests
+./gradlew jsNodeTest              # Node.js tests
+./gradlew jsBrowserTest           # Browser tests
+./gradlew testDebugUnitTest       # Android unit tests
+./gradlew macosArm64Test          # macOS tests (requires macOS)
+./gradlew iosSimulatorArm64Test   # iOS tests (requires macOS)
+
+# Linting
+./gradlew ktlintCheck             # Check code style
+./gradlew ktlintFormat            # Auto-format code
+
+# Publish to local maven
+./gradlew publishToMavenLocal
+
+# Get next version
+./gradlew -q :mqtt-client:nextVersion
+```
 
 ## Roadmap
 
-See the [open issues](https://github.com/DitchOoM/mqtt/issues) for a list of proposed features (  
+See the [open issues](https://github.com/DitchOoM/mqtt/issues) for a list of proposed features (
 and known issues).
 
 ## Contributing
 
-Contributions are what make the open source community such an amazing place to be learn, inspire,  
+Contributions are what make the open source community such an amazing place to be learn, inspire,
 and create. Any contributions you make are **greatly appreciated**.
 
 1. Fork the Project
@@ -397,15 +414,3 @@ Distributed under the Apache 2.0 License. See `LICENSE` for more information.
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
 
 [linkedin-url]: https://www.linkedin.com/in/thebehera
-
-[maven-central]: https://search.maven.org/search?q=com.ditchoom
-
-[npm]: https://www.npmjs.com/search?q=ditchoom-mqtt-client
-
-[cocoapods]: https://cocoapods.org/pods/DitchOoM-mqtt-client
-
-[apt]: https://packages.ubuntu.com/search?keywords=ditchoom&searchon=names&suite=groovy&section=all
-
-[yum]: https://pkgs.org/search/?q=DitchOoM-mqtt-client
-
-[chocolately]: https://chocolatey.org/packages?q=DitchOoM-mqtt-client

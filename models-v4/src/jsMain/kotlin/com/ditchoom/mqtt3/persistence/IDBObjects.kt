@@ -134,37 +134,38 @@ data class PersistableSocketConnection(
 ) {
     companion object {
         fun from(connectionOps: Collection<MqttConnectionOptions>) =
-            connectionOps.map {
-                when (it) {
-                    is MqttConnectionOptions.SocketConnection -> {
-                        PersistableSocketConnection(
-                            "tcp",
-                            it.host,
-                            it.port,
-                            it.tls,
-                            it.connectionTimeout.inWholeMilliseconds.toString(),
-                            it.readTimeout.inWholeMilliseconds.toString(),
-                            it.writeTimeout.inWholeMilliseconds.toString(),
-                            null,
-                            null,
-                        )
-                    }
+            connectionOps
+                .map {
+                    when (it) {
+                        is MqttConnectionOptions.SocketConnection -> {
+                            PersistableSocketConnection(
+                                "tcp",
+                                it.host,
+                                it.port,
+                                it.tls,
+                                it.connectionTimeout.inWholeMilliseconds.toString(),
+                                it.readTimeout.inWholeMilliseconds.toString(),
+                                it.writeTimeout.inWholeMilliseconds.toString(),
+                                null,
+                                null,
+                            )
+                        }
 
-                    is MqttConnectionOptions.WebSocketConnectionOptions -> {
-                        PersistableSocketConnection(
-                            "websocket",
-                            it.host,
-                            it.port,
-                            it.tls,
-                            it.connectionTimeout.inWholeMilliseconds.toString(),
-                            it.readTimeout.inWholeMilliseconds.toString(),
-                            it.writeTimeout.inWholeMilliseconds.toString(),
-                            it.websocketEndpoint,
-                            it.protocols.joinToString(),
-                        )
+                        is MqttConnectionOptions.WebSocketConnectionOptions -> {
+                            PersistableSocketConnection(
+                                "websocket",
+                                it.host,
+                                it.port,
+                                it.tls,
+                                it.connectionTimeout.inWholeMilliseconds.toString(),
+                                it.readTimeout.inWholeMilliseconds.toString(),
+                                it.writeTimeout.inWholeMilliseconds.toString(),
+                                it.websocketEndpoint,
+                                it.protocols.joinToString(),
+                            )
+                        }
                     }
-                }
-            }.toTypedArray()
+                }.toTypedArray()
     }
 }
 
@@ -262,10 +263,9 @@ fun toConnectionRequest(a: Any?): ConnectionRequest {
     )
 }
 
-fun Byte.toQos(): QualityOfService {
-    return when (toInt()) {
+fun Byte.toQos(): QualityOfService =
+    when (toInt()) {
         1 -> QualityOfService.AT_LEAST_ONCE
         2 -> QualityOfService.EXACTLY_ONCE
         else -> QualityOfService.AT_MOST_ONCE
     }
-}

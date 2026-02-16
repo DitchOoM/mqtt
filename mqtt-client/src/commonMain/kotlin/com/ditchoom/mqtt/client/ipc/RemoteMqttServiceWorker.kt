@@ -12,14 +12,16 @@ class RemoteMqttServiceWorker(
         service.incomingMessages = { broker, byte1, remaining, buffer ->
             clients[broker.connectionRequest.protocolVersion.toByte()]
                 ?.get(broker.identifier)
-                ?.observers?.forEach {
+                ?.observers
+                ?.forEach {
                     it(true, byte1, remaining, buffer)
                 }
         }
         service.sentMessages = { broker, buffer ->
             clients[broker.connectionRequest.protocolVersion.toByte()]
                 ?.get(broker.identifier)
-                ?.observers?.forEach {
+                ?.observers
+                ?.forEach {
                     it(false, 0u, 0, buffer)
                 }
         }

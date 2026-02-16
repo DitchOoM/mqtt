@@ -8,8 +8,10 @@ import org.w3c.dom.MessageChannel
 import org.w3c.dom.MessageEvent
 import org.w3c.dom.MessagePort
 
-class JsRemoteMqttServiceClient(service: LocalMqttService, private val port: MessagePort) :
-    RemoteMqttServiceClient(service) {
+class JsRemoteMqttServiceClient(
+    service: LocalMqttService,
+    private val port: MessagePort,
+) : RemoteMqttServiceClient(service) {
     private val clients = HashMap<Byte, HashMap<Int, JsRemoteMqttClient>>()
     private var nextMessageId = 0
     internal val channel = Channel<MessageEvent>(1)

@@ -22,8 +22,9 @@ import com.ditchoom.mqtt5.controlpacket.properties.readProperties
  * A PUBREL packet is the response to a PUBREC packet. It is the third packet of the QoS 2 protocol exchange.
  */
 
-data class PublishRelease(val variable: VariableHeader) :
-    ControlPacketV5(6, DirectionOfFlow.BIDIRECTIONAL, 0b10),
+data class PublishRelease(
+    val variable: VariableHeader,
+) : ControlPacketV5(6, DirectionOfFlow.BIDIRECTIONAL, 0b10),
     IPublishRelease {
     constructor(
         packetIdentifier: Int,

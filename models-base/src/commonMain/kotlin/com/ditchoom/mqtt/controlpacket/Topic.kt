@@ -4,7 +4,10 @@ import com.ditchoom.buffer.utf8Length
 import com.ditchoom.mqtt.MqttException
 import com.ditchoom.mqtt.ProtocolError
 
-data class Topic(private val root: Level, private val type: Type) {
+data class Topic(
+    private val root: Level,
+    private val type: Type,
+) {
     enum class Type {
         Name,
         Filter,
@@ -21,13 +24,12 @@ data class Topic(private val root: Level, private val type: Type) {
         fun fromOrNull(
             topic: String,
             type: Type,
-        ): Topic? {
-            return try {
+        ): Topic? =
+            try {
                 fromOrThrow(topic, type)
             } catch (e: MqttException) {
                 null
             }
-        }
 
         @Throws(MqttException::class)
         fun fromOrThrow(

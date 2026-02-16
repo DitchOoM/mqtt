@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.sqldelight) apply false
+    id("org.jetbrains.dokka")
 }
 
 // Aggregate tasks for convenience
@@ -13,4 +14,12 @@ tasks.register("buildAll") {
     description = "Build all modules"
     group = "build"
     dependsOn(":models-base:build", ":models-v4:build", ":models-v5:build", ":mqtt-client:build")
+}
+
+tasks.register<Copy>("copyDokkaToDocusaurus") {
+    description = "Generate and copy API documentation to Docusaurus"
+    group = "documentation"
+    dependsOn("dokkaHtmlMultiModule")
+    from(layout.buildDirectory.dir("dokka/htmlMultiModule"))
+    into(layout.projectDirectory.dir("docs/static/api"))
 }

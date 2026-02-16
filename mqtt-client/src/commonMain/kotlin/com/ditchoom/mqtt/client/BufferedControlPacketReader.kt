@@ -2,20 +2,19 @@ package com.ditchoom.mqtt.client
 
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.ReadBuffer.Companion.EMPTY_BUFFER
-import com.ditchoom.buffer.VARIABLE_BYTE_INT_MAX
+import com.ditchoom.mqtt.controlpacket.encoding.VARIABLE_BYTE_INT_MAX
+import com.ditchoom.buffer.stream.EndOfStreamException
 import com.ditchoom.mqtt.MalformedInvalidVariableByteInteger
 import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.ControlPacketFactory
 import com.ditchoom.mqtt.controlpacket.IDisconnectNotification
 import kotlinx.coroutines.flow.flow
 import kotlin.experimental.and
-import kotlin.time.Duration
 
 class BufferedControlPacketReader(
     private val brokerId: Int,
     private val factory: ControlPacketFactory,
     private val transport: MqttTransport,
-    private val readTimeout: Duration,
     var observer: Observer? = null,
     private var incomingMessage: (UByte, Int, ReadBuffer) -> Unit,
 ) {
@@ -23,16 +22,16 @@ class BufferedControlPacketReader(
         flow {
             try {
                 while (transport.isOpen()) {
-                    try {
-                        val p = readControlPacket()
-                        emit(p)
-                        if (p is IDisconnectNotification) {
-                            return@flow
-                        }
-                    } catch (e: Exception) {
+                    val p = readControlPacket()
+                    emit(p)
+                    if (p is IDisconnectNotification) {
                         return@flow
                     }
                 }
+            } catch (_: EndOfStreamException) {
+                // Clean disconnection — data source exhausted
+            } catch (_: Exception) {
+                // Transport error — stop reading
             } finally {
                 incomingMessage = { _, _, _ -> }
                 observer?.onReaderClosed(brokerId, factory.protocolVersion.toByte())
@@ -42,7 +41,6 @@ class BufferedControlPacketReader(
     fun isOpen() = transport.isOpen()
 
     internal suspend fun readControlPacket(): ControlPacket {
-        transport.readIntoStream(readTimeout)
         val byte1 = transport.stream.readUnsignedByte().toUByte()
         observer?.readFirstByteFromStream(brokerId, factory.protocolVersion.toByte())
         val remainingLength = readVariableByteInteger()
@@ -50,7 +48,6 @@ class BufferedControlPacketReader(
             if (remainingLength < 1) {
                 EMPTY_BUFFER
             } else {
-                ensureAvailable(remainingLength)
                 transport.stream.readBuffer(remainingLength)
             }
         val packet =
@@ -65,25 +62,18 @@ class BufferedControlPacketReader(
         return packet
     }
 
-    private suspend fun ensureAvailable(minBytes: Int) {
-        while (transport.stream.available() < minBytes) {
-            transport.readIntoStream(readTimeout)
-        }
-    }
-
     private suspend fun readVariableByteInteger(): Int {
         var digit: Byte
         var value = 0L
         var multiplier = 1L
         try {
             do {
-                if (transport.stream.available() < 1) {
-                    transport.readIntoStream(readTimeout)
-                }
                 digit = transport.stream.readByte()
                 value += (digit and 0x7F).toLong() * multiplier
                 multiplier *= 128
             } while ((digit and 0x80.toByte()).toInt() != 0)
+        } catch (e: EndOfStreamException) {
+            throw e
         } catch (e: Exception) {
             throw MalformedInvalidVariableByteInteger(value.toInt())
         }

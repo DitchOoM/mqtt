@@ -7,10 +7,11 @@ mavenPublish = "0.35.0"
 dokka = "2.1.0"
 kotlinxCoroutines = "1.10.2"
 kotlinWrappers = "2025.12.6"
-buffer = "3.0.2-SNAPSHOT"
-socket = "2.0.2-SNAPSHOT"
+buffer = "3.2.0"
+socket = "2.1.0"
 websocket = "1.1.1-SNAPSHOT"
-sqldelight = "2.0.2"
+kotlinxBenchmark = "0.4.15"
+sqldelight = "2.2.1"
 androidxStartup = "1.1.1"
 androidxTestRunner = "1.7.0"
 androidxTestRules = "1.7.0"
@@ -30,6 +31,7 @@ sqldelight-android-driver = { module = "app.cash.sqldelight:android-driver", ver
 sqldelight-sqlite-driver = { module = "app.cash.sqldelight:sqlite-driver", version.ref = "sqldelight" }
 sqldelight-native-driver = { module = "app.cash.sqldelight:native-driver", version.ref = "sqldelight" }
 sqldelight-web-worker-driver = { module = "app.cash.sqldelight:web-worker-driver", version.ref = "sqldelight" }
+kotlinx-benchmark-runtime = { module = "org.jetbrains.kotlinx:kotlinx-benchmark-runtime", version.ref = "kotlinxBenchmark" }
 androidx-startup = { module = "androidx.startup:startup-runtime", version.ref = "androidxStartup" }
 androidx-test-runner = { module = "androidx.test:runner", version.ref = "androidxTestRunner" }
 androidx-test-rules = { module = "androidx.test:rules", version.ref = "androidxTestRules" }
@@ -41,4 +43,6 @@ android-library = { id = "com.android.library", version.ref = "androidGradlePlug
 ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint" }
 maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "mavenPublish" }
 dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
+kotlin-allopen = { id = "org.jetbrains.kotlin.plugin.allopen", version.ref = "kotlin" }
+kotlinx-benchmark = { id = "org.jetbrains.kotlinx.benchmark", version.ref = "kotlinxBenchmark" }
 sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }

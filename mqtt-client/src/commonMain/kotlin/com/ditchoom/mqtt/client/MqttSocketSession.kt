@@ -126,7 +126,6 @@ class MqttSocketSession private constructor(
                     brokerId,
                     connectionRequest.controlPacketFactory,
                     transport,
-                    connectionOps.readTimeout,
                     observer,
                     incomingMessage,
                 )

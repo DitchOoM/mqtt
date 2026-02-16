@@ -5,13 +5,13 @@ import com.ditchoom.buffer.PlatformBuffer
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
 import com.ditchoom.buffer.allocate
-import com.ditchoom.buffer.readLengthPrefixedUtf8String
-import com.ditchoom.buffer.writeLengthPrefixedUtf8String
 import com.ditchoom.mqtt.MalformedInvalidVariableByteInteger
+import com.ditchoom.mqtt.controlpacket.encoding.readLengthPrefixedUtf8String
+import com.ditchoom.mqtt.controlpacket.encoding.writeLengthPrefixedUtf8String
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
-import com.ditchoom.buffer.readVariableByteInteger as bufferReadVariableByteInteger
-import com.ditchoom.buffer.variableByteSize as bufferVariableByteSize
-import com.ditchoom.buffer.writeVariableByteInteger as bufferWriteVariableByteInteger
+import com.ditchoom.mqtt.controlpacket.encoding.readVariableByteInteger as encodingReadVariableByteInteger
+import com.ditchoom.mqtt.controlpacket.encoding.variableByteSize as encodingVariableByteSize
+import com.ditchoom.mqtt.controlpacket.encoding.writeVariableByteInteger as encodingWriteVariableByteInteger
 
 interface ControlPacket {
     val controlPacketValue: Byte
@@ -52,7 +52,7 @@ interface ControlPacket {
 
     fun payload(writeBuffer: WriteBuffer) {}
 
-    fun packetSize() = 2 + remainingLength()
+    fun packetSize() = 1 + encodingVariableByteSize(remainingLength()) + remainingLength()
 
     fun remainingLength() = 0
 
@@ -77,21 +77,21 @@ interface ControlPacket {
 
         fun WriteBuffer.writeVariableByteInteger(int: Int): WriteBuffer =
             try {
-                bufferWriteVariableByteInteger(int)
+                encodingWriteVariableByteInteger(int)
             } catch (e: IllegalArgumentException) {
                 throw MalformedInvalidVariableByteInteger(int)
             }
 
         fun ReadBuffer.readVariableByteInteger(): Int =
             try {
-                bufferReadVariableByteInteger()
+                encodingReadVariableByteInteger()
             } catch (e: IllegalArgumentException) {
                 throw MalformedInvalidVariableByteInteger(0)
             }
 
         fun variableByteSize(int: Int): Byte =
             try {
-                bufferVariableByteSize(int)
+                encodingVariableByteSize(int)
             } catch (e: IllegalArgumentException) {
                 throw MalformedInvalidVariableByteInteger(int)
             }

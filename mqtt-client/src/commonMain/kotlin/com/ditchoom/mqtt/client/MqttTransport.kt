@@ -3,8 +3,9 @@ package com.ditchoom.mqtt.client
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.SuspendCloseable
 import com.ditchoom.buffer.pool.BufferPool
+import com.ditchoom.buffer.stream.AutoFillingSuspendingStreamProcessor
+import com.ditchoom.buffer.stream.EndOfStreamException
 import com.ditchoom.buffer.stream.StreamProcessor
-import com.ditchoom.buffer.stream.SuspendingStreamProcessor
 import com.ditchoom.buffer.stream.builder
 import com.ditchoom.socket.ConnectionOptions
 import com.ditchoom.socket.SocketConnection
@@ -13,14 +14,11 @@ import com.ditchoom.socket.TlsConfig
 import com.ditchoom.websocket.ConnectionState
 import com.ditchoom.websocket.WebSocketClient
 import com.ditchoom.websocket.WebSocketConnectionOptions
-import com.ditchoom.websocket.WebSocketMessage
 import com.ditchoom.websocket.allocate
-import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.take
 import kotlin.time.Duration
 
-sealed interface MqttTransport : SuspendCloseable {
+interface MqttTransport : SuspendCloseable {
     fun isOpen(): Boolean
 
     suspend fun write(
@@ -28,14 +26,12 @@ sealed interface MqttTransport : SuspendCloseable {
         timeout: Duration,
     ): Int
 
-    val stream: SuspendingStreamProcessor
-
-    suspend fun readIntoStream(timeout: Duration): Int
+    val stream: AutoFillingSuspendingStreamProcessor
 }
 
 class TcpMqttTransport(
     private val connection: SocketConnection,
-    private val readTimeout: Duration,
+    override val stream: AutoFillingSuspendingStreamProcessor,
 ) : MqttTransport {
     override fun isOpen(): Boolean = connection.isOpen
 
@@ -44,17 +40,12 @@ class TcpMqttTransport(
         timeout: Duration,
     ): Int = connection.write(buffer, timeout)
 
-    override val stream: SuspendingStreamProcessor get() = connection.stream
-
-    override suspend fun readIntoStream(timeout: Duration): Int = connection.readIntoStream(timeout)
-
     override suspend fun close() = connection.close()
 }
 
 class WebSocketMqttTransport(
     private val client: WebSocketClient,
-    override val stream: SuspendingStreamProcessor,
-    private val readTimeout: Duration,
+    override val stream: AutoFillingSuspendingStreamProcessor,
 ) : MqttTransport {
     override fun isOpen(): Boolean = client.connectionState.value == ConnectionState.Connected
 
@@ -65,20 +56,6 @@ class WebSocketMqttTransport(
         val remaining = buffer.remaining()
         client.write(buffer)
         return remaining
-    }
-
-    override suspend fun readIntoStream(timeout: Duration): Int {
-        val message =
-            client
-                .incomingMessages
-                .filterIsInstance<WebSocketMessage.Binary>()
-                .take(1)
-                .first()
-        val buffer = message.value
-        buffer.resetForRead()
-        val bytesRead = buffer.remaining()
-        if (bytesRead > 0) stream.append(buffer)
-        return bytesRead
     }
 
     override suspend fun close() = client.close()
@@ -107,7 +84,12 @@ internal suspend fun createTcpTransport(
                 readTimeout = readTimeout,
             ),
         )
-    return TcpMqttTransport(connection, readTimeout)
+    val stream =
+        AutoFillingSuspendingStreamProcessor(connection.stream) {
+            val bytesRead = connection.readIntoStream(readTimeout)
+            if (bytesRead <= 0) throw EndOfStreamException()
+        }
+    return TcpMqttTransport(connection, stream)
 }
 
 internal suspend fun createWebSocketTransport(
@@ -122,6 +104,15 @@ internal suspend fun createWebSocketTransport(
         throw e
     }
     val pool = BufferPool()
-    val stream = StreamProcessor.builder(pool).buildSuspending()
-    return WebSocketMqttTransport(client, stream, readTimeout)
+    val stream =
+        StreamProcessor.builder(pool).buildSuspendingWithAutoFill { autoFiller ->
+            val buffer = client.incomingBinaryMessages.first()
+            buffer.resetForRead()
+            if (buffer.remaining() > 0) {
+                autoFiller.append(buffer)
+            } else {
+                throw EndOfStreamException()
+            }
+        }
+    return WebSocketMqttTransport(client, stream)
 }

@@ -54,15 +54,19 @@ class SqlDatabasePersistence(
     override suspend fun ackPub(
         broker: MqttBroker,
         packet: IPublishAcknowledgment,
-    ) = withContext(dispatcher) {
-        pubQueries.deletePublishMessage(broker.identifier.toLong(), 0L, packet.packetIdentifier.toLong())
+    ) {
+        withContext(dispatcher) {
+            pubQueries.deletePublishMessage(broker.identifier.toLong(), 0L, packet.packetIdentifier.toLong())
+        }
     }
 
     override suspend fun ackPubComplete(
         broker: MqttBroker,
         packet: IPublishComplete,
-    ) = withContext(dispatcher) {
-        qos2Messages.deleteQos2Message(broker.identifier.toLong(), 0L, packet.packetIdentifier.toLong())
+    ) {
+        withContext(dispatcher) {
+            qos2Messages.deleteQos2Message(broker.identifier.toLong(), 0L, packet.packetIdentifier.toLong())
+        }
     }
 
     override suspend fun ackPubReceivedQueuePubRelease(
@@ -85,20 +89,24 @@ class SqlDatabasePersistence(
         broker: MqttBroker,
         incomingPubRel: IPublishRelease,
         outPubComp: IPublishComplete,
-    ) = withContext(dispatcher) {
-        qos2Messages.updateQos2Message(
-            outPubComp.controlPacketValue.toLong(),
-            broker.identifier.toLong(),
-            1L,
-            incomingPubRel.packetIdentifier.toLong(),
-        )
+    ) {
+        withContext(dispatcher) {
+            qos2Messages.updateQos2Message(
+                outPubComp.controlPacketValue.toLong(),
+                broker.identifier.toLong(),
+                1L,
+                incomingPubRel.packetIdentifier.toLong(),
+            )
+        }
     }
 
     override suspend fun ackSub(
         broker: MqttBroker,
         subAck: ISubscribeAcknowledgement,
-    ) = withContext(dispatcher) {
-        subQueries.deleteSubscribeRequest(broker.identifier.toLong(), subAck.packetIdentifier.toLong())
+    ) {
+        withContext(dispatcher) {
+            subQueries.deleteSubscribeRequest(broker.identifier.toLong(), subAck.packetIdentifier.toLong())
+        }
     }
 
     override suspend fun ackUnsub(
@@ -267,7 +275,7 @@ class SqlDatabasePersistence(
                 getBrokerById(broker.id)
             }
 
-    override suspend fun clearMessages(broker: MqttBroker) =
+    override suspend fun clearMessages(broker: MqttBroker) {
         withContext(dispatcher) {
             qos2Messages.deleteAll(broker.identifier.toLong())
             pubQueries.deleteAll(broker.identifier.toLong())
@@ -275,6 +283,7 @@ class SqlDatabasePersistence(
             subscriptionQueries.deleteAll(broker.identifier.toLong())
             unsubQueries.deleteAll(broker.identifier.toLong())
         }
+    }
 
     override suspend fun incomingPublish(
         broker: MqttBroker,
@@ -360,14 +369,17 @@ class SqlDatabasePersistence(
     override suspend fun onPubCompWritten(
         broker: MqttBroker,
         outPubComp: IPublishComplete,
-    ) = withContext(dispatcher) {
-        qos2Messages.deleteQos2Message(broker.identifier.toLong(), 1L, outPubComp.packetIdentifier.toLong())
+    ) {
+        withContext(dispatcher) {
+            qos2Messages.deleteQos2Message(broker.identifier.toLong(), 1L, outPubComp.packetIdentifier.toLong())
+        }
     }
 
-    override suspend fun removeBroker(identifier: Int) =
+    override suspend fun removeBroker(identifier: Int) {
         withContext(dispatcher) {
             brokerQueries.deleteBroker(identifier.toLong())
         }
+    }
 
     override suspend fun writePubGetPacketId(
         broker: MqttBroker,

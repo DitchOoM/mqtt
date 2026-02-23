@@ -3,6 +3,7 @@ package com.ditchoom.mqtt.client
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.SuspendCloseable
 import com.ditchoom.buffer.pool.BufferPool
+import com.ditchoom.buffer.pool.ThreadingMode
 import com.ditchoom.buffer.stream.AutoFillingSuspendingStreamProcessor
 import com.ditchoom.buffer.stream.EndOfStreamException
 import com.ditchoom.buffer.stream.StreamProcessor
@@ -96,18 +97,20 @@ internal suspend fun createWebSocketTransport(
     connectionOptions: WebSocketConnectionOptions,
     readTimeout: Duration,
 ): WebSocketMqttTransport {
-    val client = WebSocketClient.allocate(connectionOptions)
+    // Shared pool between WebSocket and MQTT stream processor eliminates redundant pooling.
+    // Must be MultiThreaded: WebSocket's read loop runs on Dispatchers.Default while
+    // write()/close() are called from the caller's coroutine context.
+    val pool = BufferPool(threadingMode = ThreadingMode.MultiThreaded)
+    val client = WebSocketClient.allocate(connectionOptions, bufferPool = pool)
     try {
         client.connect()
     } catch (e: Throwable) {
         client.close()
         throw e
     }
-    val pool = BufferPool()
     val stream =
         StreamProcessor.builder(pool).buildSuspendingWithAutoFill { autoFiller ->
             val buffer = client.incomingBinaryMessages.first()
-            buffer.resetForRead()
             if (buffer.remaining() > 0) {
                 autoFiller.append(buffer)
             } else {

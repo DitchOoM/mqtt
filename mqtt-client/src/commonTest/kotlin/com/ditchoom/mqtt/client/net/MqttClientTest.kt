@@ -1,10 +1,10 @@
 package com.ditchoom.mqtt.client.net
 
+import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Charset
-import com.ditchoom.buffer.PlatformBuffer
+import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.ReadBuffer.Companion.EMPTY_BUFFER
-import com.ditchoom.buffer.allocate
 import com.ditchoom.buffer.toReadBuffer
 import com.ditchoom.mqtt.InMemoryPersistence
 import com.ditchoom.mqtt.client.LocalMqttClient
@@ -265,7 +265,7 @@ class MqttClientTest {
     @Test
     fun lastWillTestamentMqtt4() =
         runTest {
-            val buffer = PlatformBuffer.allocate(4)
+            val buffer = BufferFactory.Default.allocate(4)
             buffer.writeString("yolo", Charset.UTF8)
             buffer.resetForRead()
             val lwtConnectionRequest =
@@ -290,7 +290,7 @@ class MqttClientTest {
     @Test
     fun lastWillTestamentMqtt5() =
         runTest {
-            val buffer = PlatformBuffer.allocate(4)
+            val buffer = BufferFactory.Default.allocate(4)
             buffer.writeString("yolo", Charset.UTF8)
             buffer.resetForRead()
             val lwtConnectionRequest =

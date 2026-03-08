@@ -172,7 +172,7 @@ val suback = subscribeOperation.subAck.await()
 // optional, subscribe to incoming publish on the topic
 val topicFlow = subscribeOperation.subscriptions.values.first()
 
-val payloadBuffer = PlatformBuffer.allocate(4, AllocationZone.SharedMemory)
+val payloadBuffer = PlatformBuffer.allocate(4)
 //Cast to JvmBuffer/JsBuffer/DataBuffer and retrieve underlying ByteBuffer/ArrayBuffer/NSData to modify contents
 payloadBuffer.writeString("taco") // just write utf8 string data for now
 val pubOperation = client.publish("test/123", QualityOfService.EXACTLY_ONCE, payloadBuffer)

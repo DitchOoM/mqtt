@@ -1,7 +1,7 @@
 package com.ditchoom.mqtt5.controlpacket
 
-import com.ditchoom.buffer.PlatformBuffer
-import com.ditchoom.buffer.allocate
+import com.ditchoom.buffer.BufferFactory
+import com.ditchoom.buffer.Default
 import com.ditchoom.mqtt.ProtocolError
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readMqttUtf8StringNotValidatedSized
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readVariableByteInteger
@@ -31,7 +31,7 @@ class PublishReceivedTests {
     @Test
     fun packetIdentifier() {
         val pubrec = PublishReceived(VariableHeader(packetIdentifier))
-        val buffer = PlatformBuffer.allocate(4)
+        val buffer = BufferFactory.Default.allocate(4)
         pubrec.serialize(buffer)
         buffer.resetForRead()
         assertEquals(0b01010000, buffer.readByte(), "fixed header byte1")
@@ -49,7 +49,7 @@ class PublishReceivedTests {
     @Test
     fun defaultAndNonDefaultSuccessDeserialization() {
         val pubrec = PublishReceived(VariableHeader(packetIdentifier))
-        val bufferNonDefaults = PlatformBuffer.allocate(6)
+        val bufferNonDefaults = BufferFactory.Default.allocate(6)
         bufferNonDefaults.writeByte(0b01010000.toByte())
         bufferNonDefaults.writeVariableByteInteger(4)
         bufferNonDefaults.writeUShort(packetIdentifier.toUShort())
@@ -63,7 +63,7 @@ class PublishReceivedTests {
     @Test
     fun noMatchingSubscribers() {
         val pubrec = PublishReceived(VariableHeader(packetIdentifier, NO_MATCHING_SUBSCRIBERS))
-        val buffer = PlatformBuffer.allocate(6)
+        val buffer = BufferFactory.Default.allocate(6)
         pubrec.serialize(buffer)
         buffer.resetForRead()
         assertEquals(0b01010000, buffer.readByte(), "fixed header byte1")
@@ -83,7 +83,7 @@ class PublishReceivedTests {
     @Test
     fun unspecifiedError() {
         val pubrec = PublishReceived(VariableHeader(packetIdentifier, UNSPECIFIED_ERROR))
-        val buffer = PlatformBuffer.allocate(6)
+        val buffer = BufferFactory.Default.allocate(6)
         pubrec.serialize(buffer)
         buffer.resetForRead()
         assertEquals(0b01010000, buffer.readByte(), "fixed header byte1")
@@ -104,7 +104,7 @@ class PublishReceivedTests {
     fun implementationSpecificError() {
         val pubrec =
             PublishReceived(VariableHeader(packetIdentifier, IMPLEMENTATION_SPECIFIC_ERROR))
-        val buffer = PlatformBuffer.allocate(6)
+        val buffer = BufferFactory.Default.allocate(6)
         pubrec.serialize(buffer)
         buffer.resetForRead()
         assertEquals(0b01010000, buffer.readByte(), "fixed header byte1")
@@ -124,7 +124,7 @@ class PublishReceivedTests {
     @Test
     fun notAuthorized() {
         val pubrec = PublishReceived(VariableHeader(packetIdentifier, NOT_AUTHORIZED))
-        val buffer = PlatformBuffer.allocate(6)
+        val buffer = BufferFactory.Default.allocate(6)
         pubrec.serialize(buffer)
         buffer.resetForRead()
         assertEquals(0b01010000, buffer.readByte(), "fixed header byte1")
@@ -144,7 +144,7 @@ class PublishReceivedTests {
     @Test
     fun topicNameInvalid() {
         val pubrec = PublishReceived(VariableHeader(packetIdentifier, TOPIC_NAME_INVALID))
-        val buffer = PlatformBuffer.allocate(6)
+        val buffer = BufferFactory.Default.allocate(6)
         pubrec.serialize(buffer)
         buffer.resetForRead()
         assertEquals(0b01010000, buffer.readByte(), "fixed header byte1")
@@ -164,7 +164,7 @@ class PublishReceivedTests {
     @Test
     fun packetIdentifierInUse() {
         val pubrec = PublishReceived(VariableHeader(packetIdentifier, PACKET_IDENTIFIER_IN_USE))
-        val buffer = PlatformBuffer.allocate(6)
+        val buffer = BufferFactory.Default.allocate(6)
         pubrec.serialize(buffer)
         buffer.resetForRead()
         assertEquals(0b01010000, buffer.readByte(), "fixed header byte1")
@@ -184,7 +184,7 @@ class PublishReceivedTests {
     @Test
     fun quotaExceeded() {
         val pubrec = PublishReceived(VariableHeader(packetIdentifier, QUOTA_EXCEEDED))
-        val buffer = PlatformBuffer.allocate(6)
+        val buffer = BufferFactory.Default.allocate(6)
         pubrec.serialize(buffer)
         buffer.resetForRead()
         assertEquals(0b01010000, buffer.readByte(), "fixed header byte1")
@@ -204,7 +204,7 @@ class PublishReceivedTests {
     @Test
     fun payloadFormatInvalid() {
         val pubrec = PublishReceived(VariableHeader(packetIdentifier, PAYLOAD_FORMAT_INVALID))
-        val buffer = PlatformBuffer.allocate(6)
+        val buffer = BufferFactory.Default.allocate(6)
         pubrec.serialize(buffer)
         buffer.resetForRead()
         assertEquals(0b01010000, buffer.readByte(), "fixed header byte1")
@@ -239,7 +239,7 @@ class PublishReceivedTests {
                     properties = VariableHeader.Properties(reasonString = "yolo"),
                 ),
             )
-        val buffer = PlatformBuffer.allocate(13)
+        val buffer = BufferFactory.Default.allocate(13)
         expected.serialize(buffer)
         buffer.resetForRead()
         assertEquals(0b01010000, buffer.readByte(), "fixed header byte1")
@@ -271,7 +271,7 @@ class PublishReceivedTests {
     fun reasonStringMultipleTimesThrowsProtocolError() {
         val obj1 = ReasonString("yolo")
         val obj2 = obj1.copy()
-        val buffer = PlatformBuffer.allocate(15)
+        val buffer = BufferFactory.Default.allocate(15)
         buffer.writeVariableByteInteger(obj1.size() + obj2.size())
         obj1.write(buffer)
         obj2.write(buffer)
@@ -289,7 +289,7 @@ class PublishReceivedTests {
         }
         assertEquals(userPropertyResult.size, 1)
 
-        val buffer = PlatformBuffer.allocate(19)
+        val buffer = BufferFactory.Default.allocate(19)
         val request = PublishReceived(VariableHeader(packetIdentifier, properties = props))
         request.serialize(buffer)
         buffer.resetForRead()

@@ -1,7 +1,7 @@
 package com.ditchoom.mqtt5.controlpacket
 
-import com.ditchoom.buffer.PlatformBuffer
-import com.ditchoom.buffer.allocate
+import com.ditchoom.buffer.BufferFactory
+import com.ditchoom.buffer.Default
 import com.ditchoom.mqtt.controlpacket.Topic
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.GRANTED_QOS_0
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.GRANTED_QOS_1
@@ -138,7 +138,7 @@ class TypeTests {
                     AuthenticationExchange.VariableHeader.Properties(
                         Authentication(
                             "yolo",
-                            PlatformBuffer.allocate(0),
+                            BufferFactory.Default.allocate(0),
                         ),
                     ),
                 ),
@@ -266,7 +266,7 @@ class TypeTests {
                     AuthenticationExchange.VariableHeader.Properties(
                         Authentication(
                             "yolo",
-                            PlatformBuffer.allocate(0),
+                            BufferFactory.Default.allocate(0),
                         ),
                     ),
                 ),

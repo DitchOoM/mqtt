@@ -2,12 +2,12 @@ package com.ditchoom.mqtt.client
 
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.ReadBuffer.Companion.EMPTY_BUFFER
-import com.ditchoom.mqtt.controlpacket.encoding.VARIABLE_BYTE_INT_MAX
 import com.ditchoom.buffer.stream.EndOfStreamException
 import com.ditchoom.mqtt.MalformedInvalidVariableByteInteger
 import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.ControlPacketFactory
 import com.ditchoom.mqtt.controlpacket.IDisconnectNotification
+import com.ditchoom.mqtt.controlpacket.encoding.VARIABLE_BYTE_INT_MAX
 import kotlinx.coroutines.flow.flow
 import kotlin.experimental.and
 

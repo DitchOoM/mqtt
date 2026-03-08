@@ -1,9 +1,10 @@
 package com.ditchoom.mqtt.client
 
-import com.ditchoom.buffer.AllocationZone
+import com.ditchoom.buffer.BufferFactory
+import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.PlatformBuffer
 import com.ditchoom.buffer.ReadBuffer
-import com.ditchoom.buffer.SuspendCloseable
+import com.ditchoom.buffer.shared
 import com.ditchoom.mqtt.MqttException
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.ControlPacket
@@ -26,7 +27,7 @@ class MqttSocketSession private constructor(
     private val reader: BufferedControlPacketReader,
     var allocateSharedMemory: Boolean = false,
     var sentMessage: (PlatformBuffer) -> Unit,
-) : SuspendCloseable {
+) {
     var observer: Observer? = null
         set(value) {
             reader.observer = value
@@ -43,7 +44,7 @@ class MqttSocketSession private constructor(
 
     suspend fun write(controlPackets: Collection<ControlPacket>) {
         val b =
-            controlPackets.toBuffer(if (allocateSharedMemory) AllocationZone.SharedMemory else AllocationZone.Direct)
+            controlPackets.toBuffer(if (allocateSharedMemory) BufferFactory.shared() else BufferFactory.Default)
         b.resetForWrite()
         transport.write(b, writeTimeout)
         sentMessage(b)
@@ -55,7 +56,7 @@ class MqttSocketSession private constructor(
 
     internal suspend fun read() = reader.readControlPacket()
 
-    override suspend fun close() {
+    suspend fun close() {
         isClosed = true
         try {
             withTimeoutOrNull(1.seconds) {
@@ -77,13 +78,13 @@ class MqttSocketSession private constructor(
             sentMessage: (ReadBuffer) -> Unit = {},
             incomingMessage: (UByte, Int, ReadBuffer) -> Unit = { _, _, _ -> },
         ): MqttSocketSession {
-            val zone =
+            val factory =
                 if (allocateSharedMemory) {
-                    AllocationZone.SharedMemory
+                    BufferFactory.shared()
                 } else {
-                    AllocationZone.Direct
+                    BufferFactory.Default
                 }
-            val connect = connectionRequest.toBuffer(zone)
+            val connect = connectionRequest.toBuffer(factory)
             connect.resetForWrite()
             val transport =
                 withContext(Dispatchers.Default) {

@@ -1,7 +1,7 @@
 package com.ditchoom.mqtt5.controlpacket
 
-import com.ditchoom.buffer.PlatformBuffer
-import com.ditchoom.buffer.allocate
+import com.ditchoom.buffer.BufferFactory
+import com.ditchoom.buffer.Default
 import com.ditchoom.mqtt.controlpacket.QualityOfService.AT_LEAST_ONCE
 import com.ditchoom.mqtt.controlpacket.QualityOfService.AT_MOST_ONCE
 import com.ditchoom.mqtt.controlpacket.QualityOfService.EXACTLY_ONCE
@@ -89,7 +89,7 @@ class FlagTests {
             0x03,
             "Invalid Byte 1 in the fixed header: Control Packet Value",
         )
-        val buffer = PlatformBuffer.allocate(8)
+        val buffer = BufferFactory.Default.allocate(8)
         detailed.serialize(buffer)
         buffer.resetForRead()
         val byteAsUInt = buffer.readByte().toUInt()
@@ -280,7 +280,7 @@ class FlagTests {
                     AuthenticationExchange.VariableHeader.Properties(
                         Authentication(
                             "yolo",
-                            PlatformBuffer.allocate(0),
+                            BufferFactory.Default.allocate(0),
                         ),
                     ),
                 ),

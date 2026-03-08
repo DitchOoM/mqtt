@@ -1,7 +1,8 @@
 package com.ditchoom.mqtt.client.ipc
 
-import com.ditchoom.buffer.AllocationZone
+import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.JvmBuffer
+import com.ditchoom.buffer.shared
 import kotlinx.coroutines.launch
 
 class AndroidMqttClientIPCServer(
@@ -47,11 +48,11 @@ class AndroidMqttClientIPCServer(
     }
 
     override fun currentConnectionAcknowledgmentOrNull(): JvmBuffer? =
-        clientServer.currentConnectionAck()?.serialize(AllocationZone.SharedMemory) as? JvmBuffer
+        clientServer.currentConnectionAck()?.serialize(BufferFactory.shared()) as? JvmBuffer
 
     override fun awaitConnectivity(cb: MqttMessageCallback) {
         clientServer.scope.launch {
-            cb.onMessage(clientServer.awaitConnectivity().serialize(AllocationZone.SharedMemory) as JvmBuffer)
+            cb.onMessage(clientServer.awaitConnectivity().serialize(BufferFactory.shared()) as JvmBuffer)
         }
     }
 

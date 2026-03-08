@@ -1,8 +1,8 @@
 package com.ditchoom.mqtt5.controlpacket
 
-import com.ditchoom.buffer.PlatformBuffer
+import com.ditchoom.buffer.BufferFactory
+import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.ReadBuffer
-import com.ditchoom.buffer.allocate
 import com.ditchoom.mqtt.MalformedPacketException
 import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readVariableByteInteger
@@ -34,7 +34,7 @@ abstract class ControlPacketV5(
                 if (remainingLength > 1) {
                     buffer.readBytes(remainingLength)
                 } else {
-                    PlatformBuffer.allocate(0)
+                    BufferFactory.Default.allocate(0)
                 }
             return fromTyped(remainingBuffer, byte1, remainingLength)
         }

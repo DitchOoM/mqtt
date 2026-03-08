@@ -1,14 +1,13 @@
 package com.ditchoom.mqtt.client
 
-import com.ditchoom.buffer.PlatformBuffer
+import com.ditchoom.buffer.BufferFactory
+import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.ReadBuffer
-import com.ditchoom.buffer.allocate
 import com.ditchoom.buffer.pool.BufferPool
 import com.ditchoom.buffer.stream.AutoFillingSuspendingStreamProcessor
 import com.ditchoom.buffer.stream.EndOfStreamException
 import com.ditchoom.buffer.stream.StreamProcessor
 import com.ditchoom.buffer.stream.builder
-import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.Topic
 import com.ditchoom.mqtt3.controlpacket.ConnectionAcknowledgment
 import com.ditchoom.mqtt3.controlpacket.ControlPacketV4Factory
@@ -23,7 +22,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 import kotlin.time.Duration
-import kotlin.time.Duration.Companion.seconds
 
 /**
  * Creates a mock [MqttTransport] backed by an [AutoFillingSuspendingStreamProcessor]
@@ -37,16 +35,18 @@ private class MockMqttTransport(
 
     override val stream: AutoFillingSuspendingStreamProcessor =
         StreamProcessor.builder(pool).buildSuspendingWithAutoFill { autoFiller ->
-            val chunk = chunks.receiveCatching().getOrNull()
-                ?: throw EndOfStreamException()
+            val chunk =
+                chunks.receiveCatching().getOrNull()
+                    ?: throw EndOfStreamException()
             autoFiller.append(chunk)
         }
 
     override fun isOpen(): Boolean = open
 
-    override suspend fun write(buffer: ReadBuffer, timeout: Duration): Int {
-        return buffer.remaining()
-    }
+    override suspend fun write(
+        buffer: ReadBuffer,
+        timeout: Duration,
+    ): Int = buffer.remaining()
 
     override suspend fun close() {
         open = false
@@ -70,7 +70,7 @@ private fun sendPacketInChunks(
     var offset = 0
     while (offset < bytes.size) {
         val end = minOf(offset + chunkSize, bytes.size)
-        val chunk = PlatformBuffer.allocate(end - offset)
+        val chunk = BufferFactory.Default.allocate(end - offset)
         for (i in offset until end) {
             chunk.writeByte(bytes[i])
         }
@@ -85,160 +85,174 @@ class BufferedControlPacketReaderTest {
     private val topic = Topic.fromOrThrow("test/topic", Topic.Type.Name)
 
     @Test
-    fun parseSingleConnackPacket() = runTest {
-        val chunks = Channel<ReadBuffer>(Channel.UNLIMITED)
-        val transport = MockMqttTransport(chunks)
-        val reader = BufferedControlPacketReader(
-            brokerId = 1,
-            factory = factory,
-            transport = transport,
-            incomingMessage = { _, _, _ -> },
-        )
+    fun parseSingleConnackPacket() =
+        runTest {
+            val chunks = Channel<ReadBuffer>(Channel.UNLIMITED)
+            val transport = MockMqttTransport(chunks)
+            val reader =
+                BufferedControlPacketReader(
+                    brokerId = 1,
+                    factory = factory,
+                    transport = transport,
+                    incomingMessage = { _, _, _ -> },
+                )
 
-        val connack = ConnectionAcknowledgment()
-        sendPacketInChunks(connack, chunks)
-        chunks.close()
+            val connack = ConnectionAcknowledgment()
+            sendPacketInChunks(connack, chunks)
+            chunks.close()
 
-        val packet = reader.readControlPacket()
-        assertIs<ConnectionAcknowledgment>(packet)
-        assertTrue(packet.isSuccessful)
-    }
-
-    @Test
-    fun parseFragmentedPacketOneByteAtATime() = runTest {
-        val chunks = Channel<ReadBuffer>(Channel.UNLIMITED)
-        val transport = MockMqttTransport(chunks)
-        val reader = BufferedControlPacketReader(
-            brokerId = 1,
-            factory = factory,
-            transport = transport,
-            incomingMessage = { _, _, _ -> },
-        )
-
-        val payload = PlatformBuffer.allocate(10)
-        repeat(10) { payload.writeByte(it.toByte()) }
-        payload.resetForRead()
-        val publish = PublishMessage.buildPayload(topicName = topic, payload = payload)
-
-        // Send one byte at a time to exercise auto-fill
-        sendPacketInChunks(publish, chunks, chunkSize = 1)
-        chunks.close()
-
-        val packet = reader.readControlPacket()
-        assertIs<PublishMessage>(packet)
-        assertEquals(topic.toString(), packet.variable.topicName.toString())
-    }
+            val packet = reader.readControlPacket()
+            assertIs<ConnectionAcknowledgment>(packet)
+            assertTrue(packet.isSuccessful)
+        }
 
     @Test
-    fun parseZeroLengthPayloadPingReq() = runTest {
-        val chunks = Channel<ReadBuffer>(Channel.UNLIMITED)
-        val transport = MockMqttTransport(chunks)
-        val reader = BufferedControlPacketReader(
-            brokerId = 1,
-            factory = factory,
-            transport = transport,
-            incomingMessage = { _, _, _ -> },
-        )
+    fun parseFragmentedPacketOneByteAtATime() =
+        runTest {
+            val chunks = Channel<ReadBuffer>(Channel.UNLIMITED)
+            val transport = MockMqttTransport(chunks)
+            val reader =
+                BufferedControlPacketReader(
+                    brokerId = 1,
+                    factory = factory,
+                    transport = transport,
+                    incomingMessage = { _, _, _ -> },
+                )
 
-        sendPacketInChunks(PingRequest, chunks)
-        chunks.close()
+            val payload = BufferFactory.Default.allocate(10)
+            repeat(10) { payload.writeByte(it.toByte()) }
+            payload.resetForRead()
+            val publish = PublishMessage.buildPayload(topicName = topic, payload = payload)
 
-        val packet = reader.readControlPacket()
-        assertIs<com.ditchoom.mqtt3.controlpacket.PingRequest>(packet)
-    }
+            // Send one byte at a time to exercise auto-fill
+            sendPacketInChunks(publish, chunks, chunkSize = 1)
+            chunks.close()
 
-    @Test
-    fun parseMultiplePacketsFromFlow() = runTest {
-        val chunks = Channel<ReadBuffer>(Channel.UNLIMITED)
-        val transport = MockMqttTransport(chunks)
-        val reader = BufferedControlPacketReader(
-            brokerId = 1,
-            factory = factory,
-            transport = transport,
-            incomingMessage = { _, _, _ -> },
-        )
-
-        // Send 3 packets
-        sendPacketInChunks(PingRequest, chunks)
-        sendPacketInChunks(PingResponse, chunks)
-        sendPacketInChunks(ConnectionAcknowledgment(), chunks)
-        chunks.close()
-
-        val packets = reader.incomingControlPackets.toList()
-        assertEquals(3, packets.size)
-        assertIs<com.ditchoom.mqtt3.controlpacket.PingRequest>(packets[0])
-        assertIs<com.ditchoom.mqtt3.controlpacket.PingResponse>(packets[1])
-        assertIs<ConnectionAcknowledgment>(packets[2])
-    }
+            val packet = reader.readControlPacket()
+            assertIs<PublishMessage>(packet)
+            assertEquals(topic.toString(), packet.variable.topicName.toString())
+        }
 
     @Test
-    fun endOfStreamCompletesFlowCleanly() = runTest {
-        val chunks = Channel<ReadBuffer>(Channel.UNLIMITED)
-        val transport = MockMqttTransport(chunks)
-        val reader = BufferedControlPacketReader(
-            brokerId = 1,
-            factory = factory,
-            transport = transport,
-            incomingMessage = { _, _, _ -> },
-        )
+    fun parseZeroLengthPayloadPingReq() =
+        runTest {
+            val chunks = Channel<ReadBuffer>(Channel.UNLIMITED)
+            val transport = MockMqttTransport(chunks)
+            val reader =
+                BufferedControlPacketReader(
+                    brokerId = 1,
+                    factory = factory,
+                    transport = transport,
+                    incomingMessage = { _, _, _ -> },
+                )
 
-        // Send one packet then close (EOF)
-        sendPacketInChunks(PingRequest, chunks)
-        chunks.close()
+            sendPacketInChunks(PingRequest, chunks)
+            chunks.close()
 
-        val packets = reader.incomingControlPackets.toList()
-        assertEquals(1, packets.size)
-        assertIs<com.ditchoom.mqtt3.controlpacket.PingRequest>(packets[0])
-    }
-
-    @Test
-    fun largePayloadSpanningManyAutoFillCycles() = runTest {
-        val chunks = Channel<ReadBuffer>(Channel.UNLIMITED)
-        val transport = MockMqttTransport(chunks)
-        val reader = BufferedControlPacketReader(
-            brokerId = 1,
-            factory = factory,
-            transport = transport,
-            incomingMessage = { _, _, _ -> },
-        )
-
-        val payloadSize = 4096
-        val payload = PlatformBuffer.allocate(payloadSize)
-        repeat(payloadSize) { payload.writeByte((it % 256).toByte()) }
-        payload.resetForRead()
-        val publish = PublishMessage.buildPayload(topicName = topic, payload = payload)
-
-        // Send in 64-byte chunks to exercise many auto-fill cycles
-        sendPacketInChunks(publish, chunks, chunkSize = 64)
-        chunks.close()
-
-        val packet = reader.readControlPacket()
-        assertIs<PublishMessage>(packet)
-        assertEquals(topic.toString(), packet.variable.topicName.toString())
-    }
+            val packet = reader.readControlPacket()
+            assertIs<com.ditchoom.mqtt3.controlpacket.PingRequest>(packet)
+        }
 
     @Test
-    fun variableByteIntegerMultiByteEncoding() = runTest {
-        val chunks = Channel<ReadBuffer>(Channel.UNLIMITED)
-        val transport = MockMqttTransport(chunks)
-        val reader = BufferedControlPacketReader(
-            brokerId = 1,
-            factory = factory,
-            transport = transport,
-            incomingMessage = { _, _, _ -> },
-        )
+    fun parseMultiplePacketsFromFlow() =
+        runTest {
+            val chunks = Channel<ReadBuffer>(Channel.UNLIMITED)
+            val transport = MockMqttTransport(chunks)
+            val reader =
+                BufferedControlPacketReader(
+                    brokerId = 1,
+                    factory = factory,
+                    transport = transport,
+                    incomingMessage = { _, _, _ -> },
+                )
 
-        // PUBLISH with payload large enough to require 2-byte variable-byte integer (>= 128 bytes)
-        val payloadSize = 200
-        val payload = PlatformBuffer.allocate(payloadSize)
-        repeat(payloadSize) { payload.writeByte((it % 256).toByte()) }
-        payload.resetForRead()
-        val publish = PublishMessage.buildPayload(topicName = topic, payload = payload)
+            // Send 3 packets
+            sendPacketInChunks(PingRequest, chunks)
+            sendPacketInChunks(PingResponse, chunks)
+            sendPacketInChunks(ConnectionAcknowledgment(), chunks)
+            chunks.close()
 
-        sendPacketInChunks(publish, chunks)
-        chunks.close()
+            val packets = reader.incomingControlPackets.toList()
+            assertEquals(3, packets.size)
+            assertIs<com.ditchoom.mqtt3.controlpacket.PingRequest>(packets[0])
+            assertIs<com.ditchoom.mqtt3.controlpacket.PingResponse>(packets[1])
+            assertIs<ConnectionAcknowledgment>(packets[2])
+        }
 
-        val packet = reader.readControlPacket()
-        assertIs<PublishMessage>(packet)
-    }
+    @Test
+    fun endOfStreamCompletesFlowCleanly() =
+        runTest {
+            val chunks = Channel<ReadBuffer>(Channel.UNLIMITED)
+            val transport = MockMqttTransport(chunks)
+            val reader =
+                BufferedControlPacketReader(
+                    brokerId = 1,
+                    factory = factory,
+                    transport = transport,
+                    incomingMessage = { _, _, _ -> },
+                )
+
+            // Send one packet then close (EOF)
+            sendPacketInChunks(PingRequest, chunks)
+            chunks.close()
+
+            val packets = reader.incomingControlPackets.toList()
+            assertEquals(1, packets.size)
+            assertIs<com.ditchoom.mqtt3.controlpacket.PingRequest>(packets[0])
+        }
+
+    @Test
+    fun largePayloadSpanningManyAutoFillCycles() =
+        runTest {
+            val chunks = Channel<ReadBuffer>(Channel.UNLIMITED)
+            val transport = MockMqttTransport(chunks)
+            val reader =
+                BufferedControlPacketReader(
+                    brokerId = 1,
+                    factory = factory,
+                    transport = transport,
+                    incomingMessage = { _, _, _ -> },
+                )
+
+            val payloadSize = 4096
+            val payload = BufferFactory.Default.allocate(payloadSize)
+            repeat(payloadSize) { payload.writeByte((it % 256).toByte()) }
+            payload.resetForRead()
+            val publish = PublishMessage.buildPayload(topicName = topic, payload = payload)
+
+            // Send in 64-byte chunks to exercise many auto-fill cycles
+            sendPacketInChunks(publish, chunks, chunkSize = 64)
+            chunks.close()
+
+            val packet = reader.readControlPacket()
+            assertIs<PublishMessage>(packet)
+            assertEquals(topic.toString(), packet.variable.topicName.toString())
+        }
+
+    @Test
+    fun variableByteIntegerMultiByteEncoding() =
+        runTest {
+            val chunks = Channel<ReadBuffer>(Channel.UNLIMITED)
+            val transport = MockMqttTransport(chunks)
+            val reader =
+                BufferedControlPacketReader(
+                    brokerId = 1,
+                    factory = factory,
+                    transport = transport,
+                    incomingMessage = { _, _, _ -> },
+                )
+
+            // PUBLISH with payload large enough to require 2-byte variable-byte integer (>= 128 bytes)
+            val payloadSize = 200
+            val payload = BufferFactory.Default.allocate(payloadSize)
+            repeat(payloadSize) { payload.writeByte((it % 256).toByte()) }
+            payload.resetForRead()
+            val publish = PublishMessage.buildPayload(topicName = topic, payload = payload)
+
+            sendPacketInChunks(publish, chunks)
+            chunks.close()
+
+            val packet = reader.readControlPacket()
+            assertIs<PublishMessage>(packet)
+        }
 }

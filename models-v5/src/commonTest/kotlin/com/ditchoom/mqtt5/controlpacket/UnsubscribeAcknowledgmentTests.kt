@@ -1,7 +1,7 @@
 package com.ditchoom.mqtt5.controlpacket
 
-import com.ditchoom.buffer.PlatformBuffer
-import com.ditchoom.buffer.allocate
+import com.ditchoom.buffer.BufferFactory
+import com.ditchoom.buffer.Default
 import com.ditchoom.mqtt.ProtocolError
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readMqttUtf8StringNotValidatedSized
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readVariableByteInteger
@@ -28,7 +28,7 @@ class UnsubscribeAcknowledgmentTests {
     @Test
     fun serializeDeserializeDefault() {
         val actual = UnsubscribeAcknowledgment(VariableHeader(packetIdentifier))
-        val buffer = PlatformBuffer.allocate(6)
+        val buffer = BufferFactory.Default.allocate(6)
         actual.serialize(buffer)
         buffer.resetForRead()
         assertEquals(0b10110000.toByte(), buffer.readByte(), "fixed header byte 1")
@@ -49,7 +49,7 @@ class UnsubscribeAcknowledgmentTests {
                 VariableHeader(packetIdentifier),
                 listOf(NO_SUBSCRIPTIONS_EXISTED),
             )
-        val buffer = PlatformBuffer.allocate(6)
+        val buffer = BufferFactory.Default.allocate(6)
         actual.serialize(buffer)
         buffer.resetForRead()
         assertEquals(0b10110000.toByte(), buffer.readByte(), "fixed header byte 1")
@@ -71,7 +71,7 @@ class UnsubscribeAcknowledgmentTests {
     fun serializeDeserializeUnspecifiedError() {
         val actual =
             UnsubscribeAcknowledgment(VariableHeader(packetIdentifier), listOf(UNSPECIFIED_ERROR))
-        val buffer = PlatformBuffer.allocate(6)
+        val buffer = BufferFactory.Default.allocate(6)
         actual.serialize(buffer)
         buffer.resetForRead()
         assertEquals(0b10110000.toByte(), buffer.readByte(), "fixed header byte 1")
@@ -92,7 +92,7 @@ class UnsubscribeAcknowledgmentTests {
                 VariableHeader(packetIdentifier),
                 listOf(IMPLEMENTATION_SPECIFIC_ERROR),
             )
-        val buffer = PlatformBuffer.allocate(6)
+        val buffer = BufferFactory.Default.allocate(6)
         actual.serialize(buffer)
         buffer.resetForRead()
         assertEquals(0b10110000.toByte(), buffer.readByte(), "fixed header byte 1")
@@ -114,7 +114,7 @@ class UnsubscribeAcknowledgmentTests {
     fun serializeDeserializeNotAuthorized() {
         val actual =
             UnsubscribeAcknowledgment(VariableHeader(packetIdentifier), listOf(NOT_AUTHORIZED))
-        val buffer = PlatformBuffer.allocate(6)
+        val buffer = BufferFactory.Default.allocate(6)
         actual.serialize(buffer)
         buffer.resetForRead()
         assertEquals(0b10110000.toByte(), buffer.readByte(), "fixed header byte 1")
@@ -135,7 +135,7 @@ class UnsubscribeAcknowledgmentTests {
                 VariableHeader(packetIdentifier),
                 listOf(TOPIC_FILTER_INVALID),
             )
-        val buffer = PlatformBuffer.allocate(6)
+        val buffer = BufferFactory.Default.allocate(6)
         actual.serialize(buffer)
         buffer.resetForRead()
         assertEquals(0b10110000.toByte(), buffer.readByte(), "fixed header byte 1")
@@ -165,7 +165,7 @@ class UnsubscribeAcknowledgmentTests {
                 VariableHeader(packetIdentifier),
                 listOf(PACKET_IDENTIFIER_IN_USE),
             )
-        val buffer = PlatformBuffer.allocate(6)
+        val buffer = BufferFactory.Default.allocate(6)
         actual.serialize(buffer)
         buffer.resetForRead()
         assertEquals(0b10110000.toByte(), buffer.readByte(), "fixed header byte 1")
@@ -188,7 +188,7 @@ class UnsubscribeAcknowledgmentTests {
         val props = VariableHeader.Properties(reasonString = "yolo")
         val header = VariableHeader(packetIdentifier, properties = props)
         val actual = UnsubscribeAcknowledgment(header)
-        val buffer = PlatformBuffer.allocate(13)
+        val buffer = BufferFactory.Default.allocate(13)
         actual.serialize(buffer)
         buffer.resetForRead()
         assertEquals(0b10110000.toByte(), buffer.readByte(), "fixed header byte 1")
@@ -216,7 +216,7 @@ class UnsubscribeAcknowledgmentTests {
     fun reasonStringMultipleTimesThrowsProtocolError() {
         val obj1 = ReasonString("yolo")
         val obj2 = obj1.copy()
-        val buffer = PlatformBuffer.allocate(15)
+        val buffer = BufferFactory.Default.allocate(15)
         buffer.writeVariableByteInteger(obj1.size() + obj2.size())
         obj1.write(buffer)
         obj2.write(buffer)
@@ -242,7 +242,7 @@ class UnsubscribeAcknowledgmentTests {
 
         val request =
             UnsubscribeAcknowledgment(VariableHeader(packetIdentifier, properties = props))
-        val buffer = PlatformBuffer.allocate(19)
+        val buffer = BufferFactory.Default.allocate(19)
         request.serialize(buffer)
         buffer.resetForRead()
         val requestRead = ControlPacketV5.from(buffer) as UnsubscribeAcknowledgment

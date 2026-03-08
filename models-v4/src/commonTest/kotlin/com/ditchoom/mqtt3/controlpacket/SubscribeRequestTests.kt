@@ -1,7 +1,7 @@
 package com.ditchoom.mqtt3.controlpacket
 
-import com.ditchoom.buffer.PlatformBuffer
-import com.ditchoom.buffer.allocate
+import com.ditchoom.buffer.BufferFactory
+import com.ditchoom.buffer.Default
 import com.ditchoom.mqtt.controlpacket.QualityOfService.AT_LEAST_ONCE
 import com.ditchoom.mqtt.controlpacket.QualityOfService.AT_MOST_ONCE
 import com.ditchoom.mqtt.controlpacket.QualityOfService.EXACTLY_ONCE
@@ -13,7 +13,7 @@ import kotlin.test.assertEquals
 class SubscribeRequestTests {
     @Test
     fun serializeTestByteArray() {
-        val readBuffer = PlatformBuffer.allocate(12)
+        val readBuffer = BufferFactory.Default.allocate(12)
         val subscription =
             Subscription.fromOrThrow(
                 listOf("a/b", "c/d"),
@@ -54,7 +54,7 @@ class SubscribeRequestTests {
 
     @Test
     fun subscriptionPayload() {
-        val readBuffer = PlatformBuffer.allocate(12)
+        val readBuffer = BufferFactory.Default.allocate(12)
         val subscription =
             Subscription.fromOrThrow(
                 listOf("a/b", "c/d"),
@@ -95,7 +95,7 @@ class SubscribeRequestTests {
 
     @Test
     fun packetIdentifierIsCorrect() {
-        val buffer = PlatformBuffer.allocate(100)
+        val buffer = BufferFactory.Default.allocate(100)
         val subscription = SubscribeRequest(10.toUShort(), "a/b", AT_MOST_ONCE)
         assertEquals(10, subscription.packetIdentifier)
         subscription.serialize(buffer)
@@ -113,7 +113,7 @@ class SubscribeRequestTests {
                 listOf("a/b", "c/d"),
                 listOf(AT_LEAST_ONCE, EXACTLY_ONCE),
             )
-        val buffer = PlatformBuffer.allocate(19)
+        val buffer = BufferFactory.Default.allocate(19)
         val request = SubscribeRequest(10, subscriptions)
         request.serialize(buffer)
         buffer.resetForRead()
@@ -172,7 +172,7 @@ class SubscribeRequestTests {
         val filter = firstSub.topicFilter
         val validated = validateMqttUTF8StringOrThrowWith(filter.toString())
         assertEquals(validated, "test")
-        val buffer = PlatformBuffer.allocate(11)
+        val buffer = BufferFactory.Default.allocate(11)
         subscribeRequest.serialize(buffer)
         buffer.resetForRead()
         val requestRead = ControlPacketV4.from(buffer) as SubscribeRequest

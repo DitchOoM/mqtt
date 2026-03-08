@@ -2,8 +2,8 @@
 
 package com.ditchoom.mqtt.controlpacket
 
-import com.ditchoom.buffer.PlatformBuffer
-import com.ditchoom.buffer.allocate
+import com.ditchoom.buffer.BufferFactory
+import com.ditchoom.buffer.Default
 import com.ditchoom.mqtt.MalformedInvalidVariableByteInteger
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readVariableByteInteger
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.variableByteSize
@@ -42,7 +42,7 @@ class VariableByteIntegerTests {
     @Test
     fun handles0() {
         val expectedValue = 0
-        val buffer = PlatformBuffer.allocate(1)
+        val buffer = BufferFactory.Default.allocate(1)
         buffer.writeVariableByteInteger(expectedValue)
         buffer.resetForRead()
         assertEquals(
@@ -55,7 +55,7 @@ class VariableByteIntegerTests {
     @Test
     fun handles1() {
         val expectedValue = 1
-        val buffer = PlatformBuffer.allocate(1)
+        val buffer = BufferFactory.Default.allocate(1)
         buffer.writeVariableByteInteger(expectedValue)
         buffer.resetForRead()
         assertEquals(
@@ -68,7 +68,7 @@ class VariableByteIntegerTests {
     @Test
     fun handles127() {
         val expectedValue = 127
-        val buffer = PlatformBuffer.allocate(1)
+        val buffer = BufferFactory.Default.allocate(1)
         buffer.writeVariableByteInteger(expectedValue)
         buffer.resetForRead()
         assertEquals(
@@ -81,7 +81,7 @@ class VariableByteIntegerTests {
     @Test
     fun handles128() {
         val expectedValue = 128
-        val buffer = PlatformBuffer.allocate(2)
+        val buffer = BufferFactory.Default.allocate(2)
         buffer.writeVariableByteInteger(expectedValue)
         buffer.resetForRead()
         assertEquals(
@@ -94,7 +94,7 @@ class VariableByteIntegerTests {
     @Test
     fun handles16383() {
         val expectedValue = 16383
-        val buffer = PlatformBuffer.allocate(2)
+        val buffer = BufferFactory.Default.allocate(2)
         buffer.writeVariableByteInteger(expectedValue)
         buffer.resetForRead()
         assertEquals(
@@ -107,7 +107,7 @@ class VariableByteIntegerTests {
     @Test
     fun handles16384() {
         val expectedValue = 16384
-        val buffer = PlatformBuffer.allocate(3)
+        val buffer = BufferFactory.Default.allocate(3)
         buffer.writeVariableByteInteger(expectedValue)
         buffer.resetForRead()
         assertEquals(
@@ -120,7 +120,7 @@ class VariableByteIntegerTests {
     @Test
     fun handles65535() {
         val expectedValue = 65535
-        val buffer = PlatformBuffer.allocate(3)
+        val buffer = BufferFactory.Default.allocate(3)
         buffer.writeVariableByteInteger(expectedValue)
         buffer.resetForRead()
         assertEquals(
@@ -133,7 +133,7 @@ class VariableByteIntegerTests {
     @Test
     fun handlesMaxMinus1() {
         val expectedValue = variableByteIntMax - 1
-        val buffer = PlatformBuffer.allocate(4)
+        val buffer = BufferFactory.Default.allocate(4)
         buffer.writeVariableByteInteger(expectedValue)
         buffer.resetForRead()
         assertEquals(
@@ -146,7 +146,7 @@ class VariableByteIntegerTests {
     @Test
     fun handlesMax() {
         val expectedValue = variableByteIntMax
-        val buffer = PlatformBuffer.allocate(4)
+        val buffer = BufferFactory.Default.allocate(4)
         buffer.writeVariableByteInteger(expectedValue)
         buffer.resetForRead()
         assertEquals(
@@ -159,7 +159,7 @@ class VariableByteIntegerTests {
     @Test
     fun handlesMaxPlus1() {
         val expectedValue = variableByteIntMax + 1
-        val buffer = PlatformBuffer.allocate(4)
+        val buffer = BufferFactory.Default.allocate(4)
         assertFailsWith(
             MalformedInvalidVariableByteInteger::class,
             "Larger than variable byte integer maximum",

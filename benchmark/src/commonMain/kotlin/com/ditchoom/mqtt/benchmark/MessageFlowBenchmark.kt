@@ -1,8 +1,9 @@
 package com.ditchoom.mqtt.benchmark
 
+import com.ditchoom.buffer.BufferFactory
+import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.PlatformBuffer
 import com.ditchoom.buffer.ReadBuffer
-import com.ditchoom.buffer.allocate
 import com.ditchoom.buffer.pool.BufferPool
 import com.ditchoom.buffer.stream.StreamProcessor
 import com.ditchoom.buffer.stream.builder
@@ -31,7 +32,7 @@ class MessageFlowBenchmark {
 
     @Setup
     fun setup() {
-        val payload = PlatformBuffer.allocate(64)
+        val payload = BufferFactory.Default.allocate(64)
         repeat(64) { payload.writeByte(it.toByte()) }
         payload.resetForRead()
         publishSmall = PublishMessage.buildPayload(topicName = topic, payload = payload)
@@ -51,7 +52,7 @@ class MessageFlowBenchmark {
         val channel = Channel<ReadBuffer>(Channel.UNLIMITED)
 
         // Simulate: WebSocket delivers a binary message
-        val copy = PlatformBuffer.allocate(publishSmallBytes.remaining())
+        val copy = BufferFactory.Default.allocate(publishSmallBytes.remaining())
         publishSmallBytes.position(0)
         copy.write(publishSmallBytes)
         copy.resetForRead()
@@ -72,7 +73,7 @@ class MessageFlowBenchmark {
      */
     @Benchmark
     fun fullPacketRoundTrip(bh: Blackhole) {
-        val buf = PlatformBuffer.allocate(publishSmall.packetSize())
+        val buf = BufferFactory.Default.allocate(publishSmall.packetSize())
         publishSmall.serialize(buf)
         buf.resetForRead()
         val parsed = ControlPacketV4.from(buf)

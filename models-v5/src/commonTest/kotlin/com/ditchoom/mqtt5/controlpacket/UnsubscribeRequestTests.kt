@@ -1,7 +1,7 @@
 package com.ditchoom.mqtt5.controlpacket
 
-import com.ditchoom.buffer.PlatformBuffer
-import com.ditchoom.buffer.allocate
+import com.ditchoom.buffer.BufferFactory
+import com.ditchoom.buffer.Default
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readMqttUtf8StringNotValidatedSized
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readVariableByteInteger
 import com.ditchoom.mqtt.controlpacket.Topic
@@ -15,7 +15,7 @@ class UnsubscribeRequestTests {
 
     @Test
     fun basicTest() {
-        val buffer = PlatformBuffer.allocate(11)
+        val buffer = BufferFactory.Default.allocate(11)
         val unsub =
             UnsubscribeRequest(
                 VariableHeader(packetIdentifier),
@@ -57,7 +57,7 @@ class UnsubscribeRequestTests {
                 VariableHeader(packetIdentifier, properties = props),
                 setOf(Topic.fromOrThrow("test", Topic.Type.Filter)),
             )
-        val buffer = PlatformBuffer.allocate(24)
+        val buffer = BufferFactory.Default.allocate(24)
         request.serialize(buffer)
         buffer.resetForRead()
         val requestRead = ControlPacketV5.from(buffer) as UnsubscribeRequest

@@ -1,8 +1,8 @@
 package com.ditchoom.mqtt5.controlpacket
 
+import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Charset
-import com.ditchoom.buffer.PlatformBuffer
-import com.ditchoom.buffer.allocate
+import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.toReadBuffer
 import com.ditchoom.mqtt.MalformedPacketException
 import com.ditchoom.mqtt.ProtocolError
@@ -27,16 +27,16 @@ import kotlin.test.assertFailsWith
 import kotlin.test.fail
 
 class AuthenticationExchangeTests {
-    private val emptyStringBuffer = PlatformBuffer.allocate(0)
+    private val emptyStringBuffer = BufferFactory.Default.allocate(0)
     private val buffer123 =
-        PlatformBuffer.allocate(3).also {
+        BufferFactory.Default.allocate(3).also {
             it.write("123".toReadBuffer(Charset.UTF8))
             it.resetForRead()
         }
 
     @Test
     fun serializationByteVerification() {
-        val buffer = PlatformBuffer.allocate(14)
+        val buffer = BufferFactory.Default.allocate(14)
         val props = Properties(Authentication("test", emptyStringBuffer))
         val disconnect = AuthenticationExchange(VariableHeader(SUCCESS, props))
         disconnect.serialize(buffer)
@@ -58,7 +58,7 @@ class AuthenticationExchangeTests {
 
     @Test
     fun serializeDeserializeVariableHeader() {
-        val buffer = PlatformBuffer.allocate(16)
+        val buffer = BufferFactory.Default.allocate(16)
         val variableHeader =
             VariableHeader(SUCCESS, Properties(Authentication("hello", buffer123)))
         variableHeader.serialize(buffer)
@@ -78,7 +78,7 @@ class AuthenticationExchangeTests {
 
     @Test
     fun serializeDeserialize() {
-        val buffer = PlatformBuffer.allocate(14)
+        val buffer = BufferFactory.Default.allocate(14)
         val props = Properties(Authentication("test", emptyStringBuffer))
         val disconnect = AuthenticationExchange(VariableHeader(SUCCESS, props))
         disconnect.serialize(buffer)
@@ -112,7 +112,7 @@ class AuthenticationExchangeTests {
 
     @Test
     fun reasonString() {
-        val buffer = PlatformBuffer.allocate(18)
+        val buffer = BufferFactory.Default.allocate(18)
         val props =
             Properties(
                 Authentication("2", emptyStringBuffer),
@@ -134,7 +134,7 @@ class AuthenticationExchangeTests {
     fun reasonStringMultipleTimesThrowsProtocolError() {
         val obj1 = ReasonString("yolo")
         val obj2 = obj1.copy()
-        val buffer = PlatformBuffer.allocate(20)
+        val buffer = BufferFactory.Default.allocate(20)
         val size = obj1.size() + obj2.size()
         buffer.writeVariableByteInteger(size)
         obj1.write(buffer)
@@ -163,7 +163,7 @@ class AuthenticationExchangeTests {
         }
         assertEquals(userPropertyResult.size, 1)
 
-        val buffer = PlatformBuffer.allocate(17)
+        val buffer = BufferFactory.Default.allocate(17)
         AuthenticationExchange(VariableHeader(SUCCESS, properties = props)).serialize(buffer)
         buffer.resetForRead()
         // fixed header
@@ -201,7 +201,7 @@ class AuthenticationExchangeTests {
         }
         assertEquals(userPropertyResult.size, 1)
 
-        val buffer = PlatformBuffer.allocate(21)
+        val buffer = BufferFactory.Default.allocate(21)
         AuthenticationExchange(VariableHeader(SUCCESS, properties = props)).serialize(buffer)
         buffer.resetForRead()
         val requestRead = ControlPacketV5.from(buffer) as AuthenticationExchange
@@ -217,7 +217,7 @@ class AuthenticationExchangeTests {
         val obj1 = AuthenticationMethod("yolo")
         val obj2 = obj1.copy()
         val size = obj1.size() + obj2.size()
-        val buffer1 = PlatformBuffer.allocate(size + variableByteSize(size))
+        val buffer1 = BufferFactory.Default.allocate(size + variableByteSize(size))
         buffer1.writeVariableByteInteger(size)
         obj1.write(buffer1)
         obj2.write(buffer1)
@@ -234,7 +234,7 @@ class AuthenticationExchangeTests {
         val methodSize = method.size()
         val authDataSize = authData.size()
         val size = methodSize + authDataSize + authDataSize + 1
-        val buffer = PlatformBuffer.allocate(size)
+        val buffer = BufferFactory.Default.allocate(size)
         buffer.writeVariableByteInteger(size - 1)
         method.write(buffer)
         authData.write(buffer)

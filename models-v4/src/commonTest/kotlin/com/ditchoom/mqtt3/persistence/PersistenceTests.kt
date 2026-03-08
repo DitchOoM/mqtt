@@ -1,7 +1,6 @@
 package com.ditchoom.mqtt3.persistence
 
 import com.ditchoom.buffer.PlatformBuffer
-import com.ditchoom.buffer.wrap
 import com.ditchoom.mqtt.Persistence
 import com.ditchoom.mqtt.connection.MqttBroker
 import com.ditchoom.mqtt.connection.MqttConnectionOptions

@@ -1,7 +1,6 @@
 package com.ditchoom.mqtt.client
 
 import com.ditchoom.buffer.ReadBuffer
-import com.ditchoom.buffer.SuspendCloseable
 import com.ditchoom.buffer.pool.BufferPool
 import com.ditchoom.buffer.stream.AutoFillingSuspendingStreamProcessor
 import com.ditchoom.buffer.stream.EndOfStreamException
@@ -18,7 +17,7 @@ import com.ditchoom.websocket.allocate
 import kotlinx.coroutines.flow.first
 import kotlin.time.Duration
 
-interface MqttTransport : SuspendCloseable {
+interface MqttTransport {
     fun isOpen(): Boolean
 
     suspend fun write(
@@ -27,6 +26,8 @@ interface MqttTransport : SuspendCloseable {
     ): Int
 
     val stream: AutoFillingSuspendingStreamProcessor
+
+    suspend fun close()
 }
 
 class TcpMqttTransport(

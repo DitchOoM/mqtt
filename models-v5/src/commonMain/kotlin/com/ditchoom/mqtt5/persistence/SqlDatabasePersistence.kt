@@ -4,7 +4,6 @@ import app.cash.sqldelight.db.SqlDriver
 import com.ditchoom.Mqtt5
 import com.ditchoom.buffer.ByteOrder
 import com.ditchoom.buffer.PlatformBuffer
-import com.ditchoom.buffer.wrap
 import com.ditchoom.mqtt.Persistence
 import com.ditchoom.mqtt.connection.MqttBroker
 import com.ditchoom.mqtt.connection.MqttConnectionOptions

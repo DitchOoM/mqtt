@@ -1,8 +1,9 @@
 package com.ditchoom.mqtt5.controlpacket
 
+import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Charset
+import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.PlatformBuffer
-import com.ditchoom.buffer.allocate
 import com.ditchoom.buffer.toReadBuffer
 import com.ditchoom.mqtt.MalformedPacketException
 import com.ditchoom.mqtt.ProtocolError
@@ -45,7 +46,7 @@ import kotlin.test.fail
 class ConnectionAcknowledgmentTests {
     @Test
     fun serializeDefaults() {
-        val buffer = PlatformBuffer.allocate(6)
+        val buffer = BufferFactory.Default.allocate(6)
         val actual = ConnectionAcknowledgment()
         actual.serialize(buffer)
         buffer.resetForRead()
@@ -64,7 +65,7 @@ class ConnectionAcknowledgmentTests {
 
     @Test
     fun deserializeDefaults() {
-        val buffer = PlatformBuffer.allocate(5)
+        val buffer = BufferFactory.Default.allocate(5)
         // fixed header
         buffer.writeUByte(0b00100000.toUByte())
         buffer.writeVariableByteInteger(3)
@@ -78,14 +79,14 @@ class ConnectionAcknowledgmentTests {
 
     @Test
     fun bit0SessionPresentFalseFlags() {
-        val buffer = PlatformBuffer.allocate(3)
+        val buffer = BufferFactory.Default.allocate(3)
         val model = ConnectionAcknowledgment()
         model.header.serialize(buffer)
         buffer.resetForRead()
         val sessionPresentBit = buffer.readUnsignedByte().get(0)
         assertFalse(sessionPresentBit)
 
-        val buffer2 = PlatformBuffer.allocate(5)
+        val buffer2 = BufferFactory.Default.allocate(5)
         model.serialize(buffer2)
         buffer2.resetForRead()
         val result = ControlPacketV5.from(buffer2) as ConnectionAcknowledgment
@@ -94,7 +95,7 @@ class ConnectionAcknowledgmentTests {
 
     @Test
     fun bit0SessionPresentFlags() {
-        val buffer = PlatformBuffer.allocate(3)
+        val buffer = BufferFactory.Default.allocate(3)
         val model = ConnectionAcknowledgment(VariableHeader(true))
         model.header.serialize(buffer)
         buffer.resetForRead()
@@ -104,14 +105,14 @@ class ConnectionAcknowledgmentTests {
 
     @Test
     fun connectReasonCodeDefaultSuccess() {
-        val buffer = PlatformBuffer.allocate(3)
+        val buffer = BufferFactory.Default.allocate(3)
         val model = ConnectionAcknowledgment()
         model.header.serialize(buffer)
         buffer.resetForRead()
         val sessionPresentBit = buffer.readUnsignedByte().get(0)
         assertFalse(sessionPresentBit)
 
-        val buffer2 = PlatformBuffer.allocate(5)
+        val buffer2 = BufferFactory.Default.allocate(5)
         model.serialize(buffer2)
         buffer2.resetForRead()
         val result = ControlPacketV5.from(buffer2) as ConnectionAcknowledgment
@@ -120,7 +121,7 @@ class ConnectionAcknowledgmentTests {
 
     @Test
     fun connectReasonCodeDefaultUnspecifiedError() {
-        val buffer = PlatformBuffer.allocate(5)
+        val buffer = BufferFactory.Default.allocate(5)
         val model = ConnectionAcknowledgment(VariableHeader(connectReason = UNSPECIFIED_ERROR))
         model.serialize(buffer)
         buffer.resetForRead()
@@ -132,7 +133,7 @@ class ConnectionAcknowledgmentTests {
     @Test
     fun sessionExpiryInterval() {
         val actual = ConnectionAcknowledgment(VariableHeader(properties = Properties(4uL)))
-        val buffer = PlatformBuffer.allocate(actual.packetSize())
+        val buffer = BufferFactory.Default.allocate(actual.packetSize())
         actual.serialize(buffer)
         buffer.resetForRead()
         // fixed header
@@ -158,7 +159,7 @@ class ConnectionAcknowledgmentTests {
         val obj1 = SessionExpiryInterval(4uL)
         val obj2 = obj1.copy()
         val size = obj1.size() + obj2.size()
-        val buffer = PlatformBuffer.allocate(size + variableByteSize(size))
+        val buffer = BufferFactory.Default.allocate(size + variableByteSize(size))
         buffer.writeVariableByteInteger(size.toInt())
         obj1.write(buffer)
         obj2.write(buffer)
@@ -174,7 +175,7 @@ class ConnectionAcknowledgmentTests {
     fun receiveMaximum() {
         val actual =
             ConnectionAcknowledgment(VariableHeader(properties = Properties(receiveMaximum = 4)))
-        val buffer = PlatformBuffer.allocate(8)
+        val buffer = BufferFactory.Default.allocate(8)
         actual.serialize(buffer)
         buffer.resetForRead()
         val expected = ControlPacketV5.from(buffer) as ConnectionAcknowledgment
@@ -186,7 +187,7 @@ class ConnectionAcknowledgmentTests {
     fun receiveMaximumSetToZeroThrowsProtocolError() {
         val actual =
             ConnectionAcknowledgment(VariableHeader(properties = Properties(receiveMaximum = 0)))
-        val buffer = PlatformBuffer.allocate(8)
+        val buffer = BufferFactory.Default.allocate(8)
         actual.serialize(buffer)
         buffer.resetForRead()
         try {
@@ -200,7 +201,7 @@ class ConnectionAcknowledgmentTests {
     fun receiveMaximumMultipleTimesThrowsProtocolError() {
         val obj1 = ReceiveMaximum(4)
         val obj2 = obj1.copy()
-        val buffer = PlatformBuffer.allocate(7)
+        val buffer = BufferFactory.Default.allocate(7)
         val size = obj1.size() + obj1.size()
         buffer.writeVariableByteInteger(size.toInt())
         obj1.write(buffer)
@@ -217,7 +218,7 @@ class ConnectionAcknowledgmentTests {
     fun maximumQos() {
         val actual =
             ConnectionAcknowledgment(VariableHeader(properties = Properties(maximumQos = AT_LEAST_ONCE)))
-        val buffer = PlatformBuffer.allocate(8)
+        val buffer = BufferFactory.Default.allocate(8)
         actual.serialize(buffer)
         buffer.resetForRead()
         val expected = ControlPacketV5.from(buffer) as ConnectionAcknowledgment
@@ -230,7 +231,7 @@ class ConnectionAcknowledgmentTests {
         val obj1 = MaximumQos(AT_LEAST_ONCE)
         val obj2 = obj1.copy()
         val size = obj1.size() + obj2.size()
-        val buffer1 = PlatformBuffer.allocate(size + variableByteSize(size))
+        val buffer1 = BufferFactory.Default.allocate(size + variableByteSize(size))
         buffer1.writeVariableByteInteger(size)
         obj1.write(buffer1)
         obj2.write(buffer1)
@@ -246,7 +247,7 @@ class ConnectionAcknowledgmentTests {
     fun retainAvailableTrue() {
         val actual =
             ConnectionAcknowledgment(VariableHeader(properties = Properties(retainAvailable = true)))
-        val buffer = PlatformBuffer.allocate(5)
+        val buffer = BufferFactory.Default.allocate(5)
         actual.serialize(buffer)
         buffer.resetForRead()
         val expected = ControlPacketV5.from(buffer) as ConnectionAcknowledgment
@@ -258,7 +259,7 @@ class ConnectionAcknowledgmentTests {
     fun retainAvailableFalse() {
         val actual =
             ConnectionAcknowledgment(VariableHeader(properties = Properties(retainAvailable = false)))
-        val buffer = PlatformBuffer.allocate(7)
+        val buffer = BufferFactory.Default.allocate(7)
         actual.serialize(buffer)
         buffer.resetForRead()
         val expected = ControlPacketV5.from(buffer) as ConnectionAcknowledgment
@@ -269,7 +270,7 @@ class ConnectionAcknowledgmentTests {
     @Test
     fun retainAvailableSendDefaults() {
         val actual = ConnectionAcknowledgment()
-        val buffer = PlatformBuffer.allocate(5)
+        val buffer = BufferFactory.Default.allocate(5)
         actual.serialize(buffer)
         buffer.resetForRead()
         val expected = ControlPacketV5.from(buffer) as ConnectionAcknowledgment
@@ -281,7 +282,7 @@ class ConnectionAcknowledgmentTests {
     fun retainAvailableMultipleTimesThrowsProtocolError() {
         val obj1 = RetainAvailable(true)
         val obj2 = obj1.copy()
-        val buffer = PlatformBuffer.allocate(5)
+        val buffer = BufferFactory.Default.allocate(5)
         val size = obj1.size() + obj2.size()
         buffer.writeVariableByteInteger(size.toInt())
         obj1.write(buffer)
@@ -298,7 +299,7 @@ class ConnectionAcknowledgmentTests {
     fun maximumPacketSize() {
         val actual =
             ConnectionAcknowledgment(VariableHeader(properties = Properties(maximumPacketSize = 4u)))
-        val buffer = PlatformBuffer.allocate(actual.packetSize())
+        val buffer = BufferFactory.Default.allocate(actual.packetSize())
         actual.serialize(buffer)
         buffer.resetForRead()
         val expected = ControlPacketV5.from(buffer) as ConnectionAcknowledgment
@@ -310,7 +311,7 @@ class ConnectionAcknowledgmentTests {
     fun maximumPacketSizeSetToZeroThrowsProtocolError() {
         val actual =
             ConnectionAcknowledgment(VariableHeader(properties = Properties(maximumPacketSize = 0u)))
-        val buffer = PlatformBuffer.allocate(actual.packetSize())
+        val buffer = BufferFactory.Default.allocate(actual.packetSize())
         actual.serialize(buffer)
         buffer.resetForRead()
         try {
@@ -325,7 +326,7 @@ class ConnectionAcknowledgmentTests {
         val obj1 = MaximumPacketSize(4u)
         val obj2 = obj1.copy()
         val size = obj1.size() + obj2.size()
-        val buffer = PlatformBuffer.allocate(size + variableByteSize(size))
+        val buffer = BufferFactory.Default.allocate(size + variableByteSize(size))
         buffer.writeVariableByteInteger(size)
         obj1.write(buffer)
         obj2.write(buffer)
@@ -343,7 +344,7 @@ class ConnectionAcknowledgmentTests {
             ConnectionAcknowledgment(
                 VariableHeader(properties = Properties(assignedClientIdentifier = "yolo")),
             )
-        val buffer = PlatformBuffer.allocate(12)
+        val buffer = BufferFactory.Default.allocate(12)
         actual.serialize(buffer)
         buffer.resetForRead()
         val expected = ControlPacketV5.from(buffer) as ConnectionAcknowledgment
@@ -359,7 +360,7 @@ class ConnectionAcknowledgmentTests {
     fun assignedClientIdentifierMultipleTimesThrowsProtocolError() {
         val obj1 = AssignedClientIdentifier("yolo")
         val obj2 = obj1.copy()
-        val buffer = PlatformBuffer.allocate(15)
+        val buffer = BufferFactory.Default.allocate(15)
         val size = obj1.size() + obj2.size()
         buffer.writeVariableByteInteger(size.toInt())
         obj1.write(buffer)
@@ -378,7 +379,7 @@ class ConnectionAcknowledgmentTests {
             ConnectionAcknowledgment(
                 VariableHeader(properties = Properties(topicAliasMaximum = 4)),
             )
-        val buffer = PlatformBuffer.allocate(actual.packetSize())
+        val buffer = BufferFactory.Default.allocate(actual.packetSize())
         actual.serialize(buffer)
         buffer.resetForRead()
         val expected = ControlPacketV5.from(buffer) as ConnectionAcknowledgment
@@ -389,7 +390,7 @@ class ConnectionAcknowledgmentTests {
     fun topicAliasMaximumMultipleTimesThrowsProtocolError() {
         val obj1 = TopicAliasMaximum(4)
         val obj2 = obj1.copy()
-        val buffer = PlatformBuffer.allocate(7)
+        val buffer = BufferFactory.Default.allocate(7)
         val size = obj1.size() + obj2.size()
         buffer.writeVariableByteInteger(size.toInt())
         obj1.write(buffer)
@@ -408,7 +409,7 @@ class ConnectionAcknowledgmentTests {
             ConnectionAcknowledgment(
                 VariableHeader(properties = Properties(reasonString = "yolo")),
             )
-        val buffer = PlatformBuffer.allocate(12)
+        val buffer = BufferFactory.Default.allocate(12)
         actual.serialize(buffer)
         buffer.resetForRead()
         val expected = ControlPacketV5.from(buffer) as ConnectionAcknowledgment
@@ -424,7 +425,7 @@ class ConnectionAcknowledgmentTests {
     fun reasonStringMultipleTimesThrowsProtocolError() {
         val obj1 = ReasonString("yolo")
         val obj2 = obj1.copy()
-        val buffer = PlatformBuffer.allocate(15)
+        val buffer = BufferFactory.Default.allocate(15)
         val size = obj1.size() + obj2.size()
         buffer.writeVariableByteInteger(size.toInt())
         obj1.write(buffer)
@@ -448,7 +449,7 @@ class ConnectionAcknowledgmentTests {
         assertEquals(userPropertyResult.size, 1)
 
         val connack = ConnectionAcknowledgment(VariableHeader(properties = props))
-        val buffer = PlatformBuffer.allocate(18)
+        val buffer = BufferFactory.Default.allocate(18)
         connack.serialize(buffer)
         buffer.resetForRead()
         val requestRead = ControlPacketV5.from(buffer) as ConnectionAcknowledgment
@@ -470,7 +471,7 @@ class ConnectionAcknowledgmentTests {
                         ),
                 ),
             )
-        val buffer = PlatformBuffer.allocate(7)
+        val buffer = BufferFactory.Default.allocate(7)
         actual.serialize(buffer)
         buffer.resetForRead()
         val expected = ControlPacketV5.from(buffer) as ConnectionAcknowledgment
@@ -480,7 +481,7 @@ class ConnectionAcknowledgmentTests {
     @Test
     fun wildcardSubscriptionAvailableDefaults() {
         val actual = ConnectionAcknowledgment()
-        val buffer = PlatformBuffer.allocate(5)
+        val buffer = BufferFactory.Default.allocate(5)
         actual.serialize(buffer)
         buffer.resetForRead()
         val expected = ControlPacketV5.from(buffer) as ConnectionAcknowledgment
@@ -491,7 +492,7 @@ class ConnectionAcknowledgmentTests {
     fun wildcardSubscriptionAvailableMultipleTimesThrowsProtocolError() {
         val obj1 = WildcardSubscriptionAvailable(true)
         val obj2 = obj1.copy()
-        val buffer = PlatformBuffer.allocate(5)
+        val buffer = BufferFactory.Default.allocate(5)
         val size = obj1.size() + obj2.size()
         buffer.writeVariableByteInteger(size.toInt())
         obj1.write(buffer)
@@ -507,7 +508,7 @@ class ConnectionAcknowledgmentTests {
     @Test
     fun subscriptionIdentifierAvailableDefaults() {
         val actual = ConnectionAcknowledgment()
-        val buffer = PlatformBuffer.allocate(5)
+        val buffer = BufferFactory.Default.allocate(5)
         actual.serialize(buffer)
         buffer.resetForRead()
         val expected = ControlPacketV5.from(buffer) as ConnectionAcknowledgment
@@ -525,7 +526,7 @@ class ConnectionAcknowledgmentTests {
                         ),
                 ),
             )
-        val buffer = PlatformBuffer.allocate(7)
+        val buffer = BufferFactory.Default.allocate(7)
         actual.serialize(buffer)
         buffer.resetForRead()
         val expected = ControlPacketV5.from(buffer) as ConnectionAcknowledgment
@@ -536,7 +537,7 @@ class ConnectionAcknowledgmentTests {
     fun subscriptionIdentifierAvailableMultipleTimesThrowsProtocolError() {
         val obj1 = SubscriptionIdentifierAvailable(true)
         val obj2 = obj1.copy()
-        val buffer = PlatformBuffer.allocate(5)
+        val buffer = BufferFactory.Default.allocate(5)
         val size = obj1.size() + obj2.size()
         buffer.writeVariableByteInteger(size.toInt())
         obj1.write(buffer)
@@ -552,7 +553,7 @@ class ConnectionAcknowledgmentTests {
     @Test
     fun sharedSubscriptionAvailableDefaults() {
         val actual = ConnectionAcknowledgment()
-        val buffer = PlatformBuffer.allocate(5)
+        val buffer = BufferFactory.Default.allocate(5)
         actual.serialize(buffer)
         buffer.resetForRead()
         val expected = ControlPacketV5.from(buffer) as ConnectionAcknowledgment
@@ -570,7 +571,7 @@ class ConnectionAcknowledgmentTests {
                         ),
                 ),
             )
-        val buffer = PlatformBuffer.allocate(7)
+        val buffer = BufferFactory.Default.allocate(7)
         actual.serialize(buffer)
         buffer.resetForRead()
         val expected = ControlPacketV5.from(buffer) as ConnectionAcknowledgment
@@ -581,7 +582,7 @@ class ConnectionAcknowledgmentTests {
     fun sharedSubscriptionAvailableMultipleTimesThrowsProtocolError() {
         val obj1 = SharedSubscriptionAvailable(true)
         val obj2 = obj1.copy()
-        val buffer = PlatformBuffer.allocate(5)
+        val buffer = BufferFactory.Default.allocate(5)
         val size = obj1.size() + obj2.size()
         buffer.writeVariableByteInteger(size.toInt())
         obj1.write(buffer)
@@ -598,7 +599,7 @@ class ConnectionAcknowledgmentTests {
     fun serverKeepAlive() {
         val actual =
             ConnectionAcknowledgment(VariableHeader(properties = Properties(serverKeepAlive = 5)))
-        val buffer = PlatformBuffer.allocate(8)
+        val buffer = BufferFactory.Default.allocate(8)
         actual.serialize(buffer)
         buffer.resetForRead()
         val expected = ControlPacketV5.from(buffer) as ConnectionAcknowledgment
@@ -609,7 +610,7 @@ class ConnectionAcknowledgmentTests {
     fun serverKeepAliveMultipleTimesThrowsProtocolError() {
         val obj1 = ServerKeepAlive(5)
         val obj2 = obj1.copy()
-        val buffer = PlatformBuffer.allocate(7)
+        val buffer = BufferFactory.Default.allocate(7)
         val size = obj1.size() + obj2.size()
         buffer.writeVariableByteInteger(size.toInt())
         obj1.write(buffer)
@@ -628,7 +629,7 @@ class ConnectionAcknowledgmentTests {
             ConnectionAcknowledgment(
                 VariableHeader(properties = Properties(responseInformation = "yolo")),
             )
-        val buffer = PlatformBuffer.allocate(12)
+        val buffer = BufferFactory.Default.allocate(12)
         actual.serialize(buffer)
         buffer.resetForRead()
         val expected = ControlPacketV5.from(buffer) as ConnectionAcknowledgment
@@ -643,7 +644,7 @@ class ConnectionAcknowledgmentTests {
     fun responseInformationMultipleTimesThrowsProtocolError() {
         val obj1 = ResponseInformation("yolo")
         val obj2 = obj1.copy()
-        val buffer = PlatformBuffer.allocate(15)
+        val buffer = BufferFactory.Default.allocate(15)
         val size = obj1.size() + obj2.size()
         buffer.writeVariableByteInteger(size.toInt())
         obj1.write(buffer)
@@ -662,7 +663,7 @@ class ConnectionAcknowledgmentTests {
             ConnectionAcknowledgment(
                 VariableHeader(properties = Properties(serverReference = "yolo")),
             )
-        val buffer = PlatformBuffer.allocate(12)
+        val buffer = BufferFactory.Default.allocate(12)
         actual.serialize(buffer)
         buffer.resetForRead()
         val expected = ControlPacketV5.from(buffer) as ConnectionAcknowledgment
@@ -677,7 +678,7 @@ class ConnectionAcknowledgmentTests {
     fun serverReferenceMultipleTimesThrowsProtocolError() {
         val obj1 = ServerReference("yolo")
         val obj2 = obj1.copy()
-        val buffer = PlatformBuffer.allocate(15)
+        val buffer = BufferFactory.Default.allocate(15)
         val size = obj1.size() + obj2.size()
         buffer.writeVariableByteInteger(size.toInt())
         obj1.write(buffer)
@@ -707,7 +708,7 @@ class ConnectionAcknowledgmentTests {
                         ),
                 ),
             )
-        val buffer = PlatformBuffer.allocate(19)
+        val buffer = BufferFactory.Default.allocate(19)
         actual.serialize(buffer)
         buffer.resetForRead()
         val expected = ControlPacketV5.from(buffer) as ConnectionAcknowledgment
@@ -728,7 +729,7 @@ class ConnectionAcknowledgmentTests {
     fun authenticationMethodMultipleTimesThrowsProtocolError() {
         val obj1 = AuthenticationMethod("yolo")
         val obj2 = obj1.copy()
-        val buffer = PlatformBuffer.allocate(15)
+        val buffer = BufferFactory.Default.allocate(15)
         val size = obj1.size() + obj2.size()
         buffer.writeVariableByteInteger(size.toInt())
         obj1.write(buffer)
@@ -745,7 +746,7 @@ class ConnectionAcknowledgmentTests {
     fun authenticationDataMultipleTimesThrowsProtocolError() {
         val obj1 = AuthenticationData(buffer1234)
         val obj2 = obj1.copy()
-        val buffer = PlatformBuffer.allocate(15)
+        val buffer = BufferFactory.Default.allocate(15)
         val size = obj1.size() + obj2.size()
         buffer.writeVariableByteInteger(size.toInt())
         obj1.write(buffer)
@@ -770,7 +771,7 @@ class ConnectionAcknowledgmentTests {
 
     @Test
     fun connectionReasonByteOnVariableHeaderIsInvalidThrowsMalformedPacketException() {
-        val buffer = PlatformBuffer.allocate(2)
+        val buffer = BufferFactory.Default.allocate(2)
         buffer.writeByte(1.toByte())
         buffer.writeUByte(SERVER_SHUTTING_DOWN.byte)
         buffer.resetForRead()

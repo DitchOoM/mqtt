@@ -1,10 +1,10 @@
 package com.ditchoom.mqtt.controlpacket
 
-import com.ditchoom.buffer.AllocationZone
+import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.PlatformBuffer
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
-import com.ditchoom.buffer.allocate
+import com.ditchoom.buffer.managed
 import com.ditchoom.mqtt.MalformedInvalidVariableByteInteger
 import com.ditchoom.mqtt.controlpacket.encoding.readLengthPrefixedUtf8String
 import com.ditchoom.mqtt.controlpacket.encoding.writeLengthPrefixedUtf8String
@@ -56,9 +56,9 @@ interface ControlPacket {
 
     fun remainingLength() = 0
 
-    fun serialize(allocationZone: AllocationZone = AllocationZone.Heap): PlatformBuffer {
+    fun serialize(factory: BufferFactory = BufferFactory.managed()): PlatformBuffer {
         val size = packetSize()
-        val buffer = PlatformBuffer.allocate(size, allocationZone)
+        val buffer = factory.allocate(size)
         serialize(buffer)
         return buffer
     }

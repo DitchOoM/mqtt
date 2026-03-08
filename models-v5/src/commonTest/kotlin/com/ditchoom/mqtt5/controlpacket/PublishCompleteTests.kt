@@ -1,7 +1,7 @@
 package com.ditchoom.mqtt5.controlpacket
 
-import com.ditchoom.buffer.PlatformBuffer
-import com.ditchoom.buffer.allocate
+import com.ditchoom.buffer.BufferFactory
+import com.ditchoom.buffer.Default
 import com.ditchoom.mqtt.ProtocolError
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.writeVariableByteInteger
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.PACKET_IDENTIFIER_NOT_FOUND
@@ -21,7 +21,7 @@ class PublishCompleteTests {
     @Test
     fun packetIdentifier() {
         val pubcomp = PublishComplete(VariableHeader(packetIdentifier))
-        val buffer = PlatformBuffer.allocate(4)
+        val buffer = BufferFactory.Default.allocate(4)
         pubcomp.serialize(buffer)
         buffer.resetForRead()
         val pubcompResult = ControlPacketV5.from(buffer) as PublishComplete
@@ -31,7 +31,7 @@ class PublishCompleteTests {
     @Test
     fun packetIdentifierSendDefaults() {
         val pubcomp = PublishComplete(VariableHeader(packetIdentifier))
-        val buffer = PlatformBuffer.allocate(4)
+        val buffer = BufferFactory.Default.allocate(4)
         pubcomp.serialize(buffer)
         buffer.resetForRead()
         val pubcompResult = ControlPacketV5.from(buffer) as PublishComplete
@@ -41,7 +41,7 @@ class PublishCompleteTests {
     @Test
     fun noMatchingSubscribers() {
         val pubcomp = PublishComplete(VariableHeader(packetIdentifier, PACKET_IDENTIFIER_NOT_FOUND))
-        val buffer = PlatformBuffer.allocate(6)
+        val buffer = BufferFactory.Default.allocate(6)
         pubcomp.serialize(buffer)
         buffer.resetForRead()
         val pubcompResult = ControlPacketV5.from(buffer) as PublishComplete
@@ -66,7 +66,7 @@ class PublishCompleteTests {
                     properties = VariableHeader.Properties(reasonString = "yolo"),
                 ),
             )
-        val buffer = PlatformBuffer.allocate(13)
+        val buffer = BufferFactory.Default.allocate(13)
         expected.serialize(buffer)
         buffer.resetForRead()
 //        val actual = ControlPacketV5.from(buffer) as PublishComplete
@@ -81,7 +81,7 @@ class PublishCompleteTests {
     fun reasonStringMultipleTimesThrowsProtocolError() {
         val obj1 = ReasonString("yolo")
         val obj2 = obj1.copy()
-        val buffer = PlatformBuffer.allocate(35)
+        val buffer = BufferFactory.Default.allocate(35)
         buffer.writeVariableByteInteger(obj1.size() + obj2.size())
         obj1.write(buffer)
         obj2.write(buffer)
@@ -110,7 +110,7 @@ class PublishCompleteTests {
         }
         assertEquals(userPropertyResult.size, 1)
 
-        val buffer = PlatformBuffer.allocate(19)
+        val buffer = BufferFactory.Default.allocate(19)
         val request = PublishComplete(VariableHeader(packetIdentifier, properties = props))
         request.serialize(buffer)
         buffer.resetForRead()

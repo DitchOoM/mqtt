@@ -1,7 +1,7 @@
 package com.ditchoom.mqtt5.controlpacket
 
-import com.ditchoom.buffer.PlatformBuffer
-import com.ditchoom.buffer.allocate
+import com.ditchoom.buffer.BufferFactory
+import com.ditchoom.buffer.Default
 import com.ditchoom.mqtt.MalformedPacketException
 import com.ditchoom.mqtt.ProtocolError
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.writeVariableByteInteger
@@ -36,7 +36,7 @@ class SubscribeAcknowledgementTests {
     fun packetIdentifier() {
         val payload = GRANTED_QOS_0
         val suback = SubscribeAcknowledgement(packetIdentifier.toUShort(), payload)
-        val buffer = PlatformBuffer.allocate(6)
+        val buffer = BufferFactory.Default.allocate(6)
         suback.serialize(buffer)
         buffer.resetForRead()
         val subackResult = ControlPacketV5.from(buffer) as SubscribeAcknowledgement
@@ -48,7 +48,7 @@ class SubscribeAcknowledgementTests {
     fun grantedQos1() {
         val payload = GRANTED_QOS_1
         val obj = SubscribeAcknowledgement(packetIdentifier.toUShort(), payload)
-        val buffer = PlatformBuffer.allocate(6)
+        val buffer = BufferFactory.Default.allocate(6)
         obj.serialize(buffer)
         buffer.resetForRead()
         val result = ControlPacketV5.from(buffer) as SubscribeAcknowledgement
@@ -59,7 +59,7 @@ class SubscribeAcknowledgementTests {
     fun grantedQos2() {
         val payload = GRANTED_QOS_2
         val obj = SubscribeAcknowledgement(packetIdentifier.toUShort(), payload)
-        val buffer = PlatformBuffer.allocate(6)
+        val buffer = BufferFactory.Default.allocate(6)
         obj.serialize(buffer)
         buffer.resetForRead()
         val result = ControlPacketV5.from(buffer) as SubscribeAcknowledgement
@@ -70,7 +70,7 @@ class SubscribeAcknowledgementTests {
     fun unspecifiedError() {
         val payload = UNSPECIFIED_ERROR
         val obj = SubscribeAcknowledgement(packetIdentifier.toUShort(), payload)
-        val buffer = PlatformBuffer.allocate(6)
+        val buffer = BufferFactory.Default.allocate(6)
         obj.serialize(buffer)
         buffer.resetForRead()
         val result = ControlPacketV5.from(buffer) as SubscribeAcknowledgement
@@ -81,7 +81,7 @@ class SubscribeAcknowledgementTests {
     fun implementationSpecificError() {
         val payload = IMPLEMENTATION_SPECIFIC_ERROR
         val obj = SubscribeAcknowledgement(packetIdentifier.toUShort(), payload)
-        val buffer = PlatformBuffer.allocate(6)
+        val buffer = BufferFactory.Default.allocate(6)
         obj.serialize(buffer)
         buffer.resetForRead()
         val result = ControlPacketV5.from(buffer) as SubscribeAcknowledgement
@@ -92,7 +92,7 @@ class SubscribeAcknowledgementTests {
     fun notAuthorized() {
         val payload = NOT_AUTHORIZED
         val obj = SubscribeAcknowledgement(packetIdentifier.toUShort(), payload)
-        val buffer = PlatformBuffer.allocate(6)
+        val buffer = BufferFactory.Default.allocate(6)
         obj.serialize(buffer)
         buffer.resetForRead()
         val result = ControlPacketV5.from(buffer) as SubscribeAcknowledgement
@@ -103,7 +103,7 @@ class SubscribeAcknowledgementTests {
     fun topicFilterInvalid() {
         val payload = TOPIC_FILTER_INVALID
         val obj = SubscribeAcknowledgement(packetIdentifier.toUShort(), payload)
-        val buffer = PlatformBuffer.allocate(6)
+        val buffer = BufferFactory.Default.allocate(6)
         obj.serialize(buffer)
         buffer.resetForRead()
         val result = ControlPacketV5.from(buffer) as SubscribeAcknowledgement
@@ -114,7 +114,7 @@ class SubscribeAcknowledgementTests {
     fun packetIdentifierInUse() {
         val payload = PACKET_IDENTIFIER_IN_USE
         val obj = SubscribeAcknowledgement(packetIdentifier.toUShort(), payload)
-        val buffer = PlatformBuffer.allocate(6)
+        val buffer = BufferFactory.Default.allocate(6)
         obj.serialize(buffer)
         buffer.resetForRead()
         val result = ControlPacketV5.from(buffer) as SubscribeAcknowledgement
@@ -125,7 +125,7 @@ class SubscribeAcknowledgementTests {
     fun quotaExceeded() {
         val payload = QUOTA_EXCEEDED
         val obj = SubscribeAcknowledgement(packetIdentifier.toUShort(), payload)
-        val buffer = PlatformBuffer.allocate(6)
+        val buffer = BufferFactory.Default.allocate(6)
         obj.serialize(buffer)
         buffer.resetForRead()
         val result = ControlPacketV5.from(buffer) as SubscribeAcknowledgement
@@ -136,7 +136,7 @@ class SubscribeAcknowledgementTests {
     fun sharedSubscriptionsNotSupported() {
         val payload = SHARED_SUBSCRIPTIONS_NOT_SUPPORTED
         val obj = SubscribeAcknowledgement(packetIdentifier.toUShort(), payload)
-        val buffer = PlatformBuffer.allocate(6)
+        val buffer = BufferFactory.Default.allocate(6)
         obj.serialize(buffer)
         buffer.resetForRead()
         val result = ControlPacketV5.from(buffer) as SubscribeAcknowledgement
@@ -147,7 +147,7 @@ class SubscribeAcknowledgementTests {
     fun subscriptionIdentifiersNotSupported() {
         val payload = SUBSCRIPTION_IDENTIFIERS_NOT_SUPPORTED
         val obj = SubscribeAcknowledgement(packetIdentifier.toUShort(), payload)
-        val buffer = PlatformBuffer.allocate(6)
+        val buffer = BufferFactory.Default.allocate(6)
         obj.serialize(buffer)
         buffer.resetForRead()
         val result = ControlPacketV5.from(buffer) as SubscribeAcknowledgement
@@ -158,7 +158,7 @@ class SubscribeAcknowledgementTests {
     fun wildcardSubscriptionsNotSupported() {
         val payload = WILDCARD_SUBSCRIPTIONS_NOT_SUPPORTED
         val obj = SubscribeAcknowledgement(packetIdentifier.toUShort(), payload)
-        val buffer = PlatformBuffer.allocate(6)
+        val buffer = BufferFactory.Default.allocate(6)
         obj.serialize(buffer)
         buffer.resetForRead()
         val result = ControlPacketV5.from(buffer) as SubscribeAcknowledgement
@@ -179,7 +179,7 @@ class SubscribeAcknowledgementTests {
     fun reasonString() {
         val props = VariableHeader.Properties(reasonString = "yolo")
         val actual = SubscribeAcknowledgement(packetIdentifier.toUShort(), props, GRANTED_QOS_1)
-        val buffer = PlatformBuffer.allocate(13)
+        val buffer = BufferFactory.Default.allocate(13)
         actual.serialize(buffer)
         buffer.resetForRead()
         val result = ControlPacketV5.from(buffer) as SubscribeAcknowledgement
@@ -194,7 +194,7 @@ class SubscribeAcknowledgementTests {
     fun reasonStringMultipleTimesThrowsProtocolError() {
         val obj1 = ReasonString("yolo")
         val obj2 = obj1.copy()
-        val buffer = PlatformBuffer.allocate(15)
+        val buffer = BufferFactory.Default.allocate(15)
         buffer.writeVariableByteInteger(obj1.size() + obj2.size())
         obj1.write(buffer)
         obj2.write(buffer)
@@ -218,7 +218,7 @@ class SubscribeAcknowledgementTests {
                 props,
                 WILDCARD_SUBSCRIPTIONS_NOT_SUPPORTED,
             )
-        val buffer = PlatformBuffer.allocate(19)
+        val buffer = BufferFactory.Default.allocate(19)
         request.serialize(buffer)
         buffer.resetForRead()
         val requestRead = ControlPacketV5.from(buffer) as SubscribeAcknowledgement
@@ -232,7 +232,7 @@ class SubscribeAcknowledgementTests {
     @Test
     fun invalidReasonCode() {
         val variable = VariableHeader(packetIdentifier)
-        val buffer = PlatformBuffer.allocate(5)
+        val buffer = BufferFactory.Default.allocate(5)
         variable.serialize(buffer)
         buffer.writeUByte(BANNED.byte)
         buffer.resetForRead()

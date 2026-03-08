@@ -1,8 +1,9 @@
 package com.ditchoom.mqtt3.controlpacket
 
+import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Charset
+import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.PlatformBuffer
-import com.ditchoom.buffer.allocate
 import com.ditchoom.mqtt.MalformedPacketException
 import com.ditchoom.mqtt.MqttException
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readVariableByteInteger
@@ -21,7 +22,7 @@ import kotlin.test.assertTrue
 import kotlin.test.fail
 
 class PublishMessageTests {
-    private val payload: PlatformBuffer = PlatformBuffer.allocate(4)
+    private val payload: PlatformBuffer = BufferFactory.Default.allocate(4)
 
     init {
         payload.writeString("yolo", Charset.UTF8)
@@ -32,7 +33,7 @@ class PublishMessageTests {
     fun qosBothBitsSetTo1ThrowsMalformedPacketException() {
         val byte1 = 0b00111110.toByte()
         val remainingLength = 1.toByte()
-        val buffer = PlatformBuffer.allocate(2)
+        val buffer = BufferFactory.Default.allocate(2)
         buffer.writeByte(byte1)
         buffer.writeByte(remainingLength)
         buffer.resetForRead()
@@ -71,7 +72,7 @@ class PublishMessageTests {
                 topicName = checkNotNull(Topic.fromOrThrow("user/log", Topic.Type.Name)),
                 payload = payload,
             )
-        val buffer = PlatformBuffer.allocate(16)
+        val buffer = BufferFactory.Default.allocate(16)
         publishMessage.serialize(buffer)
         val publishPayload = publishMessage.payload
         publishPayload?.position(0)
@@ -108,12 +109,12 @@ class PublishMessageTests {
         right: ControlPacketV4,
     ) {
         val leftSize = left.packetSize()
-        val leftBuffer = PlatformBuffer.allocate(leftSize)
+        val leftBuffer = BufferFactory.Default.allocate(leftSize)
         left.serialize(leftBuffer)
         leftBuffer.resetForRead()
 
         val rightSize = right.packetSize()
-        val rightBuffer = PlatformBuffer.allocate(rightSize)
+        val rightBuffer = BufferFactory.Default.allocate(rightSize)
         right.serialize(rightBuffer)
         rightBuffer.resetForRead()
 
@@ -130,7 +131,7 @@ class PublishMessageTests {
                 payload = payload,
                 dup = true,
             )
-        val buffer = PlatformBuffer.allocate(16)
+        val buffer = BufferFactory.Default.allocate(16)
         publishMessage.serialize(buffer)
         publishMessage.payload?.position(0)
         buffer.resetForRead()
@@ -170,7 +171,7 @@ class PublishMessageTests {
                 qos = QualityOfService.AT_LEAST_ONCE,
                 packetIdentifier = 13,
             )
-        val buffer = PlatformBuffer.allocate(18)
+        val buffer = BufferFactory.Default.allocate(18)
         publishMessage.serialize(buffer)
         publishMessage.payload?.position(0)
         buffer.resetForRead()
@@ -210,7 +211,7 @@ class PublishMessageTests {
                 qos = QualityOfService.EXACTLY_ONCE,
                 packetIdentifier = 13,
             )
-        val buffer = PlatformBuffer.allocate(18)
+        val buffer = BufferFactory.Default.allocate(18)
         publishMessage.serialize(buffer)
         publishMessage.payload?.position(0)
         buffer.resetForRead()
@@ -249,7 +250,7 @@ class PublishMessageTests {
                 payload = payload,
                 retain = true,
             )
-        val buffer = PlatformBuffer.allocate(16)
+        val buffer = BufferFactory.Default.allocate(16)
         publishMessage.serialize(buffer)
         publishMessage.payload?.position(0)
         buffer.resetForRead()
@@ -284,7 +285,7 @@ class PublishMessageTests {
     fun nullGenericSerialization() {
         val publishMessage =
             PublishMessage.build(topicName = checkNotNull(Topic.fromOrThrow("user/log", Topic.Type.Name)))
-        val buffer = PlatformBuffer.allocate(12)
+        val buffer = BufferFactory.Default.allocate(12)
         publishMessage.serialize(buffer)
         buffer.resetForRead()
         val firstByte = buffer.readUnsignedByte()

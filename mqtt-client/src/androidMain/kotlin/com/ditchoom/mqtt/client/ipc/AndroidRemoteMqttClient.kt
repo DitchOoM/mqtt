@@ -1,9 +1,10 @@
 package com.ditchoom.mqtt.client.ipc
 
 import android.util.Log
-import com.ditchoom.buffer.AllocationZone
+import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.JvmBuffer
 import com.ditchoom.buffer.PlatformBuffer
+import com.ditchoom.buffer.shared
 import com.ditchoom.mqtt.Persistence
 import com.ditchoom.mqtt.connection.MqttBroker
 import com.ditchoom.mqtt.controlpacket.ControlPacketFactory
@@ -24,7 +25,7 @@ class AndroidRemoteMqttClient(
     broker: MqttBroker,
     persistence: Persistence,
 ) : RemoteMqttClient(scope, broker, persistence) {
-    override val allocationZone: AllocationZone = AllocationZone.SharedMemory
+    override val bufferFactory: BufferFactory = BufferFactory.shared()
 
     override val packetFactory: ControlPacketFactory = broker.connectionRequest.controlPacketFactory
 

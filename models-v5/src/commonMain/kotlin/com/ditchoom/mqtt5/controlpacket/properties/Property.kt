@@ -1,9 +1,9 @@
 package com.ditchoom.mqtt5.controlpacket.properties
 
-import com.ditchoom.buffer.PlatformBuffer
+import com.ditchoom.buffer.BufferFactory
+import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
-import com.ditchoom.buffer.allocate
 import com.ditchoom.buffer.utf8Length
 import com.ditchoom.mqtt.MalformedPacketException
 import com.ditchoom.mqtt.ProtocolError
@@ -95,7 +95,7 @@ fun ReadBuffer.readPlatformBuffer(): ReadBuffer {
     return if (size > 0) {
         readBytes(size)
     } else {
-        PlatformBuffer.allocate(0)
+        BufferFactory.Default.allocate(0)
     }
 }
 
@@ -180,7 +180,7 @@ fun ReadBuffer.readPropertiesSized(): Pair<Int, Collection<Property>?> {
     val propertyLength = readVariableByteInteger()
     val propertyBytes =
         if (propertyLength < 1) {
-            PlatformBuffer.allocate(0)
+            BufferFactory.Default.allocate(0)
         } else {
             readBytes(propertyLength)
         }

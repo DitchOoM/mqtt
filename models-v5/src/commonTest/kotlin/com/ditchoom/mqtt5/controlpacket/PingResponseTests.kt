@@ -1,14 +1,14 @@
 package com.ditchoom.mqtt5.controlpacket
 
-import com.ditchoom.buffer.PlatformBuffer
-import com.ditchoom.buffer.allocate
+import com.ditchoom.buffer.BufferFactory
+import com.ditchoom.buffer.Default
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class PingResponseTests {
     @Test
     fun serializeDeserialize() {
-        val buffer = PlatformBuffer.allocate(2)
+        val buffer = BufferFactory.Default.allocate(2)
         val ping = PingResponse
         ping.serialize(buffer)
         buffer.resetForRead()

@@ -1,7 +1,7 @@
 package com.ditchoom.mqtt5.controlpacket
 
-import com.ditchoom.buffer.PlatformBuffer
-import com.ditchoom.buffer.allocate
+import com.ditchoom.buffer.BufferFactory
+import com.ditchoom.buffer.Default
 import com.ditchoom.mqtt.ProtocolError
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readMqttUtf8StringNotValidatedSized
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readVariableByteInteger
@@ -23,7 +23,7 @@ class PublishReleaseTests {
     @Test
     fun packetIdentifier() {
         val pubrel = PublishRelease(VariableHeader(packetIdentifier))
-        val buffer = PlatformBuffer.allocate(4)
+        val buffer = BufferFactory.Default.allocate(4)
         pubrel.serialize(buffer)
         buffer.resetForRead()
         assertEquals(0b01100010, buffer.readByte(), "fixed header byte1")
@@ -41,7 +41,7 @@ class PublishReleaseTests {
     @Test
     fun defaultAndNonDefaultSuccessDeserialization() {
         val pubrel = PublishRelease(VariableHeader(packetIdentifier))
-        val bufferNonDefaults = PlatformBuffer.allocate(6)
+        val bufferNonDefaults = BufferFactory.Default.allocate(6)
         bufferNonDefaults.writeByte(0b01100010.toByte())
         bufferNonDefaults.writeVariableByteInteger(4)
         bufferNonDefaults.writeUShort(packetIdentifier.toUShort())
@@ -70,7 +70,7 @@ class PublishReleaseTests {
                     properties = VariableHeader.Properties(reasonString = "yolo"),
                 ),
             )
-        val buffer = PlatformBuffer.allocate(13)
+        val buffer = BufferFactory.Default.allocate(13)
         expected.serialize(buffer)
         buffer.resetForRead()
         assertEquals(0b01100010, buffer.readByte(), "fixed header byte1")
@@ -102,7 +102,7 @@ class PublishReleaseTests {
     fun reasonStringMultipleTimesThrowsProtocolError() {
         val obj1 = ReasonString("yolo")
         val obj2 = obj1.copy()
-        val buffer = PlatformBuffer.allocate(15)
+        val buffer = BufferFactory.Default.allocate(15)
         buffer.writeVariableByteInteger(obj1.size() + obj2.size())
         obj1.write(buffer)
         obj2.write(buffer)
@@ -120,7 +120,7 @@ class PublishReleaseTests {
         }
         assertEquals(userPropertyResult.size, 1)
 
-        val buffer = PlatformBuffer.allocate(19)
+        val buffer = BufferFactory.Default.allocate(19)
         val request = PublishRelease(VariableHeader(packetIdentifier, properties = props))
         request.serialize(buffer)
         buffer.resetForRead()

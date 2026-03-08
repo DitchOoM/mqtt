@@ -1,6 +1,6 @@
 package com.ditchoom.mqtt.client.ipc
 
-import com.ditchoom.buffer.AllocationZone
+import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.PlatformBuffer
 import com.ditchoom.mqtt.Persistence
 import com.ditchoom.mqtt.client.MqttClient
@@ -32,7 +32,7 @@ abstract class RemoteMqttClient(
     override val broker: MqttBroker,
     private val persistence: Persistence,
 ) : MqttClient {
-    abstract val allocationZone: AllocationZone
+    abstract val bufferFactory: BufferFactory
     private val _incomingPackets = MutableSharedFlow<ControlPacket>(2, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     val incomingPackets: SharedFlow<ControlPacket> = _incomingPackets
     private val _sentPackets = MutableSharedFlow<ControlPacket>(2, onBufferOverflow = BufferOverflow.DROP_OLDEST)
@@ -69,7 +69,7 @@ abstract class RemoteMqttClient(
                 persistence.writePubGetPacketId(broker, pub)
             }
         val pub = pub.maybeCopyWithNewPacketIdentifier(publishPacketId)
-        val pubBuffer = pub.serialize(allocationZone)
+        val pubBuffer = pub.serialize(bufferFactory)
         sendPublish(publishPacketId, pubBuffer)
         return when (pub.qualityOfService) {
             QualityOfService.AT_MOST_ONCE -> PublishOperation.QoSAtMostOnceComplete

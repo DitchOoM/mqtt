@@ -4,6 +4,7 @@ import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
 import com.ditchoom.mqtt.controlpacket.IPublishAcknowledgment
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
+import com.ditchoom.mqtt3.controlpacket.wire.AckWireCodec
 
 /**
  * 3.4 PUBACK – Publish acknowledgement
@@ -21,6 +22,6 @@ data class PublishAcknowledgment(
     }
 
     companion object {
-        fun from(buffer: ReadBuffer) = PublishAcknowledgment(buffer.readUnsignedShort().toInt())
+        fun from(buffer: ReadBuffer) = PublishAcknowledgment(AckWireCodec.decode(buffer).packetId.toInt())
     }
 }

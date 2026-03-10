@@ -4,6 +4,7 @@ import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
 import com.ditchoom.mqtt.controlpacket.IUnsubscribeAcknowledgment
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
+import com.ditchoom.mqtt3.controlpacket.wire.AckWireCodec
 
 data class UnsubscribeAcknowledgment(
     override val packetIdentifier: Int,
@@ -16,6 +17,6 @@ data class UnsubscribeAcknowledgment(
     }
 
     companion object {
-        fun from(buffer: ReadBuffer) = UnsubscribeAcknowledgment(buffer.readUnsignedShort().toInt())
+        fun from(buffer: ReadBuffer) = UnsubscribeAcknowledgment(AckWireCodec.decode(buffer).packetId.toInt())
     }
 }

@@ -6,6 +6,7 @@ import com.ditchoom.mqtt.MalformedPacketException
 import com.ditchoom.mqtt.controlpacket.IConnectionAcknowledgment
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
 import com.ditchoom.mqtt3.controlpacket.ConnectionAcknowledgment.VariableHeader.ReturnCode
+import com.ditchoom.mqtt3.controlpacket.wire.ConnAckWireCodec
 import com.ditchoom.mqtt3.controlpacket.ConnectionAcknowledgment.VariableHeader.ReturnCode.CONNECTION_ACCEPTED
 import com.ditchoom.mqtt3.controlpacket.ConnectionAcknowledgment.VariableHeader.ReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD
 import com.ditchoom.mqtt3.controlpacket.ConnectionAcknowledgment.VariableHeader.ReturnCode.CONNECTION_REFUSED_IDENTIFIER_REJECTED
@@ -121,8 +122,9 @@ data class ConnectionAcknowledgment(
 
         companion object {
             fun from(buffer: ReadBuffer): VariableHeader {
-                val sessionPresent = buffer.readByte() == 1.toByte()
-                val connectionReasonByte = buffer.readUnsignedByte()
+                val wire = ConnAckWireCodec.decode(buffer)
+                val sessionPresent = wire.acknowledgeFlags.toInt() and 1 == 1
+                val connectionReasonByte = wire.returnCode
                 val connectionReasonByteNormalized =
                     if (connectionReasonByte > 5.toUByte()) {
                         RESERVED

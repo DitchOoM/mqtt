@@ -5,6 +5,7 @@ plugins {
     id("com.vanniktech.maven.publish")
     id("org.jetbrains.dokka")
     alias(libs.plugins.sqldelight)
+    alias(libs.plugins.ksp)
     signing
     id("com.ditchoom.version")
     id("com.ditchoom.module")
@@ -48,6 +49,7 @@ kotlin {
             implementation(libs.kotlinx.coroutines.core)
             implementation(project(":models-base"))
             implementation(libs.buffer)
+            implementation(libs.buffer.codec)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
@@ -68,6 +70,24 @@ kotlin {
         nativeMain.dependencies {
             implementation(libs.sqldelight.native.driver)
         }
+    }
+}
+
+// KSP: generate codecs for commonMain (visible to all targets)
+dependencies {
+    add("kspCommonMainMetadata", libs.buffer.codec.processor)
+    add("kspCommonMainMetadata", libs.buffer.codec.mqtt.spi)
+}
+
+// Wire KSP commonMain output into each target's source set
+kotlin.sourceSets.commonMain {
+    kotlin.srcDir("build/generated/ksp/metadata/commonMain/kotlin")
+}
+
+// Ensure KSP runs before compilation for all targets
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask<*>>().configureEach {
+    if (name != "kspCommonMainKotlinMetadata") {
+        dependsOn("kspCommonMainKotlinMetadata")
     }
 }
 

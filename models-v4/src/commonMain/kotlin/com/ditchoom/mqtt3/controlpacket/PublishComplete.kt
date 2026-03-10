@@ -4,6 +4,7 @@ import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
 import com.ditchoom.mqtt.controlpacket.IPublishComplete
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
+import com.ditchoom.mqtt3.controlpacket.wire.AckWireCodec
 
 /**
  * 3.7 PUBCOMP – Publish complete (QoS 2 delivery part 3)
@@ -21,6 +22,6 @@ data class PublishComplete(
     override fun remainingLength() = 2
 
     companion object {
-        fun from(buffer: ReadBuffer) = PublishComplete(buffer.readUnsignedShort().toInt())
+        fun from(buffer: ReadBuffer) = PublishComplete(AckWireCodec.decode(buffer).packetId.toInt())
     }
 }

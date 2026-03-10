@@ -5,6 +5,7 @@ import com.ditchoom.buffer.WriteBuffer
 import com.ditchoom.mqtt.controlpacket.IPublishRelease
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
+import com.ditchoom.mqtt3.controlpacket.wire.AckWireCodec
 
 /**
  * 3.6 PUBREL – Publish release (QoS 2 delivery part 2)
@@ -28,6 +29,6 @@ data class PublishRelease(
     ) = PublishComplete(packetIdentifier)
 
     companion object {
-        fun from(buffer: ReadBuffer) = PublishRelease(buffer.readUnsignedShort().toInt())
+        fun from(buffer: ReadBuffer) = PublishRelease(AckWireCodec.decode(buffer).packetId.toInt())
     }
 }

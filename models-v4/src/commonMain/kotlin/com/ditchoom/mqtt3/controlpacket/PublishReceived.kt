@@ -5,6 +5,7 @@ import com.ditchoom.buffer.WriteBuffer
 import com.ditchoom.mqtt.controlpacket.IPublishReceived
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
+import com.ditchoom.mqtt3.controlpacket.wire.AckWireCodec
 
 /**
  * 3.5 PUBREC – Publish received (QoS 2 delivery part 1)
@@ -28,6 +29,6 @@ data class PublishReceived(
     ) = PublishRelease(packetIdentifier.toUShort().toInt())
 
     companion object {
-        fun from(buffer: ReadBuffer) = PublishReceived(buffer.readUnsignedShort().toInt())
+        fun from(buffer: ReadBuffer) = PublishReceived(AckWireCodec.decode(buffer).packetId.toInt())
     }
 }

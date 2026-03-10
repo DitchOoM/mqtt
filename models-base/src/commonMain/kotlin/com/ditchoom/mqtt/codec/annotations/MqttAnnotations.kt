@@ -1,4 +1,4 @@
-package com.ditchoom.buffer.codec.mqtt.annotations
+package com.ditchoom.mqtt.codec.annotations
 
 /**
  * Marks a field as an MQTT Variable Byte Integer (VBI).

@@ -22,7 +22,6 @@ androidxTestCore = "1.7.0"
 buffer = { module = "com.ditchoom:buffer", version.ref = "buffer" }
 buffer-codec = { module = "com.ditchoom:buffer-codec", version.ref = "buffer" }
 buffer-codec-processor = { module = "com.ditchoom:buffer-codec-processor", version.ref = "buffer" }
-buffer-codec-mqtt-spi = { module = "com.ditchoom:buffer-codec-mqtt-spi", version.ref = "buffer" }
 socket = { module = "com.ditchoom:socket", version.ref = "socket" }
 websocket = { module = "com.ditchoom:websocket", version.ref = "websocket" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }

@@ -76,7 +76,7 @@ kotlin {
 // KSP: generate codecs for commonMain (visible to all targets)
 dependencies {
     add("kspCommonMainMetadata", libs.buffer.codec.processor)
-    add("kspCommonMainMetadata", libs.buffer.codec.mqtt.spi)
+    add("kspCommonMainMetadata", project(":codec-spi"))
 }
 
 // Wire KSP commonMain output into each target's source set

@@ -9,7 +9,9 @@ import com.ditchoom.mqtt.MalformedPacketException
 import com.ditchoom.mqtt.ProtocolError
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readMqttUtf8StringNotValidatedSized
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readVariableByteInteger
+import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.variableByteSize
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.writeMqttUtf8String
+import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.writeVariableByteInteger
 import com.ditchoom.mqtt.controlpacket.QualityOfService.AT_LEAST_ONCE
 import com.ditchoom.mqtt.controlpacket.QualityOfService.AT_MOST_ONCE
 import com.ditchoom.mqtt.controlpacket.Topic
@@ -174,7 +176,18 @@ fun ReadBuffer.readMqttProperty(): Pair<Property, Int> {
     return Pair(property, property.size() + 1)
 }
 
-fun ReadBuffer.readProperties() = readPropertiesSized().second
+fun ReadBuffer.readProperties(): Collection<Property>? = readPropertiesSized().second
+
+fun WriteBuffer.writeProperties(properties: Collection<Property>?) {
+    val bodySize = properties?.sumOf { it.size() } ?: 0
+    writeVariableByteInteger(bodySize)
+    properties?.forEach { it.write(this) }
+}
+
+fun propertiesSize(properties: Collection<Property>?): Int {
+    val bodySize = properties?.sumOf { it.size() } ?: 0
+    return bodySize + variableByteSize(bodySize)
+}
 
 fun ReadBuffer.readPropertiesSized(): Pair<Int, Collection<Property>?> {
     val propertyLength = readVariableByteInteger()

@@ -21,7 +21,7 @@ import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
 import com.ditchoom.mqtt5.controlpacket.properties.Property
 import com.ditchoom.mqtt5.controlpacket.properties.ReasonString
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
-import com.ditchoom.mqtt5.controlpacket.properties.readProperties
+import com.ditchoom.mqtt5.controlpacket.wire.AckV5WireCodec
 
 /**
  * 3.5 PUBREC – Publish received (QoS 2 delivery part 1)
@@ -199,31 +199,29 @@ data class PublishReceived(
                 buffer: ReadBuffer,
                 remainingLength: Int,
             ): VariableHeader {
-                val packetIdentifier = buffer.readUnsignedShort().toInt()
                 if (remainingLength == 2) {
+                    val packetIdentifier = buffer.readUnsignedShort().toInt()
                     return VariableHeader(packetIdentifier)
-                } else {
-                    val reasonCodeByte = buffer.readUnsignedByte()
-                    val reasonCode =
-                        when (reasonCodeByte) {
-                            SUCCESS.byte -> SUCCESS
-                            NO_MATCHING_SUBSCRIBERS.byte -> NO_MATCHING_SUBSCRIBERS
-                            UNSPECIFIED_ERROR.byte -> UNSPECIFIED_ERROR
-                            IMPLEMENTATION_SPECIFIC_ERROR.byte -> IMPLEMENTATION_SPECIFIC_ERROR
-                            NOT_AUTHORIZED.byte -> NOT_AUTHORIZED
-                            TOPIC_NAME_INVALID.byte -> TOPIC_NAME_INVALID
-                            PACKET_IDENTIFIER_IN_USE.byte -> PACKET_IDENTIFIER_IN_USE
-                            QUOTA_EXCEEDED.byte -> QUOTA_EXCEEDED
-                            PAYLOAD_FORMAT_INVALID.byte -> PAYLOAD_FORMAT_INVALID
-                            else -> throw MalformedPacketException(
-                                "Invalid reason code $reasonCodeByte" +
-                                    "see: https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477424",
-                            )
-                        }
-                    val propsData = buffer.readProperties()
-                    val props = Properties.from(propsData)
-                    return VariableHeader(packetIdentifier, reasonCode, props)
                 }
+                val wire = AckV5WireCodec.decode(buffer)
+                val reasonCode =
+                    when (wire.reasonCode) {
+                        SUCCESS.byte -> SUCCESS
+                        NO_MATCHING_SUBSCRIBERS.byte -> NO_MATCHING_SUBSCRIBERS
+                        UNSPECIFIED_ERROR.byte -> UNSPECIFIED_ERROR
+                        IMPLEMENTATION_SPECIFIC_ERROR.byte -> IMPLEMENTATION_SPECIFIC_ERROR
+                        NOT_AUTHORIZED.byte -> NOT_AUTHORIZED
+                        TOPIC_NAME_INVALID.byte -> TOPIC_NAME_INVALID
+                        PACKET_IDENTIFIER_IN_USE.byte -> PACKET_IDENTIFIER_IN_USE
+                        QUOTA_EXCEEDED.byte -> QUOTA_EXCEEDED
+                        PAYLOAD_FORMAT_INVALID.byte -> PAYLOAD_FORMAT_INVALID
+                        else -> throw MalformedPacketException(
+                            "Invalid reason code ${wire.reasonCode}" +
+                                "see: https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477424",
+                        )
+                    }
+                val props = Properties.from(wire.properties)
+                return VariableHeader(wire.packetId.toInt(), reasonCode, props)
             }
         }
     }

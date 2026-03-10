@@ -24,6 +24,7 @@ import com.ditchoom.mqtt5.controlpacket.properties.Property
 import com.ditchoom.mqtt5.controlpacket.properties.ReasonString
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
 import com.ditchoom.mqtt5.controlpacket.properties.readPropertiesSized
+import com.ditchoom.mqtt5.controlpacket.wire.SubscribeV5WireCodec
 
 /**
  * 3.8 SUBSCRIBE - Subscribe request
@@ -229,9 +230,46 @@ data class SubscribeRequest(
             buffer: ReadBuffer,
             remainingLength: Int,
         ): SubscribeRequest {
-            val header = VariableHeader.from(buffer, remainingLength)
-            val subscriptions = Subscription.fromMany(buffer, remainingLength - header.first)
-            return SubscribeRequest(header.second, subscriptions)
+            val wire = SubscribeV5WireCodec.decode(buffer)
+            val props = Properties.from(wire.properties)
+            val header = VariableHeader(wire.packetIdentifier.toInt(), props)
+            val subscriptions =
+                wire.subscriptions.map { sub ->
+                    val opts = sub.subscriptionOptions.toInt()
+                    val reservedBit7 = opts.shr(7) == 1
+                    if (reservedBit7) {
+                        throw ProtocolError("Bit 7 in Subscribe payload is set to an invalid value (it is reserved)")
+                    }
+                    val reservedBit6 = opts.shl(1).shr(7) == 1
+                    if (reservedBit6) {
+                        throw ProtocolError("Bit 7 in Subscribe payload is set to an invalid value (it is reserved)")
+                    }
+                    val retainHandlingBit5 = opts.shl(2).shr(7) == 1
+                    val retainHandlingBit4 = opts.shl(3).shr(7) == 1
+                    val retainHandling =
+                        if (retainHandlingBit5 && retainHandlingBit4) {
+                            throw ProtocolError("Retain Handling Value cannot be set to 3")
+                        } else if (retainHandlingBit5 && !retainHandlingBit4) {
+                            DO_NOT_SEND_RETAINED_MESSAGES
+                        } else if (!retainHandlingBit5 && retainHandlingBit4) {
+                            SEND_RETAINED_MESSAGES_AT_SUBSCRIBE_ONLY_IF_SUBSCRIBE_DOESNT_EXISTS
+                        } else {
+                            SEND_RETAINED_MESSAGES_AT_TIME_OF_SUBSCRIBE
+                        }
+                    val rapBit3 = opts.shl(4).shr(7) == 1
+                    val nlBit2 = opts.shl(5).shr(7) == 1
+                    val qosBit1 = opts.shl(6).shr(7) == 1
+                    val qosBit0 = opts.shl(7).shr(7) == 1
+                    val qos = QualityOfService.fromBooleans(qosBit1, qosBit0)
+                    Subscription(
+                        Topic.fromOrThrow(sub.topicFilter, Topic.Type.Filter),
+                        qos,
+                        nlBit2,
+                        rapBit3,
+                        retainHandling,
+                    )
+                }.toSet()
+            return SubscribeRequest(header, subscriptions)
         }
     }
 }

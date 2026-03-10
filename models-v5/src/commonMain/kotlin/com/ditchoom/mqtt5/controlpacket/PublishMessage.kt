@@ -28,6 +28,8 @@ import com.ditchoom.mqtt5.controlpacket.properties.SubscriptionIdentifier
 import com.ditchoom.mqtt5.controlpacket.properties.TopicAlias
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
 import com.ditchoom.mqtt5.controlpacket.properties.readPropertiesSized
+import com.ditchoom.mqtt5.controlpacket.wire.PublishNoIdV5WireCodec
+import com.ditchoom.mqtt5.controlpacket.wire.PublishWithIdV5WireCodec
 
 /**
  * Creates an MQTT PUBLISH
@@ -756,17 +758,29 @@ data class PublishMessage(
             remainingLength: Int,
         ): PublishMessage {
             val fixedHeader = FixedHeader.fromByte(byte1)
-            val variableHeaderSized = VariableHeader.from(buffer, fixedHeader.qos == AT_MOST_ONCE)
-            val variableHeader = variableHeaderSized.second
-            val variableSize = variableHeaderSized.first
-            val size = remainingLength - variableSize
-            val payloadBuffer =
-                if (size > 0) {
-                    buffer.readBytes(size)
-                } else {
-                    null
+            if (fixedHeader.qos == AT_MOST_ONCE) {
+                val wire = PublishNoIdV5WireCodec.decode<ReadBuffer?>(buffer) { pr ->
+                    if (pr.remaining() > 0) pr.copyToBuffer() else null
                 }
-            return PublishMessage(fixedHeader, variableHeader, payloadBuffer)
+                val props = VariableHeader.Properties.from(wire.properties)
+                val variableHeader = VariableHeader(
+                    Topic.fromOrThrow(wire.topicName, Topic.Type.Name),
+                    NO_PACKET_ID,
+                    props,
+                )
+                return PublishMessage(fixedHeader, variableHeader, wire.payload)
+            } else {
+                val wire = PublishWithIdV5WireCodec.decode<ReadBuffer?>(buffer) { pr ->
+                    if (pr.remaining() > 0) pr.copyToBuffer() else null
+                }
+                val props = VariableHeader.Properties.from(wire.properties)
+                val variableHeader = VariableHeader(
+                    Topic.fromOrThrow(wire.topicName, Topic.Type.Name),
+                    wire.packetId.toInt(),
+                    props,
+                )
+                return PublishMessage(fixedHeader, variableHeader, wire.payload)
+            }
         }
     }
 }

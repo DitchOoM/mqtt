@@ -14,7 +14,7 @@ import com.ditchoom.mqtt5.controlpacket.properties.ReasonString
 import com.ditchoom.mqtt5.controlpacket.properties.ServerReference
 import com.ditchoom.mqtt5.controlpacket.properties.SessionExpiryInterval
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
-import com.ditchoom.mqtt5.controlpacket.properties.readProperties
+import com.ditchoom.mqtt5.controlpacket.wire.DisconnectV5WireCodec
 
 /**
  * 3.14 DISCONNECT – Disconnect notification
@@ -204,9 +204,9 @@ data class DisconnectNotification(
 
         companion object {
             fun from(buffer: ReadBuffer): VariableHeader {
-                val reasonCodeByte = buffer.readUnsignedByte()
-                val reasonCode = getDisconnectCode(reasonCodeByte)
-                val props = Properties.from(buffer.readProperties())
+                val wire = DisconnectV5WireCodec.decode(buffer)
+                val reasonCode = getDisconnectCode(wire.reasonCode)
+                val props = Properties.from(wire.properties)
                 return VariableHeader(reasonCode, props)
             }
         }

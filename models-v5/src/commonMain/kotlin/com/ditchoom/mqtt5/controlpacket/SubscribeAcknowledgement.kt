@@ -27,6 +27,7 @@ import com.ditchoom.mqtt5.controlpacket.properties.Property
 import com.ditchoom.mqtt5.controlpacket.properties.ReasonString
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
 import com.ditchoom.mqtt5.controlpacket.properties.readPropertiesSized
+import com.ditchoom.mqtt5.controlpacket.wire.SubAckV5WireCodec
 
 /**
  * 3.9 SUBACK – Subscribe acknowledgement
@@ -207,12 +208,12 @@ data class SubscribeAcknowledgement(
             buffer: ReadBuffer,
             remainingLength: Int,
         ): SubscribeAcknowledgement {
-            val variableHeader = VariableHeader.from(buffer, remainingLength)
-            val max = remainingLength - variableHeader.first
-            val codes = ArrayList<ReasonCode>(max)
-            while (codes.size < max) {
-                val reasonCode =
-                    when (val reasonCodeByte = buffer.readUnsignedByte()) {
+            val wire = SubAckV5WireCodec.decode(buffer)
+            val props = Properties.from(wire.properties)
+            val variableHeader = VariableHeader(wire.packetIdentifier.toInt(), props)
+            val codes =
+                wire.returnCodes.map { rc ->
+                    when (rc.raw) {
                         GRANTED_QOS_0.byte -> GRANTED_QOS_0
                         GRANTED_QOS_1.byte -> GRANTED_QOS_1
                         GRANTED_QOS_2.byte -> GRANTED_QOS_2
@@ -226,13 +227,12 @@ data class SubscribeAcknowledgement(
                         SUBSCRIPTION_IDENTIFIERS_NOT_SUPPORTED.byte -> SUBSCRIPTION_IDENTIFIERS_NOT_SUPPORTED
                         WILDCARD_SUBSCRIPTIONS_NOT_SUPPORTED.byte -> WILDCARD_SUBSCRIPTIONS_NOT_SUPPORTED
                         else -> throw MalformedPacketException(
-                            "Invalid reason code $reasonCodeByte " +
+                            "Invalid reason code ${rc.raw} " +
                                 "see: https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477478",
                         )
                     }
-                codes += reasonCode
-            }
-            return SubscribeAcknowledgement(variableHeader.second, codes)
+                }
+            return SubscribeAcknowledgement(variableHeader, codes)
         }
     }
 }

@@ -16,6 +16,7 @@ import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
 import com.ditchoom.mqtt5.controlpacket.properties.Property
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
 import com.ditchoom.mqtt5.controlpacket.properties.readPropertiesSized
+import com.ditchoom.mqtt5.controlpacket.wire.UnsubscribeV5WireCodec
 
 /**
  * 3.10 UNSUBSCRIBE – Unsubscribe request
@@ -156,15 +157,11 @@ data class UnsubscribeRequest(
             buffer: ReadBuffer,
             remainingLength: Int,
         ): UnsubscribeRequest {
-            val header = VariableHeader.from(buffer)
-            val topics = mutableSetOf<Topic>()
-            var bytesRead = header.first
-            while (bytesRead < remainingLength) {
-                val result = buffer.readMqttUtf8StringNotValidatedSized()
-                bytesRead += result.first + UShort.SIZE_BYTES
-                topics += Topic.fromOrThrow(result.second, Topic.Type.Filter)
-            }
-            return UnsubscribeRequest(header.second, topics)
+            val wire = UnsubscribeV5WireCodec.decode(buffer)
+            val props = VariableHeader.Properties.from(wire.properties)
+            val header = VariableHeader(wire.packetIdentifier.toInt(), props)
+            val topics = wire.topics.map { Topic.fromOrThrow(it.topicFilter, Topic.Type.Filter) }.toSet()
+            return UnsubscribeRequest(header, topics)
         }
     }
 }

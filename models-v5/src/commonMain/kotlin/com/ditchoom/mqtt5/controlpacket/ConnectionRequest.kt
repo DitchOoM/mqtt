@@ -34,6 +34,7 @@ import com.ditchoom.mqtt5.controlpacket.properties.TopicAliasMaximum
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
 import com.ditchoom.mqtt5.controlpacket.properties.WillDelayInterval
 import com.ditchoom.mqtt5.controlpacket.properties.readProperties
+import com.ditchoom.mqtt5.controlpacket.wire.ConnectV5WireCodec
 
 /**
  * 3.1 CONNECT – Connection Request
@@ -1193,7 +1194,10 @@ data class ConnectionRequest(
             }
 
             companion object {
-                fun from(buffer: ReadBuffer): WillProperties {
+                fun from(buffer: ReadBuffer): WillProperties = from(buffer.readProperties())
+
+                fun from(properties: Collection<Property>?): WillProperties {
+                    if (properties == null) return WillProperties()
                     var willDelayIntervalSeconds: Long? = null
                     var payloadFormatIndicator: Boolean? = null
                     var messageExpiryIntervalSeconds: Long? = null
@@ -1201,7 +1205,6 @@ data class ConnectionRequest(
                     var responseTopic: Topic? = null
                     var correlationData: ReadBuffer? = null
                     val userProperty = mutableListOf<Pair<String, String>>()
-                    val properties = buffer.readProperties() ?: return WillProperties()
                     properties.forEach {
                         when (it) {
                             is WillDelayInterval -> {
@@ -1369,8 +1372,46 @@ data class ConnectionRequest(
 
     companion object {
         fun from(buffer: ReadBuffer): ConnectionRequest {
-            val variableHeader = VariableHeader.from(buffer)
-            val payload = Payload.from(buffer, variableHeader)
+            val wire = ConnectV5WireCodec.decode<ReadBuffer?>(buffer) { pr ->
+                if (pr.remaining() > 0) pr.copyToBuffer() else null
+            }
+            if (wire.connectFlags.reserved) {
+                throw MalformedPacketException(
+                    "Reserved flag in Connect Variable Header packet is set incorrectly to 1",
+                )
+            }
+            val willQos = QualityOfService.fromBooleans(wire.connectFlags.willQosBit2, wire.connectFlags.willQosBit1)
+            val properties = VariableHeader.Properties.from(wire.properties)
+            val variableHeader = VariableHeader(
+                wire.protocolName,
+                wire.protocolLevel,
+                wire.connectFlags.usernameFlag,
+                wire.connectFlags.passwordFlag,
+                wire.connectFlags.willRetain,
+                willQos,
+                wire.connectFlags.willFlag,
+                wire.connectFlags.cleanStart,
+                wire.keepAlive.toInt(),
+                properties,
+            )
+            val willProperties = if (wire.willProperties != null) {
+                Payload.WillProperties.from(wire.willProperties)
+            } else {
+                null
+            }
+            val willTopic = if (wire.willTopic != null) {
+                Topic.fromOrThrow(wire.willTopic, Topic.Type.Name)
+            } else {
+                null
+            }
+            val payload = Payload(
+                wire.clientId,
+                willProperties,
+                willTopic,
+                wire.willPayload,
+                wire.username,
+                wire.password,
+            )
             return ConnectionRequest(variableHeader, payload)
         }
     }

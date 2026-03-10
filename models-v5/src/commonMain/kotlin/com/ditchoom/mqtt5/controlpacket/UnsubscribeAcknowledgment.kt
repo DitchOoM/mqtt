@@ -20,6 +20,7 @@ import com.ditchoom.mqtt5.controlpacket.properties.Property
 import com.ditchoom.mqtt5.controlpacket.properties.ReasonString
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
 import com.ditchoom.mqtt5.controlpacket.properties.readPropertiesSized
+import com.ditchoom.mqtt5.controlpacket.wire.UnsubAckV5WireCodec
 
 data class UnsubscribeAcknowledgment(
     val variable: VariableHeader,
@@ -173,12 +174,12 @@ data class UnsubscribeAcknowledgment(
             buffer: ReadBuffer,
             remainingLength: Int,
         ): UnsubscribeAcknowledgment {
-            val variableHeader = VariableHeader.from(buffer)
-            val list = mutableListOf<ReasonCode>()
-            while (remainingLength - variableHeader.first > list.count()) {
-                val reasonCodeByte = buffer.readUnsignedByte()
-                list +=
-                    when (reasonCodeByte) {
+            val wire = UnsubAckV5WireCodec.decode(buffer)
+            val props = VariableHeader.Properties.from(wire.properties)
+            val variableHeader = VariableHeader(wire.packetIdentifier.toInt(), props)
+            val list =
+                wire.reasonCodes.map { rc ->
+                    when (rc.raw) {
                         SUCCESS.byte -> SUCCESS
                         NO_SUBSCRIPTIONS_EXISTED.byte -> NO_SUBSCRIPTIONS_EXISTED
                         UNSPECIFIED_ERROR.byte -> UNSPECIFIED_ERROR
@@ -187,12 +188,12 @@ data class UnsubscribeAcknowledgment(
                         TOPIC_FILTER_INVALID.byte -> TOPIC_FILTER_INVALID
                         PACKET_IDENTIFIER_IN_USE.byte -> PACKET_IDENTIFIER_IN_USE
                         else -> throw MalformedPacketException(
-                            "Invalid reason code $reasonCodeByte " +
+                            "Invalid reason code ${rc.raw} " +
                                 "see: https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477478",
                         )
                     }
-            }
-            return UnsubscribeAcknowledgment(variableHeader.second, list)
+                }
+            return UnsubscribeAcknowledgment(variableHeader, list)
         }
     }
 }

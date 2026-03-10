@@ -14,7 +14,7 @@ import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
 import com.ditchoom.mqtt5.controlpacket.properties.Property
 import com.ditchoom.mqtt5.controlpacket.properties.ReasonString
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
-import com.ditchoom.mqtt5.controlpacket.properties.readProperties
+import com.ditchoom.mqtt5.controlpacket.wire.AckV5WireCodec
 
 /**
  * 3.7 PUBCOMP – Publish complete (QoS 2 delivery part 3)
@@ -196,24 +196,22 @@ data class PublishComplete(
                 buffer: ReadBuffer,
                 remainingLength: Int,
             ): VariableHeader {
-                val packetIdentifier = buffer.readUnsignedShort()
-                return if (remainingLength == 2) {
-                    VariableHeader(packetIdentifier.toInt())
-                } else {
-                    val reasonCodeByte = buffer.readUnsignedByte()
-                    val reasonCode =
-                        when (reasonCodeByte) {
-                            SUCCESS.byte -> SUCCESS
-                            PACKET_IDENTIFIER_NOT_FOUND.byte -> PACKET_IDENTIFIER_NOT_FOUND
-                            else -> throw MalformedPacketException(
-                                "Invalid reason code $reasonCodeByte" +
-                                    "see: https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477444",
-                            )
-                        }
-                    val propsData = buffer.readProperties()
-                    val props = Properties.from(propsData)
-                    VariableHeader(packetIdentifier.toInt(), reasonCode, props)
+                if (remainingLength == 2) {
+                    val packetIdentifier = buffer.readUnsignedShort()
+                    return VariableHeader(packetIdentifier.toInt())
                 }
+                val wire = AckV5WireCodec.decode(buffer)
+                val reasonCode =
+                    when (wire.reasonCode) {
+                        SUCCESS.byte -> SUCCESS
+                        PACKET_IDENTIFIER_NOT_FOUND.byte -> PACKET_IDENTIFIER_NOT_FOUND
+                        else -> throw MalformedPacketException(
+                            "Invalid reason code ${wire.reasonCode}" +
+                                "see: https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477444",
+                        )
+                    }
+                val props = Properties.from(wire.properties)
+                return VariableHeader(wire.packetId.toInt(), reasonCode, props)
             }
         }
     }

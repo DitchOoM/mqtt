@@ -17,7 +17,7 @@ import com.ditchoom.mqtt5.controlpacket.properties.AuthenticationMethod
 import com.ditchoom.mqtt5.controlpacket.properties.Property
 import com.ditchoom.mqtt5.controlpacket.properties.ReasonString
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
-import com.ditchoom.mqtt5.controlpacket.properties.readProperties
+import com.ditchoom.mqtt5.controlpacket.wire.AuthV5WireCodec
 
 /**
  * 3.15 AUTH – Authentication exchange
@@ -177,9 +177,9 @@ data class AuthenticationExchange(
 
         companion object {
             fun from(buffer: ReadBuffer): VariableHeader {
-                val reasonCodeByte = buffer.readUnsignedByte()
-                val reasonCode = getReasonCode(reasonCodeByte)
-                val props = Properties.from(buffer.readProperties())
+                val wire = AuthV5WireCodec.decode(buffer)
+                val reasonCode = getReasonCode(wire.reasonCode)
+                val props = Properties.from(wire.properties)
                 return VariableHeader(reasonCode, props)
             }
         }

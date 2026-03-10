@@ -100,6 +100,13 @@ internal suspend fun createWebSocketTransport(
     val client = WebSocketClient.allocate(connectionOptions)
     try {
         client.connect()
+        val state = client.connectionState.value
+        if (state is ConnectionState.Disconnected) {
+            throw state.t ?: IllegalStateException("WebSocket connection failed")
+        }
+        if (state != ConnectionState.Connected) {
+            throw IllegalStateException("WebSocket connection not established, state: $state")
+        }
     } catch (e: Throwable) {
         client.close()
         throw e
@@ -108,7 +115,9 @@ internal suspend fun createWebSocketTransport(
     val stream =
         StreamProcessor.builder(pool).buildSuspendingWithAutoFill { autoFiller ->
             val buffer = client.incomingBinaryMessages.first()
-            buffer.resetForRead()
+            // Don't call resetForRead() — the WebSocket client already delivers
+            // payload buffers in read mode (position=0, limit=payloadSize).
+            // Calling resetForRead() would set limit=0, discarding the data.
             if (buffer.remaining() > 0) {
                 autoFiller.append(buffer)
             } else {

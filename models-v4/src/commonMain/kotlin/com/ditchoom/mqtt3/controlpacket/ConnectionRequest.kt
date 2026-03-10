@@ -13,6 +13,7 @@ import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.Topic
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
 import com.ditchoom.mqtt.controlpacket.format.fixed.get
+import com.ditchoom.mqtt3.controlpacket.wire.ConnectWireCodec
 
 /**
  * 3.1 CONNECT – Client requests a connection to a Server
@@ -591,8 +592,33 @@ data class ConnectionRequest(
 
     companion object {
         fun from(buffer: ReadBuffer): ConnectionRequest {
-            val variableHeader = VariableHeader.from(buffer)
-            val payload = Payload.from(buffer, variableHeader)
+            val wire = ConnectWireCodec.decode<ReadBuffer>(buffer) { pr ->
+                pr.copyToBuffer()
+            }
+            val flags = wire.connectFlags
+            if (flags.reserved) {
+                throw MalformedPacketException(
+                    "Reserved flag in Connect Variable Header packet is set incorrectly to 1",
+                )
+            }
+            val variableHeader = VariableHeader(
+                protocolName = wire.protocolName,
+                protocolLevel = wire.protocolLevel,
+                hasUserName = flags.usernameFlag,
+                hasPassword = flags.passwordFlag,
+                willRetain = flags.willRetain,
+                willQos = QualityOfService.fromBooleans(flags.willQosBit2, flags.willQosBit1),
+                willFlag = flags.willFlag,
+                cleanSession = flags.cleanSession,
+                keepAliveSeconds = wire.keepAlive.toInt(),
+            )
+            val payload = Payload(
+                clientId = wire.clientId,
+                willTopic = wire.willTopic?.let { Topic.fromOrThrow(it, Topic.Type.Name) },
+                willPayload = wire.willPayload,
+                userName = wire.username,
+                password = wire.password,
+            )
             return ConnectionRequest(variableHeader, payload)
         }
     }

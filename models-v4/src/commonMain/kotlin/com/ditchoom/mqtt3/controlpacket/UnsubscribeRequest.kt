@@ -4,11 +4,11 @@ import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
 import com.ditchoom.buffer.utf8Length
 import com.ditchoom.mqtt.ProtocolError
-import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readMqttUtf8StringNotValidatedSized
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.writeMqttUtf8String
 import com.ditchoom.mqtt.controlpacket.IUnsubscribeRequest
 import com.ditchoom.mqtt.controlpacket.Topic
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
+import com.ditchoom.mqtt3.controlpacket.wire.UnsubscribeWireCodec
 
 /**
  * 3.10 UNSUBSCRIBE – Unsubscribe request
@@ -53,15 +53,10 @@ data class UnsubscribeRequest(
             buffer: ReadBuffer,
             remainingLength: Int,
         ): UnsubscribeRequest {
-            val packetIdentifier = buffer.readUnsignedShort()
-            val topics = mutableSetOf<Topic>()
-            var bytesRead = 0
-            while (bytesRead < remainingLength - 2) {
-                val pair = buffer.readMqttUtf8StringNotValidatedSized()
-                bytesRead += 2 + pair.first
-                topics += Topic.fromOrThrow(pair.second, Topic.Type.Filter)
-            }
-            return UnsubscribeRequest(packetIdentifier.toInt(), topics)
+            val sliced = buffer.readBytes(remainingLength)
+            val wire = UnsubscribeWireCodec.decode(sliced)
+            val topics = wire.topics.map { Topic.fromOrThrow(it.topicFilter, Topic.Type.Filter) }.toSet()
+            return UnsubscribeRequest(wire.packetIdentifier.toInt(), topics)
         }
     }
 }

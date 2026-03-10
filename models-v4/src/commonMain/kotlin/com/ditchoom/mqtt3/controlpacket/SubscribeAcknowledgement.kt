@@ -3,7 +3,6 @@ package com.ditchoom.mqtt3.controlpacket
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
 import com.ditchoom.mqtt.MalformedPacketException
-import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.variableByteSize
 import com.ditchoom.mqtt.controlpacket.ISubscribeAcknowledgement
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.GRANTED_QOS_0
@@ -11,6 +10,7 @@ import com.ditchoom.mqtt.controlpacket.format.ReasonCode.GRANTED_QOS_1
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.GRANTED_QOS_2
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.UNSPECIFIED_ERROR
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
+import com.ditchoom.mqtt3.controlpacket.wire.SubAckWireCodec
 
 /**
  * 3.9 SUBACK – Subscribe acknowledgement
@@ -40,20 +40,18 @@ data class SubscribeAcknowledgement(
             buffer: ReadBuffer,
             remainingLength: Int,
         ): SubscribeAcknowledgement {
-            val packetIdentifier = buffer.readUnsignedShort()
-            val returnCodes = mutableListOf<ReasonCode>()
-            while (returnCodes.size < remainingLength - variableByteSize(remainingLength) - 1) {
-                val reasonCode =
-                    when (val reasonCodeByte = buffer.readUnsignedByte()) {
-                        GRANTED_QOS_0.byte -> GRANTED_QOS_0
-                        GRANTED_QOS_1.byte -> GRANTED_QOS_1
-                        GRANTED_QOS_2.byte -> GRANTED_QOS_2
-                        UNSPECIFIED_ERROR.byte -> UNSPECIFIED_ERROR
-                        else -> throw MalformedPacketException("Invalid return code $reasonCodeByte")
-                    }
-                returnCodes += reasonCode
+            val sliced = buffer.readBytes(remainingLength)
+            val wire = SubAckWireCodec.decode(sliced)
+            val returnCodes = wire.returnCodes.map { rc ->
+                when (rc.raw) {
+                    GRANTED_QOS_0.byte -> GRANTED_QOS_0
+                    GRANTED_QOS_1.byte -> GRANTED_QOS_1
+                    GRANTED_QOS_2.byte -> GRANTED_QOS_2
+                    UNSPECIFIED_ERROR.byte -> UNSPECIFIED_ERROR
+                    else -> throw MalformedPacketException("Invalid return code ${rc.raw}")
+                }
             }
-            return SubscribeAcknowledgement(packetIdentifier.toInt(), returnCodes)
+            return SubscribeAcknowledgement(wire.packetIdentifier.toInt(), returnCodes)
         }
     }
 }

@@ -17,6 +17,8 @@ import com.ditchoom.mqtt.controlpacket.Topic
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
 import com.ditchoom.mqtt.controlpacket.validControlPacketIdentifierRange
+import com.ditchoom.mqtt3.controlpacket.wire.PublishNoIdWireCodec
+import com.ditchoom.mqtt3.controlpacket.wire.PublishWithIdWireCodec
 
 /**
  * A PUBLISH Control Packet is sent from a Client to a Server or from Server to a Client to transport an
@@ -332,19 +334,20 @@ data class PublishMessage(
             remainingLength: Int,
         ): PublishMessage {
             val fixedHeader = FixedHeader.fromByte(byte1)
-            val variableHeader = VariableHeader.from(buffer, fixedHeader.qos == AT_MOST_ONCE)
-            var variableSize = 2 + variableHeader.topicName.toString().utf8Length()
-            if (variableHeader.packetIdentifier in validControlPacketIdentifierRange) {
-                variableSize += 2
-            }
-            val size = remainingLength - variableSize
-            val payloadBuffer =
-                if (size > 0) {
-                    buffer.readBytes(size)
-                } else {
-                    null
+            val sliced = buffer.readBytes(remainingLength)
+            return if (fixedHeader.qos == AT_MOST_ONCE) {
+                val wire = PublishNoIdWireCodec.decode<ReadBuffer?>(sliced) { pr ->
+                    if (pr.remaining() > 0) pr.copyToBuffer() else null
                 }
-            return PublishMessage(fixedHeader, variableHeader, payloadBuffer)
+                val topicName = Topic.fromOrThrow(wire.topicName, Topic.Type.Name)
+                PublishMessage(fixedHeader, VariableHeader(topicName, NO_PACKET_ID), wire.payload)
+            } else {
+                val wire = PublishWithIdWireCodec.decode<ReadBuffer?>(sliced) { pr ->
+                    if (pr.remaining() > 0) pr.copyToBuffer() else null
+                }
+                val topicName = Topic.fromOrThrow(wire.topicName, Topic.Type.Name)
+                PublishMessage(fixedHeader, VariableHeader(topicName, wire.packetId.toInt()), wire.payload)
+            }
         }
 
         fun build(

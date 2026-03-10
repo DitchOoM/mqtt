@@ -15,6 +15,7 @@ import com.ditchoom.mqtt.controlpacket.QualityOfService.EXACTLY_ONCE
 import com.ditchoom.mqtt.controlpacket.Topic
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
+import com.ditchoom.mqtt3.controlpacket.wire.SubscribeWireCodec
 
 /**
  * 3.8 SUBSCRIBE - Subscribe request
@@ -80,9 +81,17 @@ data class SubscribeRequest(
             buffer: ReadBuffer,
             remaining: Int,
         ): SubscribeRequest {
-            val packetIdentifier = buffer.readUnsignedShort().toInt()
-            val subscriptions = Subscription.fromMany(buffer, remaining - UShort.SIZE_BYTES)
-            return SubscribeRequest(packetIdentifier, subscriptions)
+            val sliced = buffer.readBytes(remaining)
+            val wire = SubscribeWireCodec.decode(sliced)
+            val subscriptions = wire.subscriptions.map { sub ->
+                val qosBit1 = sub.requestedQos.toInt().shr(1) and 1 == 1
+                val qosBit0 = sub.requestedQos.toInt() and 1 == 1
+                Subscription(
+                    Topic.fromOrThrow(sub.topicFilter, Topic.Type.Filter),
+                    QualityOfService.fromBooleans(qosBit1, qosBit0),
+                )
+            }.toSet()
+            return SubscribeRequest(wire.packetIdentifier.toInt(), subscriptions)
         }
     }
 }

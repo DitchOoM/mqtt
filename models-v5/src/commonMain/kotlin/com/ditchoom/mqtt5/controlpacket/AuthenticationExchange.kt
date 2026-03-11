@@ -17,6 +17,7 @@ import com.ditchoom.mqtt5.controlpacket.properties.AuthenticationMethod
 import com.ditchoom.mqtt5.controlpacket.properties.Property
 import com.ditchoom.mqtt5.controlpacket.properties.ReasonString
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
+import com.ditchoom.mqtt5.controlpacket.wire.AuthV5Wire
 import com.ditchoom.mqtt5.controlpacket.wire.AuthV5WireCodec
 
 /**
@@ -35,6 +36,29 @@ data class AuthenticationExchange(
     override fun remainingLength() = variable.size()
 
     override fun variableHeader(writeBuffer: WriteBuffer) = variable.serialize(writeBuffer)
+
+    override fun encodeBody(writeBuffer: WriteBuffer) {
+        val propsList = buildList {
+            val auth = variable.properties.authentication
+            if (auth != null) {
+                add(AuthenticationMethod(auth.method))
+                add(AuthenticationData(auth.data))
+            }
+            if (variable.properties.reasonString != null) {
+                add(ReasonString(variable.properties.reasonString))
+            }
+            for (kv in variable.properties.userProperty) {
+                add(UserProperty(kv.first, kv.second))
+            }
+        }
+        AuthV5WireCodec.encode(
+            writeBuffer,
+            AuthV5Wire(
+                variable.reasonCode.byte,
+                propsList.ifEmpty { null },
+            ),
+        )
+    }
 
     /**
      * 3.15.2 AUTH Variable Header

@@ -6,6 +6,7 @@ import com.ditchoom.mqtt.MalformedPacketException
 import com.ditchoom.mqtt.controlpacket.IConnectionAcknowledgment
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
 import com.ditchoom.mqtt3.controlpacket.ConnectionAcknowledgment.VariableHeader.ReturnCode
+import com.ditchoom.mqtt3.controlpacket.wire.ConnAckWire
 import com.ditchoom.mqtt3.controlpacket.wire.ConnAckWireCodec
 import com.ditchoom.mqtt3.controlpacket.ConnectionAcknowledgment.VariableHeader.ReturnCode.CONNECTION_ACCEPTED
 import com.ditchoom.mqtt3.controlpacket.ConnectionAcknowledgment.VariableHeader.ReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD
@@ -41,7 +42,15 @@ data class ConnectionAcknowledgment(
     override val isSuccessful: Boolean = header.connectReason == CONNECTION_ACCEPTED
     override val connectionReason: String = header.connectReason.name
 
-    override fun variableHeader(writeBuffer: WriteBuffer) = header.serialize(writeBuffer)
+    override fun encodeBody(writeBuffer: WriteBuffer) {
+        ConnAckWireCodec.encode(
+            writeBuffer,
+            ConnAckWire(
+                (if (header.sessionPresent) 1u else 0u).toUByte(),
+                header.connectReason.value,
+            ),
+        )
+    }
 
     override fun remainingLength() = 2
 

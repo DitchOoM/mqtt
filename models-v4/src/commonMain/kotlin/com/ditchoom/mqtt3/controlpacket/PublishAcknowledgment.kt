@@ -4,6 +4,7 @@ import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
 import com.ditchoom.mqtt.controlpacket.IPublishAcknowledgment
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
+import com.ditchoom.mqtt3.controlpacket.wire.AckWire
 import com.ditchoom.mqtt3.controlpacket.wire.AckWireCodec
 
 /**
@@ -17,8 +18,8 @@ data class PublishAcknowledgment(
     IPublishAcknowledgment {
     override fun remainingLength() = 2
 
-    override fun variableHeader(writeBuffer: WriteBuffer) {
-        writeBuffer.writeUShort(packetIdentifier.toUShort())
+    override fun encodeBody(writeBuffer: WriteBuffer) {
+        AckWireCodec.encode(writeBuffer, AckWire(packetIdentifier.toUShort()))
     }
 
     companion object {

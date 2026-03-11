@@ -7,9 +7,11 @@ import com.ditchoom.mqtt.controlpacket.IPublishMessage
 import com.ditchoom.mqtt.controlpacket.ISubscribeAcknowledgement
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.Topic
+import com.ditchoom.mqtt.controlpacket.IConnectionRequest
 import com.ditchoom.mqtt3.controlpacket.ConnectionRequest
 import com.ditchoom.socket.NetworkCapabilities
 import com.ditchoom.socket.getNetworkCapabilities
+import com.ditchoom.mqtt5.controlpacket.ConnectionRequest as ConnectionRequestV5
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -183,12 +185,146 @@ class PublicBrokerValidationTest {
             )
         }
 
-    private suspend fun connectPublishDisconnect(connectionOptions: MqttConnectionOptions) {
-        val clientId = "ditchoom-test-${Random.nextInt()}"
-        val connectionRequest =
-            ConnectionRequest(
-                payload = ConnectionRequest.Payload(clientId = clientId),
+    // --- MQTT v5 tests ---
+
+    @Test
+    fun hivemqTcpPlaintextV5() =
+        runTestNoTimeSkipping(timeout = 30.seconds) {
+            if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTestNoTimeSkipping
+            connectPublishDisconnect(
+                MqttConnectionOptions.SocketConnection("broker.hivemq.com", 1883, tls = false, connectionTimeout = 15.seconds),
+                mqttV5 = true,
             )
+        }
+
+    @Test
+    fun hivemqTcpTlsV5() =
+        runTestNoTimeSkipping(timeout = 30.seconds) {
+            if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTestNoTimeSkipping
+            connectPublishDisconnect(
+                MqttConnectionOptions.SocketConnection("broker.hivemq.com", 8883, tls = true, connectionTimeout = 15.seconds),
+                mqttV5 = true,
+            )
+        }
+
+    @Test
+    fun hivemqWebsocketPlaintextV5() =
+        runTestNoTimeSkipping(timeout = 30.seconds) {
+            connectPublishDisconnect(
+                MqttConnectionOptions.WebSocketConnectionOptions(
+                    "broker.hivemq.com",
+                    8000,
+                    websocketEndpoint = "/mqtt",
+                    tls = false,
+                    protocols = listOf("mqtt"),
+                    connectionTimeout = 15.seconds,
+                ),
+                mqttV5 = true,
+            )
+        }
+
+    @Test
+    fun hivemqWebsocketTlsV5() =
+        runTestNoTimeSkipping(timeout = 30.seconds) {
+            connectPublishDisconnect(
+                MqttConnectionOptions.WebSocketConnectionOptions(
+                    "broker.hivemq.com",
+                    8884,
+                    websocketEndpoint = "/mqtt",
+                    tls = true,
+                    protocols = listOf("mqtt"),
+                    connectionTimeout = 15.seconds,
+                ),
+                mqttV5 = true,
+            )
+        }
+
+    @Test
+    fun hivemqTcpTlsSubscribeReceiveV5() =
+        runTestNoTimeSkipping(timeout = 30.seconds) {
+            if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTestNoTimeSkipping
+            connectSubscribeReceive(
+                MqttConnectionOptions.SocketConnection("broker.hivemq.com", 8883, tls = true, connectionTimeout = 15.seconds),
+                mqttV5 = true,
+            )
+        }
+
+    @Test
+    fun hivemqWebsocketTlsSubscribeReceiveV5() =
+        runTestNoTimeSkipping(timeout = 30.seconds) {
+            connectSubscribeReceive(
+                MqttConnectionOptions.WebSocketConnectionOptions(
+                    "broker.hivemq.com",
+                    8884,
+                    websocketEndpoint = "/mqtt",
+                    tls = true,
+                    protocols = listOf("mqtt"),
+                    connectionTimeout = 15.seconds,
+                ),
+                mqttV5 = true,
+            )
+        }
+
+    @Test
+    fun mosquittoTcpPlaintextV5() =
+        runTestNoTimeSkipping(timeout = 30.seconds) {
+            if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTestNoTimeSkipping
+            connectPublishDisconnect(
+                MqttConnectionOptions.SocketConnection("test.mosquitto.org", 1883, tls = false, connectionTimeout = 15.seconds),
+                mqttV5 = true,
+            )
+        }
+
+    @Test
+    fun mosquittoWebsocketPlaintextV5() =
+        runTestNoTimeSkipping(timeout = 30.seconds) {
+            connectPublishDisconnect(
+                MqttConnectionOptions.WebSocketConnectionOptions(
+                    "test.mosquitto.org",
+                    8080,
+                    websocketEndpoint = "/",
+                    tls = false,
+                    protocols = listOf("mqtt"),
+                    connectionTimeout = 15.seconds,
+                ),
+                mqttV5 = true,
+            )
+        }
+
+    @Test
+    fun mosquittoWebsocketTlsV5() =
+        runTestNoTimeSkipping(timeout = 30.seconds) {
+            connectPublishDisconnect(
+                MqttConnectionOptions.WebSocketConnectionOptions(
+                    "test.mosquitto.org",
+                    8081,
+                    websocketEndpoint = "/",
+                    tls = true,
+                    protocols = listOf("mqtt"),
+                    connectionTimeout = 15.seconds,
+                ),
+                mqttV5 = true,
+            )
+        }
+
+    // --- Helpers ---
+
+    private fun makeConnectionRequest(
+        clientId: String,
+        mqttV5: Boolean,
+    ): IConnectionRequest =
+        if (mqttV5) {
+            ConnectionRequestV5(clientId = clientId)
+        } else {
+            ConnectionRequest(payload = ConnectionRequest.Payload(clientId = clientId))
+        }
+
+    private suspend fun connectPublishDisconnect(
+        connectionOptions: MqttConnectionOptions,
+        mqttV5: Boolean = false,
+    ) {
+        val clientId = "ditchoom-test-${Random.nextInt()}"
+        val connectionRequest = makeConnectionRequest(clientId, mqttV5)
         val session = MqttSocketSession.open(-1, connectionRequest, connectionOptions)
         assertTrue(session.connectionAcknowledgement.isSuccessful, "CONNACK failed for $clientId")
 
@@ -209,12 +345,10 @@ class PublicBrokerValidationTest {
     private suspend fun connectMultiplePublishes(
         connectionOptions: MqttConnectionOptions,
         publishCount: Int,
+        mqttV5: Boolean = false,
     ) {
         val clientId = "ditchoom-multi-${Random.nextInt()}"
-        val connectionRequest =
-            ConnectionRequest(
-                payload = ConnectionRequest.Payload(clientId = clientId),
-            )
+        val connectionRequest = makeConnectionRequest(clientId, mqttV5)
         val session = MqttSocketSession.open(-1, connectionRequest, connectionOptions)
         assertTrue(session.connectionAcknowledgement.isSuccessful, "CONNACK failed for $clientId")
 
@@ -234,13 +368,13 @@ class PublicBrokerValidationTest {
         session.close()
     }
 
-    private suspend fun connectSubscribeReceive(connectionOptions: MqttConnectionOptions) {
+    private suspend fun connectSubscribeReceive(
+        connectionOptions: MqttConnectionOptions,
+        mqttV5: Boolean = false,
+    ) {
         val clientId = "ditchoom-sub-${Random.nextInt()}"
         val uniqueTopic = "ditchoom/validation/sub/${Random.nextInt()}"
-        val connectionRequest =
-            ConnectionRequest(
-                payload = ConnectionRequest.Payload(clientId = clientId),
-            )
+        val connectionRequest = makeConnectionRequest(clientId, mqttV5)
         val session = MqttSocketSession.open(-1, connectionRequest, connectionOptions)
         assertTrue(session.connectionAcknowledgement.isSuccessful, "CONNACK failed for $clientId")
 

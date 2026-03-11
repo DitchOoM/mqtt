@@ -20,6 +20,8 @@ import com.ditchoom.mqtt5.controlpacket.properties.Property
 import com.ditchoom.mqtt5.controlpacket.properties.ReasonString
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
 import com.ditchoom.mqtt5.controlpacket.properties.readPropertiesSized
+import com.ditchoom.mqtt5.controlpacket.wire.UnsubAckReasonCodeV5Wire
+import com.ditchoom.mqtt5.controlpacket.wire.UnsubAckV5Wire
 import com.ditchoom.mqtt5.controlpacket.wire.UnsubAckV5WireCodec
 
 data class UnsubscribeAcknowledgment(
@@ -42,6 +44,17 @@ data class UnsubscribeAcknowledgment(
     ) : this(VariableHeader(packetIdentifier, VariableHeader.Properties(reasonString, userProperty)), reasonCodes)
 
     override fun variableHeader(writeBuffer: WriteBuffer) = variable.serialize(writeBuffer)
+
+    override fun encodeBody(writeBuffer: WriteBuffer) {
+        UnsubAckV5WireCodec.encode(
+            writeBuffer,
+            UnsubAckV5Wire(
+                variable.packetIdentifier.toUShort(),
+                variable.properties.props,
+                reasonCodes.map { UnsubAckReasonCodeV5Wire(it.byte) },
+            ),
+        )
+    }
 
     override fun remainingLength(): Int {
         val variableSize = variable.size()

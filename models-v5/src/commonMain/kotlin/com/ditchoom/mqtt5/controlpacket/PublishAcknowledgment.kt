@@ -21,6 +21,7 @@ import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
 import com.ditchoom.mqtt5.controlpacket.properties.Property
 import com.ditchoom.mqtt5.controlpacket.properties.ReasonString
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
+import com.ditchoom.mqtt5.controlpacket.wire.AckV5Wire
 import com.ditchoom.mqtt5.controlpacket.wire.AckV5WireCodec
 
 /**
@@ -43,6 +44,24 @@ data class PublishAcknowledgment(
         this(VariableHeader(packetId, reasonCode, VariableHeader.Properties(reasonString, props)))
 
     override fun variableHeader(writeBuffer: WriteBuffer) = variable.serialize(writeBuffer)
+
+    override fun encodeBody(writeBuffer: WriteBuffer) {
+        val canOmit = variable.reasonCode == SUCCESS &&
+            variable.properties.userProperty.isEmpty() &&
+            variable.properties.reasonString == null
+        if (canOmit) {
+            writeBuffer.writeUShort(variable.packetIdentifier.toUShort())
+        } else {
+            AckV5WireCodec.encode(
+                writeBuffer,
+                AckV5Wire(
+                    variable.packetIdentifier.toUShort(),
+                    variable.reasonCode.byte,
+                    variable.properties.props,
+                ),
+            )
+        }
+    }
 
     override val packetIdentifier: Int = variable.packetIdentifier
 

@@ -5,6 +5,7 @@ import com.ditchoom.buffer.PlatformBuffer
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
 import com.ditchoom.buffer.managed
+import com.ditchoom.buffer.ReadWriteBuffer
 import com.ditchoom.mqtt.MalformedInvalidVariableByteInteger
 import com.ditchoom.mqtt.controlpacket.encoding.readLengthPrefixedUtf8String
 import com.ditchoom.mqtt.controlpacket.encoding.writeLengthPrefixedUtf8String
@@ -23,6 +24,16 @@ interface ControlPacket {
         get() = NO_PACKET_ID
 
     val controlPacketFactory: ControlPacketFactory
+
+    /**
+     * The first byte of the fixed header: packet type (bits 7-4) | flags (bits 3-0).
+     */
+    val byte1: UByte
+        get() {
+            val packetValueShifted = controlPacketValue.toUInt().shl(4)
+            val localFlagsByte = flags.toUByte().toUInt()
+            return (packetValueShifted or localFlagsByte).toUByte()
+        }
 
     fun validateOrNull(): ControlPacket? =
         try {
@@ -52,6 +63,15 @@ interface ControlPacket {
 
     fun payload(writeBuffer: WriteBuffer) {}
 
+    /**
+     * Encodes the variable header + payload (everything after the fixed header).
+     * Override this to delegate to generated codecs. Default calls [variableHeader] + [payload].
+     */
+    fun encodeBody(writeBuffer: WriteBuffer) {
+        variableHeader(writeBuffer)
+        payload(writeBuffer)
+    }
+
     fun packetSize() = 1 + encodingVariableByteSize(remainingLength()) + remainingLength()
 
     fun remainingLength() = 0
@@ -65,11 +85,49 @@ interface ControlPacket {
 
     fun serialize(writeBuffer: WriteBuffer) {
         fixedHeader(writeBuffer)
-        variableHeader(writeBuffer)
-        payload(writeBuffer)
+        encodeBody(writeBuffer)
+    }
+
+    /**
+     * Single-pass serialization using backpatch: reserves space for the fixed header,
+     * writes the body via [encodeBody], then backpatches byte1 + VBI at the correct offset.
+     * Returns a zero-copy slice over the valid region of [buffer].
+     *
+     * The caller must ensure [buffer] has at least [MAX_FIXED_HEADER_SIZE] + body size bytes
+     * remaining. The returned slice shares underlying memory with [buffer] and must be consumed
+     * before [buffer] is recycled.
+     */
+    fun serializeToSlice(buffer: ReadWriteBuffer): ReadBuffer {
+        val reserveStart = buffer.position()
+        buffer.position(reserveStart + MAX_FIXED_HEADER_SIZE)
+
+        encodeBody(buffer)
+
+        val bodySize = buffer.position() - reserveStart - MAX_FIXED_HEADER_SIZE
+        val vbiSize = encodingVariableByteSize(bodySize).toInt()
+        val actualStart = reserveStart + MAX_FIXED_HEADER_SIZE - 1 - vbiSize
+
+        // Backpatch fixed header: byte1 + VBI
+        buffer[actualStart] = byte1.toByte()
+        val savedPos = buffer.position()
+        buffer.position(actualStart + 1)
+        buffer.encodingWriteVariableByteInteger(bodySize)
+        buffer.position(savedPos)
+
+        // Zero-copy slice over the valid region
+        val savedLimit = buffer.limit()
+        buffer.position(actualStart)
+        buffer.setLimit(savedPos)
+        val result = buffer.slice()
+        buffer.position(savedPos)
+        buffer.setLimit(savedLimit)
+        return result
     }
 
     companion object {
+        /** Maximum fixed header size: 1 byte (byte1) + 4 bytes (max VBI). */
+        const val MAX_FIXED_HEADER_SIZE = 5
+
         fun isValidFirstByte(uByte: UByte): Boolean {
             val byte1AsUInt = uByte.toUInt()
             return byte1AsUInt.shr(4).toInt() in 1..15

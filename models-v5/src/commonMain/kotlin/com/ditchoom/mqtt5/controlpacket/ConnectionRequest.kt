@@ -34,6 +34,8 @@ import com.ditchoom.mqtt5.controlpacket.properties.TopicAliasMaximum
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
 import com.ditchoom.mqtt5.controlpacket.properties.WillDelayInterval
 import com.ditchoom.mqtt5.controlpacket.properties.readProperties
+import com.ditchoom.mqtt5.controlpacket.wire.ConnectV5FlagsValue
+import com.ditchoom.mqtt5.controlpacket.wire.ConnectV5Wire
 import com.ditchoom.mqtt5.controlpacket.wire.ConnectV5WireCodec
 
 /**
@@ -139,6 +141,40 @@ data class ConnectionRequest(
     override val keepAliveTimeoutSeconds: UShort = variableHeader.keepAliveSeconds.toUShort()
 
     override fun variableHeader(writeBuffer: WriteBuffer) = variableHeader.serialize(writeBuffer)
+
+    override fun encodeBody(writeBuffer: WriteBuffer) {
+        val vh = variableHeader
+        // If willFlag=true but required will fields are null, fall back to legacy encoding
+        if (vh.willFlag && (payload.willTopic == null || payload.willPayload == null || payload.willProperties == null)) {
+            vh.serialize(writeBuffer)
+            payload.serialize(writeBuffer)
+            return
+        }
+        val usernameFlag = if (vh.hasUserName) 0b10000000 else 0
+        val passwordFlag = if (vh.hasPassword) 0b1000000 else 0
+        val wRetain = if (vh.willRetain) 0b100000 else 0
+        val qos = vh.willQos.integerValue.toInt().shl(3)
+        val wFlag = if (vh.willFlag) 0b100 else 0
+        val cleanStart = if (vh.cleanStart) 0b10 else 0
+        val flagsByte = (usernameFlag or passwordFlag or wRetain or qos or wFlag or cleanStart).toUByte()
+        val connectFlags = ConnectV5FlagsValue(flagsByte)
+        val wire = ConnectV5Wire<ReadBuffer?>(
+            protocolName = vh.protocolName,
+            protocolLevel = vh.protocolVersion,
+            connectFlags = connectFlags,
+            keepAlive = vh.keepAliveSeconds.toUShort(),
+            properties = vh.properties.props,
+            clientId = payload.clientId,
+            willProperties = payload.willProperties?.props,
+            willTopic = payload.willTopic?.toString(),
+            willPayload = payload.willPayload,
+            username = payload.userName,
+            password = payload.password,
+        )
+        ConnectV5WireCodec.encode(writeBuffer, wire) { buf, wp ->
+            if (wp != null) buf.write(wp)
+        }
+    }
 
     override val cleanStart: Boolean = variableHeader.cleanStart
     override val userName = payload.userName

@@ -13,6 +13,8 @@ import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.Topic
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
 import com.ditchoom.mqtt.controlpacket.format.fixed.get
+import com.ditchoom.mqtt3.controlpacket.wire.ConnectFlagsValue
+import com.ditchoom.mqtt3.controlpacket.wire.ConnectWire
 import com.ditchoom.mqtt3.controlpacket.wire.ConnectWireCodec
 
 /**
@@ -88,9 +90,38 @@ data class ConnectionRequest(
     override val willRetain: Boolean = variableHeader.willRetain
     override val willTopic: Topic? = payload.willTopic
 
-    override fun variableHeader(writeBuffer: WriteBuffer) = variableHeader.serialize(writeBuffer)
-
-    override fun payload(writeBuffer: WriteBuffer) = payload.serialize(writeBuffer)
+    override fun encodeBody(writeBuffer: WriteBuffer) {
+        val vh = variableHeader
+        // If willFlag=true but willTopic is null, this is an invalid state (caught by validate()).
+        // Fall back to legacy encoding to preserve byte compatibility for such edge cases.
+        if (vh.willFlag && payload.willTopic == null) {
+            vh.serialize(writeBuffer)
+            payload.serialize(writeBuffer)
+            return
+        }
+        val usernameFlag = if (vh.hasUserName) 0b10000000 else 0
+        val passwordFlag = if (vh.hasPassword) 0b1000000 else 0
+        val wRetain = if (vh.willRetain) 0b100000 else 0
+        val qos = vh.willQos.integerValue.toInt().shl(3)
+        val wFlag = if (vh.willFlag) 0b100 else 0
+        val cleanStart = if (vh.cleanSession) 0b10 else 0
+        val flagsByte = (usernameFlag or passwordFlag or wRetain or qos or wFlag or cleanStart).toUByte()
+        val connectFlags = ConnectFlagsValue(flagsByte)
+        val wire = ConnectWire<ReadBuffer?>(
+            protocolName = vh.protocolName,
+            protocolLevel = vh.protocolLevel,
+            connectFlags = connectFlags,
+            keepAlive = vh.keepAliveSeconds.toUShort(),
+            clientId = payload.clientId,
+            willTopic = payload.willTopic?.toString(),
+            willPayload = payload.willPayload,
+            username = payload.userName,
+            password = payload.password,
+        )
+        ConnectWireCodec.encode(writeBuffer, wire) { buf, wp ->
+            if (wp != null) buf.write(wp)
+        }
+    }
 
     override fun remainingLength() = variableHeader.size() + payload.size()
 

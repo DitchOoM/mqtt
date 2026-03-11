@@ -24,7 +24,9 @@ import com.ditchoom.mqtt5.controlpacket.properties.Property
 import com.ditchoom.mqtt5.controlpacket.properties.ReasonString
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
 import com.ditchoom.mqtt5.controlpacket.properties.readPropertiesSized
+import com.ditchoom.mqtt5.controlpacket.wire.SubscribeV5Wire
 import com.ditchoom.mqtt5.controlpacket.wire.SubscribeV5WireCodec
+import com.ditchoom.mqtt5.controlpacket.wire.SubscriptionV5Wire
 
 /**
  * 3.8 SUBSCRIBE - Subscribe request
@@ -84,6 +86,25 @@ data class SubscribeRequest(
     override fun expectedResponse() = SubscribeAcknowledgement(variable.packetIdentifier.toUShort(), ReasonCode.SUCCESS)
 
     override fun payload(writeBuffer: WriteBuffer) = subscriptions.forEach { (it as Subscription).serialize(writeBuffer) }
+
+    override fun encodeBody(writeBuffer: WriteBuffer) {
+        SubscribeV5WireCodec.encode(
+            writeBuffer,
+            SubscribeV5Wire(
+                variable.packetIdentifier.toUShort(),
+                variable.properties.props,
+                subscriptions.map { sub ->
+                    sub as Subscription
+                    val qosInt = sub.maximumQos.integerValue
+                    val nlShifted = (if (sub.noLocal) 1 else 0).shl(2)
+                    val rapShifted = (if (sub.retainAsPublished) 1 else 0).shl(3)
+                    val rH = sub.retainHandling.value.toInt().shl(4)
+                    val combinedByte = (qosInt + nlShifted + rapShifted + rH).toUByte()
+                    SubscriptionV5Wire(sub.topicFilter.toString(), combinedByte)
+                },
+            ),
+        )
+    }
 
     override fun remainingLength(): Int {
         val variableSize = variable.size()

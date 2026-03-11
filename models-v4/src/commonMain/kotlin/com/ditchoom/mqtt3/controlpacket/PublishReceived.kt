@@ -5,6 +5,7 @@ import com.ditchoom.buffer.WriteBuffer
 import com.ditchoom.mqtt.controlpacket.IPublishReceived
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
+import com.ditchoom.mqtt3.controlpacket.wire.AckWire
 import com.ditchoom.mqtt3.controlpacket.wire.AckWireCodec
 
 /**
@@ -16,8 +17,8 @@ data class PublishReceived(
     override val packetIdentifier: Int,
 ) : ControlPacketV4(IPublishReceived.CONTROL_PACKET_VALUE, DirectionOfFlow.BIDIRECTIONAL),
     IPublishReceived {
-    override fun variableHeader(writeBuffer: WriteBuffer) {
-        writeBuffer.writeUShort(packetIdentifier.toUShort())
+    override fun encodeBody(writeBuffer: WriteBuffer) {
+        AckWireCodec.encode(writeBuffer, AckWire(packetIdentifier.toUShort()))
     }
 
     override fun remainingLength() = 2

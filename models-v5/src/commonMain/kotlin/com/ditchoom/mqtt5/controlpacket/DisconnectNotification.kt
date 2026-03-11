@@ -14,6 +14,7 @@ import com.ditchoom.mqtt5.controlpacket.properties.ReasonString
 import com.ditchoom.mqtt5.controlpacket.properties.ServerReference
 import com.ditchoom.mqtt5.controlpacket.properties.SessionExpiryInterval
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
+import com.ditchoom.mqtt5.controlpacket.wire.DisconnectV5Wire
 import com.ditchoom.mqtt5.controlpacket.wire.DisconnectV5WireCodec
 
 /**
@@ -36,6 +37,16 @@ data class DisconnectNotification(
     override fun packetSize(): Int = 2 + remainingLength()
 
     override fun variableHeader(writeBuffer: WriteBuffer) = variable.serialize(writeBuffer)
+
+    override fun encodeBody(writeBuffer: WriteBuffer) {
+        DisconnectV5WireCodec.encode(
+            writeBuffer,
+            DisconnectV5Wire(
+                variable.reasonCode.byte,
+                variable.properties.props,
+            ),
+        )
+    }
 
     override fun remainingLength(): Int = variable.size()
 

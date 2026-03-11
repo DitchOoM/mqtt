@@ -8,6 +8,8 @@ import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.writeMqttUtf8Stri
 import com.ditchoom.mqtt.controlpacket.IUnsubscribeRequest
 import com.ditchoom.mqtt.controlpacket.Topic
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
+import com.ditchoom.mqtt3.controlpacket.wire.TopicFilterWire
+import com.ditchoom.mqtt3.controlpacket.wire.UnsubscribeWire
 import com.ditchoom.mqtt3.controlpacket.wire.UnsubscribeWireCodec
 
 /**
@@ -24,8 +26,14 @@ data class UnsubscribeRequest(
 
     override fun remainingLength() = UShort.SIZE_BYTES + payloadSize()
 
-    override fun variableHeader(writeBuffer: WriteBuffer) {
-        writeBuffer.writeUShort(packetIdentifier.toUShort())
+    override fun encodeBody(writeBuffer: WriteBuffer) {
+        UnsubscribeWireCodec.encode(
+            writeBuffer,
+            UnsubscribeWire(
+                packetIdentifier.toUShort(),
+                topics.map { TopicFilterWire(it.toString()) },
+            ),
+        )
     }
 
     private fun payloadSize(): Int {
@@ -34,10 +42,6 @@ data class UnsubscribeRequest(
             size += UShort.SIZE_BYTES + it.toString().utf8Length()
         }
         return size
-    }
-
-    override fun payload(writeBuffer: WriteBuffer) {
-        topics.forEach { writeBuffer.writeMqttUtf8String(it.toString()) }
     }
 
     init {

@@ -28,7 +28,9 @@ import com.ditchoom.mqtt5.controlpacket.properties.SubscriptionIdentifier
 import com.ditchoom.mqtt5.controlpacket.properties.TopicAlias
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
 import com.ditchoom.mqtt5.controlpacket.properties.readPropertiesSized
+import com.ditchoom.mqtt5.controlpacket.wire.PublishNoIdV5Wire
 import com.ditchoom.mqtt5.controlpacket.wire.PublishNoIdV5WireCodec
+import com.ditchoom.mqtt5.controlpacket.wire.PublishWithIdV5Wire
 import com.ditchoom.mqtt5.controlpacket.wire.PublishWithIdV5WireCodec
 
 /**
@@ -94,6 +96,21 @@ data class PublishMessage(
     override fun payload(writeBuffer: WriteBuffer) {
         if (payload != null) {
             writeBuffer.write(payload)
+        }
+    }
+
+    override fun encodeBody(writeBuffer: WriteBuffer) {
+        val topicStr = variable.topicName.toString()
+        if (fixed.qos == AT_MOST_ONCE) {
+            PublishNoIdV5WireCodec.encode(
+                writeBuffer,
+                PublishNoIdV5Wire<ReadBuffer?>(topicStr, variable.properties.props, payload),
+            ) { buf, p -> if (p != null) buf.write(p) }
+        } else {
+            PublishWithIdV5WireCodec.encode(
+                writeBuffer,
+                PublishWithIdV5Wire<ReadBuffer?>(topicStr, variable.packetIdentifier.toUShort(), variable.properties.props, payload),
+            ) { buf, p -> if (p != null) buf.write(p) }
         }
     }
 

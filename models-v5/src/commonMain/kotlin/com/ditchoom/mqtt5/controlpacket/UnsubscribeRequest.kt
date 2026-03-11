@@ -16,6 +16,8 @@ import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
 import com.ditchoom.mqtt5.controlpacket.properties.Property
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
 import com.ditchoom.mqtt5.controlpacket.properties.readPropertiesSized
+import com.ditchoom.mqtt5.controlpacket.wire.TopicFilterV5Wire
+import com.ditchoom.mqtt5.controlpacket.wire.UnsubscribeV5Wire
 import com.ditchoom.mqtt5.controlpacket.wire.UnsubscribeV5WireCodec
 
 /**
@@ -49,6 +51,17 @@ data class UnsubscribeRequest(
         copy(variable = variable.copy(packetIdentifier = packetIdentifier))
 
     override fun variableHeader(writeBuffer: WriteBuffer) = variable.serialize(writeBuffer)
+
+    override fun encodeBody(writeBuffer: WriteBuffer) {
+        UnsubscribeV5WireCodec.encode(
+            writeBuffer,
+            UnsubscribeV5Wire(
+                variable.packetIdentifier.toUShort(),
+                variable.properties.props,
+                topics.map { TopicFilterV5Wire(it.toString()) },
+            ),
+        )
+    }
 
     override fun remainingLength(): Int {
         val variableSize = variable.size()

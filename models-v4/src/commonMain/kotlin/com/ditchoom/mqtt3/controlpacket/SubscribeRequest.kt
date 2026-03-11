@@ -15,7 +15,9 @@ import com.ditchoom.mqtt.controlpacket.QualityOfService.EXACTLY_ONCE
 import com.ditchoom.mqtt.controlpacket.Topic
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
+import com.ditchoom.mqtt3.controlpacket.wire.SubscribeWire
 import com.ditchoom.mqtt3.controlpacket.wire.SubscribeWireCodec
+import com.ditchoom.mqtt3.controlpacket.wire.SubscriptionWire
 
 /**
  * 3.8 SUBSCRIBE - Subscribe request
@@ -56,11 +58,15 @@ data class SubscribeRequest(
 
     override fun copyWithNewPacketIdentifier(packetIdentifier: Int): ISubscribeRequest = copy(packetIdentifier = packetIdentifier)
 
-    override fun variableHeader(writeBuffer: WriteBuffer) {
-        writeBuffer.writeUShort(packetIdentifier.toUShort())
+    override fun encodeBody(writeBuffer: WriteBuffer) {
+        SubscribeWireCodec.encode(
+            writeBuffer,
+            SubscribeWire(
+                packetIdentifier.toUShort(),
+                subscriptions.map { SubscriptionWire(it.topicFilter.toString(), it.maximumQos.integerValue.toUByte()) },
+            ),
+        )
     }
-
-    override fun payload(writeBuffer: WriteBuffer) = Subscription.writeMany(subscriptions, writeBuffer)
 
     override fun remainingLength() = UShort.SIZE_BYTES + Subscription.sizeMany(subscriptions)
 

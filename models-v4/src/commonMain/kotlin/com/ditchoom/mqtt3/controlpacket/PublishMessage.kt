@@ -17,7 +17,9 @@ import com.ditchoom.mqtt.controlpacket.Topic
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
 import com.ditchoom.mqtt.controlpacket.validControlPacketIdentifierRange
+import com.ditchoom.mqtt3.controlpacket.wire.PublishNoIdWire
 import com.ditchoom.mqtt3.controlpacket.wire.PublishNoIdWireCodec
+import com.ditchoom.mqtt3.controlpacket.wire.PublishWithIdWire
 import com.ditchoom.mqtt3.controlpacket.wire.PublishWithIdWireCodec
 
 /**
@@ -60,11 +62,18 @@ data class PublishMessage(
 
     override val qualityOfService: QualityOfService = fixed.qos
 
-    override fun variableHeader(writeBuffer: WriteBuffer) = variable.serialize(writeBuffer)
-
-    override fun payload(writeBuffer: WriteBuffer) {
-        if (payload != null) {
-            writeBuffer.write(payload)
+    override fun encodeBody(writeBuffer: WriteBuffer) {
+        val topicStr = variable.topicName.toString()
+        if (fixed.qos == AT_MOST_ONCE) {
+            PublishNoIdWireCodec.encode(
+                writeBuffer,
+                PublishNoIdWire<ReadBuffer?>(topicStr, payload),
+            ) { buf, p -> if (p != null) buf.write(p) }
+        } else {
+            PublishWithIdWireCodec.encode(
+                writeBuffer,
+                PublishWithIdWire<ReadBuffer?>(topicStr, variable.packetIdentifier.toUShort(), payload),
+            ) { buf, p -> if (p != null) buf.write(p) }
         }
     }
 

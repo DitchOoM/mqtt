@@ -52,6 +52,7 @@ import com.ditchoom.mqtt5.controlpacket.properties.TopicAlias
 import com.ditchoom.mqtt5.controlpacket.properties.TopicAliasMaximum
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
 import com.ditchoom.mqtt5.controlpacket.properties.WildcardSubscriptionAvailable
+import com.ditchoom.mqtt5.controlpacket.wire.ConnAckV5Wire
 import com.ditchoom.mqtt5.controlpacket.wire.ConnAckV5WireCodec
 
 /**
@@ -73,6 +74,17 @@ data class ConnectionAcknowledgment(
     override val sessionPresent: Boolean = header.sessionPresent
 
     override fun variableHeader(writeBuffer: WriteBuffer) = header.serialize(writeBuffer)
+
+    override fun encodeBody(writeBuffer: WriteBuffer) {
+        ConnAckV5WireCodec.encode(
+            writeBuffer,
+            ConnAckV5Wire(
+                (if (header.sessionPresent) 1u else 0u).toUByte(),
+                header.connectReason.byte,
+                header.properties.props,
+            ),
+        )
+    }
 
     override fun remainingLength() = header.size()
 

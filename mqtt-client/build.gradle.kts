@@ -18,8 +18,20 @@ kotlin {
     }
     jvm()
     js {
-        browser()
-        nodejs()
+        browser {
+            testTask {
+                useMocha {
+                    timeout = "60s"
+                }
+            }
+        }
+        nodejs {
+            testTask {
+                useMocha {
+                    timeout = "60s"
+                }
+            }
+        }
     }
 
     if (hostOs.family.isAppleFamily) {

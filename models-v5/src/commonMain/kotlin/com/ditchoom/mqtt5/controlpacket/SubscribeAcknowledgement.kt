@@ -27,6 +27,8 @@ import com.ditchoom.mqtt5.controlpacket.properties.Property
 import com.ditchoom.mqtt5.controlpacket.properties.ReasonString
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
 import com.ditchoom.mqtt5.controlpacket.properties.readPropertiesSized
+import com.ditchoom.mqtt5.controlpacket.wire.SubAckReasonCodeV5Wire
+import com.ditchoom.mqtt5.controlpacket.wire.SubAckV5Wire
 import com.ditchoom.mqtt5.controlpacket.wire.SubAckV5WireCodec
 
 /**
@@ -67,6 +69,17 @@ data class SubscribeAcknowledgement(
     override fun variableHeader(writeBuffer: WriteBuffer) = variable.serialize(writeBuffer)
 
     override fun payload(writeBuffer: WriteBuffer) = payload.forEach { writeBuffer.writeUByte(it.byte) }
+
+    override fun encodeBody(writeBuffer: WriteBuffer) {
+        SubAckV5WireCodec.encode(
+            writeBuffer,
+            SubAckV5Wire(
+                variable.packetIdentifier.toUShort(),
+                variable.properties.props,
+                payload.map { SubAckReasonCodeV5Wire(it.byte) },
+            ),
+        )
+    }
 
     override fun remainingLength() = variable.size() + payload.size
 

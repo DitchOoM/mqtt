@@ -10,6 +10,8 @@ import com.ditchoom.mqtt.controlpacket.format.ReasonCode.GRANTED_QOS_1
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.GRANTED_QOS_2
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.UNSPECIFIED_ERROR
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
+import com.ditchoom.mqtt3.controlpacket.wire.SubAckReturnCodeWire
+import com.ditchoom.mqtt3.controlpacket.wire.SubAckWire
 import com.ditchoom.mqtt3.controlpacket.wire.SubAckWireCodec
 
 /**
@@ -27,12 +29,14 @@ data class SubscribeAcknowledgement(
     ISubscribeAcknowledgement {
     override fun remainingLength() = 2 + payload.size
 
-    override fun variableHeader(writeBuffer: WriteBuffer) {
-        writeBuffer.writeUShort(packetIdentifier.toUShort())
-    }
-
-    override fun payload(writeBuffer: WriteBuffer) {
-        payload.forEach { writeBuffer.writeUByte(it.byte) }
+    override fun encodeBody(writeBuffer: WriteBuffer) {
+        SubAckWireCodec.encode(
+            writeBuffer,
+            SubAckWire(
+                packetIdentifier.toUShort(),
+                payload.map { SubAckReturnCodeWire(it.byte) },
+            ),
+        )
     }
 
     companion object {

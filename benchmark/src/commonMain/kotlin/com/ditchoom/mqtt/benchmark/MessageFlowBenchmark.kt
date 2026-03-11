@@ -7,7 +7,7 @@ import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.pool.BufferPool
 import com.ditchoom.buffer.stream.StreamProcessor
 import com.ditchoom.buffer.stream.builder
-import com.ditchoom.mqtt.controlpacket.Topic
+import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt3.controlpacket.ControlPacketV4
 import com.ditchoom.mqtt3.controlpacket.PublishMessage
 import kotlinx.benchmark.Benchmark
@@ -28,7 +28,7 @@ class MessageFlowBenchmark {
     private lateinit var publishSmall: PublishMessage
     private lateinit var publishSmallBytes: PlatformBuffer
 
-    private val topic = Topic.fromOrThrow("test/flow", Topic.Type.Name)
+    private val topic = TopicName.fromOrThrow("test/flow")
 
     @Setup
     fun setup() {

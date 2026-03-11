@@ -1,7 +1,7 @@
 package com.ditchoom.mqtt.controlpacket
 
 interface IUnsubscribeRequest : ControlPacket {
-    val topics: Set<Topic>
+    val topics: Set<TopicFilter>
 
     fun copyWithNewPacketIdentifier(packetIdentifier: Int): IUnsubscribeRequest
 

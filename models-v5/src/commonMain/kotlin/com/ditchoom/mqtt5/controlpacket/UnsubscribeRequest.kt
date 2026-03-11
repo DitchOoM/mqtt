@@ -11,7 +11,7 @@ import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.writeMqttUtf8Stri
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.writeVariableByteInteger
 import com.ditchoom.mqtt.controlpacket.IUnsubscribeRequest
 import com.ditchoom.mqtt.controlpacket.NO_PACKET_ID
-import com.ditchoom.mqtt.controlpacket.Topic
+import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
 import com.ditchoom.mqtt5.controlpacket.properties.Property
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
@@ -27,18 +27,18 @@ import com.ditchoom.mqtt5.controlpacket.wire.UnsubscribeV5WireCodec
 
 data class UnsubscribeRequest(
     val variable: VariableHeader,
-    override val topics: Set<Topic>,
+    override val topics: Set<TopicFilter>,
 ) : ControlPacketV5(IUnsubscribeRequest.controlPacketValue, DirectionOfFlow.CLIENT_TO_SERVER, 0b10),
     IUnsubscribeRequest {
     constructor(
-        topics: Set<Topic>,
+        topics: Set<TopicFilter>,
         userProperty: List<Pair<String, String>> = emptyList(),
     ) : this(VariableHeader(NO_PACKET_ID, VariableHeader.Properties(userProperty)), topics)
 
     constructor(topic: String, userProperty: List<Pair<String, String>> = emptyList()) :
         this(
             VariableHeader(NO_PACKET_ID, VariableHeader.Properties(userProperty)),
-            setOf<Topic>(Topic.fromOrThrow(topic, Topic.Type.Filter)),
+            setOf<TopicFilter>(TopicFilter.fromOrThrow(topic)),
         )
 
     init {
@@ -173,7 +173,7 @@ data class UnsubscribeRequest(
             val wire = UnsubscribeV5WireCodec.decode(buffer)
             val props = VariableHeader.Properties.from(wire.properties)
             val header = VariableHeader(wire.packetIdentifier.toInt(), props)
-            val topics = wire.topics.map { Topic.fromOrThrow(it.topicFilter, Topic.Type.Filter) }.toSet()
+            val topics = wire.topics.map { TopicFilter.fromOrThrow(it.topicFilter) }.toSet()
             return UnsubscribeRequest(header, topics)
         }
     }

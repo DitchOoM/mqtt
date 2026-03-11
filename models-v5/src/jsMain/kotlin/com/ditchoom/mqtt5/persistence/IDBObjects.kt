@@ -7,7 +7,8 @@ import com.ditchoom.buffer.JsBuffer
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.ISubscription
 import com.ditchoom.mqtt.controlpacket.QualityOfService
-import com.ditchoom.mqtt.controlpacket.Topic
+import com.ditchoom.mqtt.controlpacket.TopicFilter
+import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt5.controlpacket.ConnectionRequest
 import com.ditchoom.mqtt5.controlpacket.PublishMessage
 import com.ditchoom.mqtt5.controlpacket.Subscription
@@ -106,7 +107,7 @@ data class PersistableSubscription(
 
 fun toSubscription(s: PersistableSubscription) =
     Subscription(
-        Topic.fromOrThrow(s.topicFilter, Topic.Type.Filter),
+        TopicFilter.fromOrThrow(s.topicFilter),
         s.qos.toQos(),
         s.noLocal,
         s.retainAsPublished,
@@ -188,13 +189,13 @@ fun toPub(
 ) = PublishMessage(
     PublishMessage.FixedHeader(p.dup, p.qos.toQos(), p.retain),
     PublishMessage.VariableHeader(
-        Topic.fromOrThrow(p.topicName, Topic.Type.Name),
+        TopicName.fromOrThrow(p.topicName),
         p.packetId,
         PublishMessage.VariableHeader.Properties(
             p.payloadFormatIndicator == 1,
             p.messageExpiryInterval?.toLong(),
             p.topicAlias,
-            p.responseTopic?.let { Topic.fromOrThrow(it, Topic.Type.Name) },
+            p.responseTopic?.let { TopicName.fromOrThrow(it) },
             p.correlationData
                 ?.let {
                     JsBuffer(it).also { buf ->
@@ -437,7 +438,7 @@ fun toConnectionRequest(
                 p.willPropertyPayloadFormatIndicator as Boolean,
                 (p.willPropertyMessageExpiryIntervalSeconds as String?)?.toLong(),
                 p.willPropertyContentType as String?,
-                (p.willPropertyResponseTopic as String?)?.let { Topic.fromOrThrow(it, Topic.Type.Name) },
+                (p.willPropertyResponseTopic as String?)?.let { TopicName.fromOrThrow(it) },
                 p.willPropertyCorrelationData
                     ?.unsafeCast<Int8Array>()
                     ?.let { JsBuffer(it).also { buf -> buf.setLimit(it.length) } },
@@ -473,7 +474,7 @@ fun toConnectionRequest(
         ConnectionRequest.Payload(
             p.clientId as String,
             willProps,
-            (p.willTopic as? String)?.let { Topic.fromOrThrow(it, Topic.Type.Name) },
+            (p.willTopic as? String)?.let { TopicName.fromOrThrow(it) },
             p.willPayload
                 ?.unsafeCast<Int8Array>()
                 ?.let {

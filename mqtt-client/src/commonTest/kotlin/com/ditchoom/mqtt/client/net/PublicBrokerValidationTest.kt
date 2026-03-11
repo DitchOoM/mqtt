@@ -6,7 +6,8 @@ import com.ditchoom.mqtt.controlpacket.IPublishAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IPublishMessage
 import com.ditchoom.mqtt.controlpacket.ISubscribeAcknowledgement
 import com.ditchoom.mqtt.controlpacket.QualityOfService
-import com.ditchoom.mqtt.controlpacket.Topic
+import com.ditchoom.mqtt.controlpacket.TopicFilter
+import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt.controlpacket.IConnectionRequest
 import com.ditchoom.mqtt3.controlpacket.ConnectionRequest
 import com.ditchoom.socket.NetworkCapabilities
@@ -331,7 +332,7 @@ class PublicBrokerValidationTest {
         val publish =
             connectionRequest.controlPacketFactory
                 .publish(
-                    topicName = Topic.fromOrThrow("ditchoom/validation/test", Topic.Type.Name),
+                    topicName = TopicName.fromOrThrow("ditchoom/validation/test"),
                     qos = QualityOfService.AT_LEAST_ONCE,
                 ).maybeCopyWithNewPacketIdentifier(1)
         session.write(publish)
@@ -356,7 +357,7 @@ class PublicBrokerValidationTest {
             val publish =
                 connectionRequest.controlPacketFactory
                     .publish(
-                        topicName = Topic.fromOrThrow("ditchoom/validation/multi/$i", Topic.Type.Name),
+                        topicName = TopicName.fromOrThrow("ditchoom/validation/multi/$i"),
                         qos = QualityOfService.AT_LEAST_ONCE,
                     ).maybeCopyWithNewPacketIdentifier(i + 1)
             session.write(publish)
@@ -381,7 +382,7 @@ class PublicBrokerValidationTest {
         // Subscribe
         val subscribe =
             connectionRequest.controlPacketFactory
-                .subscribe(Topic.fromOrThrow(uniqueTopic, Topic.Type.Filter))
+                .subscribe(TopicFilter.fromOrThrow(uniqueTopic))
                 .copyWithNewPacketIdentifier(1)
         session.write(subscribe)
         val suback = session.read()
@@ -391,7 +392,7 @@ class PublicBrokerValidationTest {
         val publish =
             connectionRequest.controlPacketFactory
                 .publish(
-                    topicName = Topic.fromOrThrow(uniqueTopic, Topic.Type.Name),
+                    topicName = TopicName.fromOrThrow(uniqueTopic),
                     qos = QualityOfService.AT_LEAST_ONCE,
                 ).maybeCopyWithNewPacketIdentifier(2)
         session.write(publish)

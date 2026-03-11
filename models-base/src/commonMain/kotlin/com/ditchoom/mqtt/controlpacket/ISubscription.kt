@@ -1,7 +1,7 @@
 package com.ditchoom.mqtt.controlpacket
 
 interface ISubscription {
-    val topicFilter: Topic
+    val topicFilter: TopicFilter
     val maximumQos: QualityOfService
 
     // mqtt 5

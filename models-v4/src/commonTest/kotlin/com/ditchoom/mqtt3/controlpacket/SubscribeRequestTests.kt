@@ -5,7 +5,7 @@ import com.ditchoom.buffer.Default
 import com.ditchoom.mqtt.controlpacket.QualityOfService.AT_LEAST_ONCE
 import com.ditchoom.mqtt.controlpacket.QualityOfService.AT_MOST_ONCE
 import com.ditchoom.mqtt.controlpacket.QualityOfService.EXACTLY_ONCE
-import com.ditchoom.mqtt.controlpacket.Topic
+import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.validateMqttUTF8StringOrThrowWith
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -165,7 +165,7 @@ class SubscribeRequestTests {
 
     @Test
     fun serializeDeserialize() {
-        val subscribeRequest = SubscribeRequest(2, setOf(Subscription(Topic.fromOrThrow("test", Topic.Type.Filter))))
+        val subscribeRequest = SubscribeRequest(2, setOf(Subscription(TopicFilter.fromOrThrow("test"))))
         assertEquals(subscribeRequest.packetIdentifier, 2)
         val subs = subscribeRequest.subscriptions
         val firstSub = subs.first()

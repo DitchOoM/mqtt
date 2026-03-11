@@ -12,7 +12,7 @@ import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.QualityOfService.AT_LEAST_ONCE
 import com.ditchoom.mqtt.controlpacket.QualityOfService.AT_MOST_ONCE
 import com.ditchoom.mqtt.controlpacket.QualityOfService.EXACTLY_ONCE
-import com.ditchoom.mqtt.controlpacket.Topic
+import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
 import com.ditchoom.mqtt3.controlpacket.wire.SubscribeWire
@@ -35,7 +35,7 @@ data class SubscribeRequest(
     override val subscriptions: Set<ISubscription>,
 ) : ControlPacketV4(ISubscribeRequest.CONTROL_PACKET_VALUE, DirectionOfFlow.CLIENT_TO_SERVER, 0b10),
     ISubscribeRequest {
-    constructor(packetIdentifier: UShort, topic: Topic, qos: QualityOfService) :
+    constructor(packetIdentifier: UShort, topic: TopicFilter, qos: QualityOfService) :
         this(
             packetIdentifier.toInt(),
             subscriptions = setOf(Subscription(topic, qos)),
@@ -44,13 +44,13 @@ data class SubscribeRequest(
     constructor(packetIdentifier: UShort, topic: String, qos: QualityOfService) :
         this(
             packetIdentifier.toInt(),
-            subscriptions = setOf(Subscription(Topic.fromOrThrow(topic, Topic.Type.Filter), qos)),
+            subscriptions = setOf(Subscription(TopicFilter.fromOrThrow(topic), qos)),
         )
 
-    constructor(packetIdentifier: UShort, topics: List<Topic>, qos: List<QualityOfService>) :
+    constructor(packetIdentifier: UShort, topics: List<TopicFilter>, qos: List<QualityOfService>) :
         this(packetIdentifier.toInt(), subscriptions = Subscription.from(topics, qos))
 
-    constructor(packetIdentifier: Int, topicsQosMap: Map<Topic, QualityOfService>) :
+    constructor(packetIdentifier: Int, topicsQosMap: Map<TopicFilter, QualityOfService>) :
         this(
             packetIdentifier,
             subscriptions = Subscription.from(topicsQosMap.keys.toList(), topicsQosMap.values.toList()),
@@ -93,7 +93,7 @@ data class SubscribeRequest(
                 val qosBit1 = sub.requestedQos.toInt().shr(1) and 1 == 1
                 val qosBit0 = sub.requestedQos.toInt() and 1 == 1
                 Subscription(
-                    Topic.fromOrThrow(sub.topicFilter, Topic.Type.Filter),
+                    TopicFilter.fromOrThrow(sub.topicFilter),
                     QualityOfService.fromBooleans(qosBit1, qosBit0),
                 )
             }.toSet()
@@ -103,7 +103,7 @@ data class SubscribeRequest(
 }
 
 data class Subscription(
-    override val topicFilter: Topic,
+    override val topicFilter: TopicFilter,
     /**
      * Bits 0 and 1 of the Subscription Options represent Maximum QoS field. This gives the maximum
      * QoS level at which the Server can send Application Messages to the Client. It is a Protocol
@@ -135,12 +135,12 @@ data class Subscription(
             val qosBit1 = subOptionsInt.shl(6).shr(7) == 1
             val qosBit0 = subOptionsInt.shl(7).shr(7) == 1
             val qos = QualityOfService.fromBooleans(qosBit1, qosBit0)
-            val topic = Topic.fromOrThrow(topicString, Topic.Type.Filter)
+            val topic = TopicFilter.fromOrThrow(topicString)
             return Pair(bytesRead, Subscription(topic, qos))
         }
 
         fun from(
-            topics: List<Topic>,
+            topics: List<TopicFilter>,
             qos: List<QualityOfService>,
         ): Set<ISubscription> {
             if (topics.size != qos.size) {
@@ -166,7 +166,7 @@ data class Subscription(
             }
             val subscriptions = mutableSetOf<ISubscription>()
             topics.forEachIndexed { index, topic ->
-                subscriptions += Subscription(Topic.fromOrThrow(topic, Topic.Type.Filter), qos[index])
+                subscriptions += Subscription(TopicFilter.fromOrThrow(topic), qos[index])
             }
             return subscriptions
         }

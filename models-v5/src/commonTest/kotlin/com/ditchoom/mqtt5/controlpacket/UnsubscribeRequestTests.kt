@@ -4,7 +4,7 @@ import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Default
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readMqttUtf8StringNotValidatedSized
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readVariableByteInteger
-import com.ditchoom.mqtt.controlpacket.Topic
+import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt5.controlpacket.UnsubscribeRequest.VariableHeader
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
 import kotlin.test.Test
@@ -19,7 +19,7 @@ class UnsubscribeRequestTests {
         val unsub =
             UnsubscribeRequest(
                 VariableHeader(packetIdentifier),
-                setOf(Topic.fromOrThrow("yolo", Topic.Type.Filter)),
+                setOf(TopicFilter.fromOrThrow("yolo")),
             )
         unsub.serialize(buffer)
         buffer.resetForRead()
@@ -55,7 +55,7 @@ class UnsubscribeRequestTests {
         val request =
             UnsubscribeRequest(
                 VariableHeader(packetIdentifier, properties = props),
-                setOf(Topic.fromOrThrow("test", Topic.Type.Filter)),
+                setOf(TopicFilter.fromOrThrow("test")),
             )
         val buffer = BufferFactory.Default.allocate(24)
         request.serialize(buffer)

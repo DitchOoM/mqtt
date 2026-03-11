@@ -21,7 +21,8 @@ import com.ditchoom.mqtt.controlpacket.IUnsubscribeAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IUnsubscribeRequest
 import com.ditchoom.mqtt.controlpacket.NO_PACKET_ID
 import com.ditchoom.mqtt.controlpacket.QualityOfService
-import com.ditchoom.mqtt.controlpacket.Topic
+import com.ditchoom.mqtt.controlpacket.TopicFilter
+import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
 import com.ditchoom.mqtt5.controlpacket.ConnectionRequest
 import com.ditchoom.mqtt5.controlpacket.PublishComplete
@@ -155,7 +156,7 @@ class SqlDatabasePersistence(
     override suspend fun activeSubscriptions(
         broker: MqttBroker,
         includePendingUnsub: Boolean,
-    ): Map<Topic, ISubscription> =
+    ): Map<TopicFilter, ISubscription> =
         withContext(dispatcher) {
             if (includePendingUnsub) {
                 subscriptionQueries
@@ -164,7 +165,7 @@ class SqlDatabasePersistence(
                 subscriptionQueries
                     .allSubscriptionsNotPendingUnsub(broker.identifier.toLong())
             }.executeAsList()
-                .map { Subscription(Topic.fromOrThrow(it.topic_filter, Topic.Type.Filter), it.qos.toQos()) }
+                .map { Subscription(TopicFilter.fromOrThrow(it.topic_filter), it.qos.toQos()) }
                 .associateBy { it.topicFilter }
         }
 
@@ -343,10 +344,7 @@ class SqlDatabasePersistence(
                     connectionRequestDatabaseRecord.will_property_message_expiry_interval_seconds,
                     connectionRequestDatabaseRecord.will_property_content_type,
                     connectionRequestDatabaseRecord.will_property_response_topic?.let {
-                        Topic.fromOrThrow(
-                            it,
-                            Topic.Type.Name,
-                        )
+                        TopicName.fromOrThrow(it)
                     },
                     connectionRequestDatabaseRecord.will_property_correlation_data?.let { PlatformBuffer.wrap(it) },
                     willUserProps,
@@ -358,7 +356,7 @@ class SqlDatabasePersistence(
             ConnectionRequest.Payload(
                 connectionRequestDatabaseRecord.client_id,
                 willProperties,
-                connectionRequestDatabaseRecord.will_topic?.let { Topic.fromOrThrow(it, Topic.Type.Name) },
+                connectionRequestDatabaseRecord.will_topic?.let { TopicName.fromOrThrow(it) },
                 willPayload,
                 connectionRequestDatabaseRecord.username,
                 connectionRequestDatabaseRecord.password,
@@ -473,7 +471,7 @@ class SqlDatabasePersistence(
                         it.payload_format_indicator == 1L,
                         it.message_expiry_interval,
                         it.topic_alias?.toInt(),
-                        it.response_topic?.let { t -> Topic.fromOrThrow(t, Topic.Type.Name) },
+                        it.response_topic?.let { t -> TopicName.fromOrThrow(t) },
                         it.correlation_data?.let { c -> PlatformBuffer.wrap(c) },
                         props,
                         it.subscription_identifier
@@ -485,7 +483,7 @@ class SqlDatabasePersistence(
                 PublishMessage(
                     PublishMessage.FixedHeader(true, it.qos.toQos(), it.retain == 1L),
                     PublishMessage.VariableHeader(
-                        Topic.fromOrThrow(it.topic_name, Topic.Type.Name),
+                        TopicName.fromOrThrow(it.topic_name),
                         it.packet_id.toInt(),
                         properties,
                     ),
@@ -555,7 +553,7 @@ class SqlDatabasePersistence(
                         .executeAsList()
                         .map {
                             Subscription(
-                                Topic.fromOrThrow(it.topic_filter, Topic.Type.Filter),
+                                TopicFilter.fromOrThrow(it.topic_filter),
                                 it.qos.toQos(),
                                 it.no_local == 1L,
                                 it.retain_as_published == 1L,
@@ -584,7 +582,7 @@ class SqlDatabasePersistence(
                             .queuedUnsubscriptions(unsubscribeRequest.broker_id, unsubscribeRequest.packet_id)
                             .executeAsList()
                             .map {
-                                Topic.fromOrThrow(it.topic_filter, Topic.Type.Filter)
+                                TopicFilter.fromOrThrow(it.topic_filter)
                             }.toSet()
                     if (subscriptions.isNotEmpty()) {
                         val userProps =
@@ -711,7 +709,7 @@ class SqlDatabasePersistence(
                 p.payload_format_indicator == 1L,
                 p.message_expiry_interval,
                 p.topic_alias?.toInt(),
-                p.response_topic?.let { t -> Topic.fromOrThrow(t, Topic.Type.Name) },
+                p.response_topic?.let { t -> TopicName.fromOrThrow(t) },
                 p.correlation_data?.let { c -> PlatformBuffer.wrap(c) },
                 props,
                 p.subscription_identifier
@@ -723,7 +721,7 @@ class SqlDatabasePersistence(
         return PublishMessage(
             PublishMessage.FixedHeader(p.dup == 1L, p.qos.toQos(), p.retain == 1L),
             PublishMessage.VariableHeader(
-                Topic.fromOrThrow(p.topic_name, Topic.Type.Name),
+                TopicName.fromOrThrow(p.topic_name),
                 p.packet_id.toInt(),
                 properties,
             ),
@@ -787,7 +785,7 @@ class SqlDatabasePersistence(
                 .executeAsList()
                 .map {
                     Subscription(
-                        Topic.fromOrThrow(it.topic_filter, Topic.Type.Filter),
+                        TopicFilter.fromOrThrow(it.topic_filter),
                         it.qos.toQos(),
                         it.no_local == 1L,
                         it.retain_as_published == 1L,
@@ -847,7 +845,7 @@ class SqlDatabasePersistence(
                 .queuedUnsubscriptions(unsubscribeRequest.broker_id, unsubscribeRequest.packet_id)
                 .executeAsList()
                 .map {
-                    Topic.fromOrThrow(it.topic_filter, Topic.Type.Filter)
+                    TopicFilter.fromOrThrow(it.topic_filter)
                 }.toSet()
         return if (subscriptions.isNotEmpty()) {
             val userProps =

@@ -14,7 +14,7 @@ import com.ditchoom.mqtt.controlpacket.NO_PACKET_ID
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.QualityOfService.AT_LEAST_ONCE
 import com.ditchoom.mqtt.controlpacket.QualityOfService.AT_MOST_ONCE
-import com.ditchoom.mqtt.controlpacket.Topic
+import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
 import com.ditchoom.mqtt.controlpacket.validControlPacketIdentifierRange
@@ -62,13 +62,13 @@ data class PublishMessage(
     ) : this(
         FixedHeader(dup, qos, retain),
         VariableHeader(
-            Topic.fromOrThrow(topicName, Topic.Type.Name),
+            TopicName.fromOrThrow(topicName),
             packetIdentifier,
             VariableHeader.Properties(
                 payloadFormatIndicator,
                 messageExpiryInterval,
                 topicAlias,
-                responseTopicName?.let { Topic.fromOrThrow(it, Topic.Type.Name) },
+                responseTopicName?.let { TopicName.fromOrThrow(it) },
                 correlationData,
                 userProperty,
                 subscriptionIdentifier,
@@ -326,7 +326,7 @@ data class PublishMessage(
      */
 
     data class VariableHeader(
-        val topicName: Topic,
+        val topicName: TopicName,
         val packetIdentifier: Int = NO_PACKET_ID,
         val properties: Properties = Properties(),
     ) {
@@ -495,7 +495,7 @@ data class PublishMessage(
              * Data, the receiver of the Request Message should also include this Correlation Data as a
              * property in the PUBLISH packet of the Response Message.
              */
-            val responseTopic: Topic? = null,
+            val responseTopic: TopicName? = null,
             /**
              * 3.3.2.3.6 Correlation Data
              *
@@ -646,7 +646,7 @@ data class PublishMessage(
                     var payloadFormatIndicator: Boolean? = null
                     var messageExpiryInterval: Long? = null
                     var topicAlias: Int? = null
-                    var responseTopic: Topic? = null
+                    var responseTopic: TopicName? = null
                     var correlationData: ReadBuffer? = null
                     val userProperty = mutableListOf<Pair<String, String>>()
                     val subscriptionIdentifier = LinkedHashSet<Long>()
@@ -762,7 +762,7 @@ data class PublishMessage(
                 val props = Properties.from(propertiesSized.second)
                 return Pair(
                     size,
-                    VariableHeader(Topic.fromOrThrow(topicName, Topic.Type.Name), packetIdentifier, props),
+                    VariableHeader(TopicName.fromOrThrow(topicName), packetIdentifier, props),
                 )
             }
         }
@@ -781,7 +781,7 @@ data class PublishMessage(
                 }
                 val props = VariableHeader.Properties.from(wire.properties)
                 val variableHeader = VariableHeader(
-                    Topic.fromOrThrow(wire.topicName, Topic.Type.Name),
+                    TopicName.fromOrThrow(wire.topicName),
                     NO_PACKET_ID,
                     props,
                 )
@@ -792,7 +792,7 @@ data class PublishMessage(
                 }
                 val props = VariableHeader.Properties.from(wire.properties)
                 val variableHeader = VariableHeader(
-                    Topic.fromOrThrow(wire.topicName, Topic.Type.Name),
+                    TopicName.fromOrThrow(wire.topicName),
                     wire.packetId.toInt(),
                     props,
                 )

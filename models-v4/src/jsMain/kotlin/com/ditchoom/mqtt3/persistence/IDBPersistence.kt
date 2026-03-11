@@ -16,7 +16,7 @@ import com.ditchoom.mqtt.controlpacket.ISubscription
 import com.ditchoom.mqtt.controlpacket.IUnsubscribeAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IUnsubscribeRequest
 import com.ditchoom.mqtt.controlpacket.QualityOfService
-import com.ditchoom.mqtt.controlpacket.Topic
+import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt3.controlpacket.ConnectionRequest
 import com.ditchoom.mqtt3.controlpacket.PublishComplete
 import com.ditchoom.mqtt3.controlpacket.PublishMessage
@@ -187,7 +187,7 @@ class IDBPersistence(
     override suspend fun activeSubscriptions(
         broker: MqttBroker,
         includePendingUnsub: Boolean,
-    ): Map<Topic, ISubscription> {
+    ): Map<TopicFilter, ISubscription> {
         val tx = db.transaction(SUBSCRIPTION, IDBTransactionMode.readonly)
         val subStore = tx.objectStore(SUBSCRIPTION)
         val index = subStore.index(BROKER_INDEX)

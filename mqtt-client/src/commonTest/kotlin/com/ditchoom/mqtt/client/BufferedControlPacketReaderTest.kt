@@ -8,7 +8,7 @@ import com.ditchoom.buffer.stream.AutoFillingSuspendingStreamProcessor
 import com.ditchoom.buffer.stream.EndOfStreamException
 import com.ditchoom.buffer.stream.StreamProcessor
 import com.ditchoom.buffer.stream.builder
-import com.ditchoom.mqtt.controlpacket.Topic
+import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt3.controlpacket.ConnectionAcknowledgment
 import com.ditchoom.mqtt3.controlpacket.ControlPacketV4Factory
 import com.ditchoom.mqtt3.controlpacket.PingRequest
@@ -82,7 +82,7 @@ private fun sendPacketInChunks(
 
 class BufferedControlPacketReaderTest {
     private val factory = ControlPacketV4Factory
-    private val topic = Topic.fromOrThrow("test/topic", Topic.Type.Name)
+    private val topic = TopicName.fromOrThrow("test/topic")
 
     @Test
     fun parseSingleConnackPacket() =

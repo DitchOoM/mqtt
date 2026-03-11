@@ -16,7 +16,7 @@ import com.ditchoom.mqtt.controlpacket.ISubscription.RetainHandling.DO_NOT_SEND_
 import com.ditchoom.mqtt.controlpacket.ISubscription.RetainHandling.SEND_RETAINED_MESSAGES_AT_SUBSCRIBE_ONLY_IF_SUBSCRIBE_DOESNT_EXISTS
 import com.ditchoom.mqtt.controlpacket.ISubscription.RetainHandling.SEND_RETAINED_MESSAGES_AT_TIME_OF_SUBSCRIBE
 import com.ditchoom.mqtt.controlpacket.QualityOfService
-import com.ditchoom.mqtt.controlpacket.Topic
+import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
 import com.ditchoom.mqtt5.controlpacket.SubscribeRequest.VariableHeader.Properties
@@ -61,7 +61,7 @@ data class SubscribeRequest(
 
     constructor(
         packetIdentifier: Int,
-        topic: List<Topic>,
+        topic: List<TopicFilter>,
         qos: List<QualityOfService>,
         props: Properties = Properties(),
         noLocalList: List<Boolean>? = null,
@@ -283,7 +283,7 @@ data class SubscribeRequest(
                     val qosBit0 = opts.shl(7).shr(7) == 1
                     val qos = QualityOfService.fromBooleans(qosBit1, qosBit0)
                     Subscription(
-                        Topic.fromOrThrow(sub.topicFilter, Topic.Type.Filter),
+                        TopicFilter.fromOrThrow(sub.topicFilter),
                         qos,
                         nlBit2,
                         rapBit3,
@@ -296,7 +296,7 @@ data class SubscribeRequest(
 }
 
 data class Subscription(
-    override val topicFilter: Topic,
+    override val topicFilter: TopicFilter,
     /**
      * Bits 0 and 1 of the Subscription Options represent Maximum QoS field. This gives the maximum
      * QoS level at which the Server can send Application Messages to the Client. It is a Protocol
@@ -366,7 +366,7 @@ data class Subscription(
             var size = 0
             val topic = buffer.readMqttUtf8StringNotValidatedSized()
             size += topic.first + 2
-            val topicFilter = Topic.fromOrThrow(topic.second, Topic.Type.Filter)
+            val topicFilter = TopicFilter.fromOrThrow(topic.second)
             val subOptionsInt = buffer.readUnsignedByte().toInt()
             size += 1
             val reservedBit7 = subOptionsInt.shr(7) == 1
@@ -408,7 +408,7 @@ data class Subscription(
             retainHandlingList: RetainHandling =
                 SEND_RETAINED_MESSAGES_AT_TIME_OF_SUBSCRIBE,
         ) = from(
-            listOf(Topic.fromOrThrow(topic, Topic.Type.Filter)),
+            listOf(TopicFilter.fromOrThrow(topic)),
             listOf(qos),
             listOf(noLocal),
             listOf(retainAsPublished),
@@ -416,7 +416,7 @@ data class Subscription(
         ).first()
 
         fun from(
-            topics: List<Topic>,
+            topics: List<TopicFilter>,
             qos: List<QualityOfService>,
             noLocalList: List<Boolean>? = null,
             retainAsPublishedList: List<Boolean>? = null,

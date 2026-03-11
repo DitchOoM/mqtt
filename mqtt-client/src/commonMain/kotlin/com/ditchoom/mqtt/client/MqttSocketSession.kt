@@ -4,7 +4,6 @@ import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.PlatformBuffer
 import com.ditchoom.buffer.ReadBuffer
-import com.ditchoom.buffer.shared
 import com.ditchoom.mqtt.MqttException
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.ControlPacket
@@ -25,7 +24,7 @@ class MqttSocketSession private constructor(
     private val writeTimeout: Duration,
     private val transport: MqttTransport,
     private val reader: BufferedControlPacketReader,
-    var allocateSharedMemory: Boolean = false,
+    val factory: BufferFactory = BufferFactory.Default,
     var sentMessage: (PlatformBuffer) -> Unit,
 ) {
     var observer: Observer? = null
@@ -43,11 +42,11 @@ class MqttSocketSession private constructor(
     suspend fun write(packet: ControlPacket) = write(listOf(packet))
 
     suspend fun write(controlPackets: Collection<ControlPacket>) {
-        val b =
-            controlPackets.toBuffer(if (allocateSharedMemory) BufferFactory.shared() else BufferFactory.Default)
+        val b = controlPackets.toBuffer(factory)
         b.resetForWrite()
         transport.write(b, writeTimeout)
         sentMessage(b)
+        b.freeNativeMemory()
         observer?.wrotePackets(brokerId, connectionAcknowledgement.mqttVersion, controlPackets)
         if (controlPackets.filterIsInstance<IDisconnectNotification>().firstOrNull() != null) {
             close()
@@ -73,17 +72,11 @@ class MqttSocketSession private constructor(
             brokerId: Int,
             connectionRequest: IConnectionRequest,
             connectionOps: MqttConnectionOptions,
-            allocateSharedMemory: Boolean = false,
+            factory: BufferFactory = BufferFactory.Default,
             observer: Observer? = null,
             sentMessage: (ReadBuffer) -> Unit = {},
             incomingMessage: (UByte, Int, ReadBuffer) -> Unit = { _, _, _ -> },
         ): MqttSocketSession {
-            val factory =
-                if (allocateSharedMemory) {
-                    BufferFactory.shared()
-                } else {
-                    BufferFactory.Default
-                }
             val connect = connectionRequest.toBuffer(factory)
             connect.resetForWrite()
             val transport =
@@ -114,13 +107,14 @@ class MqttSocketSession private constructor(
                                     connectionOps.websocketEndpoint,
                                     connectionOps.protocols,
                                 )
-                            val ws = createWebSocketTransport(wsOptions, connectionOps.readTimeout)
+                            val ws = createWebSocketTransport(wsOptions, connectionOps.readTimeout, factory)
                             ws.write(connect, connectionOps.writeTimeout)
                             ws
                         }
                     }
                 }
             sentMessage(connect)
+            connect.freeNativeMemory()
 
             val bufferedControlPacketReader =
                 BufferedControlPacketReader(
@@ -139,7 +133,7 @@ class MqttSocketSession private constructor(
                         connectionOps.writeTimeout,
                         transport,
                         bufferedControlPacketReader,
-                        allocateSharedMemory,
+                        factory,
                         sentMessage,
                     )
                 s.observer = observer

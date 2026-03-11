@@ -15,12 +15,12 @@ import com.ditchoom.mqtt.controlpacket.ISubscription
 import com.ditchoom.mqtt.controlpacket.IUnsubscribeAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IUnsubscribeRequest
 import com.ditchoom.mqtt.controlpacket.QualityOfService
-import com.ditchoom.mqtt.controlpacket.Topic
+import com.ditchoom.mqtt.controlpacket.TopicFilter
 
 class InMemoryPersistence : Persistence {
     private var nextPacketId = 0.toUShort()
 
-    private val activeSubscriptions = HashMap<Int, MutableMap<Topic, ISubscription>>()
+    private val activeSubscriptions = HashMap<Int, MutableMap<TopicFilter, ISubscription>>()
 
     // client messages
     private val clientMessages = HashMap<Int, MutableMap<Int, ControlPacket>>()
@@ -33,7 +33,7 @@ class InMemoryPersistence : Persistence {
     override suspend fun activeSubscriptions(
         broker: MqttBroker,
         includePendingUnsub: Boolean,
-    ): Map<Topic, ISubscription> = activeSubscriptions[broker.identifier] ?: emptyMap()
+    ): Map<TopicFilter, ISubscription> = activeSubscriptions[broker.identifier] ?: emptyMap()
 
     override suspend fun clearMessages(broker: MqttBroker) {
         clientMessages.clear()

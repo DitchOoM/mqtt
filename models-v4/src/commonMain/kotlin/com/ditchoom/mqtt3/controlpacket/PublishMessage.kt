@@ -13,7 +13,7 @@ import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.QualityOfService.AT_LEAST_ONCE
 import com.ditchoom.mqtt.controlpacket.QualityOfService.AT_MOST_ONCE
 import com.ditchoom.mqtt.controlpacket.QualityOfService.EXACTLY_ONCE
-import com.ditchoom.mqtt.controlpacket.Topic
+import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
 import com.ditchoom.mqtt.controlpacket.validControlPacketIdentifierRange
@@ -41,12 +41,12 @@ data class PublishMessage(
         payload: ReadBuffer? = null,
     ) : this(
         FixedHeader(dup, qos, retain),
-        VariableHeader(Topic.fromOrThrow(topicName, Topic.Type.Name), packetIdentifier),
+        VariableHeader(TopicName.fromOrThrow(topicName), packetIdentifier),
         payload,
     )
 
     constructor(
-        topicName: Topic,
+        topicName: TopicName,
         qos: QualityOfService,
         dup: Boolean = false,
         retain: Boolean = false,
@@ -112,7 +112,7 @@ data class PublishMessage(
             -> copy(variable = variable.copy(packetIdentifier = packetIdentifier))
         }
 
-    override val topic: Topic = variable.topicName
+    override val topic: TopicName = variable.topicName
 
     override fun validate(): MalformedPacketException? {
         if (fixed.qos == AT_MOST_ONCE &&
@@ -290,7 +290,7 @@ data class PublishMessage(
          * 4.7 [MQTT-3.3.2-3]. However, since the Server is permitted to override the Topic Name,
          * it might not be the same as the Topic Name in the original PUBLISH Packet.
          */
-        val topicName: Topic,
+        val topicName: TopicName,
         /**
          * The Packet Identifier field is only present in PUBLISH Packets where the QoS level is
          * 1 or 2. Section 2.3.1 provides more information about Packet Identifiers.
@@ -318,7 +318,7 @@ data class PublishMessage(
                 isQos0: Boolean,
             ): VariableHeader {
                 val validatedMqttString = buffer.readMqttUtf8StringNotValidatedSized().second
-                val topicName = Topic.fromOrThrow(validatedMqttString, Topic.Type.Name)
+                val topicName = TopicName.fromOrThrow(validatedMqttString)
                 val packetIdentifier =
                     if (isQos0) NO_PACKET_ID else buffer.readUnsignedShort().toInt()
                 return VariableHeader(
@@ -348,13 +348,13 @@ data class PublishMessage(
                 val wire = PublishNoIdWireCodec.decode<ReadBuffer?>(sliced) { pr ->
                     if (pr.remaining() > 0) pr.copyToBuffer() else null
                 }
-                val topicName = Topic.fromOrThrow(wire.topicName, Topic.Type.Name)
+                val topicName = TopicName.fromOrThrow(wire.topicName)
                 PublishMessage(fixedHeader, VariableHeader(topicName, NO_PACKET_ID), wire.payload)
             } else {
                 val wire = PublishWithIdWireCodec.decode<ReadBuffer?>(sliced) { pr ->
                     if (pr.remaining() > 0) pr.copyToBuffer() else null
                 }
-                val topicName = Topic.fromOrThrow(wire.topicName, Topic.Type.Name)
+                val topicName = TopicName.fromOrThrow(wire.topicName)
                 PublishMessage(fixedHeader, VariableHeader(topicName, wire.packetId.toInt()), wire.payload)
             }
         }
@@ -363,7 +363,7 @@ data class PublishMessage(
             dup: Boolean = false,
             qos: QualityOfService = AT_MOST_ONCE,
             retain: Boolean = false,
-            topicName: Topic,
+            topicName: TopicName,
             packetIdentifier: Int = NO_PACKET_ID,
         ) = buildPayload(dup, qos, retain, topicName, packetIdentifier)
 
@@ -371,7 +371,7 @@ data class PublishMessage(
             dup: Boolean = false,
             qos: QualityOfService = AT_MOST_ONCE,
             retain: Boolean = false,
-            topicName: Topic,
+            topicName: TopicName,
             packetIdentifier: Int = NO_PACKET_ID,
             payload: PlatformBuffer? = null,
         ): PublishMessage {

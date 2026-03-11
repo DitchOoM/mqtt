@@ -1,5 +1,7 @@
 package com.ditchoom.mqtt.client
 
+import com.ditchoom.buffer.BufferFactory
+import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.mqtt.InMemoryPersistence
 import com.ditchoom.mqtt.Persistence
@@ -25,11 +27,7 @@ class LocalMqttService private constructor(
 ) : MqttService {
     private val brokerClientMap = mutableMapOf<Byte, HashMap<Int, LocalMqttClient>>()
     private var observer: Observer? = null
-    internal var useSharedMemory = false
-        set(value) {
-            field = value
-            brokerClientMap.values.forEach { map -> map.values.forEach { it.allocateSharedMemory = value } }
-        }
+    var factory: BufferFactory = BufferFactory.Default
     var incomingMessages: (MqttBroker, UByte, Int, ReadBuffer) -> Unit = { _, _, _, _ -> }
     var sentMessages: (MqttBroker, ReadBuffer) -> Unit = { _, _ -> }
 
@@ -55,7 +53,7 @@ class LocalMqttService private constructor(
 
         if (client == null) {
             val c =
-                LocalMqttClient.stayConnected(scope, broker, getPersistence(broker), useSharedMemory, observer, {
+                LocalMqttClient.stayConnected(scope, broker, getPersistence(broker), factory, observer, {
                     sentMessages(broker, it)
                 }) { byte1, remainingLength, buffer ->
                     incomingMessages(broker, byte1, remainingLength, buffer)
@@ -65,7 +63,7 @@ class LocalMqttService private constructor(
                 .getOrPut(broker.identifier) { c }
         } else if (client.isStopped()) {
             val c =
-                LocalMqttClient.stayConnected(scope, broker, getPersistence(broker), useSharedMemory, observer, {
+                LocalMqttClient.stayConnected(scope, broker, getPersistence(broker), factory, observer, {
                     sentMessages(broker, it)
                 }) { byte1, remainingLength, buffer ->
                     incomingMessages(broker, byte1, remainingLength, buffer)
@@ -88,7 +86,7 @@ class LocalMqttService private constructor(
             val (protocolVersion, brokerId) = pair
             val broker = allBrokers[pair]!!
             val c =
-                LocalMqttClient.stayConnected(scope, broker, getPersistence(broker), useSharedMemory, observer, {
+                LocalMqttClient.stayConnected(scope, broker, getPersistence(broker), factory, observer, {
                     sentMessages(broker, it)
                 }) { byte1, remainingLength, buffer ->
                     incomingMessages(broker, byte1, remainingLength, buffer)

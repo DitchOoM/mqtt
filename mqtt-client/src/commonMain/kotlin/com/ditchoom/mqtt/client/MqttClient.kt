@@ -9,7 +9,8 @@ import com.ditchoom.mqtt.controlpacket.ISubscribeRequest
 import com.ditchoom.mqtt.controlpacket.ISubscription
 import com.ditchoom.mqtt.controlpacket.IUnsubscribeRequest
 import com.ditchoom.mqtt.controlpacket.QualityOfService
-import com.ditchoom.mqtt.controlpacket.Topic
+import com.ditchoom.mqtt.controlpacket.TopicFilter
+import com.ditchoom.mqtt.controlpacket.TopicName
 import kotlinx.coroutines.flow.Flow
 
 interface MqttClient {
@@ -32,7 +33,7 @@ interface MqttClient {
     ): PublishOperation =
         publish(
             packetFactory.publish(
-                topicName = Topic.fromOrThrow(topicName, Topic.Type.Name),
+                topicName = TopicName.fromOrThrow(topicName),
                 qos = qos,
                 retain = retain,
                 payload = payload,
@@ -41,12 +42,12 @@ interface MqttClient {
 
     suspend fun publish(pub: IPublishMessage): PublishOperation
 
-    fun observe(filter: Topic): Flow<IPublishMessage>
+    fun observe(filter: TopicFilter): Flow<IPublishMessage>
 
     suspend fun subscribe(
         topicFilter: String,
         maxQos: QualityOfService,
-    ): SubscribeOperation = subscribe(packetFactory.subscribe(Topic.fromOrThrow(topicFilter, Topic.Type.Filter), maxQos))
+    ): SubscribeOperation = subscribe(packetFactory.subscribe(TopicFilter.fromOrThrow(topicFilter), maxQos))
 
     suspend fun subscribe(subscriptions: Set<ISubscription>): SubscribeOperation =
         subscribe(
@@ -55,10 +56,44 @@ interface MqttClient {
 
     suspend fun subscribe(sub: ISubscribeRequest): SubscribeOperation
 
-    suspend fun unsubscribe(topicFilter: String): UnsubscribeOperation =
-        unsubscribe(packetFactory.unsubscribe(Topic.fromOrThrow(topicFilter, Topic.Type.Filter)))
+    /**
+     * Subscribe with a callback handler for incoming publishes.
+     *
+     * The handler receives [com.ditchoom.mqtt.controlpacket.IncomingPublish] which can be
+     * smart-cast to [com.ditchoom.mqtt.controlpacket.IncomingPublishV5] for v5 properties.
+     *
+     * The payload buffer is scoped — it is only valid during the handler invocation.
+     * Copy the bytes if you need them beyond the callback.
+     *
+     * @param topicFilter The topic filter to subscribe to
+     * @param maxQos Maximum QoS for the subscription
+     * @param handler Callback invoked for each matching incoming publish
+     * @return The subscribe operation with the SUBACK deferred
+     */
+    suspend fun subscribe(
+        topicFilter: String,
+        maxQos: QualityOfService = QualityOfService.AT_LEAST_ONCE,
+        handler: SubscriptionHandler,
+    ): SubscribeOperation =
+        subscribe(
+            packetFactory.subscribe(TopicFilter.fromOrThrow(topicFilter), maxQos),
+            handler,
+        )
 
-    suspend fun unsubscribe(subscriptions: Set<Topic>): UnsubscribeOperation =
+    /**
+     * Subscribe with a callback handler for incoming publishes.
+     *
+     * @see subscribe(String, QualityOfService, SubscriptionHandler)
+     */
+    suspend fun subscribe(
+        sub: ISubscribeRequest,
+        handler: SubscriptionHandler,
+    ): SubscribeOperation
+
+    suspend fun unsubscribe(topicFilter: String): UnsubscribeOperation =
+        unsubscribe(packetFactory.unsubscribe(TopicFilter.fromOrThrow(topicFilter)))
+
+    suspend fun unsubscribe(subscriptions: Set<TopicFilter>): UnsubscribeOperation =
         unsubscribe(
             packetFactory.unsubscribe(subscriptions),
         )

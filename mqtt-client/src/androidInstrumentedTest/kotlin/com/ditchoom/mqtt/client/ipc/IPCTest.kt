@@ -10,7 +10,7 @@ import com.ditchoom.mqtt.client.LocalMqttService
 import com.ditchoom.mqtt.client.MqttService
 import com.ditchoom.mqtt.client.net.sendAllMessageTypes
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
-import com.ditchoom.mqtt.controlpacket.Topic
+import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt3.controlpacket.ConnectionRequest
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -60,7 +60,7 @@ class IPCTest {
             service.start(broker)
             val client = checkNotNull(service.getClient(broker))
             client.awaitConnectivity()
-            sendAllMessageTypes(client, Topic.fromOrThrow("testIpc", Topic.Type.Name), "Test String")
+            sendAllMessageTypes(client, TopicName.fromOrThrow("testIpc"), "Test String")
             client.shutdown(true)
         }
 }

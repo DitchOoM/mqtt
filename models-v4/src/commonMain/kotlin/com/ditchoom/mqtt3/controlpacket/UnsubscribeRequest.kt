@@ -6,7 +6,7 @@ import com.ditchoom.buffer.utf8Length
 import com.ditchoom.mqtt.ProtocolError
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.writeMqttUtf8String
 import com.ditchoom.mqtt.controlpacket.IUnsubscribeRequest
-import com.ditchoom.mqtt.controlpacket.Topic
+import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
 import com.ditchoom.mqtt3.controlpacket.wire.TopicFilterWire
 import com.ditchoom.mqtt3.controlpacket.wire.UnsubscribeWire
@@ -18,11 +18,11 @@ import com.ditchoom.mqtt3.controlpacket.wire.UnsubscribeWireCodec
  */
 data class UnsubscribeRequest(
     override val packetIdentifier: Int,
-    override val topics: Set<Topic>,
+    override val topics: Set<TopicFilter>,
 ) : ControlPacketV4(IUnsubscribeRequest.controlPacketValue, DirectionOfFlow.CLIENT_TO_SERVER, 0b10),
     IUnsubscribeRequest {
     constructor(packetIdentifier: Int, topicString: Collection<String>) :
-        this(packetIdentifier, topicString.map { Topic.fromOrThrow(it, Topic.Type.Filter) }.toSet())
+        this(packetIdentifier, topicString.map { TopicFilter.fromOrThrow(it) }.toSet())
 
     override fun remainingLength() = UShort.SIZE_BYTES + payloadSize()
 
@@ -59,7 +59,7 @@ data class UnsubscribeRequest(
         ): UnsubscribeRequest {
             val sliced = buffer.readBytes(remainingLength)
             val wire = UnsubscribeWireCodec.decode(sliced)
-            val topics = wire.topics.map { Topic.fromOrThrow(it.topicFilter, Topic.Type.Filter) }.toSet()
+            val topics = wire.topics.map { TopicFilter.fromOrThrow(it.topicFilter) }.toSet()
             return UnsubscribeRequest(wire.packetIdentifier.toInt(), topics)
         }
     }

@@ -13,7 +13,7 @@ import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.writeMqttUtf8Stri
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.writeVariableByteInteger
 import com.ditchoom.mqtt.controlpacket.IConnectionRequest
 import com.ditchoom.mqtt.controlpacket.QualityOfService
-import com.ditchoom.mqtt.controlpacket.Topic
+import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
 import com.ditchoom.mqtt.controlpacket.format.fixed.get
 import com.ditchoom.mqtt5.controlpacket.properties.Authentication
@@ -104,7 +104,7 @@ data class ConnectionRequest(
             if (willTopic == null) {
                 null
             } else {
-                Topic.fromOrThrow(willTopic, Topic.Type.Name)
+                TopicName.fromOrThrow(willTopic)
             },
             willPayload,
             userName,
@@ -116,7 +116,7 @@ data class ConnectionRequest(
         clientId: String,
         userName: String? = null,
         password: String? = null,
-        willTopic: Topic? = null,
+        willTopic: TopicName? = null,
         willPayload: PlatformBuffer? = null,
         willRetain: Boolean = false,
         willQos: QualityOfService = QualityOfService.AT_MOST_ONCE,
@@ -189,7 +189,7 @@ data class ConnectionRequest(
     override val password: String? = payload.password
     override val payloadFormatIndicator: Boolean = payload.willProperties?.payloadFormatIndicator ?: false
     override val receiveMaximum: UShort = variableHeader.properties.receiveMaximum?.toUShort() ?: UShort.MAX_VALUE
-    override val responseTopic: Topic? = payload.willProperties?.responseTopic
+    override val responseTopic: TopicName? = payload.willProperties?.responseTopic
     override val sessionExpiryIntervalSeconds: ULong? = variableHeader.properties.sessionExpiryIntervalSeconds
     override val topicAliasMax: UShort? = variableHeader.properties.topicAliasMaximum?.toUShort()
     override val userProperty: List<Pair<String, String>> = variableHeader.properties.userProperty
@@ -198,7 +198,7 @@ data class ConnectionRequest(
     override val willPayload: ReadBuffer? = payload.willPayload
     override val willQos: QualityOfService = variableHeader.willQos
     override val willRetain: Boolean = variableHeader.willRetain
-    override val willTopic: Topic? = payload.willTopic
+    override val willTopic: TopicName? = payload.willTopic
 
     override fun payload(writeBuffer: WriteBuffer) = payload.serialize(writeBuffer)
 
@@ -1024,7 +1024,7 @@ data class ConnectionRequest(
          * @see <a href="https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477369">
          *     3.1.3.3 Will Topic</a>
          */
-        val willTopic: Topic? = null,
+        val willTopic: TopicName? = null,
         /**
          * 3.1.3.4 Will Payload
          * If the Will Flag is set to 1 the Will Payload is the next field in the Payload. The Will Payload
@@ -1145,7 +1145,7 @@ data class ConnectionRequest(
              * @see <a href="https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Request_/_Response">
              *     Section 4.10 Request Response</a>
              */
-            val responseTopic: Topic? = null,
+            val responseTopic: TopicName? = null,
             /**
              * 3.1.3.2.7 Correlation Data
              *
@@ -1238,7 +1238,7 @@ data class ConnectionRequest(
                     var payloadFormatIndicator: Boolean? = null
                     var messageExpiryIntervalSeconds: Long? = null
                     var contentType: String? = null
-                    var responseTopic: Topic? = null
+                    var responseTopic: TopicName? = null
                     var correlationData: ReadBuffer? = null
                     val userProperty = mutableListOf<Pair<String, String>>()
                     properties.forEach {
@@ -1378,7 +1378,7 @@ data class ConnectionRequest(
                     }
                 val willTopic =
                     if (variableHeader.willFlag) {
-                        Topic.fromOrThrow(buffer.readMqttUtf8StringNotValidatedSized().second, Topic.Type.Name)
+                        TopicName.fromOrThrow(buffer.readMqttUtf8StringNotValidatedSized().second)
                     } else {
                         null
                     }
@@ -1436,7 +1436,7 @@ data class ConnectionRequest(
                 null
             }
             val willTopic = if (wire.willTopic != null) {
-                Topic.fromOrThrow(wire.willTopic, Topic.Type.Name)
+                TopicName.fromOrThrow(wire.willTopic)
             } else {
                 null
             }

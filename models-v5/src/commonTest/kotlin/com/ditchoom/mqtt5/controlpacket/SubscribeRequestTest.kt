@@ -8,7 +8,7 @@ import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readVariableByteI
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.writeVariableByteInteger
 import com.ditchoom.mqtt.controlpacket.QualityOfService.AT_LEAST_ONCE
 import com.ditchoom.mqtt.controlpacket.QualityOfService.EXACTLY_ONCE
-import com.ditchoom.mqtt.controlpacket.Topic
+import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.validateMqttUTF8StringOrThrow
 import com.ditchoom.mqtt5.controlpacket.SubscribeRequest.VariableHeader
 import com.ditchoom.mqtt5.controlpacket.properties.ReasonString
@@ -84,7 +84,7 @@ class SubscribeRequestTest {
         val subscribeRequest =
             SubscribeRequest(
                 2,
-                listOf(Topic.fromOrThrow("a/b", Topic.Type.Name), Topic.fromOrThrow("c/d", Topic.Type.Name)),
+                listOf(TopicFilter.fromOrThrow("a/b"), TopicFilter.fromOrThrow("c/d")),
                 listOf(AT_LEAST_ONCE, EXACTLY_ONCE),
             )
         assertEquals(subscribeRequest.variable.packetIdentifier, 2)
@@ -155,7 +155,7 @@ class SubscribeRequestTest {
                     packetIdentifier.toInt(),
                     properties = VariableHeader.Properties(reasonString = "yolo"),
                 ),
-                setOf(Subscription(Topic.fromOrThrow("test", Topic.Type.Filter))),
+                setOf(Subscription(TopicFilter.fromOrThrow("test"))),
             )
         actual.serialize(buffer)
         buffer.resetForRead()
@@ -192,7 +192,7 @@ class SubscribeRequestTest {
         val request =
             SubscribeRequest(
                 VariableHeader(packetIdentifier.toInt(), properties = props),
-                setOf(Subscription(Topic.fromOrThrow("test", Topic.Type.Filter))),
+                setOf(Subscription(TopicFilter.fromOrThrow("test"))),
             )
         val buffer = BufferFactory.Default.allocate(25)
         request.serialize(buffer)

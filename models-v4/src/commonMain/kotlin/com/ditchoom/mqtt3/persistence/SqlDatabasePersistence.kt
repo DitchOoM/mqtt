@@ -21,7 +21,8 @@ import com.ditchoom.mqtt.controlpacket.IUnsubscribeAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IUnsubscribeRequest
 import com.ditchoom.mqtt.controlpacket.NO_PACKET_ID
 import com.ditchoom.mqtt.controlpacket.QualityOfService
-import com.ditchoom.mqtt.controlpacket.Topic
+import com.ditchoom.mqtt.controlpacket.TopicFilter
+import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt3.controlpacket.ConnectionRequest
 import com.ditchoom.mqtt3.controlpacket.PublishComplete
 import com.ditchoom.mqtt3.controlpacket.PublishMessage
@@ -121,7 +122,7 @@ class SqlDatabasePersistence(
     override suspend fun activeSubscriptions(
         broker: MqttBroker,
         includePendingUnsub: Boolean,
-    ): Map<Topic, ISubscription> =
+    ): Map<TopicFilter, ISubscription> =
         withContext(dispatcher) {
             if (includePendingUnsub) {
                 subscriptionQueries
@@ -130,7 +131,7 @@ class SqlDatabasePersistence(
                 subscriptionQueries
                     .allSubscriptionsNotPendingUnsub(broker.identifier.toLong())
             }.executeAsList()
-                .map { Subscription(Topic.fromOrThrow(it.topic_filter, Topic.Type.Filter), it.qos.toQos()) }
+                .map { Subscription(TopicFilter.fromOrThrow(it.topic_filter), it.qos.toQos()) }
                 .associateBy { it.topicFilter }
         }
 
@@ -319,7 +320,7 @@ class SqlDatabasePersistence(
                     }
                 PublishMessage(
                     PublishMessage.FixedHeader(true, it.qos.toQos(), it.retain == 1L),
-                    PublishMessage.VariableHeader(Topic.fromOrThrow(it.topic_name, Topic.Type.Name), it.packet_id.toInt()),
+                    PublishMessage.VariableHeader(TopicName.fromOrThrow(it.topic_name), it.packet_id.toInt()),
                     payload,
                 )
             }
@@ -340,7 +341,7 @@ class SqlDatabasePersistence(
                         .queuedSubscriptions(subscribeRequest.broker_id, subscribeRequest.packet_id)
                         .executeAsList()
                         .map {
-                            Subscription(Topic.fromOrThrow(it.topic_filter, Topic.Type.Filter), it.qos.toQos())
+                            Subscription(TopicFilter.fromOrThrow(it.topic_filter), it.qos.toQos())
                         }.toSet()
                 SubscribeRequest(subscribeRequest.packet_id.toInt(), subs)
             }
@@ -354,7 +355,7 @@ class SqlDatabasePersistence(
                             .queuedUnsubscriptions(unsubscribeRequest.broker_id, unsubscribeRequest.packet_id)
                             .executeAsList()
                             .map {
-                                Topic.fromOrThrow(it.topic_filter, Topic.Type.Filter)
+                                TopicFilter.fromOrThrow(it.topic_filter)
                             }.toSet()
                     if (subscriptions.isNotEmpty()) {
                         UnsubscribeRequest(unsubscribeRequest.packet_id.toInt(), subscriptions)
@@ -431,7 +432,7 @@ class SqlDatabasePersistence(
             }
         return PublishMessage(
             PublishMessage.FixedHeader(pub.dup == 1L, pub.qos.toQos(), pub.retain == 1L),
-            PublishMessage.VariableHeader(Topic.fromOrThrow(pub.topic_name, Topic.Type.Name), pub.packet_id.toInt()),
+            PublishMessage.VariableHeader(TopicName.fromOrThrow(pub.topic_name), pub.packet_id.toInt()),
             payload,
         )
     }
@@ -475,7 +476,7 @@ class SqlDatabasePersistence(
                 .queuedSubscriptions(subscribeRequest.broker_id, subscribeRequest.packet_id)
                 .executeAsList()
                 .map {
-                    Subscription(Topic.fromOrThrow(it.topic_filter, Topic.Type.Filter), it.qos.toQos())
+                    Subscription(TopicFilter.fromOrThrow(it.topic_filter), it.qos.toQos())
                 }.toSet()
         return SubscribeRequest(subscribeRequest.packet_id.toInt(), subs)
     }
@@ -515,7 +516,7 @@ class SqlDatabasePersistence(
                 .queuedUnsubscriptions(unsubscribeRequest.broker_id, unsubscribeRequest.packet_id)
                 .executeAsList()
                 .map {
-                    Topic.fromOrThrow(it.topic_filter, Topic.Type.Filter)
+                    TopicFilter.fromOrThrow(it.topic_filter)
                 }.toSet()
         return if (subscriptions.isNotEmpty()) {
             UnsubscribeRequest(unsubscribeRequest.packet_id.toInt(), subscriptions)

@@ -1,7 +1,5 @@
 package com.ditchoom.mqtt5.controlpacket
 
-import com.ditchoom.buffer.BufferFactory
-import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.mqtt.MalformedPacketException
 import com.ditchoom.mqtt.controlpacket.ControlPacket
@@ -31,10 +29,10 @@ abstract class ControlPacketV5(
             val byte1 = buffer.readUnsignedByte()
             val remainingLength = buffer.readVariableByteInteger()
             val remainingBuffer =
-                if (remainingLength > 1) {
+                if (remainingLength > 0) {
                     buffer.readBytes(remainingLength)
                 } else {
-                    BufferFactory.Default.allocate(0)
+                    ReadBuffer.EMPTY_BUFFER
                 }
             return fromTyped(remainingBuffer, byte1, remainingLength)
         }

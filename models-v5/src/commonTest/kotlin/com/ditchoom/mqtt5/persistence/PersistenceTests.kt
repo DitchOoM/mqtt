@@ -7,7 +7,8 @@ import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.ISubscription
 import com.ditchoom.mqtt.controlpacket.NO_PACKET_ID
 import com.ditchoom.mqtt.controlpacket.QualityOfService
-import com.ditchoom.mqtt.controlpacket.Topic
+import com.ditchoom.mqtt.controlpacket.TopicFilter
+import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
 import com.ditchoom.mqtt5.controlpacket.ConnectionRequest
 import com.ditchoom.mqtt5.controlpacket.PublishAcknowledgment
@@ -145,10 +146,10 @@ class PersistenceTests {
     fun subscription() =
         runTest {
             val (persistence, broker) = setupPersistence()
-            val topicMap = HashMap<Topic, QualityOfService>()
-            val topic0 = Topic.fromOrThrow("topic0", Topic.Type.Filter)
-            val topic1 = Topic.fromOrThrow("topic1", Topic.Type.Filter)
-            val topic2 = Topic.fromOrThrow("topic2", Topic.Type.Filter)
+            val topicMap = HashMap<TopicFilter, QualityOfService>()
+            val topic0 = TopicFilter.fromOrThrow("topic0")
+            val topic1 = TopicFilter.fromOrThrow("topic1")
+            val topic2 = TopicFilter.fromOrThrow("topic2")
             topicMap[topic0] = QualityOfService.AT_MOST_ONCE
             topicMap[topic1] = QualityOfService.AT_LEAST_ONCE
             topicMap[topic2] = QualityOfService.EXACTLY_ONCE
@@ -302,7 +303,7 @@ class PersistenceTests {
                                 correlationData = PlatformBuffer.wrap(byteArrayOf(1, 2, 3, 4)).also { it.position(0) },
                                 userProperty = listOf(Pair("will", "test"), Pair("test", "will")),
                             ),
-                        willTopic = Topic.fromOrThrow("testWill", Topic.Type.Name),
+                        willTopic = TopicName.fromOrThrow("testWill"),
                     ),
             )
     }

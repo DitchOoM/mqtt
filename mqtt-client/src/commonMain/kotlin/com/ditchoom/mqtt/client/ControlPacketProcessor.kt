@@ -40,6 +40,7 @@ class ControlPacketProcessor(
     internal val persistence: Persistence,
 ) {
     var observer: Observer? = null
+    internal val publishDispatcher = PublishDispatcher()
     private var currentPingJob: Job? = null
     var pingCount = 0L
         private set
@@ -126,6 +127,11 @@ class ControlPacketProcessor(
                     if (replyMessage != null) {
                         persistence.incomingPublish(broker, packet, replyMessage)
                         write(replyMessage)
+                    }
+                    // Dispatch to registered handlers after QoS ACK
+                    if (!publishDispatcher.isEmpty()) {
+                        val incoming = packet.toIncomingPublish()
+                        publishDispatcher.dispatch(incoming)
                     }
                 }
 

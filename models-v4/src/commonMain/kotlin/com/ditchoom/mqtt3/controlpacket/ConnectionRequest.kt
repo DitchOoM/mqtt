@@ -10,7 +10,7 @@ import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readMqttUtf8Strin
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.writeMqttUtf8String
 import com.ditchoom.mqtt.controlpacket.IConnectionRequest
 import com.ditchoom.mqtt.controlpacket.QualityOfService
-import com.ditchoom.mqtt.controlpacket.Topic
+import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
 import com.ditchoom.mqtt.controlpacket.format.fixed.get
 import com.ditchoom.mqtt3.controlpacket.wire.ConnectFlagsValue
@@ -69,7 +69,7 @@ data class ConnectionRequest(
             if (willTopic == null) {
                 null
             } else {
-                Topic.fromOrThrow(willTopic, Topic.Type.Name)
+                TopicName.fromOrThrow(willTopic)
             },
             willPayload,
             userName,
@@ -88,7 +88,7 @@ data class ConnectionRequest(
     override val willPayload: ReadBuffer? = payload.willPayload
     override val willQos: QualityOfService = variableHeader.willQos
     override val willRetain: Boolean = variableHeader.willRetain
-    override val willTopic: Topic? = payload.willTopic
+    override val willTopic: TopicName? = payload.willTopic
 
     override fun encodeBody(writeBuffer: WriteBuffer) {
         val vh = variableHeader
@@ -515,7 +515,7 @@ data class ConnectionRequest(
          * If the Will Flag is set to 1, the Will Topic is the next field in the payload. The Will Topic MUST be a
          * UTF-8 encoded string as defined in Section 1.5.3 [MQTT-3.1.3-10].
          */
-        val willTopic: Topic? = null,
+        val willTopic: TopicName? = null,
         /**
          * 3.1.3.3 Will Message
          * If the Will Flag is set to 1 the Will Message is the next field in the payload. The Will Message defines
@@ -612,7 +612,7 @@ data class ConnectionRequest(
                     }
                 val topic =
                     if (willTopic != null) {
-                        Topic.fromOrThrow(willTopic, Topic.Type.Name)
+                        TopicName.fromOrThrow(willTopic)
                     } else {
                         null
                     }
@@ -645,7 +645,7 @@ data class ConnectionRequest(
             )
             val payload = Payload(
                 clientId = wire.clientId,
-                willTopic = wire.willTopic?.let { Topic.fromOrThrow(it, Topic.Type.Name) },
+                willTopic = wire.willTopic?.let { TopicName.fromOrThrow(it) },
                 willPayload = wire.willPayload,
                 userName = wire.username,
                 password = wire.password,

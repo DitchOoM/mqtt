@@ -6,6 +6,7 @@ import com.ditchoom.mqtt.Persistence
 import com.ditchoom.mqtt.client.MqttClient
 import com.ditchoom.mqtt.client.PublishOperation
 import com.ditchoom.mqtt.client.SubscribeOperation
+import com.ditchoom.mqtt.client.SubscriptionHandler
 import com.ditchoom.mqtt.client.UnsubscribeOperation
 import com.ditchoom.mqtt.connection.MqttBroker
 import com.ditchoom.mqtt.controlpacket.ControlPacket
@@ -39,6 +40,9 @@ abstract class RemoteMqttClient(
     val sentPackets: SharedFlow<ControlPacket> = _sentPackets
 
     protected open suspend fun sendSubscribe(packetId: Int) {}
+
+    override suspend fun subscribe(sub: ISubscribeRequest, handler: SubscriptionHandler): SubscribeOperation =
+        subscribe(sub) // handler-based dispatch not supported across IPC boundary
 
     override suspend fun subscribe(sub: ISubscribeRequest): SubscribeOperation {
         val subscribe = persistence.writeSubUpdatePacketIdAndSimplifySubscriptions(broker, sub)

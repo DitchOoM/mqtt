@@ -26,7 +26,7 @@ interface ControlPacketFactory {
     fun pingResponse(): IPingResponse
 
     fun subscribe(
-        topicFilter: Topic,
+        topicFilter: TopicFilter,
         maximumQos: QualityOfService = QualityOfService.AT_LEAST_ONCE,
         noLocal: Boolean = false,
         retainAsPublished: Boolean = false,
@@ -45,13 +45,13 @@ interface ControlPacketFactory {
         dup: Boolean = false,
         qos: QualityOfService = QualityOfService.AT_MOST_ONCE,
         retain: Boolean = false,
-        topicName: Topic,
+        topicName: TopicName,
         payload: ReadBuffer? = null,
         // MQTT 5 Properties
         payloadFormatIndicator: Boolean = false,
         messageExpiryInterval: Long? = null,
         topicAlias: Int? = null,
-        responseTopic: Topic? = null,
+        responseTopic: TopicName? = null,
         correlationData: ReadBuffer? = null,
         userProperty: List<Pair<String, String>> = emptyList(),
         subscriptionIdentifier: Set<Long> = emptySet(),
@@ -59,12 +59,12 @@ interface ControlPacketFactory {
     ): IPublishMessage
 
     fun unsubscribe(
-        topic: Topic,
+        topic: TopicFilter,
         userProperty: List<Pair<String, String>> = emptyList(),
     ) = unsubscribe(setOf(topic), userProperty)
 
     fun unsubscribe(
-        topics: Set<Topic>,
+        topics: Set<TopicFilter>,
         userProperty: List<Pair<String, String>> = emptyList(),
     ): IUnsubscribeRequest
 

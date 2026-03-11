@@ -5,7 +5,7 @@ import com.ditchoom.mqtt.controlpacket.format.ReasonCode
 
 interface IPublishMessage : ControlPacket {
     val qualityOfService: QualityOfService
-    val topic: Topic
+    val topic: TopicName
     val payload: ReadBuffer?
 
     fun expectedResponse(

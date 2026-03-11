@@ -10,7 +10,7 @@ import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readMqttUtf8Strin
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readVariableByteInteger
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.writeVariableByteInteger
 import com.ditchoom.mqtt.controlpacket.QualityOfService
-import com.ditchoom.mqtt.controlpacket.Topic
+import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt5.controlpacket.PublishMessage.VariableHeader
 import com.ditchoom.mqtt5.controlpacket.properties.ContentType
 import com.ditchoom.mqtt5.controlpacket.properties.CorrelationData
@@ -71,7 +71,7 @@ class PublishMessageTests {
     @Test
     fun payloadFormatIndicatorDefault() {
         val buffer = BufferFactory.Default.allocate(6)
-        val expected = PublishMessage(variable = VariableHeader(Topic.fromOrThrow("t", Topic.Type.Name)))
+        val expected = PublishMessage(variable = VariableHeader(TopicName.fromOrThrow("t")))
         expected.serialize(buffer)
         buffer.resetForRead()
         assertEquals(0b00110000, buffer.readByte(), "fixed header byte 1")
@@ -90,7 +90,7 @@ class PublishMessageTests {
     @Test
     fun payloadFormatIndicatorTrue() {
         val props = VariableHeader.Properties(true)
-        val variableHeader = VariableHeader(Topic.fromOrThrow("t", Topic.Type.Name), properties = props)
+        val variableHeader = VariableHeader(TopicName.fromOrThrow("t"), properties = props)
         val buffer = BufferFactory.Default.allocate(8)
         val expected = PublishMessage(variable = variableHeader)
         expected.serialize(buffer)
@@ -117,7 +117,7 @@ class PublishMessageTests {
     fun payloadFormatIndicatorFalse() {
         val props = VariableHeader.Properties(false)
         val buffer = BufferFactory.Default.allocate(6)
-        val variableHeader = VariableHeader(Topic.fromOrThrow("t", Topic.Type.Name), properties = props)
+        val variableHeader = VariableHeader(TopicName.fromOrThrow("t"), properties = props)
         val expected = PublishMessage(variable = variableHeader)
         expected.serialize(buffer)
         buffer.resetForRead()
@@ -155,7 +155,7 @@ class PublishMessageTests {
     @Test
     fun messageExpiryInterval() {
         val props = VariableHeader.Properties(messageExpiryInterval = 2)
-        val variableHeader = VariableHeader(Topic.fromOrThrow("t", Topic.Type.Name), properties = props)
+        val variableHeader = VariableHeader(TopicName.fromOrThrow("t"), properties = props)
         val buffer = BufferFactory.Default.allocate(11)
         val msg = PublishMessage(variable = variableHeader)
         msg.serialize(buffer)
@@ -197,7 +197,7 @@ class PublishMessageTests {
     @Test
     fun topicAlias() {
         val props = VariableHeader.Properties(topicAlias = 2)
-        val variableHeader = VariableHeader(Topic.fromOrThrow("t", Topic.Type.Name), properties = props)
+        val variableHeader = VariableHeader(TopicName.fromOrThrow("t"), properties = props)
         val expected = PublishMessage(variable = variableHeader)
         val buffer = BufferFactory.Default.allocate(9)
         expected.serialize(buffer)
@@ -229,7 +229,7 @@ class PublishMessageTests {
                 variable =
                     VariableHeader(
                         properties = VariableHeader.Properties(topicAlias = 0),
-                        topicName = Topic.fromOrThrow("t", Topic.Type.Name),
+                        topicName = TopicName.fromOrThrow("t"),
                     ),
             )
         }
@@ -253,8 +253,8 @@ class PublishMessageTests {
 
     @Test
     fun responseTopic() {
-        val props = VariableHeader.Properties(responseTopic = Topic.fromOrThrow("t/as", Topic.Type.Name))
-        val variableHeader = VariableHeader(Topic.fromOrThrow("t", Topic.Type.Name), properties = props)
+        val props = VariableHeader.Properties(responseTopic = TopicName.fromOrThrow("t/as"))
+        val variableHeader = VariableHeader(TopicName.fromOrThrow("t"), properties = props)
         val buffer = BufferFactory.Default.allocate(13)
         val actual = PublishMessage(variable = variableHeader)
         actual.serialize(buffer)
@@ -284,7 +284,7 @@ class PublishMessageTests {
 
     @Test
     fun responseTopicDuplicateThrowsProtocolError() {
-        val obj1 = ResponseTopic(Topic.fromOrThrow("t/as", Topic.Type.Name))
+        val obj1 = ResponseTopic(TopicName.fromOrThrow("t/as"))
         val obj2 = obj1.copy()
         val buffer = BufferFactory.Default.allocate(15)
         buffer.writeVariableByteInteger(obj1.size() + obj2.size())
@@ -306,7 +306,7 @@ class PublishMessageTests {
     @Test
     fun correlationData() {
         val props = VariableHeader.Properties(correlationData = yoyoBuffer)
-        val variableHeader = VariableHeader(Topic.fromOrThrow("t", Topic.Type.Name), properties = props)
+        val variableHeader = VariableHeader(TopicName.fromOrThrow("t"), properties = props)
         val buffer = BufferFactory.Default.allocate(13)
         val actual = PublishMessage(variable = variableHeader)
         actual.serialize(buffer)
@@ -363,7 +363,7 @@ class PublishMessageTests {
         assertEquals(userPropertyResult.size, 1)
 
         val request =
-            PublishMessage(variable = VariableHeader(Topic.fromOrThrow("t", Topic.Type.Name), properties = props))
+            PublishMessage(variable = VariableHeader(TopicName.fromOrThrow("t"), properties = props))
         val buffer = BufferFactory.Default.allocate(100)
         request.serialize(buffer)
         buffer.resetForRead()
@@ -378,7 +378,7 @@ class PublishMessageTests {
     @Test
     fun subscriptionIdentifier() {
         val props = VariableHeader.Properties(subscriptionIdentifier = setOf(2))
-        val variableHeader = VariableHeader(Topic.fromOrThrow("t", Topic.Type.Name), properties = props)
+        val variableHeader = VariableHeader(TopicName.fromOrThrow("t"), properties = props)
         val buffer = BufferFactory.Default.allocate(8)
         val actual = PublishMessage(variable = variableHeader)
         actual.serialize(buffer)
@@ -405,7 +405,7 @@ class PublishMessageTests {
     @Test
     fun contentType() {
         val props = VariableHeader.Properties(contentType = "t/as")
-        val variableHeader = VariableHeader(Topic.fromOrThrow("t", Topic.Type.Name), properties = props)
+        val variableHeader = VariableHeader(TopicName.fromOrThrow("t"), properties = props)
         val buffer = BufferFactory.Default.allocate(13)
         val actual = PublishMessage(variable = variableHeader)
         actual.serialize(buffer)

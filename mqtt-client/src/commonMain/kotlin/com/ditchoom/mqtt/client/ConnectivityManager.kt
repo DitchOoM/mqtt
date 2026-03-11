@@ -1,5 +1,7 @@
 package com.ditchoom.mqtt.client
 
+import com.ditchoom.buffer.BufferFactory
+import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.mqtt.Persistence
 import com.ditchoom.mqtt.connection.MqttBroker
@@ -22,7 +24,7 @@ class ConnectivityManager(
     internal val scope: CoroutineScope,
     internal val persistence: Persistence,
     internal val broker: MqttBroker,
-    allocateSharedMemoryInitial: Boolean = false,
+    val factory: BufferFactory = BufferFactory.Default,
     private var sentMessage: (ReadBuffer) -> Unit = {},
     private var incomingMessage: (UByte, Int, ReadBuffer) -> Unit = { _, _, _ -> },
 ) {
@@ -47,15 +49,6 @@ class ConnectivityManager(
     private var currentConnectionJob: Job? = null
     val processor = ControlPacketProcessor(scope, broker, readChannel, writeChannel, persistence)
     internal var currentSocketSession: MqttSocketSession? = null
-
-    var allocateSharedMemory: Boolean = allocateSharedMemoryInitial
-        set(value) {
-            field = value
-            currentSocketSession?.allocateSharedMemory = value
-        }
-        get() {
-            return currentSocketSession?.allocateSharedMemory ?: field
-        }
 
     fun currentConnack(): IConnectionAcknowledgment? = currentSocketSession?.connectionAcknowledgement
 
@@ -141,7 +134,7 @@ class ConnectivityManager(
                                 broker.identifier,
                                 broker.connectionRequest,
                                 connectionOp,
-                                allocateSharedMemory,
+                                factory,
                                 observer,
                                 sentMessage,
                                 incomingMessage,

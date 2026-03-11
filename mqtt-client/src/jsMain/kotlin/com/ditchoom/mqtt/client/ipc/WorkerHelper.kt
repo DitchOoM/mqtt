@@ -1,5 +1,7 @@
 package com.ditchoom.mqtt.client.ipc
 
+import com.ditchoom.buffer.BufferFactory
+import com.ditchoom.buffer.Default
 import com.ditchoom.mqtt.client.LocalMqttService
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -11,13 +13,13 @@ import org.w3c.workers.ServiceWorker
 
 private var worker: JsRemoteMqttServiceWorker? = null
 
-suspend fun buildMqttServiceIPCServer(useSharedMemory: Boolean): JsRemoteMqttServiceWorker {
+suspend fun buildMqttServiceIPCServer(factory: BufferFactory = BufferFactory.Default): JsRemoteMqttServiceWorker {
     val workerTmp = worker
     if (workerTmp != null) {
         return workerTmp
     }
     val service = LocalMqttService.buildService(null)
-    service.useSharedMemory = useSharedMemory
+    service.factory = factory
     val serviceServer = RemoteMqttServiceWorker(service)
     val workerLocal = JsRemoteMqttServiceWorker(serviceServer)
     worker = workerLocal
@@ -48,7 +50,7 @@ suspend fun sendAndAwaitRegistration(worker: AbstractWorker): JsRemoteMqttServic
             worker.port.postMessage(MESSAGE_IPC_MQTT_SERVICE_REGISTRATION, arrayOf(messageChannel.port2))
         }
     }
-    val ipcServer = buildMqttServiceIPCServer(false)
+    val ipcServer = buildMqttServiceIPCServer()
     val client = JsRemoteMqttServiceClient(ipcServer.mqttService, messageChannel.port1)
     client.channel.receiveAsFlow().first { it.data == MESSAGE_IPC_MQTT_SERVICE_REGISTRATION_ACK }
     return client

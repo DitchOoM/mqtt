@@ -1,6 +1,8 @@
 package com.ditchoom.mqtt.client.ipc
 
 import android.util.Log
+import com.ditchoom.buffer.BufferFactory
+import com.ditchoom.buffer.shared
 import com.ditchoom.mqtt.client.LocalMqttService
 import kotlinx.coroutines.launch
 
@@ -55,7 +57,7 @@ class AndroidRemoteMqttServiceWorker(
     ) {
         scope.launch {
             val client = serviceServer.requestClientOrNull(brokerId, protocolVersion)
-            client?.client?.allocateSharedMemory = true
+            serviceServer.service.factory = BufferFactory.shared()
             if (client != null) {
                 callback.onClientReady(AndroidMqttClientIPCServer(client), brokerId, protocolVersion)
             } else {

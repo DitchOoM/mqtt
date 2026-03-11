@@ -10,7 +10,7 @@ import com.ditchoom.mqtt.connection.MqttBroker
 import com.ditchoom.mqtt.controlpacket.ControlPacketFactory
 import com.ditchoom.mqtt.controlpacket.IConnectionAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IPublishMessage
-import com.ditchoom.mqtt.controlpacket.Topic
+import com.ditchoom.mqtt.controlpacket.TopicFilter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filter
@@ -104,7 +104,7 @@ class AndroidRemoteMqttClient(
 
     override suspend fun pingResponseCount(): Long = aidl.pingResponseCount()
 
-    override fun observe(filter: Topic): Flow<IPublishMessage> =
+    override fun observe(filter: TopicFilter): Flow<IPublishMessage> =
         incomingPackets.filterIsInstance<IPublishMessage>().filter { filter.matches(it.topic) }
 
     override suspend fun sendDisconnect() {

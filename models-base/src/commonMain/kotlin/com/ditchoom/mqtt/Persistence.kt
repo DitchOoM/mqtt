@@ -14,13 +14,13 @@ import com.ditchoom.mqtt.controlpacket.ISubscribeRequest
 import com.ditchoom.mqtt.controlpacket.ISubscription
 import com.ditchoom.mqtt.controlpacket.IUnsubscribeAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IUnsubscribeRequest
-import com.ditchoom.mqtt.controlpacket.Topic
+import com.ditchoom.mqtt.controlpacket.TopicFilter
 
 interface Persistence {
     suspend fun activeSubscriptions(
         broker: MqttBroker,
         includePendingUnsub: Boolean = false,
-    ): Map<Topic, ISubscription>
+    ): Map<TopicFilter, ISubscription>
 
     suspend fun clearMessages(broker: MqttBroker)
 

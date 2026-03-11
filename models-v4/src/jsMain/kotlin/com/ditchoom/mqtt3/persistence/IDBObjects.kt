@@ -7,7 +7,8 @@ import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.ISubscription
 import com.ditchoom.mqtt.controlpacket.QualityOfService
-import com.ditchoom.mqtt.controlpacket.Topic
+import com.ditchoom.mqtt.controlpacket.TopicFilter
+import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt3.controlpacket.ConnectionRequest
 import com.ditchoom.mqtt3.controlpacket.PublishMessage
 import com.ditchoom.mqtt3.controlpacket.Subscription
@@ -64,7 +65,7 @@ data class PersistableSubscription(
         this(brokerId, sub.topicFilter.toString(), subscribeId, -1, sub.maximumQos.integerValue)
 }
 
-fun toSubscription(s: PersistableSubscription) = Subscription(Topic.fromOrThrow(s.topicFilter, Topic.Type.Filter), s.qos.toQos())
+fun toSubscription(s: PersistableSubscription) = Subscription(TopicFilter.fromOrThrow(s.topicFilter), s.qos.toQos())
 
 data class PersistablePublishMessage(
     @JsName("brokerId")
@@ -99,7 +100,7 @@ data class PersistablePublishMessage(
 fun toPub(p: PersistablePublishMessage) =
     PublishMessage(
         PublishMessage.FixedHeader(p.dup, p.qos.toQos(), p.retain),
-        PublishMessage.VariableHeader(Topic.fromOrThrow(p.topicName, Topic.Type.Name), p.packetId),
+        PublishMessage.VariableHeader(TopicName.fromOrThrow(p.topicName), p.packetId),
         p.payload
             ?.let {
                 JsBuffer(it).also { buf ->
@@ -261,7 +262,7 @@ fun toConnectionRequest(a: Any?): ConnectionRequest {
         ),
         ConnectionRequest.Payload(
             p.clientId as String,
-            (p.willTopic as? String)?.let { Topic.fromOrThrow(it, Topic.Type.Name) },
+            (p.willTopic as? String)?.let { TopicName.fromOrThrow(it) },
             (p.willPayload as? Int8Array)?.let { JsBuffer(it).also { buf -> buf.setLimit(it.length) } } as? ReadBuffer,
             p.username as? String,
             p.password as? String,

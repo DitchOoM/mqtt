@@ -30,7 +30,7 @@ interface IConnectionRequest : ControlPacket {
 
     // Mqtt Variable Header
     val clientIdentifier: String
-    val willTopic: Topic?
+    val willTopic: TopicName?
     val willPayload: ReadBuffer?
     val userName: String?
     val password: String?
@@ -40,7 +40,7 @@ interface IConnectionRequest : ControlPacket {
     val payloadFormatIndicator: Boolean get() = false
     val messageExpiryIntervalSeconds: Long? get() = null
     val contentType: String? get() = null
-    val responseTopic: Topic? get() = null
+    val responseTopic: TopicName? get() = null
     val correlationData: ReadBuffer? get() = null
     val userProperty: List<Pair<String, String>> get() = emptyList()
 }

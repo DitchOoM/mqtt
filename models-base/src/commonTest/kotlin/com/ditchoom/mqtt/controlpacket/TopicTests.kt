@@ -11,60 +11,100 @@ import kotlin.test.assertTrue
 class TopicTests {
     @Test
     fun multiLevelWildcard() {
-        val topic = Topic.fromOrThrow("sport/tennis/player1/#", Topic.Type.Filter)
-        assertEquals(topic.toString(), "sport/tennis/player1/#")
-        assertTrue(validateMatchBothWays(topic, Topic.fromOrThrow("sport/tennis/player1", Topic.Type.Name)))
-        assertTrue(validateMatchBothWays(topic, Topic.fromOrThrow("sport/tennis/player1/ranking", Topic.Type.Name)))
+        val filter = TopicFilter.fromOrThrow("sport/tennis/player1/#")
+        assertEquals(filter.toString(), "sport/tennis/player1/#")
+        assertTrue(filter.matches(TopicName.fromOrThrow("sport/tennis/player1")))
+        assertTrue(filter.matches(TopicName.fromOrThrow("sport/tennis/player1/ranking")))
         assertTrue(
-            validateMatchBothWays(
-                topic,
-                Topic.fromOrThrow("sport/tennis/player1/score/wimbledon", Topic.Type.Name),
-            ),
+            filter.matches(TopicName.fromOrThrow("sport/tennis/player1/score/wimbledon")),
         )
 
-        assertTrue(validateMatchBothWays(topic, Topic.fromOrThrow("#", Topic.Type.Filter)))
-        assertTrue(validateMatchBothWays(topic, Topic.fromOrThrow("sport/tennis/#", Topic.Type.Filter)))
-        assertFailsWith(ProtocolError::class) {
-            Topic.fromOrThrow("sport/tennis#", Topic.Type.Name)
-        }
-        assertFailsWith(ProtocolError::class) {
-            Topic.fromOrThrow("sport/tennis/#/ranking", Topic.Type.Filter)
-        }
-    }
+        // Filter-to-filter matching via sealed interface
+        val broadFilter = TopicFilter.fromOrThrow("#")
+        assertTrue(filter.matches(broadFilter))
+        assertTrue(broadFilter.matches(filter))
+        val tennisFilter = TopicFilter.fromOrThrow("sport/tennis/#")
+        assertTrue(filter.matches(tennisFilter))
 
-    private fun validateMatchBothWays(
-        left: Topic?,
-        right: Topic?,
-    ): Boolean {
-        val leftMatches = left?.matches(right) ?: false
-        val rightMatches = right?.matches(left) ?: false
-        return leftMatches && rightMatches
+        assertFailsWith(ProtocolError::class) {
+            TopicName.fromOrThrow("sport/tennis#")
+        }
+        assertFailsWith(ProtocolError::class) {
+            TopicFilter.fromOrThrow("sport/tennis/#/ranking")
+        }
     }
 
     @Test
     fun singleLevelWildcard() {
-        assertEquals(Topic.fromOrThrow("/test/hello/", Topic.Type.Filter).toString(), "/test/hello/")
-        val shortTopic = checkNotNull(Topic.fromOrThrow("sport/+", Topic.Type.Filter))
-        assertEquals(shortTopic.toString(), "sport/+")
-        assertFalse(validateMatchBothWays(shortTopic, Topic.fromOrThrow("sport", Topic.Type.Name)))
-        assertTrue(validateMatchBothWays(shortTopic, Topic.fromOrThrow("sport/", Topic.Type.Name)))
+        assertEquals(TopicFilter.fromOrThrow("/test/hello/").toString(), "/test/hello/")
+        val shortFilter = TopicFilter.fromOrThrow("sport/+")
+        assertEquals(shortFilter.toString(), "sport/+")
+        assertFalse(shortFilter.matches(TopicName.fromOrThrow("sport")))
+        assertTrue(shortFilter.matches(TopicName.fromOrThrow("sport/")))
 
-        val topic = checkNotNull(Topic.fromOrThrow("sport/tennis/+", Topic.Type.Filter))
-        assertEquals(topic.toString(), "sport/tennis/+")
-        assertTrue(validateMatchBothWays(topic, Topic.fromOrThrow("sport/tennis/player1", Topic.Type.Name)))
-        assertTrue(validateMatchBothWays(topic, Topic.fromOrThrow("sport/tennis/player2", Topic.Type.Name)))
-        assertFalse(validateMatchBothWays(topic, Topic.fromOrThrow("sport/tennis/player1/ranking", Topic.Type.Name)))
-        assertNotNull(Topic.fromOrThrow("+", Topic.Type.Filter))
-        assertNotNull(Topic.fromOrThrow("+/tennis/#", Topic.Type.Filter))
+        val filter = TopicFilter.fromOrThrow("sport/tennis/+")
+        assertEquals(filter.toString(), "sport/tennis/+")
+        assertTrue(filter.matches(TopicName.fromOrThrow("sport/tennis/player1")))
+        assertTrue(filter.matches(TopicName.fromOrThrow("sport/tennis/player2")))
+        assertFalse(filter.matches(TopicName.fromOrThrow("sport/tennis/player1/ranking")))
+        assertNotNull(TopicFilter.fromOrThrow("+"))
+        assertNotNull(TopicFilter.fromOrThrow("+/tennis/#"))
         assertFailsWith(ProtocolError::class) {
-            Topic.fromOrThrow("sport+", Topic.Type.Filter)
+            TopicFilter.fromOrThrow("sport+")
         }
-        assertNotNull(Topic.fromOrThrow("sport/+/player1", Topic.Type.Filter))
+        assertNotNull(TopicFilter.fromOrThrow("sport/+/player1"))
 
-        val financeTopic = checkNotNull(Topic.fromOrThrow("/finance", Topic.Type.Name))
+        val financeTopic = TopicName.fromOrThrow("/finance")
         assertEquals(financeTopic.toString(), "/finance")
-        assertTrue(validateMatchBothWays(financeTopic, Topic.fromOrThrow("+/+", Topic.Type.Filter)))
-        assertTrue(validateMatchBothWays(financeTopic, Topic.fromOrThrow("/+", Topic.Type.Filter)))
-        assertFalse(validateMatchBothWays(financeTopic, Topic.fromOrThrow("+", Topic.Type.Filter)))
+        assertTrue(TopicFilter.fromOrThrow("+/+").matches(financeTopic))
+        assertTrue(TopicFilter.fromOrThrow("/+").matches(financeTopic))
+        assertFalse(TopicFilter.fromOrThrow("+").matches(financeTopic))
+    }
+
+    @Test
+    fun topicNameRejectsWildcards() {
+        assertFailsWith(ProtocolError::class) { TopicName.fromOrThrow("sensors/+/data") }
+        assertFailsWith(ProtocolError::class) { TopicName.fromOrThrow("sensors/#") }
+        assertFailsWith(ProtocolError::class) { TopicName.fromOrThrow("+") }
+        assertFailsWith(ProtocolError::class) { TopicName.fromOrThrow("#") }
+    }
+
+    @Test
+    fun topicFilterAcceptsWildcards() {
+        assertNotNull(TopicFilter.fromOrThrow("sensors/+/data"))
+        assertNotNull(TopicFilter.fromOrThrow("sensors/#"))
+        assertNotNull(TopicFilter.fromOrThrow("+"))
+        assertNotNull(TopicFilter.fromOrThrow("#"))
+    }
+
+    @Test
+    fun backwardCompatFactory() {
+        val name = Topic.fromOrThrow("test/topic", Topic.Type.Name)
+        assertTrue(name is TopicName)
+        assertEquals("test/topic", name.toString())
+
+        val filter = Topic.fromOrThrow("test/+", Topic.Type.Filter)
+        assertTrue(filter is TopicFilter)
+        assertEquals("test/+", filter.toString())
+
+        // Sealed interface matches() still works
+        assertTrue(name.matches(filter))
+        assertTrue(filter.matches(name))
+    }
+
+    @Test
+    fun equality() {
+        val name1 = TopicName.fromOrThrow("a/b/c")
+        val name2 = TopicName.fromOrThrow("a/b/c")
+        assertEquals(name1, name2)
+        assertEquals(name1.hashCode(), name2.hashCode())
+
+        val filter1 = TopicFilter.fromOrThrow("a/+/c")
+        val filter2 = TopicFilter.fromOrThrow("a/+/c")
+        assertEquals(filter1, filter2)
+        assertEquals(filter1.hashCode(), filter2.hashCode())
+
+        // TopicName and TopicFilter are never equal even with same string
+        assertFalse(name1.equals(TopicFilter.fromOrThrow("a/b/c")))
     }
 }

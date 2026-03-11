@@ -1,5 +1,7 @@
 package com.ditchoom.mqtt.client
 
+import com.ditchoom.buffer.BufferFactory
+import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.mqtt.Persistence
 import com.ditchoom.mqtt.connection.MqttBroker
@@ -15,7 +17,7 @@ import com.ditchoom.mqtt.controlpacket.IUnsubscribeAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IUnsubscribeRequest
 import com.ditchoom.mqtt.controlpacket.NO_PACKET_ID
 import com.ditchoom.mqtt.controlpacket.QualityOfService
-import com.ditchoom.mqtt.controlpacket.Topic
+import com.ditchoom.mqtt.controlpacket.TopicFilter
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -38,14 +40,7 @@ class LocalMqttClient(
             processor.observer = value
             field = value
         }
-    var allocateSharedMemory: Boolean = connectivityManager.allocateSharedMemory
-        set(value) {
-            field = value
-            connectivityManager.allocateSharedMemory = value
-        }
-        get() {
-            return connectivityManager.allocateSharedMemory
-        }
+    val factory: BufferFactory get() = connectivityManager.factory
     override val packetFactory: ControlPacketFactory = connectivityManager.broker.connectionRequest.controlPacketFactory
 
     override suspend fun currentConnectionAcknowledgment(): IConnectionAcknowledgment? = connectivityManager.currentConnack()
@@ -118,7 +113,7 @@ class LocalMqttClient(
             }
         }
 
-    override fun observe(filter: Topic): Flow<IPublishMessage> =
+    override fun observe(filter: TopicFilter): Flow<IPublishMessage> =
         processor.readChannel.filterIsInstance<IPublishMessage>().filter {
             filter.matches(it.topic)
         }
@@ -130,6 +125,14 @@ class LocalMqttClient(
     }
 
     override suspend fun subscribe(sub: ISubscribeRequest): SubscribeOperation = observeSub(processor.subscribe(sub))
+
+    override suspend fun subscribe(sub: ISubscribeRequest, handler: SubscriptionHandler): SubscribeOperation {
+        // Register handler in the dispatcher for each subscription topic
+        for (subscription in sub.subscriptions) {
+            processor.publishDispatcher.subscribe(subscription.topicFilter, handler)
+        }
+        return observeSub(processor.subscribe(sub))
+    }
 
     private fun observeSub(subscribeRequestSent: ISubscribeRequest): SubscribeOperation {
         val map = subscribeRequestSent.subscriptions.associateWith { observe(it.topicFilter) }
@@ -151,7 +154,13 @@ class LocalMqttClient(
         processor.unsubscribe(unsub, false)
     }
 
-    override suspend fun unsubscribe(unsub: IUnsubscribeRequest): UnsubscribeOperation = observeUnsubscribe(processor.unsubscribe(unsub))
+    override suspend fun unsubscribe(unsub: IUnsubscribeRequest): UnsubscribeOperation {
+        // Remove handlers from the dispatcher for each topic
+        for (topic in unsub.topics) {
+            processor.publishDispatcher.unsubscribe(topic)
+        }
+        return observeUnsubscribe(processor.unsubscribe(unsub))
+    }
 
     private fun observeUnsubscribe(unsubscribeRequestSent: IUnsubscribeRequest): UnsubscribeOperation =
         UnsubscribeOperation(
@@ -183,7 +192,7 @@ class LocalMqttClient(
             scope: CoroutineScope = CoroutineScope(Dispatchers.Default + CoroutineName("MQTT Stay Connected")),
             broker: MqttBroker,
             persistence: Persistence,
-            allocateSharedMemoryInitial: Boolean = false,
+            factory: BufferFactory = BufferFactory.Default,
             observer: Observer? = null,
             sentMessage: (ReadBuffer) -> Unit = {},
             incomingMessage: (UByte, Int, ReadBuffer) -> Unit = { _, _, _ -> },
@@ -193,7 +202,7 @@ class LocalMqttClient(
                     scope,
                     persistence,
                     broker,
-                    allocateSharedMemoryInitial,
+                    factory,
                     sentMessage,
                     incomingMessage,
                 )
@@ -207,7 +216,7 @@ class LocalMqttClient(
             scope: CoroutineScope = CoroutineScope(Dispatchers.Default + CoroutineName("MQTT Connect Once")),
             broker: MqttBroker,
             persistence: Persistence,
-            allocateSharedMemoryInitial: Boolean = false,
+            factory: BufferFactory = BufferFactory.Default,
             observer: Observer? = null,
             sentMessage: (ReadBuffer) -> Unit = {},
             incomingMessage: (UByte, Int, ReadBuffer) -> Unit = { _, _, _ -> },
@@ -217,7 +226,7 @@ class LocalMqttClient(
                     scope,
                     persistence,
                     broker,
-                    allocateSharedMemoryInitial,
+                    factory,
                     sentMessage,
                     incomingMessage,
                 )

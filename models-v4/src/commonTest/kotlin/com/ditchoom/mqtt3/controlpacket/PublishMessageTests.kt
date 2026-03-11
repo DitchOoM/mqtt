@@ -8,7 +8,7 @@ import com.ditchoom.mqtt.MalformedPacketException
 import com.ditchoom.mqtt.MqttException
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readVariableByteInteger
 import com.ditchoom.mqtt.controlpacket.QualityOfService
-import com.ditchoom.mqtt.controlpacket.Topic
+import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt.controlpacket.format.fixed.get
 import com.ditchoom.mqtt.controlpacket.validControlPacketIdentifierRange
 import com.ditchoom.mqtt3.controlpacket.PublishMessage.FixedHeader
@@ -47,21 +47,21 @@ class PublishMessageTests {
     @Test
     fun qos0AndPacketIdentifierThrowsIllegalArgumentException() {
         val fixed = FixedHeader(qos = QualityOfService.AT_MOST_ONCE)
-        val variable = VariableHeader(checkNotNull(Topic.fromOrThrow("t", Topic.Type.Name)), 2)
+        val variable = VariableHeader(checkNotNull(TopicName.fromOrThrow("t")), 2)
         assertFailsWith(MqttException::class) { PublishMessage(fixed, variable).validateOrThrow() }
     }
 
     @Test
     fun qos1WithoutPacketIdentifierThrowsIllegalArgumentException() {
         val fixed = FixedHeader(qos = QualityOfService.AT_LEAST_ONCE)
-        val variable = VariableHeader(checkNotNull(Topic.fromOrThrow("t", Topic.Type.Name)))
+        val variable = VariableHeader(checkNotNull(TopicName.fromOrThrow("t")))
         assertFailsWith(MqttException::class) { PublishMessage(fixed, variable).validateOrThrow() }
     }
 
     @Test
     fun qos2WithoutPacketIdentifierThrowsIllegalArgumentException() {
         val fixed = FixedHeader(qos = QualityOfService.EXACTLY_ONCE)
-        val variable = VariableHeader(checkNotNull(Topic.fromOrThrow("t", Topic.Type.Name)))
+        val variable = VariableHeader(checkNotNull(TopicName.fromOrThrow("t")))
         assertFailsWith(MqttException::class) { PublishMessage(fixed, variable).validateOrThrow() }
     }
 
@@ -69,7 +69,7 @@ class PublishMessageTests {
     fun genericSerialization() {
         val publishMessage =
             PublishMessage.buildPayload(
-                topicName = checkNotNull(Topic.fromOrThrow("user/log", Topic.Type.Name)),
+                topicName = checkNotNull(TopicName.fromOrThrow("user/log")),
                 payload = payload,
             )
         val buffer = BufferFactory.Default.allocate(16)
@@ -86,7 +86,7 @@ class PublishMessageTests {
         assertEquals(buffer.readVariableByteInteger(), 14, "fixed header remaining length")
         assertEquals(8u, buffer.readUnsignedShort(), "variable header topic name length")
         assertEquals(
-            checkNotNull(Topic.fromOrThrow("user/log", Topic.Type.Name)).toString(),
+            checkNotNull(TopicName.fromOrThrow("user/log")).toString(),
             buffer.readString(8, Charset.UTF8),
             "variable header topic name value",
         )
@@ -127,7 +127,7 @@ class PublishMessageTests {
     fun genericSerializationPublishDupFlag() {
         val publishMessage =
             PublishMessage.buildPayload(
-                topicName = checkNotNull(Topic.fromOrThrow("user/log", Topic.Type.Name)),
+                topicName = checkNotNull(TopicName.fromOrThrow("user/log")),
                 payload = payload,
                 dup = true,
             )
@@ -144,7 +144,7 @@ class PublishMessageTests {
         assertEquals(buffer.readVariableByteInteger(), 14, "fixed header remaining length")
         assertEquals(8u, buffer.readUnsignedShort(), "variable header topic name length")
         assertEquals(
-            checkNotNull(Topic.fromOrThrow("user/log", Topic.Type.Name)).toString(),
+            checkNotNull(TopicName.fromOrThrow("user/log")).toString(),
             buffer.readString(8, Charset.UTF8),
             "variable header topic name value",
         )
@@ -166,7 +166,7 @@ class PublishMessageTests {
     fun genericSerializationPublishQos1() {
         val publishMessage =
             PublishMessage.buildPayload(
-                topicName = checkNotNull(Topic.fromOrThrow("user/log", Topic.Type.Name)),
+                topicName = checkNotNull(TopicName.fromOrThrow("user/log")),
                 payload = payload,
                 qos = QualityOfService.AT_LEAST_ONCE,
                 packetIdentifier = 13,
@@ -184,7 +184,7 @@ class PublishMessageTests {
         assertEquals(buffer.readVariableByteInteger(), 16, "fixed header remaining length")
         assertEquals(8u, buffer.readUnsignedShort(), "variable header topic name length")
         assertEquals(
-            checkNotNull(Topic.fromOrThrow("user/log", Topic.Type.Name)).toString(),
+            checkNotNull(TopicName.fromOrThrow("user/log")).toString(),
             buffer.readString(8, Charset.UTF8),
             "variable header topic name value",
         )
@@ -206,7 +206,7 @@ class PublishMessageTests {
     fun genericSerializationPublishQos2() {
         val publishMessage =
             PublishMessage.buildPayload(
-                topicName = checkNotNull(Topic.fromOrThrow("user/log", Topic.Type.Name)),
+                topicName = checkNotNull(TopicName.fromOrThrow("user/log")),
                 payload = payload,
                 qos = QualityOfService.EXACTLY_ONCE,
                 packetIdentifier = 13,
@@ -224,7 +224,7 @@ class PublishMessageTests {
         assertEquals(buffer.readVariableByteInteger(), 16, "fixed header remaining length")
         assertEquals(8u, buffer.readUnsignedShort(), "variable header topic name length")
         assertEquals(
-            checkNotNull(Topic.fromOrThrow("user/log", Topic.Type.Name)).toString(),
+            checkNotNull(TopicName.fromOrThrow("user/log")).toString(),
             buffer.readString(8, Charset.UTF8),
             "variable header topic name value",
         )
@@ -246,7 +246,7 @@ class PublishMessageTests {
     fun genericSerializationPublishRetainFlag() {
         val publishMessage =
             PublishMessage.buildPayload(
-                topicName = checkNotNull(Topic.fromOrThrow("user/log", Topic.Type.Name)),
+                topicName = checkNotNull(TopicName.fromOrThrow("user/log")),
                 payload = payload,
                 retain = true,
             )
@@ -263,7 +263,7 @@ class PublishMessageTests {
         assertEquals(buffer.readVariableByteInteger(), 14, "fixed header remaining length")
         assertEquals(8u, buffer.readUnsignedShort(), "variable header topic name length")
         assertEquals(
-            checkNotNull(Topic.fromOrThrow("user/log", Topic.Type.Name)).toString(),
+            checkNotNull(TopicName.fromOrThrow("user/log")).toString(),
             buffer.readString(8, Charset.UTF8),
             "variable header topic name value",
         )
@@ -284,7 +284,7 @@ class PublishMessageTests {
     @Test
     fun nullGenericSerialization() {
         val publishMessage =
-            PublishMessage.build(topicName = checkNotNull(Topic.fromOrThrow("user/log", Topic.Type.Name)))
+            PublishMessage.build(topicName = checkNotNull(TopicName.fromOrThrow("user/log")))
         val buffer = BufferFactory.Default.allocate(12)
         publishMessage.serialize(buffer)
         buffer.resetForRead()
@@ -297,7 +297,7 @@ class PublishMessageTests {
         assertEquals(buffer.readVariableByteInteger(), 10, "fixed header remaining length")
         assertEquals(8u, buffer.readUnsignedShort(), "variable header topic name length")
         assertEquals(
-            checkNotNull(Topic.fromOrThrow("user/log", Topic.Type.Name)).toString(),
+            checkNotNull(TopicName.fromOrThrow("user/log")).toString(),
             buffer.readString(8, Charset.UTF8),
             "variable header topic name value",
         )

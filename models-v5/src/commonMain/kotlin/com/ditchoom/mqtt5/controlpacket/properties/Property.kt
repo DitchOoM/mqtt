@@ -1,7 +1,5 @@
 package com.ditchoom.mqtt5.controlpacket.properties
 
-import com.ditchoom.buffer.BufferFactory
-import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
 import com.ditchoom.buffer.utf8Length
@@ -14,7 +12,7 @@ import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.writeMqttUtf8Stri
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.writeVariableByteInteger
 import com.ditchoom.mqtt.controlpacket.QualityOfService.AT_LEAST_ONCE
 import com.ditchoom.mqtt.controlpacket.QualityOfService.AT_MOST_ONCE
-import com.ditchoom.mqtt.controlpacket.Topic
+import com.ditchoom.mqtt.controlpacket.TopicName
 
 @Suppress("UNUSED_PARAMETER")
 abstract class Property(
@@ -97,7 +95,7 @@ fun ReadBuffer.readPlatformBuffer(): ReadBuffer {
     return if (size > 0) {
         readBytes(size)
     } else {
-        BufferFactory.Default.allocate(0)
+        ReadBuffer.EMPTY_BUFFER
     }
 }
 
@@ -116,7 +114,7 @@ fun ReadBuffer.readMqttProperty(): Pair<Property, Int> {
                 ContentType(readMqttUtf8StringNotValidatedSized().second)
             }
 
-            0x08 -> ResponseTopic(Topic.fromOrThrow(readMqttUtf8StringNotValidatedSized().second, Topic.Type.Name))
+            0x08 -> ResponseTopic(TopicName.fromOrThrow(readMqttUtf8StringNotValidatedSized().second))
             0x09 -> CorrelationData(readPlatformBuffer())
             0x0B -> SubscriptionIdentifier(readVariableByteInteger().toLong())
             0x11 -> SessionExpiryInterval(readUnsignedLong())
@@ -191,15 +189,13 @@ fun propertiesSize(properties: Collection<Property>?): Int {
 
 fun ReadBuffer.readPropertiesSized(): Pair<Int, Collection<Property>?> {
     val propertyLength = readVariableByteInteger()
-    val propertyBytes =
-        if (propertyLength < 1) {
-            BufferFactory.Default.allocate(0)
-        } else {
-            readBytes(propertyLength)
-        }
+    if (propertyLength < 1) {
+        return Pair(propertyLength, null)
+    }
+    val endPosition = position() + propertyLength
     val list = mutableListOf<Property>()
-    while (propertyBytes.hasRemaining()) {
-        val (property, _) = propertyBytes.readMqttProperty()
+    while (position() < endPosition) {
+        val (property, _) = readMqttProperty()
         list += property
     }
     return Pair(propertyLength, if (list.isEmpty()) null else list)

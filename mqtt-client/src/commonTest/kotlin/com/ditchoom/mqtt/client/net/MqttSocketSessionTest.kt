@@ -4,7 +4,7 @@ import com.ditchoom.mqtt.client.MqttSocketSession
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.IPublishAcknowledgment
 import com.ditchoom.mqtt.controlpacket.QualityOfService
-import com.ditchoom.mqtt.controlpacket.Topic
+import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt3.controlpacket.ConnectionRequest
 import com.ditchoom.socket.NetworkCapabilities
 import com.ditchoom.socket.getNetworkCapabilities
@@ -110,7 +110,7 @@ class MqttSocketSessionTest {
             val publish =
                 connectionRequest.controlPacketFactory
                     .publish(
-                        topicName = Topic.fromOrThrow("testtt", Topic.Type.Name),
+                        topicName = TopicName.fromOrThrow("testtt"),
                         qos = QualityOfService.AT_LEAST_ONCE,
                     ).maybeCopyWithNewPacketIdentifier(1)
             socketSession.write(publish)

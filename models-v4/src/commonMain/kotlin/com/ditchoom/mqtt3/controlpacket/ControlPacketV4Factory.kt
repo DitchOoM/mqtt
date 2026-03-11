@@ -8,7 +8,8 @@ import com.ditchoom.mqtt.controlpacket.ISubscribeRequest
 import com.ditchoom.mqtt.controlpacket.ISubscription
 import com.ditchoom.mqtt.controlpacket.NO_PACKET_ID
 import com.ditchoom.mqtt.controlpacket.QualityOfService
-import com.ditchoom.mqtt.controlpacket.Topic
+import com.ditchoom.mqtt.controlpacket.TopicFilter
+import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
 import com.ditchoom.mqtt3.persistence.newDefaultPersistence
 
@@ -35,13 +36,13 @@ object ControlPacketV4Factory : ControlPacketFactory {
         dup: Boolean,
         qos: QualityOfService,
         retain: Boolean,
-        topicName: Topic,
+        topicName: TopicName,
         payload: ReadBuffer?,
         // MQTT 5 Properties, Should be ignored in this version
         payloadFormatIndicator: Boolean,
         messageExpiryInterval: Long?,
         topicAlias: Int?,
-        responseTopic: Topic?,
+        responseTopic: TopicName?,
         correlationData: ReadBuffer?,
         userProperty: List<Pair<String, String>>,
         subscriptionIdentifier: Set<Long>,
@@ -53,7 +54,7 @@ object ControlPacketV4Factory : ControlPacketFactory {
     }
 
     override fun subscribe(
-        topicFilter: Topic,
+        topicFilter: TopicFilter,
         maximumQos: QualityOfService,
         noLocal: Boolean,
         retainAsPublished: Boolean,
@@ -76,7 +77,7 @@ object ControlPacketV4Factory : ControlPacketFactory {
     ): ISubscribeRequest = SubscribeRequest(NO_PACKET_ID, subscriptions)
 
     override fun unsubscribe(
-        topics: Set<Topic>,
+        topics: Set<TopicFilter>,
         userProperty: List<Pair<String, String>>,
     ) = UnsubscribeRequest(NO_PACKET_ID, topics)
 

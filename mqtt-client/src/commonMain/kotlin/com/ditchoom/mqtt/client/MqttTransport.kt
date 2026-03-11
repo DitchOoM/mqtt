@@ -1,5 +1,7 @@
 package com.ditchoom.mqtt.client
 
+import com.ditchoom.buffer.BufferFactory
+import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.pool.BufferPool
 import com.ditchoom.buffer.stream.AutoFillingSuspendingStreamProcessor
@@ -47,6 +49,7 @@ class TcpMqttTransport(
 class WebSocketMqttTransport(
     private val client: WebSocketClient,
     override val stream: AutoFillingSuspendingStreamProcessor,
+    private val pool: BufferPool,
 ) : MqttTransport {
     override fun isOpen(): Boolean = client.connectionState.value == ConnectionState.Connected
 
@@ -59,7 +62,10 @@ class WebSocketMqttTransport(
         return remaining
     }
 
-    override suspend fun close() = client.close()
+    override suspend fun close() {
+        pool.clear()
+        client.close()
+    }
 }
 
 internal suspend fun createTcpTransport(
@@ -96,8 +102,10 @@ internal suspend fun createTcpTransport(
 internal suspend fun createWebSocketTransport(
     connectionOptions: WebSocketConnectionOptions,
     readTimeout: Duration,
+    factory: BufferFactory = BufferFactory.Default,
 ): WebSocketMqttTransport {
-    val client = WebSocketClient.allocate(connectionOptions)
+    val pool = BufferPool()
+    val client = WebSocketClient.allocate(connectionOptions, bufferFactory = factory, bufferPool = pool)
     try {
         client.connect()
         val state = client.connectionState.value
@@ -108,10 +116,10 @@ internal suspend fun createWebSocketTransport(
             throw IllegalStateException("WebSocket connection not established, state: $state")
         }
     } catch (e: Throwable) {
+        pool.clear()
         client.close()
         throw e
     }
-    val pool = BufferPool()
     val stream =
         StreamProcessor.builder(pool).buildSuspendingWithAutoFill { autoFiller ->
             val buffer = client.incomingBinaryMessages.first()
@@ -124,5 +132,5 @@ internal suspend fun createWebSocketTransport(
                 throw EndOfStreamException()
             }
         }
-    return WebSocketMqttTransport(client, stream)
+    return WebSocketMqttTransport(client, stream, pool)
 }

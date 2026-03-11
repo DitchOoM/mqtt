@@ -2,7 +2,8 @@ package com.ditchoom.mqtt5.controlpacket
 
 import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Default
-import com.ditchoom.mqtt.controlpacket.Topic
+import com.ditchoom.mqtt.controlpacket.TopicFilter
+import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.GRANTED_QOS_0
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.GRANTED_QOS_1
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.NORMAL_DISCONNECTION
@@ -33,7 +34,7 @@ class TypeTests {
 
     @Test
     fun controlPacketTypeValueMatchesSpecForPUBLISH() {
-        val variable = VariableHeader(Topic.fromOrThrow("t", Topic.Type.Name))
+        val variable = VariableHeader(TopicName.fromOrThrow("t"))
         assertEquals(
             3,
             PublishMessage(variable = variable).controlPacketValue,
@@ -79,7 +80,7 @@ class TypeTests {
             8,
             SubscribeRequest(
                 SubscribeRequest.VariableHeader(packetIdentifier),
-                setOf(Subscription(Topic.fromOrThrow("yolo", Topic.Type.Filter))),
+                setOf(Subscription(TopicFilter.fromOrThrow("yolo"))),
             ).controlPacketValue,
             controlPacketSpectMatchError,
         )
@@ -98,7 +99,7 @@ class TypeTests {
             10,
             UnsubscribeRequest(
                 UnsubscribeRequest.VariableHeader(packetIdentifier),
-                setOf(Topic.fromOrThrow("yolo", Topic.Type.Filter)),
+                setOf(TopicFilter.fromOrThrow("yolo")),
             ).controlPacketValue,
             controlPacketSpectMatchError,
         )
@@ -161,7 +162,7 @@ class TypeTests {
 
     @Test
     fun controlPacketTypeDirectionOfFlowPUBLISH() {
-        val variable = VariableHeader(Topic.fromOrThrow("t", Topic.Type.Name))
+        val variable = VariableHeader(TopicName.fromOrThrow("t"))
         assertEquals(
             BIDIRECTIONAL,
             PublishMessage(variable = variable).direction,
@@ -207,7 +208,7 @@ class TypeTests {
             CLIENT_TO_SERVER,
             SubscribeRequest(
                 SubscribeRequest.VariableHeader(packetIdentifier),
-                setOf(Subscription(Topic.fromOrThrow("yolo", Topic.Type.Filter))),
+                setOf(Subscription(TopicFilter.fromOrThrow("yolo"))),
             ).direction,
             controlPacketSpectMatchError,
         )
@@ -226,7 +227,7 @@ class TypeTests {
             CLIENT_TO_SERVER,
             UnsubscribeRequest(
                 UnsubscribeRequest.VariableHeader(packetIdentifier),
-                setOf(Topic.fromOrThrow("yolo", Topic.Type.Filter)),
+                setOf(TopicFilter.fromOrThrow("yolo")),
             ).direction,
             controlPacketSpectMatchError,
         )

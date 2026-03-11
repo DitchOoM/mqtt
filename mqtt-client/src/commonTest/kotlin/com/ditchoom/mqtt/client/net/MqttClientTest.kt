@@ -14,7 +14,8 @@ import com.ditchoom.mqtt.controlpacket.IConnectionRequest
 import com.ditchoom.mqtt.controlpacket.IPingResponse
 import com.ditchoom.mqtt.controlpacket.IPublishMessage
 import com.ditchoom.mqtt.controlpacket.QualityOfService
-import com.ditchoom.mqtt.controlpacket.Topic
+import com.ditchoom.mqtt.controlpacket.TopicFilter
+import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt3.controlpacket.ConnectionRequest
 import com.ditchoom.socket.NetworkCapabilities
 import com.ditchoom.socket.getNetworkCapabilities
@@ -92,9 +93,9 @@ class MqttClientTest {
                 com.ditchoom.mqtt5.controlpacket.ConnectionRequest
                     .Payload(clientId = "taco123-" + Random.nextUInt()),
         )
-    private val topic = Topic.fromOrThrow("hello123", Topic.Type.Name)
-    private val willTopic4 = Topic.fromOrThrow("willTopicMqtt4", Topic.Type.Name)
-    private val willTopic5 = Topic.fromOrThrow("willTopicMqtt5", Topic.Type.Name)
+    private val topic = TopicName.fromOrThrow("hello123")
+    private val willTopic4 = TopicName.fromOrThrow("willTopicMqtt4")
+    private val willTopic5 = TopicName.fromOrThrow("willTopicMqtt5")
     private val payloadString = "Taco"
 
     @Test
@@ -317,7 +318,7 @@ class MqttClientTest {
 
     private suspend fun lastWillTestamentInternal(
         scope: CoroutineScope,
-        willTopic: Topic,
+        willTopic: TopicName,
         lwtConnectionRequest: IConnectionRequest,
         connectionRequest: IConnectionRequest,
     ) {
@@ -327,17 +328,18 @@ class MqttClientTest {
         val broker = persistence.addBroker(testWsMqttConnectionOptions, connectionRequest)
         val clientOther = LocalMqttClient.connectOnce(scope, broker, persistence)
 
+        val willTopicFilter = TopicFilter.fromOrThrow(willTopic.toString())
         val receivedLwt =
             scope.async {
-                val result = clientOther.observe(willTopic).take(1).first()
-                clientOther.unsubscribe(connectionRequest.controlPacketFactory.unsubscribe(willTopic)).unsubAck.await()
+                val result = clientOther.observe(willTopicFilter).take(1).first()
+                clientOther.unsubscribe(connectionRequest.controlPacketFactory.unsubscribe(willTopicFilter)).unsubAck.await()
                 clientOther.sendDisconnect()
                 clientOther.shutdown()
                 result
             }
         clientOther.subscribe(
             connectionRequest.controlPacketFactory.subscribe(
-                willTopic,
+                willTopicFilter,
                 QualityOfService.AT_LEAST_ONCE,
             ),
         )
@@ -374,7 +376,7 @@ class MqttClientTest {
         val persistence = connectionRequest.controlPacketFactory.defaultPersistence(inMemory)
         val broker = persistence.addBroker(connectionOptions, connectionRequest)
         val client = LocalMqttClient.connectOnce(scope, broker, persistence)
-        val flow = client.observe(topic)
+        val flow = client.observe(TopicFilter.fromOrThrow(topic.toString()))
         scope.launch {
             flow.filterIsInstance<IPublishMessage>().take(3).collect {
                 val payload = it.payload ?: EMPTY_BUFFER
@@ -392,10 +394,11 @@ class MqttClientTest {
 
 suspend fun sendAllMessageTypes(
     client: MqttClient,
-    topic: Topic,
+    topic: TopicName,
     payloadString: String,
 ) {
     val factory = client.packetFactory
+    val topicFilter = TopicFilter.fromOrThrow(topic.toString())
     val pubQos0 =
         factory.publish(
             topicName = topic,
@@ -414,7 +417,7 @@ suspend fun sendAllMessageTypes(
             qos = QualityOfService.EXACTLY_ONCE,
             payload = (payloadString + "2").toReadBuffer(Charset.UTF8),
         )
-    client.subscribe(factory.subscribe(topic, maximumQos = QualityOfService.EXACTLY_ONCE)).subAck.await()
+    client.subscribe(factory.subscribe(topicFilter, maximumQos = QualityOfService.EXACTLY_ONCE)).subAck.await()
     val pub = client.publish(pubQos2)
     if (getNetworkCapabilities() == NetworkCapabilities.WEBSOCKETS_ONLY && client.packetFactory.protocolVersion == 5) {
         // TODO: incoming qos2 messages are still in the queue when using clientEchoInternal for some reason with web
@@ -423,5 +426,5 @@ suspend fun sendAllMessageTypes(
     pub.awaitAll()
     client.publish(pubQos0).awaitAll()
     client.publish(pubQos1).awaitAll()
-    client.unsubscribe(factory.unsubscribe(topic)).unsubAck.await()
+    client.unsubscribe(factory.unsubscribe(topicFilter)).unsubAck.await()
 }

@@ -29,4 +29,25 @@ class PublishAcknowledgementTest {
         val pubackResult = ControlPacketV4.from(buffer) as PublishAcknowledgment
         assertEquals(pubackResult.packetIdentifier, packetIdentifier)
     }
+
+    @Test
+    fun wireFormatBytes() {
+        val puback = PublishAcknowledgment(0x1234)
+        val buffer = BufferFactory.Default.allocate(4)
+        puback.serialize(buffer)
+        buffer.resetForRead()
+        assertEquals(0x40.toByte(), buffer.readByte()) // byte1: type=4, flags=0
+        assertEquals(0x02.toByte(), buffer.readByte()) // VBI: remainingLength=2
+        assertEquals(0x12.toByte(), buffer.readByte()) // packetId MSB
+        assertEquals(0x34.toByte(), buffer.readByte()) // packetId LSB
+        assertEquals(0, buffer.remaining()) // no trailing bytes
+    }
+
+    @Test
+    fun valueClassEquality() {
+        val a = PublishAcknowledgment(42)
+        val b = PublishAcknowledgment(42)
+        assertEquals(a, b)
+        assertEquals(a.hashCode(), b.hashCode())
+    }
 }

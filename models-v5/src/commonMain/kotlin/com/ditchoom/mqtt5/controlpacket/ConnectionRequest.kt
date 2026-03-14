@@ -69,8 +69,10 @@ data class ConnectionRequest(
      */
     val variableHeader: VariableHeader = VariableHeader(),
     val payload: Payload = Payload(),
-) : ControlPacketV5(1, DirectionOfFlow.CLIENT_TO_SERVER),
+) : ControlPacketV5,
     IConnectionRequest {
+    override val controlPacketValue: Byte get() = 1
+    override val direction: DirectionOfFlow get() = DirectionOfFlow.CLIENT_TO_SERVER
     constructor(
         clientId: String,
         keepAliveSeconds: Int = 3600,

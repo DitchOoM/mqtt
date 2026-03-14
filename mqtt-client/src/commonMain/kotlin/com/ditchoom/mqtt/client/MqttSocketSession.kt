@@ -4,12 +4,16 @@ import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.PlatformBuffer
 import com.ditchoom.buffer.ReadBuffer
+import com.ditchoom.buffer.ReadWriteBuffer
+import com.ditchoom.buffer.pool.TieredBufferPool
+import com.ditchoom.buffer.withPooling
 import com.ditchoom.mqtt.MqttException
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.IConnectionAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IConnectionRequest
 import com.ditchoom.mqtt.controlpacket.IDisconnectNotification
+import com.ditchoom.mqtt.controlpacket.IPublishMessage
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
 import com.ditchoom.websocket.WebSocketConnectionOptions
 import kotlinx.coroutines.Dispatchers
@@ -27,6 +31,9 @@ class MqttSocketSession private constructor(
     val factory: BufferFactory = BufferFactory.Default,
     var sentMessage: (PlatformBuffer) -> Unit,
 ) {
+    private val writePool = TieredBufferPool(factory = factory)
+    private val pooledFactory = factory.withPooling(writePool)
+
     var observer: Observer? = null
         set(value) {
             reader.observer = value
@@ -42,8 +49,19 @@ class MqttSocketSession private constructor(
     suspend fun write(packet: ControlPacket) = write(listOf(packet))
 
     suspend fun write(controlPackets: Collection<ControlPacket>) {
-        val b = controlPackets.toBuffer(factory)
-        b.resetForWrite()
+        // Fast path: single PUBLISH with payload → scatter-gather (avoids payload copy)
+        if (controlPackets.size == 1) {
+            val packet = controlPackets.first()
+            if (packet is IPublishMessage) {
+                val payload = packet.payload
+                if (payload != null && payload.remaining() > 0) {
+                    writePublishZeroCopy(packet, controlPackets)
+                    return
+                }
+            }
+        }
+        val b = controlPackets.toBuffer(pooledFactory)
+        b.resetForRead()
         transport.write(b, writeTimeout)
         sentMessage(b)
         b.freeNativeMemory()
@@ -51,6 +69,23 @@ class MqttSocketSession private constructor(
         if (controlPackets.filterIsInstance<IDisconnectNotification>().firstOrNull() != null) {
             close()
         }
+    }
+
+    private suspend fun writePublishZeroCopy(
+        packet: IPublishMessage,
+        controlPackets: Collection<ControlPacket>,
+    ) {
+        val payload = packet.payload!!
+        // Acquire small pooled buffer for the header (topic + packet ID + fixed header).
+        // 512 bytes from the small pool is more than enough.
+        val headerBuf = writePool.acquire(64)
+        try {
+            val header = packet.serializeHeaderToSlice(headerBuf, payload.remaining())
+            transport.writeGathered(listOf(header, payload), writeTimeout)
+        } finally {
+            writePool.release(headerBuf)
+        }
+        observer?.wrotePackets(brokerId, connectionAcknowledgement.mqttVersion, controlPackets)
     }
 
     internal suspend fun read() = reader.readControlPacket()
@@ -64,6 +99,7 @@ class MqttSocketSession private constructor(
         } catch (e: Exception) {
             // ignore close exceptions
         }
+        writePool.clear()
         sentMessage = {}
     }
 
@@ -78,7 +114,7 @@ class MqttSocketSession private constructor(
             incomingMessage: (UByte, Int, ReadBuffer) -> Unit = { _, _, _ -> },
         ): MqttSocketSession {
             val connect = connectionRequest.toBuffer(factory)
-            connect.resetForWrite()
+            connect.resetForRead()
             val transport =
                 withContext(Dispatchers.Default) {
                     when (connectionOps) {

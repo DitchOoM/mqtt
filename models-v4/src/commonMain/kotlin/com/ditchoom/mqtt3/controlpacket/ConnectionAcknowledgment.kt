@@ -29,8 +29,10 @@ typealias CONNACK = ConnectionAcknowledgment
  */
 data class ConnectionAcknowledgment(
     val header: VariableHeader = VariableHeader(),
-) : ControlPacketV4(2, DirectionOfFlow.SERVER_TO_CLIENT),
+) : ControlPacketV4,
     IConnectionAcknowledgment {
+    override val controlPacketValue: Byte get() = 2
+    override val direction: DirectionOfFlow get() = DirectionOfFlow.SERVER_TO_CLIENT
     constructor(sessionPresent: Boolean, connectReason: ReturnCode) : this(
         VariableHeader(
             sessionPresent,

@@ -4,23 +4,17 @@ import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.mqtt.MalformedPacketException
 import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readVariableByteInteger
-import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
+import com.ditchoom.mqtt.controlpacket.ControlPacketFactory
 
 /**
  * The MQTT specification defines fifteen different types of MQTT Control Packet, for example the PublishMessage packet is
  * used to convey Application Messages.
  * @see https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477322
  * @see https://docs.oasis-open.org/mqtt/mqtt/v5.0/mqtt-v5.0.html#_Toc514847903
- * @param controlPacketValue Value defined under [MQTT 2.1.2]
- * @param direction Direction of Flow defined under [MQTT 2.1.2]
  */
-abstract class ControlPacketV4(
-    override val controlPacketValue: Byte,
-    override val direction: DirectionOfFlow,
-    override val flags: Byte = 0b0,
-) : ControlPacket {
-    override val mqttVersion: Byte = 4
-    override val controlPacketFactory = ControlPacketV4Factory
+sealed interface ControlPacketV4 : ControlPacket {
+    override val mqttVersion: Byte get() = 4
+    override val controlPacketFactory: ControlPacketFactory get() = ControlPacketV4Factory
 
     companion object {
         inline fun <reified WillPayload : Any, reified PublishPayload : Any> fromTyped(buffer: ReadBuffer): ControlPacketV4 {

@@ -1,5 +1,6 @@
 package com.ditchoom.mqtt5.controlpacket
 
+import com.ditchoom.buffer.WriteBuffer
 import com.ditchoom.mqtt.controlpacket.IPingRequest
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
 
@@ -17,4 +18,11 @@ import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
  * This packet is used in Keep Alive processing. Refer to section 3.1.2.10 for more details.
  */
 
-object PingRequest : ControlPacketV5(12, DirectionOfFlow.CLIENT_TO_SERVER), IPingRequest
+object PingRequest : ControlPacketV5, IPingRequest {
+    override val controlPacketValue: Byte get() = 12
+    override val direction: DirectionOfFlow get() = DirectionOfFlow.CLIENT_TO_SERVER
+
+    override fun serialize(writeBuffer: WriteBuffer) {
+        writeBuffer.writeShort(0xC000.toShort())
+    }
+}

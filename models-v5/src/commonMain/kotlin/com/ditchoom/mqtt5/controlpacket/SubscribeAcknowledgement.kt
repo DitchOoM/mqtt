@@ -43,8 +43,10 @@ import com.ditchoom.mqtt5.controlpacket.wire.SubAckV5WireCodec
 data class SubscribeAcknowledgement(
     val variable: VariableHeader,
     val payload: List<ReasonCode>,
-) : ControlPacketV5(9, DirectionOfFlow.SERVER_TO_CLIENT),
+) : ControlPacketV5,
     ISubscribeAcknowledgement {
+    override val controlPacketValue: Byte get() = 9
+    override val direction: DirectionOfFlow get() = DirectionOfFlow.SERVER_TO_CLIENT
     constructor(
         packetIdentifier: UShort,
         properties: Properties = Properties(),

@@ -27,8 +27,10 @@ import com.ditchoom.mqtt5.controlpacket.wire.UnsubAckV5WireCodec
 data class UnsubscribeAcknowledgment(
     val variable: VariableHeader,
     val reasonCodes: List<ReasonCode> = listOf(SUCCESS),
-) : ControlPacketV5(11, DirectionOfFlow.SERVER_TO_CLIENT),
+) : ControlPacketV5,
     IUnsubscribeAcknowledgment {
+    override val controlPacketValue: Byte get() = 11
+    override val direction: DirectionOfFlow get() = DirectionOfFlow.SERVER_TO_CLIENT
     init {
         val invalidCodes = reasonCodes.map { it.byte } - validSubscribeCodes
         if (invalidCodes.isEmpty()) {

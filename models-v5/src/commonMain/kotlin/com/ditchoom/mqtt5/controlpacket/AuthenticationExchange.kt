@@ -32,7 +32,9 @@ import com.ditchoom.mqtt5.controlpacket.wire.AuthV5WireCodec
 
 data class AuthenticationExchange(
     val variable: VariableHeader,
-) : ControlPacketV5(15, DirectionOfFlow.BIDIRECTIONAL) {
+) : ControlPacketV5 {
+    override val controlPacketValue: Byte get() = 15
+    override val direction: DirectionOfFlow get() = DirectionOfFlow.BIDIRECTIONAL
     override fun remainingLength() = variable.size()
 
     override fun variableHeader(writeBuffer: WriteBuffer) = variable.serialize(writeBuffer)

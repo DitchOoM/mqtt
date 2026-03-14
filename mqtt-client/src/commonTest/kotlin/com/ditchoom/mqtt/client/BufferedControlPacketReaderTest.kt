@@ -48,6 +48,11 @@ private class MockMqttTransport(
         timeout: Duration,
     ): Int = buffer.remaining()
 
+    override suspend fun writeGathered(
+        buffers: List<ReadBuffer>,
+        timeout: Duration,
+    ): Int = buffers.sumOf { it.remaining() }
+
     override suspend fun close() {
         open = false
         chunks.close()

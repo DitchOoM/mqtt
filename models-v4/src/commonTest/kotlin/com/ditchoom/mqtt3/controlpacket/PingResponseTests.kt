@@ -21,4 +21,14 @@ class PingResponseTests {
         val result = ControlPacketV4.from(buffer2)
         assertEquals(result, ping)
     }
+
+    @Test
+    fun wireFormatBytes() {
+        val buffer = BufferFactory.Default.allocate(2)
+        PingResponse.serialize(buffer)
+        buffer.resetForRead()
+        assertEquals(0xD0.toByte(), buffer.readByte()) // byte1: type=13
+        assertEquals(0x00.toByte(), buffer.readByte()) // VBI: remainingLength=0
+        assertEquals(0, buffer.remaining())
+    }
 }

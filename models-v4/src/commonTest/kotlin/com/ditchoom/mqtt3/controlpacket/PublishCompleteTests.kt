@@ -18,4 +18,17 @@ class PublishCompleteTests {
         val pubackResult = ControlPacketV4.from(buffer) as PublishComplete
         assertEquals(pubackResult.packetIdentifier, packetIdentifier)
     }
+
+    @Test
+    fun wireFormatBytes() {
+        val pubcomp = PublishComplete(0x1234)
+        val buffer = BufferFactory.Default.allocate(4)
+        pubcomp.serialize(buffer)
+        buffer.resetForRead()
+        assertEquals(0x70.toByte(), buffer.readByte()) // byte1: type=7, flags=0
+        assertEquals(0x02.toByte(), buffer.readByte()) // VBI: remainingLength=2
+        assertEquals(0x12.toByte(), buffer.readByte()) // packetId MSB
+        assertEquals(0x34.toByte(), buffer.readByte()) // packetId LSB
+        assertEquals(0, buffer.remaining())
+    }
 }

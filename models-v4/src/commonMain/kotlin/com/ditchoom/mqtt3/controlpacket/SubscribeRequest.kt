@@ -33,8 +33,11 @@ import com.ditchoom.mqtt3.controlpacket.wire.SubscriptionWire
 data class SubscribeRequest(
     override val packetIdentifier: Int,
     override val subscriptions: Set<ISubscription>,
-) : ControlPacketV4(ISubscribeRequest.CONTROL_PACKET_VALUE, DirectionOfFlow.CLIENT_TO_SERVER, 0b10),
+) : ControlPacketV4,
     ISubscribeRequest {
+    override val controlPacketValue: Byte get() = ISubscribeRequest.CONTROL_PACKET_VALUE
+    override val direction: DirectionOfFlow get() = DirectionOfFlow.CLIENT_TO_SERVER
+    override val flags: Byte get() = 0b10
     constructor(packetIdentifier: UShort, topic: TopicFilter, qos: QualityOfService) :
         this(
             packetIdentifier.toInt(),

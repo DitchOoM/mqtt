@@ -32,8 +32,10 @@ import com.ditchoom.mqtt5.controlpacket.wire.AckV5WireCodec
 
 data class PublishAcknowledgment(
     val variable: VariableHeader,
-) : ControlPacketV5(4, DirectionOfFlow.BIDIRECTIONAL),
+) : ControlPacketV5,
     IPublishAcknowledgment {
+    override val controlPacketValue: Byte get() = 4
+    override val direction: DirectionOfFlow get() = DirectionOfFlow.BIDIRECTIONAL
     constructor(packetIdentifier: UShort) : this(VariableHeader(packetIdentifier.toInt()))
     constructor(
         packetId: Int,

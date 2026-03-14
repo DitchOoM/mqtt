@@ -22,6 +22,7 @@ import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
  *
  * SHOULD close the Network Connection if the Client has not already done so.
  */
-object DisconnectNotification :
-    ControlPacketV4(14, DirectionOfFlow.BIDIRECTIONAL),
-    IDisconnectNotification
+object DisconnectNotification : ControlPacketV4, IDisconnectNotification {
+    override val controlPacketValue: Byte get() = 14
+    override val direction: DirectionOfFlow get() = DirectionOfFlow.BIDIRECTIONAL
+}

@@ -32,8 +32,10 @@ import com.ditchoom.mqtt5.controlpacket.wire.DisconnectV5WireCodec
 
 data class DisconnectNotification(
     val variable: VariableHeader = VariableHeader(),
-) : ControlPacketV5(14, DirectionOfFlow.BIDIRECTIONAL),
+) : ControlPacketV5,
     IDisconnectNotification {
+    override val controlPacketValue: Byte get() = 14
+    override val direction: DirectionOfFlow get() = DirectionOfFlow.BIDIRECTIONAL
     override fun packetSize(): Int = 2 + remainingLength()
 
     override fun variableHeader(writeBuffer: WriteBuffer) = variable.serialize(writeBuffer)

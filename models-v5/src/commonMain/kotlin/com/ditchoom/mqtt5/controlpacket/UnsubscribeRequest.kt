@@ -28,8 +28,11 @@ import com.ditchoom.mqtt5.controlpacket.wire.UnsubscribeV5WireCodec
 data class UnsubscribeRequest(
     val variable: VariableHeader,
     override val topics: Set<TopicFilter>,
-) : ControlPacketV5(IUnsubscribeRequest.controlPacketValue, DirectionOfFlow.CLIENT_TO_SERVER, 0b10),
+) : ControlPacketV5,
     IUnsubscribeRequest {
+    override val controlPacketValue: Byte get() = IUnsubscribeRequest.controlPacketValue
+    override val direction: DirectionOfFlow get() = DirectionOfFlow.CLIENT_TO_SERVER
+    override val flags: Byte get() = 0b10
     constructor(
         topics: Set<TopicFilter>,
         userProperty: List<Pair<String, String>> = emptyList(),

@@ -67,8 +67,10 @@ import com.ditchoom.mqtt5.controlpacket.wire.ConnAckV5WireCodec
 
 data class ConnectionAcknowledgment(
     val header: VariableHeader = VariableHeader(),
-) : ControlPacketV5(2, DirectionOfFlow.SERVER_TO_CLIENT),
+) : ControlPacketV5,
     IConnectionAcknowledgment {
+    override val controlPacketValue: Byte get() = 2
+    override val direction: DirectionOfFlow get() = DirectionOfFlow.SERVER_TO_CLIENT
     override val isSuccessful: Boolean = header.connectReason == SUCCESS
     override val connectionReason: String = header.connectReason.name
     override val sessionPresent: Boolean = header.sessionPresent

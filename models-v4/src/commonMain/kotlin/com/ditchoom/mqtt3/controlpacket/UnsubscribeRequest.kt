@@ -19,8 +19,11 @@ import com.ditchoom.mqtt3.controlpacket.wire.UnsubscribeWireCodec
 data class UnsubscribeRequest(
     override val packetIdentifier: Int,
     override val topics: Set<TopicFilter>,
-) : ControlPacketV4(IUnsubscribeRequest.controlPacketValue, DirectionOfFlow.CLIENT_TO_SERVER, 0b10),
+) : ControlPacketV4,
     IUnsubscribeRequest {
+    override val controlPacketValue: Byte get() = IUnsubscribeRequest.controlPacketValue
+    override val direction: DirectionOfFlow get() = DirectionOfFlow.CLIENT_TO_SERVER
+    override val flags: Byte get() = 0b10
     constructor(packetIdentifier: Int, topicString: Collection<String>) :
         this(packetIdentifier, topicString.map { TopicFilter.fromOrThrow(it) }.toSet())
 

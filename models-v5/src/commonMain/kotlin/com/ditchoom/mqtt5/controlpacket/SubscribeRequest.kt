@@ -43,8 +43,11 @@ import com.ditchoom.mqtt5.controlpacket.wire.SubscriptionV5Wire
 data class SubscribeRequest(
     val variable: VariableHeader,
     override val subscriptions: Set<ISubscription>,
-) : ControlPacketV5(8, DirectionOfFlow.CLIENT_TO_SERVER, 0b10),
+) : ControlPacketV5,
     ISubscribeRequest {
+    override val controlPacketValue: Byte get() = 8
+    override val direction: DirectionOfFlow get() = DirectionOfFlow.CLIENT_TO_SERVER
+    override val flags: Byte get() = 0b10
     constructor(
         packetIdentifier: UShort,
         topic: String,

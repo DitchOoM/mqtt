@@ -2,6 +2,7 @@ package com.ditchoom.mqtt.client
 
 import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Default
+import com.ditchoom.buffer.PlatformBuffer
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.pool.BufferPool
 import com.ditchoom.buffer.stream.AutoFillingSuspendingStreamProcessor
@@ -27,6 +28,16 @@ interface MqttTransport {
         timeout: Duration,
     ): Int
 
+    /**
+     * Writes multiple buffers as a single logical message.
+     * TCP: sequential writes (zero-copy, no concatenation).
+     * WebSocket: must concatenate into single frame per MQTT spec.
+     */
+    suspend fun writeGathered(
+        buffers: List<ReadBuffer>,
+        timeout: Duration,
+    ): Int
+
     val stream: AutoFillingSuspendingStreamProcessor
 
     suspend fun close()
@@ -42,6 +53,11 @@ class TcpMqttTransport(
         buffer: ReadBuffer,
         timeout: Duration,
     ): Int = connection.write(buffer, timeout)
+
+    override suspend fun writeGathered(
+        buffers: List<ReadBuffer>,
+        timeout: Duration,
+    ): Int = connection.writeGathered(buffers, timeout)
 
     override suspend fun close() = connection.close()
 }
@@ -62,9 +78,25 @@ class WebSocketMqttTransport(
         return remaining
     }
 
+    override suspend fun writeGathered(
+        buffers: List<ReadBuffer>,
+        timeout: Duration,
+    ): Int {
+        // WebSocket: each MQTT packet must be a single WebSocket frame.
+        // Concatenate buffers into one before sending.
+        if (buffers.size == 1) return write(buffers[0], timeout)
+        val totalSize = buffers.sumOf { it.remaining() }
+        val combined = PlatformBuffer.allocate(totalSize)
+        for (buf in buffers) combined.write(buf)
+        combined.resetForRead()
+        val result = write(combined, timeout)
+        combined.freeNativeMemory()
+        return result
+    }
+
     override suspend fun close() {
-        pool.clear()
         client.close()
+        pool.clear()
     }
 }
 

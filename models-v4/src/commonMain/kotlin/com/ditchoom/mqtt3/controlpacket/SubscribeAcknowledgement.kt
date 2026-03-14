@@ -25,8 +25,10 @@ import com.ditchoom.mqtt3.controlpacket.wire.SubAckWireCodec
 data class SubscribeAcknowledgement(
     override val packetIdentifier: Int,
     val payload: List<ReasonCode>,
-) : ControlPacketV4(ISubscribeAcknowledgement.CONTROL_PACKET_VALUE, DirectionOfFlow.SERVER_TO_CLIENT),
+) : ControlPacketV4,
     ISubscribeAcknowledgement {
+    override val controlPacketValue: Byte get() = ISubscribeAcknowledgement.CONTROL_PACKET_VALUE
+    override val direction: DirectionOfFlow get() = DirectionOfFlow.SERVER_TO_CLIENT
     override fun remainingLength() = 2 + payload.size
 
     override fun encodeBody(writeBuffer: WriteBuffer) {

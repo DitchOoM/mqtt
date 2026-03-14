@@ -42,8 +42,11 @@ data class PublishMessage(
     val fixed: FixedHeader = FixedHeader(),
     val variable: VariableHeader,
     override val payload: ReadBuffer? = null,
-) : ControlPacketV5(IPublishMessage.CONTROL_PACKET_VALUE, DirectionOfFlow.BIDIRECTIONAL, fixed.flags),
+) : ControlPacketV5,
     IPublishMessage {
+    override val controlPacketValue: Byte get() = IPublishMessage.CONTROL_PACKET_VALUE
+    override val direction: DirectionOfFlow get() = DirectionOfFlow.BIDIRECTIONAL
+    override val flags: Byte get() = fixed.flags
     constructor(
         dup: Boolean = false,
         qos: QualityOfService = AT_MOST_ONCE,

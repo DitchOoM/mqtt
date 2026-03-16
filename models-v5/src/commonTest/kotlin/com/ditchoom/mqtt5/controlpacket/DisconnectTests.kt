@@ -43,6 +43,7 @@ import com.ditchoom.mqtt5.controlpacket.properties.ReasonString
 import com.ditchoom.mqtt5.controlpacket.properties.ServerReference
 import com.ditchoom.mqtt5.controlpacket.properties.SessionExpiryInterval
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
+import com.ditchoom.mqtt5.controlpacket.properties.MaximumPacketSize
 import com.ditchoom.mqtt5.controlpacket.properties.WillDelayInterval
 import com.ditchoom.mqtt5.controlpacket.properties.readProperties
 import kotlin.test.Test
@@ -51,6 +52,32 @@ import kotlin.test.assertFailsWith
 import kotlin.test.fail
 
 class DisconnectTests {
+    /**
+     * Regression: SessionExpiryInterval (0x11) is FOUR_BYTE_INTEGER but was calling
+     * size(ULong) returning 9 instead of size(UInt) returning 5.
+     */
+    @Test
+    fun sessionExpiryIntervalPropertySize() {
+        val prop = SessionExpiryInterval(300)
+        assertEquals(5, prop.size(), "SessionExpiryInterval must be 5 bytes (1 id + 4 value)")
+        val buffer = BufferFactory.Default.allocate(5)
+        val written = prop.write(buffer)
+        assertEquals(5, written, "SessionExpiryInterval must write exactly 5 bytes")
+    }
+
+    /**
+     * Regression: MaximumPacketSize (0x27) is FOUR_BYTE_INTEGER but was calling
+     * size(ULong) returning 9 instead of size(UInt) returning 5.
+     */
+    @Test
+    fun maximumPacketSizePropertySize() {
+        val prop = MaximumPacketSize(65536uL)
+        assertEquals(5, prop.size(), "MaximumPacketSize must be 5 bytes (1 id + 4 value)")
+        val buffer = BufferFactory.Default.allocate(5)
+        val written = prop.write(buffer)
+        assertEquals(5, written, "MaximumPacketSize must write exactly 5 bytes")
+    }
+
     @Test
     fun sessionExpiryInterval() {
         val expected = DisconnectNotification(VariableHeader(properties = Properties(4u)))
@@ -573,6 +600,37 @@ class DisconnectTests {
         val deserialized = ControlPacketV5.from(buffer) as DisconnectNotification
         assertEquals(deserialized.variable.reasonCode, reason)
         assertEquals(disconnect, deserialized)
+    }
+
+    /**
+     * Regression: A broker may send DISCONNECT with remainingLength=0 (clean disconnect,
+     * no reason code, no properties). Before the fix, the parser tried to read bytes
+     * from an empty buffer.
+     */
+    @Test
+    fun remainingLength0CleanDisconnect() {
+        val buffer = BufferFactory.Default.allocate(2)
+        buffer.writeByte(0b11100000.toByte()) // DISCONNECT fixed header
+        buffer.writeByte(0) // remaining length = 0
+        buffer.resetForRead()
+        val disconnect = ControlPacketV5.from(buffer) as DisconnectNotification
+        assertEquals(NORMAL_DISCONNECTION, disconnect.variable.reasonCode)
+    }
+
+    /**
+     * Regression: A broker may send DISCONNECT with remainingLength=1 (reason code only,
+     * no properties). Before the fix, the parser tried to read property length after
+     * the reason code, reading past the buffer.
+     */
+    @Test
+    fun remainingLength1ReasonCodeOnly() {
+        val buffer = BufferFactory.Default.allocate(3)
+        buffer.writeByte(0b11100000.toByte()) // DISCONNECT fixed header
+        buffer.writeByte(1) // remaining length = 1
+        buffer.writeUByte(MALFORMED_PACKET.byte.toUByte()) // reason code only
+        buffer.resetForRead()
+        val disconnect = ControlPacketV5.from(buffer) as DisconnectNotification
+        assertEquals(MALFORMED_PACKET, disconnect.variable.reasonCode)
     }
 
     @Test

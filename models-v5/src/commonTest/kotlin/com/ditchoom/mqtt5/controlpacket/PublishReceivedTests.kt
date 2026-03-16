@@ -221,6 +221,23 @@ class PublishReceivedTests {
         assertEquals(pubrecResult.variable.reasonCode, PAYLOAD_FORMAT_INVALID)
     }
 
+    /**
+     * Regression: remainingLength=3 means packetId (2) + reasonCode (1), no property length byte.
+     * Before the fix, AckV5WireCodec.decode was called which expected a property length VBI.
+     */
+    @Test
+    fun remainingLength3ReasonCodeNoProperties() {
+        val buffer = BufferFactory.Default.allocate(5)
+        buffer.writeByte(0b01010000.toByte()) // PUBREC fixed header
+        buffer.writeByte(3) // remaining length = 3
+        buffer.writeUShort(packetIdentifier.toUShort())
+        buffer.writeUByte(NO_MATCHING_SUBSCRIBERS.byte.toUByte())
+        buffer.resetForRead()
+        val pubrec = ControlPacketV5.from(buffer) as PublishReceived
+        assertEquals(packetIdentifier, pubrec.variable.packetIdentifier)
+        assertEquals(NO_MATCHING_SUBSCRIBERS, pubrec.variable.reasonCode)
+    }
+
     @Test
     fun invalidReasonCodeThrowsProtocolError() {
         try {

@@ -48,6 +48,23 @@ class PublishCompleteTests {
         assertEquals(pubcompResult.variable.reasonCode, PACKET_IDENTIFIER_NOT_FOUND)
     }
 
+    /**
+     * Regression: remainingLength=3 means packetId (2) + reasonCode (1), no property length byte.
+     * Before the fix, AckV5WireCodec.decode was called which expected a property length VBI.
+     */
+    @Test
+    fun remainingLength3ReasonCodeNoProperties() {
+        val buffer = BufferFactory.Default.allocate(5)
+        buffer.writeByte(0b01110000.toByte()) // PUBCOMP fixed header
+        buffer.writeByte(3) // remaining length = 3
+        buffer.writeUShort(packetIdentifier.toUShort())
+        buffer.writeUByte(PACKET_IDENTIFIER_NOT_FOUND.byte.toUByte())
+        buffer.resetForRead()
+        val pubcomp = ControlPacketV5.from(buffer) as PublishComplete
+        assertEquals(packetIdentifier, pubcomp.variable.packetIdentifier)
+        assertEquals(PACKET_IDENTIFIER_NOT_FOUND, pubcomp.variable.reasonCode)
+    }
+
     @Test
     fun invalidReasonCodeThrowsProtocolError() {
         try {

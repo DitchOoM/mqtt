@@ -189,6 +189,25 @@ class PublishAcknowledgementTest {
         }
     }
 
+    /**
+     * Regression: remainingLength=3 means packetId (2) + reasonCode (1), no property length byte.
+     * Before the fix, AckV5WireCodec.decode was called which expected a property length VBI,
+     * causing a parse failure or reading garbage.
+     */
+    @Test
+    fun remainingLength3ReasonCodeNoProperties() {
+        // Manually construct: fixed header byte, RL=3, packetId (2 bytes), reason code (1 byte)
+        val buffer = BufferFactory.Default.allocate(5)
+        buffer.writeByte(0b01000000.toByte()) // PUBACK fixed header
+        buffer.writeByte(3) // remaining length = 3
+        buffer.writeUShort(packetIdentifier.toUShort()) // packet ID
+        buffer.writeUByte(NO_MATCHING_SUBSCRIBERS.byte.toUByte()) // reason code, no properties
+        buffer.resetForRead()
+        val puback = ControlPacketV5.from(buffer) as PublishAcknowledgment
+        assertEquals(packetIdentifier, puback.variable.packetIdentifier)
+        assertEquals(NO_MATCHING_SUBSCRIBERS, puback.variable.reasonCode)
+    }
+
     @Test
     fun variableHeaderPropertyUserProperty() {
         val props = VariableHeader.Properties.from(setOf(UserProperty("key", "value")))

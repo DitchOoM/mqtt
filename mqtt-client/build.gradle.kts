@@ -90,6 +90,46 @@ kotlin {
     }
 }
 
+// Integration tests require a running broker (local Mosquitto or public brokers).
+// Run with: ./gradlew :mqtt-client:jvmTest -PintegrationTests
+val integrationTestPatterns =
+    listOf(
+        "com.ditchoom.mqtt.client.net.EndToEndBenchmark",
+        "com.ditchoom.mqtt.client.net.EndToEndBrokerBenchmarkTest",
+        "com.ditchoom.mqtt.client.net.MqttSocketSessionTest",
+        "com.ditchoom.mqtt.client.net.MqttClientTest",
+        "com.ditchoom.mqtt.client.net.PublicBrokerValidationTest",
+    )
+
+val runIntegrationTests = project.hasProperty("integrationTests")
+
+// Filter JVM tests
+tasks.withType<Test>().configureEach {
+    testLogging {
+        showStandardStreams = true
+    }
+    jvmArgs("-XX:MaxDirectMemorySize=1g")
+    if (!runIntegrationTests) {
+        filter {
+            integrationTestPatterns.forEach { excludeTestsMatching(it) }
+        }
+    }
+}
+
+// Filter Kotlin/Native tests
+tasks.withType<org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeTest>().configureEach {
+    if (!runIntegrationTests) {
+        integrationTestPatterns.forEach { this.filter.excludeTestsMatching(it) }
+    }
+}
+
+// Filter Kotlin/JS tests
+tasks.withType<org.jetbrains.kotlin.gradle.targets.js.testing.KotlinJsTest>().configureEach {
+    if (!runIntegrationTests) {
+        integrationTestPatterns.forEach { this.filter.excludeTestsMatching(it) }
+    }
+}
+
 android {
     compileSdk = 36
     sourceSets["main"].manifest.srcFile("src/androidMain/AndroidManifest.xml")

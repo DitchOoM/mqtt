@@ -4,9 +4,6 @@ import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.PlatformBuffer
 import com.ditchoom.buffer.ReadBuffer
-import com.ditchoom.buffer.ReadWriteBuffer
-import com.ditchoom.buffer.pool.TieredBufferPool
-import com.ditchoom.buffer.withPooling
 import com.ditchoom.mqtt.MqttException
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.ControlPacket
@@ -31,9 +28,6 @@ class MqttSocketSession private constructor(
     val factory: BufferFactory = BufferFactory.Default,
     var sentMessage: (PlatformBuffer) -> Unit,
 ) {
-    private val writePool = TieredBufferPool(factory = factory)
-    private val pooledFactory = factory.withPooling(writePool)
-
     var observer: Observer? = null
         set(value) {
             reader.observer = value
@@ -60,7 +54,7 @@ class MqttSocketSession private constructor(
                 }
             }
         }
-        val b = controlPackets.toBuffer(pooledFactory)
+        val b = controlPackets.toBuffer(factory)
         b.resetForRead()
         transport.write(b, writeTimeout)
         sentMessage(b)
@@ -76,14 +70,20 @@ class MqttSocketSession private constructor(
         controlPackets: Collection<ControlPacket>,
     ) {
         val payload = packet.payload!!
-        // Acquire small pooled buffer for the header (topic + packet ID + fixed header).
-        // 512 bytes from the small pool is more than enough.
-        val headerBuf = writePool.acquire(64)
+        // Allocate a small buffer for the fixed header + variable header (topic + packet ID).
+        // The payload is written separately via scatter-gather to avoid copying.
+        val headerBuf = BufferFactory.Default.allocate(64)
         try {
-            val header = packet.serializeHeaderToSlice(headerBuf, payload.remaining())
+            val headerSlice = packet.serializeHeaderToSlice(headerBuf, payload.remaining())
+            // serializeHeaderToSlice returns a slice (ReadBuffer). The socket write requires
+            // PlatformBuffer, so copy the small header (~20 bytes) into a fresh buffer.
+            val header = BufferFactory.Default.allocate(headerSlice.remaining())
+            header.write(headerSlice)
+            header.resetForRead()
             transport.writeGathered(listOf(header, payload), writeTimeout)
+            header.freeNativeMemory()
         } finally {
-            writePool.release(headerBuf)
+            headerBuf.freeNativeMemory()
         }
         observer?.wrotePackets(brokerId, connectionAcknowledgement.mqttVersion, controlPackets)
     }
@@ -99,7 +99,6 @@ class MqttSocketSession private constructor(
         } catch (e: Exception) {
             // ignore close exceptions
         }
-        writePool.clear()
         sentMessage = {}
     }
 

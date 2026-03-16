@@ -17,6 +17,7 @@ import com.ditchoom.mqtt3.controlpacket.ConnectionRequest
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import java.util.concurrent.atomic.AtomicInteger
@@ -57,6 +58,27 @@ class EndToEndBenchmark {
         payload = ConnectionRequest.Payload(clientId = "bench-${Random.nextUInt()}"),
     )
 
+    private suspend fun connectWithRetry(
+        scope: CoroutineScope,
+        broker: com.ditchoom.mqtt.connection.MqttBroker,
+        persistence: InMemoryPersistence,
+        factory: BufferFactory,
+        maxAttempts: Int = 3,
+    ): LocalMqttClient {
+        var lastException: Exception? = null
+        for (attempt in 1..maxAttempts) {
+            try {
+                return LocalMqttClient.connectOnce(scope, broker, persistence, factory)
+            } catch (e: Exception) {
+                lastException = e
+                if (attempt < maxAttempts) {
+                    delay(2000L * attempt)
+                }
+            }
+        }
+        throw lastException!!
+    }
+
     private fun runSingle(
         label: String,
         factory: BufferFactory,
@@ -64,18 +86,20 @@ class EndToEndBenchmark {
         payloadSize: Int,
         count: Int = messageCount,
     ): String = runBlocking(Dispatchers.Default) {
+        // Pause between tests to let the broker release prior connections
+        delay(1500)
         val topicStr = "bench/${Random.nextUInt()}"
         val topic = TopicName.fromOrThrow(topicStr)
         val filter = TopicFilter.fromOrThrow(topicStr)
         val persistence = InMemoryPersistence()
         val connReq = connectionRequest()
         val broker = persistence.addBroker(listOf(connectionOptions()), connReq)
-        val client = LocalMqttClient.connectOnce(
-            CoroutineScope(Dispatchers.Default), broker, persistence, factory,
-        )
+        val scope = CoroutineScope(Dispatchers.Default)
+        val client = connectWithRetry(scope, broker, persistence, factory)
 
         try {
             val received = AtomicInteger(0)
+            val published = AtomicInteger(0)
             val allReceived = CompletableDeferred<Unit>()
             val handler = SubscriptionHandler.Blocking { _ ->
                 if (received.incrementAndGet() >= count) {
@@ -89,11 +113,21 @@ class EndToEndBenchmark {
 
             val mark = TimeSource.Monotonic.markNow()
             for (i in 0 until count) {
-                client.publish(
-                    connReq.controlPacketFactory.publish(
-                        topicName = topic, qos = qos, payload = PlatformBuffer.wrap(payloadBytes),
-                    ),
-                )
+                try {
+                    client.publish(
+                        connReq.controlPacketFactory.publish(
+                            topicName = topic, qos = qos, payload = PlatformBuffer.wrap(payloadBytes),
+                        ),
+                    )
+                    published.incrementAndGet()
+                } catch (_: Exception) {
+                    // Connection lost — stop publishing
+                    break
+                }
+            }
+            val actualCount = published.get()
+            if (actualCount < count) {
+                System.err.println("$label: Only published $actualCount/$count before connection loss")
             }
             withTimeout(60.seconds) { allReceived.await() }
             val elapsedMs = mark.elapsedNow().inWholeMilliseconds

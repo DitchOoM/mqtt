@@ -216,8 +216,16 @@ data class DisconnectNotification(
         }
 
         companion object {
-            fun from(buffer: ReadBuffer): VariableHeader {
-                val wire = DisconnectV5WireCodec.decode(buffer)
+            fun from(buffer: ReadBuffer, remainingLength: Int): VariableHeader {
+                if (remainingLength == 0) {
+                    return VariableHeader(ReasonCode.NORMAL_DISCONNECTION)
+                }
+                val wire =
+                    if (remainingLength == 1) {
+                        DisconnectV5Wire(buffer.readUnsignedByte(), null)
+                    } else {
+                        DisconnectV5WireCodec.decode(buffer)
+                    }
                 val reasonCode = getDisconnectCode(wire.reasonCode)
                 val props = Properties.from(wire.properties)
                 return VariableHeader(reasonCode, props)
@@ -226,8 +234,8 @@ data class DisconnectNotification(
     }
 
     companion object {
-        fun from(buffer: ReadBuffer): DisconnectNotification {
-            val variableHeader = VariableHeader.from(buffer)
+        fun from(buffer: ReadBuffer, remainingLength: Int): DisconnectNotification {
+            val variableHeader = VariableHeader.from(buffer, remainingLength)
             return DisconnectNotification(variableHeader)
         }
     }

@@ -30,7 +30,6 @@ import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
 import kotlin.random.Random
 import kotlin.random.nextUInt
@@ -98,65 +97,65 @@ class MqttClientTest {
 
     @Test
     fun clientEcho4() =
-        runTest {
-            if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTest
+        runTestNoTimeSkipping {
+            if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTestNoTimeSkipping
             clientEchoInternal(this, testMqttConnectionOptions, connectionRequestMqtt4)
         }
 
     @Test
     fun clientEchoMqtt5() =
-        runTest {
-            if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTest
+        runTestNoTimeSkipping {
+            if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTestNoTimeSkipping
             clientEchoInternal(this, testMqttConnectionOptions, connectionRequestMqtt5)
         }
 
     @Test
     fun clientWebsocketEcho4() =
-        runTest {
+        runTestNoTimeSkipping {
             clientEchoInternal(this, testWsMqttConnectionOptions, connectionRequestMqtt4)
         }
 
     @Test
     fun clientWebsocketEcho5() =
-        runTest {
+        runTestNoTimeSkipping {
             clientEchoInternal(this, testWsMqttConnectionOptions, connectionRequestMqtt5)
         }
 
     @Test
     fun stayConnectedEcho4() =
-        runTest {
-            if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTest
+        runTestNoTimeSkipping {
+            if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTestNoTimeSkipping
             stayConnectedEchoInternal(this, testMqttConnectionOptions, connectionRequestResumeSessionMqtt4)
         }
 
     @Test
     fun stayConnectedEcho5() =
-        runTest {
-            if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTest
+        runTestNoTimeSkipping {
+            if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTestNoTimeSkipping
             stayConnectedEchoInternal(this, testMqttConnectionOptions, connectionRequestResumeSessionMqtt5)
         }
 
     @Test
     fun stayConnectedEchoWebsockets4() =
-        runTest {
+        runTestNoTimeSkipping {
             stayConnectedEchoInternal(this, testWsMqttConnectionOptions, connectionRequestResumeSessionMqtt4)
         }
 
     @Test
     fun stayConnectedEchoWebsockets5() =
-        runTest {
+        runTestNoTimeSkipping {
             stayConnectedEchoInternal(this, testWsMqttConnectionOptions, connectionRequestResumeSessionMqtt5)
         }
 
     @Test
     fun highAvailabilityBadPortConnectOnceMqtt4() =
-        runTest {
+        runTestNoTimeSkipping {
             highAvailabilityBadPortConnectOnceInternal(this, connectionRequestMqtt4)
         }
 
     @Test
     fun highAvailabilityBadPortConnectOnceMqtt5() =
-        runTest {
+        runTestNoTimeSkipping {
             highAvailabilityBadPortConnectOnceInternal(this, connectionRequestMqtt5)
         }
 
@@ -184,13 +183,13 @@ class MqttClientTest {
 
     @Test
     fun highAvailabilityBadPortStayConnectedMqtt4() =
-        runTest {
+        runTestNoTimeSkipping {
             highAvailabilityBadPortStayConnectedInternal(this, connectionRequestMqtt4)
         }
 
     @Test
     fun highAvailabilityBadPortStayConnectedMqtt5() =
-        runTest {
+        runTestNoTimeSkipping {
             highAvailabilityBadPortStayConnectedInternal(this, connectionRequestMqtt5)
         }
 
@@ -219,13 +218,13 @@ class MqttClientTest {
 
     @Test
     fun pingMqtt4() =
-        runTest {
+        runTestNoTimeSkipping {
             pingInternal(this, connectionRequestMqtt4)
         }
 
     @Test
     fun pingMqtt5() =
-        runTest {
+        runTestNoTimeSkipping {
             pingInternal(this, connectionRequestMqtt5)
         }
 
@@ -263,7 +262,7 @@ class MqttClientTest {
 
     @Test
     fun lastWillTestamentMqtt4() =
-        runTest {
+        runTestNoTimeSkipping {
             val buffer = BufferFactory.Default.allocate(4)
             buffer.writeString("yolo", Charset.UTF8)
             buffer.resetForRead()
@@ -288,7 +287,7 @@ class MqttClientTest {
 
     @Test
     fun lastWillTestamentMqtt5() =
-        runTest {
+        runTestNoTimeSkipping {
             val buffer = BufferFactory.Default.allocate(4)
             buffer.writeString("yolo", Charset.UTF8)
             buffer.resetForRead()

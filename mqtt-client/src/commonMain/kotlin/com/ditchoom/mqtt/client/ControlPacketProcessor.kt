@@ -62,6 +62,25 @@ class ControlPacketProcessor(
         return publishMessageOnWire
     }
 
+    /**
+     * Prepare a publish message (persist + assign packet ID) without sending it.
+     * Used by [LocalMqttClient] to set up response observers before the packet hits the wire.
+     */
+    suspend fun preparePublish(
+        pub: IPublishMessage,
+        persist: Boolean = true,
+    ): IPublishMessage =
+        if (persist && pub.qualityOfService.isGreaterThan(QualityOfService.AT_MOST_ONCE)) {
+            val packetId = persistence.writePubGetPacketId(broker, pub)
+            pub.maybeCopyWithNewPacketIdentifier(packetId)
+        } else {
+            pub
+        }
+
+    internal suspend fun sendPacket(packet: ControlPacket) {
+        write(packet)
+    }
+
     suspend fun subscribe(
         sub: ISubscribeRequest,
         persist: Boolean = true,

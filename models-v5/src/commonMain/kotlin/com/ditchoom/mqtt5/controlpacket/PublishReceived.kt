@@ -224,7 +224,12 @@ data class PublishReceived(
                     val packetIdentifier = buffer.readUnsignedShort().toInt()
                     return VariableHeader(packetIdentifier)
                 }
-                val wire = AckV5WireCodec.decode(buffer)
+                val wire =
+                    if (remainingLength == 3) {
+                        AckV5Wire(buffer.readUnsignedShort(), buffer.readUnsignedByte(), null)
+                    } else {
+                        AckV5WireCodec.decode(buffer)
+                    }
                 val reasonCode =
                     when (wire.reasonCode) {
                         SUCCESS.byte -> SUCCESS

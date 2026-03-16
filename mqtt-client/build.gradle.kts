@@ -108,7 +108,7 @@ tasks.withType<Test>().configureEach {
     testLogging {
         showStandardStreams = true
     }
-    jvmArgs("-XX:MaxDirectMemorySize=1g")
+    jvmArgs("-XX:MaxDirectMemorySize=2g")
     if (!runIntegrationTests) {
         filter {
             integrationTestPatterns.forEach { excludeTestsMatching(it) }

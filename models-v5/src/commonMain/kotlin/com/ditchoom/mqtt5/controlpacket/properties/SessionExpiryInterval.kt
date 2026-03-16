@@ -7,7 +7,7 @@ data class SessionExpiryInterval(
 ) : Property(0x11, Type.FOUR_BYTE_INTEGER) {
     constructor(seconds: Int) : this(seconds.toULong())
 
-    override fun size(): Int = size(seconds)
+    override fun size(): Int = size(seconds.toUInt())
 
-    override fun write(buffer: WriteBuffer): Int = write(buffer, seconds)
+    override fun write(buffer: WriteBuffer): Int = write(buffer, seconds.toUInt())
 }

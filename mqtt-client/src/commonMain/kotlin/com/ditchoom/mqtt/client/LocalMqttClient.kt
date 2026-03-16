@@ -73,7 +73,16 @@ class LocalMqttClient(
         processor.publish(pub, false)
     }
 
-    override suspend fun publish(pub: IPublishMessage): PublishOperation = observePub(processor.publish(pub))
+    override suspend fun publish(pub: IPublishMessage): PublishOperation {
+        // Prepare the message (persist + assign packet ID) without sending
+        val prepared = processor.preparePublish(pub)
+        // Set up response observers BEFORE the packet hits the wire, to avoid
+        // a race where the broker responds before the SharedFlow collectors start.
+        val operation = observePub(prepared)
+        // Now send
+        processor.sendPacket(prepared)
+        return operation
+    }
 
     private fun observePub(publishMessage: IPublishMessage): PublishOperation =
         when (publishMessage.qualityOfService) {
@@ -106,7 +115,6 @@ class LocalMqttClient(
                     }
                 val pubCompReceived =
                     scope.async {
-                        pubRecReceived.await()
                         processor.awaitIncomingPacketId<IPublishComplete>(packetId, IPublishComplete.CONTROL_PACKET_VALUE)
                     }
                 PublishOperation.QoSExactlyOnce(packetId, pubRecReceived, pubCompReceived)

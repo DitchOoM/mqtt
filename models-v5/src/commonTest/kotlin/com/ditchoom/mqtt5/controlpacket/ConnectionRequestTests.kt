@@ -911,7 +911,7 @@ class ConnectionRequestTests {
         buffer.resetForRead()
         assertEquals(0b00010000, buffer.readByte(), "invalid byte 1 on the CONNECT fixed header")
         assertEquals(
-            22,
+            18,
             buffer.readVariableByteInteger().toInt(),
             "invalid remaining length on the CONNECT fixed header",
         )
@@ -988,9 +988,9 @@ class ConnectionRequestTests {
             "invalid byte 8 bit 0 on the CONNECT variable header for reserved flag",
         )
         assertEquals(UShort.MAX_VALUE, buffer.readUnsignedShort(), "invalid keep alive")
-        assertEquals(9, buffer.readVariableByteInteger(), "property length")
+        assertEquals(5, buffer.readVariableByteInteger(), "property length")
         assertEquals(0x11, buffer.readByte(), "property identifier")
-        assertEquals(0u, buffer.readUnsignedInt(), "session expiry interval seconds")
+        assertEquals(1u, buffer.readUnsignedInt(), "session expiry interval seconds")
         assertEquals(
             "",
             buffer.readMqttUtf8StringNotValidatedSized().second.toString(),

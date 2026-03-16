@@ -8,9 +8,10 @@ import com.ditchoom.buffer.ReadWriteBuffer
 import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.IPublishMessage
 import com.ditchoom.mqtt.controlpacket.QualityOfService
-import com.ditchoom.mqtt.controlpacket.encoding.writeLengthPrefixedUtf8String
 import com.ditchoom.mqtt.controlpacket.encoding.variableByteSize
+import com.ditchoom.mqtt.controlpacket.encoding.writeLengthPrefixedUtf8String
 import com.ditchoom.mqtt.controlpacket.encoding.writeVariableByteInteger
+import com.ditchoom.mqtt5.controlpacket.PublishMessage as PublishMessageV5
 
 fun ControlPacket.toBuffer(factory: BufferFactory = BufferFactory.Default) = listOf(this).toBuffer(factory)
 
@@ -44,6 +45,10 @@ fun IPublishMessage.serializeHeaderToSlice(
     buffer.writeLengthPrefixedUtf8String(topic.toString())
     if (qualityOfService != QualityOfService.AT_MOST_ONCE) {
         buffer.writeUShort(packetIdentifier.toUShort())
+    }
+    // MQTT v5 PUBLISH requires a properties section after the packet ID
+    if (this is PublishMessageV5) {
+        this.variable.properties.serialize(buffer)
     }
 
     val headerBodySize = buffer.position() - reserveStart - ControlPacket.MAX_FIXED_HEADER_SIZE

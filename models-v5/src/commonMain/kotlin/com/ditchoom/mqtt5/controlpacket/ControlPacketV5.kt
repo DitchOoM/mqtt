@@ -60,7 +60,7 @@ sealed interface ControlPacketV5 : ControlPacket {
                 11 -> UnsubscribeAcknowledgment.from(buffer, remainingLength)
                 12 -> PingRequest
                 13 -> PingResponse
-                14 -> DisconnectNotification.from(buffer)
+                14 -> DisconnectNotification.from(buffer, remainingLength)
                 15 -> AuthenticationExchange.from(buffer)
                 else -> throw MalformedPacketException(
                     "Invalid MQTT Control Packet Type: $packetValue Should be in range between 0 and 15 inclusive",

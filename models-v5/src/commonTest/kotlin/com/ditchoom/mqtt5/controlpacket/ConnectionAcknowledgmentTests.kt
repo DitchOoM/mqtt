@@ -138,7 +138,7 @@ class ConnectionAcknowledgmentTests {
         buffer.resetForRead()
         // fixed header
         assertEquals(0b00100000.toUByte(), buffer.readUnsignedByte(), "byte1 fixed header")
-        assertEquals(12, buffer.readVariableByteInteger(), "byte2 fixed header remaining length")
+        assertEquals(8, buffer.readVariableByteInteger(), "byte2 fixed header remaining length")
         // variable header
         assertEquals(0, buffer.readByte(), "byte0 variable header session Present Flag")
         assertEquals(
@@ -146,9 +146,9 @@ class ConnectionAcknowledgmentTests {
             buffer.readUnsignedByte(),
             "byte1 variable header connect reason code",
         )
-        assertEquals(9, buffer.readVariableByteInteger(), "property length")
+        assertEquals(5, buffer.readVariableByteInteger(), "property length")
         assertEquals(0x11, buffer.readByte())
-        assertEquals(4uL, buffer.readUnsignedLong())
+        assertEquals(4u, buffer.readUnsignedInt())
         buffer.resetForRead()
         val expected = ControlPacketV5.from(buffer) as ConnectionAcknowledgment
         assertEquals(4uL, expected.header.properties.sessionExpiryIntervalSeconds)

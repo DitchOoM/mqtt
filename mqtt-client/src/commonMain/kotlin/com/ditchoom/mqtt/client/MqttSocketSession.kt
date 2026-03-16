@@ -70,9 +70,11 @@ class MqttSocketSession private constructor(
         controlPackets: Collection<ControlPacket>,
     ) {
         val payload = packet.payload!!
-        // Allocate a small buffer for the fixed header + variable header (topic + packet ID).
+        // Allocate a buffer for the fixed header + variable header (topic + packet ID + v5 properties).
         // The payload is written separately via scatter-gather to avoid copying.
-        val headerBuf = BufferFactory.Default.allocate(64)
+        val cp = packet as ControlPacket
+        val headerSize = cp.packetSize() - payload.remaining()
+        val headerBuf = BufferFactory.Default.allocate(headerSize + ControlPacket.MAX_FIXED_HEADER_SIZE)
         try {
             val headerSlice = packet.serializeHeaderToSlice(headerBuf, payload.remaining())
             // serializeHeaderToSlice returns a slice (ReadBuffer). The socket write requires

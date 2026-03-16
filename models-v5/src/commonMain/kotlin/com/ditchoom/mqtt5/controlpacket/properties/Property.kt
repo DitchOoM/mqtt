@@ -117,7 +117,7 @@ fun ReadBuffer.readMqttProperty(): Pair<Property, Int> {
             0x08 -> ResponseTopic(TopicName.fromOrThrow(readMqttUtf8StringNotValidatedSized().second))
             0x09 -> CorrelationData(readPlatformBuffer())
             0x0B -> SubscriptionIdentifier(readVariableByteInteger().toLong())
-            0x11 -> SessionExpiryInterval(readUnsignedLong())
+            0x11 -> SessionExpiryInterval(readUnsignedInt().toULong())
             0x12 -> AssignedClientIdentifier(readMqttUtf8StringNotValidatedSized().second)
             0x13 -> ServerKeepAlive(readUnsignedShort().toInt())
             0x15 -> AuthenticationMethod(readMqttUtf8StringNotValidatedSized().second)
@@ -159,7 +159,7 @@ fun ReadBuffer.readMqttProperty(): Pair<Property, Int> {
                     readMqttUtf8StringNotValidatedSized().second,
                 )
 
-            0x27 -> MaximumPacketSize(readUnsignedLong())
+            0x27 -> MaximumPacketSize(readUnsignedInt().toULong())
             0x28 -> WildcardSubscriptionAvailable(readByte() == 1.toByte())
             0x29 -> SubscriptionIdentifierAvailable(readByte() == 1.toByte())
             0x2A -> SharedSubscriptionAvailable(readByte() == 1.toByte())

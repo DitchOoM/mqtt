@@ -8,7 +8,6 @@ import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt3.controlpacket.ConnectionRequest
 import com.ditchoom.socket.NetworkCapabilities
 import com.ditchoom.socket.getNetworkCapabilities
-import kotlinx.coroutines.test.runTest
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertTrue
@@ -20,8 +19,8 @@ class MqttSocketSessionTest {
 
     //    @Test
     fun connectTls() =
-        runTest {
-            if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTest
+        runTestNoTimeSkipping {
+            if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTestNoTimeSkipping
             val connectionOptions =
                 MqttConnectionOptions.SocketConnection(
                     "test.mosquitto.org",
@@ -34,23 +33,23 @@ class MqttSocketSessionTest {
 
     @Test
     fun connectLocalhostMqtt4() =
-        runTest {
-            if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTest
+        runTestNoTimeSkipping {
+            if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTestNoTimeSkipping
             val connectionOptions = MqttConnectionOptions.SocketConnection(host, 1883, false, 10.seconds)
             connectTest(connectionOptions, 4)
         }
 
     @Test
     fun connectLocalhostMqtt5() =
-        runTest {
-            if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTest
+        runTestNoTimeSkipping {
+            if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTestNoTimeSkipping
             val connectionOptions = MqttConnectionOptions.SocketConnection(host, 1883, false, 10.seconds)
             connectTest(connectionOptions, 5)
         }
 
     @Test
     fun connectWebsockets() =
-        runTest {
+        runTestNoTimeSkipping {
             val connectionOptions =
                 MqttConnectionOptions.WebSocketConnectionOptions(
                     host,
@@ -64,8 +63,8 @@ class MqttSocketSessionTest {
 
     //    @Test
     fun connectTestMosquitto() =
-        runTest {
-            if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTest
+        runTestNoTimeSkipping {
+            if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTestNoTimeSkipping
             val connectionOptions =
                 MqttConnectionOptions.SocketConnection(
                     "test.mosquitto.org",
@@ -78,7 +77,7 @@ class MqttSocketSessionTest {
 
     //    @Test
     fun connectWebsocketsTestMosquitto() =
-        runTest {
+        runTestNoTimeSkipping {
             val connectionOptions =
                 MqttConnectionOptions.WebSocketConnectionOptions(
                     "test.mosquitto.org",

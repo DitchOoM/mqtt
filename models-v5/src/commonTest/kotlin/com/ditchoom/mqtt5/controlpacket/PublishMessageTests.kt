@@ -299,7 +299,7 @@ class PublishMessageTests {
     }
 
     val yoyoBuffer =
-        PlatformBuffer
+        BufferFactory.Default
             .allocate(4)
             .also { it.writeString("yoyo", Charset.UTF8) }
 

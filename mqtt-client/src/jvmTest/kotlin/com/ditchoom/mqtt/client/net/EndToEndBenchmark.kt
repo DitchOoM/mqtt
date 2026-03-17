@@ -2,7 +2,6 @@ package com.ditchoom.mqtt.client.net
 
 import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Default
-import com.ditchoom.buffer.PlatformBuffer
 import com.ditchoom.buffer.managed
 import com.ditchoom.buffer.pool.BufferPool
 import com.ditchoom.buffer.withPooling
@@ -116,7 +115,7 @@ class EndToEndBenchmark {
                 try {
                     client.publish(
                         connReq.controlPacketFactory.publish(
-                            topicName = topic, qos = qos, payload = PlatformBuffer.wrap(payloadBytes),
+                            topicName = topic, qos = qos, payload = BufferFactory.Default.wrap(payloadBytes),
                         ),
                     )
                     published.incrementAndGet()

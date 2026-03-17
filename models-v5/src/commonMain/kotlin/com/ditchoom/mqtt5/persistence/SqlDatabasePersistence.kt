@@ -3,7 +3,8 @@ package com.ditchoom.mqtt5.persistence
 import app.cash.sqldelight.db.SqlDriver
 import com.ditchoom.Mqtt5
 import com.ditchoom.buffer.ByteOrder
-import com.ditchoom.buffer.PlatformBuffer
+import com.ditchoom.buffer.BufferFactory
+import com.ditchoom.buffer.Default
 import com.ditchoom.mqtt.Persistence
 import com.ditchoom.mqtt.connection.MqttBroker
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
@@ -289,7 +290,7 @@ class SqlDatabasePersistence(
             connectionRequestQueries.connectionRequestByBrokerId(id).executeAsOneOrNull() ?: return null
         val willPayload =
             if (connectionRequestDatabaseRecord.will_payload != null) {
-                PlatformBuffer.wrap(connectionRequestDatabaseRecord.will_payload, ByteOrder.BIG_ENDIAN)
+                BufferFactory.Default.wrap(connectionRequestDatabaseRecord.will_payload, ByteOrder.BIG_ENDIAN)
             } else {
                 null
             }
@@ -299,7 +300,7 @@ class SqlDatabasePersistence(
             ) {
                 Authentication(
                     connectionRequestDatabaseRecord.authentication_method,
-                    PlatformBuffer.wrap(connectionRequestDatabaseRecord.authentication_data),
+                    BufferFactory.Default.wrap(connectionRequestDatabaseRecord.authentication_data),
                 )
             } else {
                 null
@@ -346,7 +347,7 @@ class SqlDatabasePersistence(
                     connectionRequestDatabaseRecord.will_property_response_topic?.let {
                         TopicName.fromOrThrow(it)
                     },
-                    connectionRequestDatabaseRecord.will_property_correlation_data?.let { PlatformBuffer.wrap(it) },
+                    connectionRequestDatabaseRecord.will_property_correlation_data?.let { BufferFactory.Default.wrap(it) },
                     willUserProps,
                 )
             } else {
@@ -457,7 +458,7 @@ class SqlDatabasePersistence(
             pubQueries.queuedPubMessages(broker.identifier.toLong()).executeAsList().map {
                 val payload =
                     if (it.payload != null) {
-                        PlatformBuffer.wrap(it.payload, ByteOrder.BIG_ENDIAN)
+                        BufferFactory.Default.wrap(it.payload, ByteOrder.BIG_ENDIAN)
                     } else {
                         null
                     }
@@ -472,7 +473,7 @@ class SqlDatabasePersistence(
                         it.message_expiry_interval,
                         it.topic_alias?.toInt(),
                         it.response_topic?.let { t -> TopicName.fromOrThrow(t) },
-                        it.correlation_data?.let { c -> PlatformBuffer.wrap(c) },
+                        it.correlation_data?.let { c -> BufferFactory.Default.wrap(c) },
                         props,
                         it.subscription_identifier
                             ?.split(", ")
@@ -695,7 +696,7 @@ class SqlDatabasePersistence(
                 .executeAsOneOrNull() ?: return null
         val payload =
             if (p.payload != null) {
-                PlatformBuffer.wrap(p.payload, ByteOrder.BIG_ENDIAN)
+                BufferFactory.Default.wrap(p.payload, ByteOrder.BIG_ENDIAN)
             } else {
                 null
             }
@@ -710,7 +711,7 @@ class SqlDatabasePersistence(
                 p.message_expiry_interval,
                 p.topic_alias?.toInt(),
                 p.response_topic?.let { t -> TopicName.fromOrThrow(t) },
-                p.correlation_data?.let { c -> PlatformBuffer.wrap(c) },
+                p.correlation_data?.let { c -> BufferFactory.Default.wrap(c) },
                 props,
                 p.subscription_identifier
                     ?.split(", ")

@@ -2,7 +2,7 @@ package com.ditchoom.mqtt.client.net
 
 import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Default
-import com.ditchoom.buffer.Deterministic
+import com.ditchoom.buffer.deterministic
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.pool.BufferPool
 import com.ditchoom.buffer.stream.StreamProcessor
@@ -386,7 +386,7 @@ class MemoryPressureTest {
 
     @Test
     fun deterministicFactoryCleanup() {
-        val factory = BufferFactory.Deterministic
+        val factory = BufferFactory.deterministic()
         val packets = listOf(buildV4Connect(), buildV4Publish(1), buildV4Subscribe())
         val iterations = 50_000
 

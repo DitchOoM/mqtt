@@ -692,7 +692,7 @@ class ConnectionAcknowledgmentTests {
     }
 
     private val buffer1234 =
-        PlatformBuffer
+        BufferFactory.Default
             .allocate(4)
             .also { it.write("1234".toReadBuffer(Charset.UTF8)) }
 

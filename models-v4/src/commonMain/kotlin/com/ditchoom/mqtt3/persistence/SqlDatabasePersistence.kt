@@ -3,7 +3,8 @@ package com.ditchoom.mqtt3.persistence
 import app.cash.sqldelight.db.SqlDriver
 import com.ditchoom.Mqtt4
 import com.ditchoom.buffer.ByteOrder
-import com.ditchoom.buffer.PlatformBuffer
+import com.ditchoom.buffer.BufferFactory
+import com.ditchoom.buffer.Default
 import com.ditchoom.mqtt.Persistence
 import com.ditchoom.mqtt.connection.MqttBroker
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
@@ -213,7 +214,7 @@ class SqlDatabasePersistence(
             connectionRequestQueries.connectionRequestByBrokerId(id).executeAsOneOrNull() ?: return null
         val willPayload =
             if (connectionRequestDatabaseRecord.will_payload != null) {
-                PlatformBuffer.wrap(connectionRequestDatabaseRecord.will_payload, ByteOrder.BIG_ENDIAN)
+                BufferFactory.Default.wrap(connectionRequestDatabaseRecord.will_payload, ByteOrder.BIG_ENDIAN)
             } else {
                 null
             }
@@ -314,7 +315,7 @@ class SqlDatabasePersistence(
             pubQueries.queuedPubMessages(broker.identifier.toLong()).executeAsList().map {
                 val payload =
                     if (it.payload != null) {
-                        PlatformBuffer.wrap(it.payload, ByteOrder.BIG_ENDIAN)
+                        BufferFactory.Default.wrap(it.payload, ByteOrder.BIG_ENDIAN)
                     } else {
                         null
                     }
@@ -426,7 +427,7 @@ class SqlDatabasePersistence(
                 .executeAsOneOrNull() ?: return null
         val payload =
             if (pub.payload != null) {
-                PlatformBuffer.wrap(pub.payload, ByteOrder.BIG_ENDIAN)
+                BufferFactory.Default.wrap(pub.payload, ByteOrder.BIG_ENDIAN)
             } else {
                 null
             }

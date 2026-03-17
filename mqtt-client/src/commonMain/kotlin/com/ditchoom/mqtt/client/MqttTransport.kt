@@ -2,7 +2,6 @@ package com.ditchoom.mqtt.client
 
 import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Default
-import com.ditchoom.buffer.PlatformBuffer
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.pool.BufferPool
 import com.ditchoom.buffer.stream.AutoFillingSuspendingStreamProcessor
@@ -86,11 +85,11 @@ class WebSocketMqttTransport(
         // Concatenate buffers into one before sending.
         if (buffers.size == 1) return write(buffers[0], timeout)
         val totalSize = buffers.sumOf { it.remaining() }
-        val combined = PlatformBuffer.allocate(totalSize)
+        val combined = pool.acquire(totalSize)
         for (buf in buffers) combined.write(buf)
         combined.resetForRead()
         val result = write(combined, timeout)
-        combined.freeNativeMemory()
+        pool.release(combined)
         return result
     }
 

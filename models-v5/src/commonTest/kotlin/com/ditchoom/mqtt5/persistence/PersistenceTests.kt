@@ -1,6 +1,7 @@
 package com.ditchoom.mqtt5.persistence
 
-import com.ditchoom.buffer.PlatformBuffer
+import com.ditchoom.buffer.BufferFactory
+import com.ditchoom.buffer.Default
 import com.ditchoom.mqtt.Persistence
 import com.ditchoom.mqtt.connection.MqttBroker
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
@@ -29,7 +30,7 @@ import kotlin.test.assertEquals
 import kotlin.time.Duration.Companion.seconds
 
 class PersistenceTests {
-    private val buffer = PlatformBuffer.wrap(byteArrayOf(1, 2, 3, 4))
+    private val buffer = BufferFactory.Default.wrap(byteArrayOf(1, 2, 3, 4))
 
     private suspend fun setupPersistence(): Pair<Persistence, MqttBroker> {
         val p = newDefaultPersistence(name = "test" + Random.nextUInt(), inMemory = true)
@@ -300,7 +301,7 @@ class PersistenceTests {
                         willProperties =
                             ConnectionRequest.Payload.WillProperties(
                                 willDelayIntervalSeconds = 1,
-                                correlationData = PlatformBuffer.wrap(byteArrayOf(1, 2, 3, 4)).also { it.position(0) },
+                                correlationData = BufferFactory.Default.wrap(byteArrayOf(1, 2, 3, 4)).also { it.position(0) },
                                 userProperty = listOf(Pair("will", "test"), Pair("test", "will")),
                             ),
                         willTopic = TopicName.fromOrThrow("testWill"),

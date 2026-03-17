@@ -130,7 +130,7 @@ class HeaderSerializationTest {
         val topicStr = "sensor/temperature/living-room"
         val payloadBytes = ByteArray(128) { (it % 256).toByte() }
         val topic = TopicName.fromOrThrow(topicStr)
-        val payload = PlatformBuffer.wrap(payloadBytes)
+        val payload = BufferFactory.Default.wrap(payloadBytes)
         val pub = PublishMessage.buildPayload(
             topicName = topic,
             qos = QualityOfService.AT_LEAST_ONCE,
@@ -169,7 +169,7 @@ class HeaderSerializationTest {
     fun roundTripV5PublishWithEmptyProperties() {
         val topicStr = "sensor/temperature"
         val payloadBytes = ByteArray(64) { (it % 256).toByte() }
-        val payload = PlatformBuffer.wrap(payloadBytes)
+        val payload = BufferFactory.Default.wrap(payloadBytes)
         val pub = PublishMessageV5(
             topicName = topicStr,
             qos = com.ditchoom.mqtt.controlpacket.QualityOfService.AT_LEAST_ONCE,
@@ -208,7 +208,7 @@ class HeaderSerializationTest {
     fun roundTripV5PublishWithUserProperties() {
         val topicStr = "device/status"
         val payloadBytes = ByteArray(32) { it.toByte() }
-        val payload = PlatformBuffer.wrap(payloadBytes)
+        val payload = BufferFactory.Default.wrap(payloadBytes)
         val pub = PublishMessageV5(
             topicName = topicStr,
             qos = com.ditchoom.mqtt.controlpacket.QualityOfService.EXACTLY_ONCE,
@@ -246,7 +246,7 @@ class HeaderSerializationTest {
         val topicStr = "device/" + "x".repeat(500) + "/status"
         val payloadBytes = ByteArray(32) { it.toByte() }
         val topic = TopicName.fromOrThrow(topicStr)
-        val payload = PlatformBuffer.wrap(payloadBytes)
+        val payload = BufferFactory.Default.wrap(payloadBytes)
         val pub = PublishMessage.buildPayload(
             topicName = topic,
             qos = QualityOfService.AT_LEAST_ONCE,

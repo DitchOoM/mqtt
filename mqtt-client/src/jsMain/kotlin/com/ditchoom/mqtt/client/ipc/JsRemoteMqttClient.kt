@@ -1,7 +1,7 @@
 package com.ditchoom.mqtt.client.ipc
 
 import com.ditchoom.buffer.BufferFactory
-import com.ditchoom.buffer.Default
+import com.ditchoom.buffer.deterministic
 import com.ditchoom.buffer.JsBuffer
 import com.ditchoom.buffer.PlatformBuffer
 import com.ditchoom.mqtt.Persistence
@@ -25,7 +25,7 @@ class JsRemoteMqttClient(
     broker: MqttBroker,
     persistence: Persistence,
 ) : RemoteMqttClient(scope, broker, persistence) {
-    override val bufferFactory: BufferFactory = BufferFactory.Default
+    override val bufferFactory: BufferFactory = BufferFactory.deterministic()
     private var nextMessageId = 0
     override val packetFactory: ControlPacketFactory = broker.connectionRequest.controlPacketFactory
     internal val messageFlow = MutableSharedFlow<MessageEvent>(2)

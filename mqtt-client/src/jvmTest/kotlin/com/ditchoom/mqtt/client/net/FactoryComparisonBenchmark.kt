@@ -2,7 +2,7 @@ package com.ditchoom.mqtt.client.net
 
 import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Default
-import com.ditchoom.buffer.Deterministic
+import com.ditchoom.buffer.deterministic
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.managed
 import com.ditchoom.buffer.pool.BufferPool
@@ -293,7 +293,7 @@ class FactoryComparisonBenchmark {
         return listOf(
             FactoryConfig("Default (direct)", BufferFactory.Default, null),
             FactoryConfig("managed (heap)", BufferFactory.managed(), null),
-            FactoryConfig("Deterministic", BufferFactory.Deterministic, null),
+            FactoryConfig("Deterministic", BufferFactory.deterministic(), null),
             FactoryConfig("Pooled-direct", BufferFactory.Default.withPooling(directPool), directPool),
             FactoryConfig("Pooled-heap", BufferFactory.managed().withPooling(heapPool), heapPool),
         )

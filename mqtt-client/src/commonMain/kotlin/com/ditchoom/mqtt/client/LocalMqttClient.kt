@@ -185,8 +185,11 @@ class LocalMqttClient(
         connectivityManager.sendDisconnect()
     }
 
-    override suspend fun shutdown(sendDisconnect: Boolean) {
-        connectivityManager.shutdown(sendDisconnect)
+    override suspend fun shutdown(
+        sendDisconnect: Boolean,
+        drain: Boolean,
+    ) {
+        connectivityManager.shutdown(sendDisconnect, drain)
     }
 
     internal fun isStopped() = connectivityManager.isStopped

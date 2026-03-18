@@ -97,10 +97,23 @@ class ConnectivityManager(
         currentConnectionJob = job
     }
 
-    suspend fun shutdown(sendDisconnect: Boolean = true) {
+    suspend fun shutdown(
+        sendDisconnect: Boolean = true,
+        drain: Boolean = false,
+    ) {
         if (isStopped) return
         isStopped = true
         try {
+            if (drain) {
+                // Wait for in-flight QoS 2 ack handshakes to complete before disconnecting.
+                // Without this, PUBREL/PUBCOMP exchanges are interrupted and persistence
+                // retains stale entries.
+                withTimeout(5.seconds) {
+                    while (!persistence.isQueueClear(broker, includeSubscriptions = false)) {
+                        delay(10)
+                    }
+                }
+            }
             if (sendDisconnect) {
                 sendDisconnect()
             }

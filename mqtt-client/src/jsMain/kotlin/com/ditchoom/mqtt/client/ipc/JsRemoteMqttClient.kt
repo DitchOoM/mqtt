@@ -67,7 +67,7 @@ class JsRemoteMqttClient(
         awaitMessage(MESSAGE_TYPE_CLIENT_UNSUBSCRIBE_COMPLETION, messageId)
     }
 
-    override suspend fun shutdown(sendDisconnect: Boolean) {
+    override suspend fun shutdown(sendDisconnect: Boolean, drain: Boolean) {
         val messageId = nextMessageId++
         port.postMessage(buildSimpleMessage(MESSAGE_TYPE_CLIENT_SHUTDOWN, sendDisconnect, messageId))
         awaitMessage(MESSAGE_TYPE_CLIENT_SHUTDOWN_COMPLETION, messageId)

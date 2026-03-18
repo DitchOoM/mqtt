@@ -115,7 +115,7 @@ class AndroidRemoteMqttClient(
 
     override suspend fun connectionAttempts(): Long = aidl.connectionAttempts()
 
-    override suspend fun shutdown(sendDisconnect: Boolean) {
+    override suspend fun shutdown(sendDisconnect: Boolean, drain: Boolean) {
         aidl.unregisterObserver(cb)
         suspendCoroutine { aidl.shutdown(sendDisconnect, SuspendingMqttCompletionCallback("shutdown", it)) }
     }

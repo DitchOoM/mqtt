@@ -102,7 +102,18 @@ interface MqttClient {
 
     suspend fun sendDisconnect()
 
-    suspend fun shutdown(sendDisconnect: Boolean = true)
+    /**
+     * Shuts down the client and disconnects from the broker.
+     *
+     * @param sendDisconnect Whether to send a DISCONNECT packet before closing
+     * @param drain If true, waits for in-flight QoS 1/2 acknowledgments to complete
+     *   before disconnecting. This ensures the persistence queue is clean and no
+     *   messages need to be retransmitted on the next connection.
+     */
+    suspend fun shutdown(
+        sendDisconnect: Boolean = true,
+        drain: Boolean = false,
+    )
 
     suspend fun connectionCount(): Long
 

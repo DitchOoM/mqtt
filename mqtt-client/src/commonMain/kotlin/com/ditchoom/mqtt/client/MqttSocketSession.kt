@@ -124,7 +124,7 @@ class MqttSocketSession private constructor(
                                 createTcpTransport(
                                     connectionOps.host,
                                     connectionOps.port,
-                                    connectionOps.tls,
+                                    connectionOps,
                                     connectionOps.connectionTimeout,
                                     connectionOps.readTimeout,
                                 )
@@ -133,11 +133,22 @@ class MqttSocketSession private constructor(
                         }
 
                         is MqttConnectionOptions.WebSocketConnectionOptions -> {
+                            val wsTlsConfig =
+                                if (connectionOps.tlsEnabled) {
+                                    com.ditchoom.socket.TlsConfig(
+                                        verifyCertificates = connectionOps.tlsVerifyCerts,
+                                        verifyHostname = connectionOps.tlsVerifyHostname,
+                                        allowExpiredCertificates = connectionOps.tlsAllowExpired,
+                                        allowSelfSigned = connectionOps.tlsAllowSelfSigned,
+                                    )
+                                } else {
+                                    null
+                                }
                             val wsOptions =
                                 WebSocketConnectionOptions(
                                     connectionOps.host,
                                     connectionOps.port,
-                                    connectionOps.tls,
+                                    wsTlsConfig,
                                     connectionOps.connectionTimeout,
                                     connectionOps.readTimeout,
                                     connectionOps.writeTimeout,

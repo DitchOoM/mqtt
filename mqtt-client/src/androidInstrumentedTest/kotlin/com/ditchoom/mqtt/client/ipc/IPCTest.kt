@@ -32,7 +32,7 @@ class IPCTest {
             "10.0.2.2",
             80,
             websocketEndpoint = "/mqtt",
-            tls = false,
+            tlsEnabled = false,
             protocols = listOf("mqttv3.1"),
             connectionTimeout = 10.seconds,
         )

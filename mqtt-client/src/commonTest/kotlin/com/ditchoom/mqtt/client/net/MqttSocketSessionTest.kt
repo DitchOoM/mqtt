@@ -25,7 +25,7 @@ class MqttSocketSessionTest {
                 MqttConnectionOptions.SocketConnection(
                     "test.mosquitto.org",
                     8886,
-                    tls = true,
+                    tlsEnabled = true,
                     connectionTimeout = 10.seconds,
                 )
             connectTest(connectionOptions)
@@ -35,7 +35,7 @@ class MqttSocketSessionTest {
     fun connectLocalhostMqtt4() =
         runTestNoTimeSkipping {
             if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTestNoTimeSkipping
-            val connectionOptions = MqttConnectionOptions.SocketConnection(host, 1883, false, 10.seconds)
+            val connectionOptions = MqttConnectionOptions.SocketConnection(host, 1883, tlsEnabled = false, connectionTimeout = 10.seconds)
             connectTest(connectionOptions, 4)
         }
 
@@ -43,7 +43,7 @@ class MqttSocketSessionTest {
     fun connectLocalhostMqtt5() =
         runTestNoTimeSkipping {
             if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTestNoTimeSkipping
-            val connectionOptions = MqttConnectionOptions.SocketConnection(host, 1883, false, 10.seconds)
+            val connectionOptions = MqttConnectionOptions.SocketConnection(host, 1883, tlsEnabled = false, connectionTimeout = 10.seconds)
             connectTest(connectionOptions, 5)
         }
 
@@ -55,7 +55,7 @@ class MqttSocketSessionTest {
                     host,
                     80,
                     websocketEndpoint = "/mqtt",
-                    tls = false,
+                    tlsEnabled = false,
                     protocols = listOf("mqtt"),
                 )
             connectTest(connectionOptions)
@@ -69,7 +69,7 @@ class MqttSocketSessionTest {
                 MqttConnectionOptions.SocketConnection(
                     "test.mosquitto.org",
                     1883,
-                    tls = false,
+                    tlsEnabled = false,
                     connectionTimeout = 10.seconds,
                 )
             connectTest(connectionOptions)
@@ -83,7 +83,7 @@ class MqttSocketSessionTest {
                     "test.mosquitto.org",
                     8081,
                     websocketEndpoint = "/mqtt",
-                    tls = true,
+                    tlsEnabled = true,
                     protocols = listOf("mqttv3.1"),
                 )
             connectTest(connectionOptions)

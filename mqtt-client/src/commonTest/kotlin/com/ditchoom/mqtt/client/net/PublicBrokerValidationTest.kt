@@ -41,7 +41,7 @@ class PublicBrokerValidationTest {
         runTestNoTimeSkipping(timeout = 30.seconds) {
             if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTestNoTimeSkipping
             connectPublishDisconnect(
-                MqttConnectionOptions.SocketConnection("broker.hivemq.com", 1883, tls = false, connectionTimeout = 15.seconds),
+                MqttConnectionOptions.SocketConnection("broker.hivemq.com", 1883, tlsEnabled = false, connectionTimeout = 15.seconds),
             )
         }
 
@@ -50,7 +50,7 @@ class PublicBrokerValidationTest {
         runTestNoTimeSkipping(timeout = 30.seconds) {
             if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTestNoTimeSkipping
             connectPublishDisconnect(
-                MqttConnectionOptions.SocketConnection("broker.hivemq.com", 8883, tls = true, connectionTimeout = 15.seconds),
+                MqttConnectionOptions.SocketConnection("broker.hivemq.com", 8883, tlsEnabled = true, connectionTimeout = 15.seconds),
             )
         }
 
@@ -62,7 +62,7 @@ class PublicBrokerValidationTest {
                     "broker.hivemq.com",
                     8000,
                     websocketEndpoint = "/mqtt",
-                    tls = false,
+                    tlsEnabled = false,
                     protocols = listOf("mqtt"),
                     connectionTimeout = 15.seconds,
                 ),
@@ -77,7 +77,7 @@ class PublicBrokerValidationTest {
                     "broker.hivemq.com",
                     8884,
                     websocketEndpoint = "/mqtt",
-                    tls = true,
+                    tlsEnabled = true,
                     protocols = listOf("mqtt"),
                     connectionTimeout = 15.seconds,
                 ),
@@ -91,7 +91,7 @@ class PublicBrokerValidationTest {
         runTestNoTimeSkipping(timeout = 30.seconds) {
             if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTestNoTimeSkipping
             connectPublishDisconnect(
-                MqttConnectionOptions.SocketConnection("test.mosquitto.org", 1883, tls = false, connectionTimeout = 15.seconds),
+                MqttConnectionOptions.SocketConnection("test.mosquitto.org", 1883, tlsEnabled = false, connectionTimeout = 15.seconds),
             )
         }
 
@@ -103,7 +103,7 @@ class PublicBrokerValidationTest {
                     "test.mosquitto.org",
                     8080,
                     websocketEndpoint = "/",
-                    tls = false,
+                    tlsEnabled = false,
                     protocols = listOf("mqtt"),
                     connectionTimeout = 15.seconds,
                 ),
@@ -118,7 +118,7 @@ class PublicBrokerValidationTest {
                     "test.mosquitto.org",
                     8081,
                     websocketEndpoint = "/",
-                    tls = true,
+                    tlsEnabled = true,
                     protocols = listOf("mqtt"),
                     connectionTimeout = 15.seconds,
                 ),
@@ -136,7 +136,7 @@ class PublicBrokerValidationTest {
         runTestNoTimeSkipping(timeout = 30.seconds) {
             if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTestNoTimeSkipping
             connectMultiplePublishes(
-                MqttConnectionOptions.SocketConnection("broker.hivemq.com", 8883, tls = true, connectionTimeout = 15.seconds),
+                MqttConnectionOptions.SocketConnection("broker.hivemq.com", 8883, tlsEnabled = true, connectionTimeout = 15.seconds),
                 publishCount = 5,
             )
         }
@@ -149,7 +149,7 @@ class PublicBrokerValidationTest {
                     "broker.hivemq.com",
                     8884,
                     websocketEndpoint = "/mqtt",
-                    tls = true,
+                    tlsEnabled = true,
                     protocols = listOf("mqtt"),
                     connectionTimeout = 15.seconds,
                 ),
@@ -167,7 +167,7 @@ class PublicBrokerValidationTest {
         runTestNoTimeSkipping(timeout = 30.seconds) {
             if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTestNoTimeSkipping
             connectSubscribeReceive(
-                MqttConnectionOptions.SocketConnection("broker.hivemq.com", 8883, tls = true, connectionTimeout = 15.seconds),
+                MqttConnectionOptions.SocketConnection("broker.hivemq.com", 8883, tlsEnabled = true, connectionTimeout = 15.seconds),
             )
         }
 
@@ -179,7 +179,7 @@ class PublicBrokerValidationTest {
                     "broker.hivemq.com",
                     8884,
                     websocketEndpoint = "/mqtt",
-                    tls = true,
+                    tlsEnabled = true,
                     protocols = listOf("mqtt"),
                     connectionTimeout = 15.seconds,
                 ),
@@ -193,7 +193,7 @@ class PublicBrokerValidationTest {
         runTestNoTimeSkipping(timeout = 30.seconds) {
             if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTestNoTimeSkipping
             connectPublishDisconnect(
-                MqttConnectionOptions.SocketConnection("broker.hivemq.com", 1883, tls = false, connectionTimeout = 15.seconds),
+                MqttConnectionOptions.SocketConnection("broker.hivemq.com", 1883, tlsEnabled = false, connectionTimeout = 15.seconds),
                 mqttV5 = true,
             )
         }
@@ -203,7 +203,7 @@ class PublicBrokerValidationTest {
         runTestNoTimeSkipping(timeout = 30.seconds) {
             if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTestNoTimeSkipping
             connectPublishDisconnect(
-                MqttConnectionOptions.SocketConnection("broker.hivemq.com", 8883, tls = true, connectionTimeout = 15.seconds),
+                MqttConnectionOptions.SocketConnection("broker.hivemq.com", 8883, tlsEnabled = true, connectionTimeout = 15.seconds),
                 mqttV5 = true,
             )
         }
@@ -216,7 +216,7 @@ class PublicBrokerValidationTest {
                     "broker.hivemq.com",
                     8000,
                     websocketEndpoint = "/mqtt",
-                    tls = false,
+                    tlsEnabled = false,
                     protocols = listOf("mqtt"),
                     connectionTimeout = 15.seconds,
                 ),
@@ -232,7 +232,7 @@ class PublicBrokerValidationTest {
                     "broker.hivemq.com",
                     8884,
                     websocketEndpoint = "/mqtt",
-                    tls = true,
+                    tlsEnabled = true,
                     protocols = listOf("mqtt"),
                     connectionTimeout = 15.seconds,
                 ),
@@ -245,7 +245,7 @@ class PublicBrokerValidationTest {
         runTestNoTimeSkipping(timeout = 30.seconds) {
             if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTestNoTimeSkipping
             connectSubscribeReceive(
-                MqttConnectionOptions.SocketConnection("broker.hivemq.com", 8883, tls = true, connectionTimeout = 15.seconds),
+                MqttConnectionOptions.SocketConnection("broker.hivemq.com", 8883, tlsEnabled = true, connectionTimeout = 15.seconds),
                 mqttV5 = true,
             )
         }
@@ -258,7 +258,7 @@ class PublicBrokerValidationTest {
                     "broker.hivemq.com",
                     8884,
                     websocketEndpoint = "/mqtt",
-                    tls = true,
+                    tlsEnabled = true,
                     protocols = listOf("mqtt"),
                     connectionTimeout = 15.seconds,
                 ),
@@ -271,7 +271,7 @@ class PublicBrokerValidationTest {
         runTestNoTimeSkipping(timeout = 30.seconds) {
             if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTestNoTimeSkipping
             connectPublishDisconnect(
-                MqttConnectionOptions.SocketConnection("test.mosquitto.org", 1883, tls = false, connectionTimeout = 15.seconds),
+                MqttConnectionOptions.SocketConnection("test.mosquitto.org", 1883, tlsEnabled = false, connectionTimeout = 15.seconds),
                 mqttV5 = true,
             )
         }
@@ -284,7 +284,7 @@ class PublicBrokerValidationTest {
                     "test.mosquitto.org",
                     8080,
                     websocketEndpoint = "/",
-                    tls = false,
+                    tlsEnabled = false,
                     protocols = listOf("mqtt"),
                     connectionTimeout = 15.seconds,
                 ),
@@ -300,7 +300,7 @@ class PublicBrokerValidationTest {
                     "test.mosquitto.org",
                     8081,
                     websocketEndpoint = "/",
-                    tls = true,
+                    tlsEnabled = true,
                     protocols = listOf("mqtt"),
                     connectionTimeout = 15.seconds,
                 ),

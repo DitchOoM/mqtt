@@ -8,6 +8,8 @@ import com.ditchoom.mqtt.connection.MqttBroker
 import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.IConnectionAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IDisconnectNotification
+import com.ditchoom.socket.SSLHandshakeFailedException
+import com.ditchoom.socket.SocketUnknownHostException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -131,6 +133,7 @@ class ConnectivityManager(
 
     private suspend fun connectMqttSocketSessionOrThrow(): MqttSocketSession {
         var lastException: Throwable? = null
+        var allNonRecoverable = true
         for (connectionOp in broker.connectionOps) {
             val session =
                 try {
@@ -161,6 +164,16 @@ class ConnectivityManager(
                     }
                 } catch (e: Throwable) {
                     lastException = e
+                    if (isNonRecoverableError(e)) {
+                        observer?.nonRecoverableError(
+                            broker.identifier,
+                            broker.connectionRequest.protocolVersion.toByte(),
+                            connectionOp,
+                            e,
+                        )
+                    } else {
+                        allNonRecoverable = false
+                    }
                     null
                 } ?: continue
             return session
@@ -170,11 +183,21 @@ class ConnectivityManager(
                 prefix = "Failed to connect to services:",
                 postfix = (" " + lastException?.message),
             )
-        throw UnavailableMqttServiceException(
-            broker.connectionOps,
-            Exception("Failed to connect to services: $s " + lastException?.message),
-        )
+        val exception =
+            UnavailableMqttServiceException(
+                broker.connectionOps,
+                Exception("Failed to connect to services: $s " + lastException?.message),
+            )
+        exception.allNonRecoverable = allNonRecoverable
+        throw exception
     }
+
+    private fun isNonRecoverableError(e: Throwable): Boolean =
+        when (e) {
+            is SSLHandshakeFailedException -> true
+            is SocketUnknownHostException -> true
+            else -> false
+        }
 
     suspend fun connectOnce() {
         val socketSession = connectMqttSocketSessionOrThrow()
@@ -262,10 +285,12 @@ class ConnectivityManager(
                 try {
                     connectMqttSocketSessionOrThrow()
                 } catch (e: UnavailableMqttServiceException) {
+                    val shouldRetry = !e.allNonRecoverable
                     return ConnectionEndReason(
-                        shouldContinueReconnecting = true,
+                        shouldContinueReconnecting = shouldRetry,
                         shouldResetTimer = false,
                         msg = e.message,
+                        cause = e,
                     )
                 }
             currentSocketSession = socketSession
@@ -332,5 +357,6 @@ class ConnectivityManager(
         val shouldContinueReconnecting: Boolean,
         val shouldResetTimer: Boolean,
         val msg: String?,
+        val cause: Throwable? = null,
     )
 }

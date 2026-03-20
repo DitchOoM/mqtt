@@ -11,4 +11,7 @@ class UnavailableMqttServiceException(
             postfix = (" " + cause?.message),
         ),
         cause,
-    )
+    ) {
+    /** True if ALL endpoints failed with non-recoverable errors (DNS, TLS cert, etc.) */
+    var allNonRecoverable: Boolean = false
+}

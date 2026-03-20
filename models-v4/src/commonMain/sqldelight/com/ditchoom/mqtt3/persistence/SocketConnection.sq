@@ -4,7 +4,11 @@ CREATE TABLE IF NOT EXISTS SocketConnection (
 	type	TEXT NOT NULL DEFAULT 'tcp' CHECK(type LIKE 'tcp' OR type LIKE 'websocket'),
 	host	TEXT NOT NULL,
 	port	INTEGER NOT NULL CHECK(port BETWEEN 1 AND 65535),
-	tls	INTEGER NOT NULL CHECK(tls BETWEEN 0 AND 1),
+	tls_enabled	INTEGER NOT NULL DEFAULT 0 CHECK(tls_enabled BETWEEN 0 AND 1),
+	tls_verify_certs	INTEGER NOT NULL DEFAULT 1 CHECK(tls_verify_certs BETWEEN 0 AND 1),
+	tls_verify_hostname	INTEGER NOT NULL DEFAULT 1 CHECK(tls_verify_hostname BETWEEN 0 AND 1),
+	tls_allow_expired	INTEGER NOT NULL DEFAULT 0 CHECK(tls_allow_expired BETWEEN 0 AND 1),
+	tls_allow_self_signed	INTEGER NOT NULL DEFAULT 0 CHECK(tls_allow_self_signed BETWEEN 0 AND 1),
 	connection_timeout_ms	INTEGER NOT NULL CHECK(connection_timeout_ms > 0),
 	read_timeout_ms	INTEGER NOT NULL CHECK(read_timeout_ms > 0),
 	write_timeout_ms	INTEGER NOT NULL CHECK(write_timeout_ms > 0),
@@ -16,9 +20,9 @@ CREATE TABLE IF NOT EXISTS SocketConnection (
 
 insertConnection:
 INSERT INTO SocketConnection
-(id,broker_id,type,host,port,tls,connection_timeout_ms,read_timeout_ms,write_timeout_ms,websocket_endpoint,websocket_protocols)
+(id,broker_id,type,host,port,tls_enabled,tls_verify_certs,tls_verify_hostname,tls_allow_expired,tls_allow_self_signed,connection_timeout_ms,read_timeout_ms,write_timeout_ms,websocket_endpoint,websocket_protocols)
  VALUES
-  (NULL,?,?,?,?,?,?,?,?,?,?);
+  (NULL,?,?,?,?,?,?,?,?,?,?,?,?,?,?);
 
 
 connectionsByBrokerId:

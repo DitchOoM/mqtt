@@ -97,4 +97,16 @@ interface Observer {
         protocolVersion: Byte,
         e: Exception,
     )
+
+    /**
+     * Called when a non-recoverable socket error occurs (e.g., SSL handshake failure, DNS failure).
+     * The endpoint has been skipped. If all endpoints fail with non-recoverable errors,
+     * reconnection will stop.
+     */
+    fun nonRecoverableError(
+        brokerId: Int,
+        protocolVersion: Byte,
+        connectionOp: MqttConnectionOptions,
+        error: Throwable,
+    ) {}
 }

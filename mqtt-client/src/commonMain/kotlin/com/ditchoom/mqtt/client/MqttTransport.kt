@@ -102,13 +102,20 @@ class WebSocketMqttTransport(
 internal suspend fun createTcpTransport(
     host: String,
     port: Int,
-    tls: Boolean,
+    connectionOps: com.ditchoom.mqtt.connection.MqttConnectionOptions,
     connectionTimeout: Duration,
     readTimeout: Duration,
 ): TcpMqttTransport {
     val socketOptions =
-        if (tls) {
-            SocketOptions(tls = TlsConfig())
+        if (connectionOps.tlsEnabled) {
+            SocketOptions(
+                tls = TlsConfig(
+                    verifyCertificates = connectionOps.tlsVerifyCerts,
+                    verifyHostname = connectionOps.tlsVerifyHostname,
+                    allowExpiredCertificates = connectionOps.tlsAllowExpired,
+                    allowSelfSigned = connectionOps.tlsAllowSelfSigned,
+                ),
+            )
         } else {
             SocketOptions()
         }

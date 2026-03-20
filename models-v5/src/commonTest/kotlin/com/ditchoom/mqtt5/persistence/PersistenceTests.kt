@@ -266,14 +266,14 @@ class PersistenceTests {
             MqttConnectionOptions.SocketConnection(
                 "localhost",
                 1883,
-                tls = false,
+                tlsEnabled = false,
                 connectionTimeout = 10.seconds,
             )
         private val testWsMqttConnectionOptions =
             MqttConnectionOptions.WebSocketConnectionOptions(
                 "localhost",
                 80,
-                tls = false,
+                tlsEnabled = false,
                 protocols = listOf("mqttv3.1"),
                 websocketEndpoint = "/mqtt",
                 connectionTimeout = 10.seconds,

@@ -46,7 +46,7 @@ class MqttClientTest {
         MqttConnectionOptions.SocketConnection(
             host,
             1883,
-            tls = false,
+            tlsEnabled = false,
             connectionTimeout = 10.seconds,
         )
     private val testWsMqttConnectionOptions =
@@ -54,7 +54,7 @@ class MqttClientTest {
             host,
             80,
             websocketEndpoint = "/mqtt",
-            tls = false,
+            tlsEnabled = false,
             protocols = listOf("mqttv3.1"),
             connectionTimeout = 10.seconds,
         )
@@ -63,7 +63,7 @@ class MqttClientTest {
             host,
             80,
             websocketEndpoint = "/mqtt",
-            tls = false,
+            tlsEnabled = false,
             protocols = listOf("mqtt"),
             connectionTimeout = 10.seconds,
         )
@@ -179,7 +179,7 @@ class MqttClientTest {
                 host,
                 2,
                 websocketEndpoint = "/mqtt",
-                tls = false,
+                tlsEnabled = false,
                 protocols = listOf(wsProtocol),
                 connectionTimeout = 1.seconds,
             )
@@ -216,7 +216,7 @@ class MqttClientTest {
                 host,
                 2,
                 websocketEndpoint = "/mqtt",
-                tls = false,
+                tlsEnabled = false,
                 protocols = listOf(wsProtocol),
                 connectionTimeout = 1.seconds,
             )

@@ -49,7 +49,7 @@ class EndToEndBenchmark {
     private val messageCount = 200
 
     private fun connectionOptions() = MqttConnectionOptions.SocketConnection(
-        host, port, tls = false, connectionTimeout = 10.seconds, readTimeout = 30.seconds,
+        host, port, tlsEnabled = false, connectionTimeout = 10.seconds, readTimeout = 30.seconds,
     )
 
     private fun connectionRequest() = ConnectionRequest(

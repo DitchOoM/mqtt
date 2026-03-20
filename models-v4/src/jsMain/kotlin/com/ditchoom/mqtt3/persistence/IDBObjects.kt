@@ -127,7 +127,7 @@ data class PersistableSocketConnection(
     @JsName("port")
     val port: Int,
     @JsName("tls")
-    val tls: Boolean,
+    val tlsEnabled: Boolean,
     @JsName("connectionTimeoutMs")
     val connectionTimeoutMs: String,
     @JsName("readTimeoutMs")
@@ -149,7 +149,7 @@ data class PersistableSocketConnection(
                                 "tcp",
                                 it.host,
                                 it.port,
-                                it.tls,
+                                it.tlsEnabled,
                                 it.connectionTimeout.inWholeMilliseconds.toString(),
                                 it.readTimeout.inWholeMilliseconds.toString(),
                                 it.writeTimeout.inWholeMilliseconds.toString(),
@@ -163,7 +163,7 @@ data class PersistableSocketConnection(
                                 "websocket",
                                 it.host,
                                 it.port,
-                                it.tls,
+                                it.tlsEnabled,
                                 it.connectionTimeout.inWholeMilliseconds.toString(),
                                 it.readTimeout.inWholeMilliseconds.toString(),
                                 it.writeTimeout.inWholeMilliseconds.toString(),
@@ -182,21 +182,21 @@ fun toSocketConnection(a: Any?): MqttConnectionOptions {
         MqttConnectionOptions.SocketConnection(
             p.host as String,
             p.port.unsafeCast<Int>(),
-            p.tls.unsafeCast<Boolean>(),
-            (p.connectionTimeoutMs as String).toLong().milliseconds,
-            (p.readTimeoutMs as String).toLong().milliseconds,
-            (p.writeTimeoutMs as String).toLong().milliseconds,
+            tlsEnabled = p.tls.unsafeCast<Boolean>(),
+            connectionTimeout = (p.connectionTimeoutMs as String).toLong().milliseconds,
+            readTimeout = (p.readTimeoutMs as String).toLong().milliseconds,
+            writeTimeout = (p.writeTimeoutMs as String).toLong().milliseconds,
         )
     } else {
         MqttConnectionOptions.WebSocketConnectionOptions(
-            p.host as String,
-            p.port as Int,
-            p.tls as Boolean,
-            (p.connectionTimeoutMs as String).toLong().milliseconds,
-            (p.readTimeoutMs as String).toLong().milliseconds,
-            (p.writeTimeoutMs as String).toLong().milliseconds,
-            (p.websocketEndpoint ?: "") as String,
-            (p.websocketProtocols as? String)?.split(", ") ?: emptyList(),
+            host = p.host as String,
+            port = p.port as Int,
+            tlsEnabled = p.tls as Boolean,
+            connectionTimeout = (p.connectionTimeoutMs as String).toLong().milliseconds,
+            readTimeout = (p.readTimeoutMs as String).toLong().milliseconds,
+            writeTimeout = (p.writeTimeoutMs as String).toLong().milliseconds,
+            websocketEndpoint = (p.websocketEndpoint ?: "") as String,
+            protocols = (p.websocketProtocols as? String)?.split(", ") ?: emptyList(),
         )
     }
 }

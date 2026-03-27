@@ -8,8 +8,9 @@ import com.ditchoom.mqtt.connection.MqttBroker
 import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.IConnectionAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IDisconnectNotification
-import com.ditchoom.socket.SSLHandshakeFailedException
-import com.ditchoom.socket.SocketUnknownHostException
+import com.ditchoom.socket.DefaultReconnectionClassifier
+import com.ditchoom.socket.ReconnectDecision
+import com.ditchoom.socket.ReconnectionClassifier
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -54,6 +55,7 @@ class ConnectivityManager(
 
     fun currentConnack(): IConnectionAcknowledgment? = currentSocketSession?.connectionAcknowledgement
 
+    @Deprecated("Use stayConnected(classifier) instead", ReplaceWith("stayConnected(MqttReconnectionClassifier())"))
     fun stayConnected(
         initialDelay: Duration = 0.1.seconds,
         maxDelay: Duration = 15.seconds,
@@ -93,6 +95,65 @@ class ConnectivityManager(
                             delay(currentDelay)
                             (currentDelay * factor).coerceAtMost(maxDelay)
                         }
+                }
+                currentConnectionJob = null
+            }
+        currentConnectionJob = job
+    }
+
+    fun stayConnected(classifier: ReconnectionClassifier = MqttReconnectionClassifier()) {
+        currentConnectionJob?.cancel()
+        currentConnectionJob = null
+        val job =
+            scope.launch {
+                while (isActive && !isStopped) {
+                    val result = buildConnectionShouldRetry(this)
+                    processor.cancelPingTimer()
+                    if (!result.shouldContinueReconnecting) {
+                        observer?.stopReconnecting(
+                            broker.identifier,
+                            broker.connectionRequest.protocolVersion.toByte(),
+                            result,
+                        )
+                        break
+                    }
+                    val cause = result.cause
+                    if (cause != null) {
+                        val decision = classifier.classify(cause)
+                        when (decision) {
+                            is ReconnectDecision.GiveUp -> {
+                                observer?.stopReconnecting(
+                                    broker.identifier,
+                                    broker.connectionRequest.protocolVersion.toByte(),
+                                    result,
+                                )
+                                break
+                            }
+                            is ReconnectDecision.RetryAfter -> {
+                                observer?.reconnectIn(
+                                    broker.identifier,
+                                    broker.connectionRequest.protocolVersion.toByte(),
+                                    decision.delay,
+                                    result,
+                                )
+                                delay(decision.delay)
+                            }
+                        }
+                    } else if (result.shouldResetTimer || isStopped) {
+                        if (classifier is MqttReconnectionClassifier) classifier.reset()
+                        observer?.reconnectAndResetTimer(
+                            broker.identifier,
+                            broker.connectionRequest.protocolVersion.toByte(),
+                            result,
+                        )
+                    } else {
+                        // No cause but should continue — treat as immediate reconnect
+                        observer?.reconnectAndResetTimer(
+                            broker.identifier,
+                            broker.connectionRequest.protocolVersion.toByte(),
+                            result,
+                        )
+                    }
                 }
                 currentConnectionJob = null
             }
@@ -191,13 +252,6 @@ class ConnectivityManager(
         exception.allNonRecoverable = allNonRecoverable
         throw exception
     }
-
-    private fun isNonRecoverableError(e: Throwable): Boolean =
-        when (e) {
-            is SSLHandshakeFailedException -> true
-            is SocketUnknownHostException -> true
-            else -> false
-        }
 
     suspend fun connectOnce() {
         val socketSession = connectMqttSocketSessionOrThrow()
@@ -360,3 +414,12 @@ class ConnectivityManager(
         val cause: Throwable? = null,
     )
 }
+
+/**
+ * Determines whether a socket error is non-recoverable (should not be retried).
+ *
+ * TLS configuration errors and DNS failures are non-recoverable because retrying
+ * with the same parameters will always fail. Transient errors like connection
+ * resets, timeouts, and refused connections may succeed on retry.
+ */
+internal fun isNonRecoverableError(e: Throwable): Boolean = DefaultReconnectionClassifier.isNonRecoverable(e)

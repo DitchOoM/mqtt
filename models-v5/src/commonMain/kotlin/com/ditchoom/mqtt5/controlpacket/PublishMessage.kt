@@ -127,20 +127,20 @@ data class PublishMessage(
     ) = when (fixed.qos) {
         AT_LEAST_ONCE -> {
             PublishAcknowledgment(
-                PublishAcknowledgment.VariableHeader(
+                AckVariableHeader(
                     variable.packetIdentifier,
                     reasonCode,
-                    PublishAcknowledgment.VariableHeader.Properties(reasonString, userProperty),
+                    AckProperties(reasonString, userProperty),
                 ),
             )
         }
 
         QualityOfService.EXACTLY_ONCE -> {
             PublishReceived(
-                PublishReceived.VariableHeader(
+                AckVariableHeader(
                     packetIdentifier,
                     reasonCode,
-                    PublishReceived.VariableHeader.Properties(reasonString, userProperty),
+                    AckProperties(reasonString, userProperty),
                 ),
             )
         }

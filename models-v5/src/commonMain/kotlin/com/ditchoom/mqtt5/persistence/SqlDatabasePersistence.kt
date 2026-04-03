@@ -25,6 +25,8 @@ import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
+import com.ditchoom.mqtt5.controlpacket.AckProperties
+import com.ditchoom.mqtt5.controlpacket.AckVariableHeader
 import com.ditchoom.mqtt5.controlpacket.ConnectionRequest
 import com.ditchoom.mqtt5.controlpacket.PublishComplete
 import com.ditchoom.mqtt5.controlpacket.PublishMessage
@@ -517,7 +519,7 @@ class SqlDatabasePersistence(
                 when (it.type) {
                     5L ->
                         PublishReceived(
-                            PublishReceived.VariableHeader(
+                            AckVariableHeader(
                                 it.packet_id.toInt(),
                                 when (it.reason_code.toUByte()) {
                                     ReasonCode.SUCCESS.byte -> ReasonCode.SUCCESS
@@ -531,25 +533,25 @@ class SqlDatabasePersistence(
                                     ReasonCode.PAYLOAD_FORMAT_INVALID.byte -> ReasonCode.PAYLOAD_FORMAT_INVALID
                                     else -> error("Invalid PublishReceived QOS Reason code ${it.reason_code}")
                                 },
-                                PublishReceived.VariableHeader.Properties(it.reason_string, userProps),
+                                AckProperties(it.reason_string, userProps),
                             ),
                         )
 
                     6L ->
                         PublishRelease(
-                            PublishRelease.VariableHeader(
+                            AckVariableHeader(
                                 it.packet_id.toInt(),
                                 pubRelOrPubCompReasonCode(it.reason_code.toInt()),
-                                PublishRelease.VariableHeader.Properties(it.reason_string, userProps),
+                                AckProperties(it.reason_string, userProps),
                             ),
                         )
 
                     7L ->
                         PublishComplete(
-                            PublishComplete.VariableHeader(
+                            AckVariableHeader(
                                 it.packet_id.toInt(),
                                 pubRelOrPubCompReasonCode(it.reason_code.toInt()),
-                                PublishComplete.VariableHeader.Properties(it.reason_string, userProps),
+                                AckProperties(it.reason_string, userProps),
                             ),
                         )
 

@@ -202,7 +202,7 @@ class SubscribeAcknowledgementTests {
         encodeProperty(buffer, obj1)
         encodeProperty(buffer, obj2)
         buffer.resetForRead()
-        assertFailsWith<ProtocolError> { PublishReceived.VariableHeader.Properties.from(buffer.readProperties()) }
+        assertFailsWith<ProtocolError> { AckProperties.from(buffer.readProperties(), "PUBREC") }
     }
 
     @Test

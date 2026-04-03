@@ -8,12 +8,10 @@ import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readVariableByteI
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.writeVariableByteInteger
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.RECEIVE_MAXIMUM_EXCEEDED
-import com.ditchoom.mqtt5.controlpacket.PublishRelease.VariableHeader
 import com.ditchoom.mqtt5.controlpacket.properties.ReasonString
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
 import com.ditchoom.mqtt5.controlpacket.properties.encodedSize
 import com.ditchoom.mqtt5.controlpacket.properties.encodeProperty
-import com.ditchoom.mqtt5.controlpacket.properties.MqttPropertyCodec
 import com.ditchoom.mqtt5.controlpacket.properties.readProperties
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -25,7 +23,7 @@ class PublishReleaseTests {
 
     @Test
     fun packetIdentifier() {
-        val pubrel = PublishRelease(VariableHeader(packetIdentifier))
+        val pubrel = PublishRelease(AckVariableHeader(packetIdentifier))
         val buffer = BufferFactory.Default.allocate(4)
         pubrel.serialize(buffer)
         buffer.resetForRead()
@@ -43,7 +41,7 @@ class PublishReleaseTests {
 
     @Test
     fun defaultAndNonDefaultSuccessDeserialization() {
-        val pubrel = PublishRelease(VariableHeader(packetIdentifier))
+        val pubrel = PublishRelease(AckVariableHeader(packetIdentifier))
         val bufferNonDefaults = BufferFactory.Default.allocate(6)
         bufferNonDefaults.writeByte(0b01100010.toByte())
         bufferNonDefaults.writeVariableByteInteger(4)
@@ -74,10 +72,8 @@ class PublishReleaseTests {
 
     @Test
     fun invalidReasonCodeThrowsProtocolError() {
-        try {
-            PublishRelease(VariableHeader(packetIdentifier, RECEIVE_MAXIMUM_EXCEEDED))
-            fail()
-        } catch (e: ProtocolError) {
+        assertFailsWith<IllegalArgumentException> {
+            PublishRelease(AckVariableHeader(packetIdentifier, RECEIVE_MAXIMUM_EXCEEDED))
         }
     }
 
@@ -85,9 +81,9 @@ class PublishReleaseTests {
     fun reasonString() {
         val expected =
             PublishRelease(
-                VariableHeader(
+                AckVariableHeader(
                     packetIdentifier,
-                    properties = VariableHeader.Properties(reasonString = "yolo"),
+                    properties = AckProperties(reasonString = "yolo"),
                 ),
             )
         val buffer = BufferFactory.Default.allocate(13)
@@ -127,12 +123,12 @@ class PublishReleaseTests {
         encodeProperty(buffer, obj1)
         encodeProperty(buffer, obj2)
         buffer.resetForRead()
-        assertFailsWith<ProtocolError> { VariableHeader.Properties.from(buffer.readProperties()) }
+        assertFailsWith<ProtocolError> { AckProperties.from(buffer.readProperties(), "PUBREL") }
     }
 
     @Test
     fun variableHeaderPropertyUserProperty() {
-        val props = VariableHeader.Properties.from(setOf(UserProperty("key", "value")))
+        val props = AckProperties.from(setOf(UserProperty("key", "value")), "PUBREL")
         val userPropertyResult = props.userProperty
         for ((key, value) in userPropertyResult) {
             assertEquals(key, "key")
@@ -141,7 +137,7 @@ class PublishReleaseTests {
         assertEquals(userPropertyResult.size, 1)
 
         val buffer = BufferFactory.Default.allocate(19)
-        val request = PublishRelease(VariableHeader(packetIdentifier, properties = props))
+        val request = PublishRelease(AckVariableHeader(packetIdentifier, properties = props))
         request.serialize(buffer)
         buffer.resetForRead()
         val requestRead = ControlPacketV5.from(buffer) as PublishRelease

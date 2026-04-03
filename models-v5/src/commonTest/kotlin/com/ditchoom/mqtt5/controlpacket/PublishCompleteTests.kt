@@ -6,12 +6,10 @@ import com.ditchoom.mqtt.ProtocolError
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.writeVariableByteInteger
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.PACKET_IDENTIFIER_NOT_FOUND
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.RECEIVE_MAXIMUM_EXCEEDED
-import com.ditchoom.mqtt5.controlpacket.PublishComplete.VariableHeader
 import com.ditchoom.mqtt5.controlpacket.properties.ReasonString
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
 import com.ditchoom.mqtt5.controlpacket.properties.encodedSize
 import com.ditchoom.mqtt5.controlpacket.properties.encodeProperty
-import com.ditchoom.mqtt5.controlpacket.properties.MqttPropertyCodec
 import com.ditchoom.mqtt5.controlpacket.properties.readProperties
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -23,7 +21,7 @@ class PublishCompleteTests {
 
     @Test
     fun packetIdentifier() {
-        val pubcomp = PublishComplete(VariableHeader(packetIdentifier))
+        val pubcomp = PublishComplete(AckVariableHeader(packetIdentifier))
         val buffer = BufferFactory.Default.allocate(4)
         pubcomp.serialize(buffer)
         buffer.resetForRead()
@@ -33,7 +31,7 @@ class PublishCompleteTests {
 
     @Test
     fun packetIdentifierSendDefaults() {
-        val pubcomp = PublishComplete(VariableHeader(packetIdentifier))
+        val pubcomp = PublishComplete(AckVariableHeader(packetIdentifier))
         val buffer = BufferFactory.Default.allocate(4)
         pubcomp.serialize(buffer)
         buffer.resetForRead()
@@ -43,7 +41,7 @@ class PublishCompleteTests {
 
     @Test
     fun noMatchingSubscribers() {
-        val pubcomp = PublishComplete(VariableHeader(packetIdentifier, PACKET_IDENTIFIER_NOT_FOUND))
+        val pubcomp = PublishComplete(AckVariableHeader(packetIdentifier, PACKET_IDENTIFIER_NOT_FOUND))
         val buffer = BufferFactory.Default.allocate(6)
         pubcomp.serialize(buffer)
         buffer.resetForRead()
@@ -70,10 +68,8 @@ class PublishCompleteTests {
 
     @Test
     fun invalidReasonCodeThrowsProtocolError() {
-        try {
-            PublishComplete(VariableHeader(packetIdentifier, RECEIVE_MAXIMUM_EXCEEDED))
-            fail()
-        } catch (e: ProtocolError) {
+        assertFailsWith<IllegalArgumentException> {
+            PublishComplete(AckVariableHeader(packetIdentifier, RECEIVE_MAXIMUM_EXCEEDED))
         }
     }
 
@@ -81,9 +77,9 @@ class PublishCompleteTests {
     fun reasonString() {
         val expected =
             PublishComplete(
-                VariableHeader(
+                AckVariableHeader(
                     packetIdentifier,
-                    properties = VariableHeader.Properties(reasonString = "yolo"),
+                    properties = AckProperties(reasonString = "yolo"),
                 ),
             )
         val buffer = BufferFactory.Default.allocate(13)
@@ -115,13 +111,14 @@ class PublishCompleteTests {
     @Test
     fun variableHeaderPropertyUserProperty() {
         val props =
-            VariableHeader.Properties.from(
+            AckProperties.from(
                 setOf(
                     UserProperty(
                         "key",
                         "value",
                     ),
                 ),
+                "PUBCOMP",
             )
         val userPropertyResult = props.userProperty
         for ((key, value) in userPropertyResult) {
@@ -131,7 +128,7 @@ class PublishCompleteTests {
         assertEquals(userPropertyResult.size, 1)
 
         val buffer = BufferFactory.Default.allocate(19)
-        val request = PublishComplete(VariableHeader(packetIdentifier, properties = props))
+        val request = PublishComplete(AckVariableHeader(packetIdentifier, properties = props))
         request.serialize(buffer)
         buffer.resetForRead()
         val requestRead = ControlPacketV5.from(buffer) as PublishComplete

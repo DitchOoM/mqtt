@@ -187,16 +187,6 @@ data class ConnectionRequest(
     override val willDelayIntervalSeconds: Long = payload.willProperties?.willDelayIntervalSeconds ?: 0
 
     override fun validate(): MqttWarning? {
-        if (variableHeader.willFlag &&
-            (payload.willPayload == null || payload.willTopic == null || payload.willProperties == null)
-        ) {
-            return MqttWarning(
-                "[MQTT-3.1.2-9]",
-                "If the Will Flag is set to " +
-                    "1, the Will QoS and Will Retain fields in the Connect Flags will be used by the Server, " +
-                    "and the Will Properties, Will Topic and Will Message fields MUST be present in the Payload.",
-            )
-        }
         if (variableHeader.hasUserName && payload.userName == null) {
             return MqttWarning(
                 "[MQTT-3.1.2-17]",

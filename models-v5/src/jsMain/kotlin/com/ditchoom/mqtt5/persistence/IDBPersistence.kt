@@ -18,6 +18,8 @@ import com.ditchoom.mqtt.controlpacket.IUnsubscribeRequest
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
+import com.ditchoom.mqtt5.controlpacket.AckProperties
+import com.ditchoom.mqtt5.controlpacket.AckVariableHeader
 import com.ditchoom.mqtt5.controlpacket.ConnectionRequest
 import com.ditchoom.mqtt5.controlpacket.PublishComplete
 import com.ditchoom.mqtt5.controlpacket.PublishMessage
@@ -616,10 +618,10 @@ class IDBPersistence(
                                     .filter { broker.identifier == it.brokerId && msg.packetId == it.packetId && it.incoming == 0 }
                                     .map { Pair(it.key, it.value) }
                             PublishReceived(
-                                PublishReceived.VariableHeader(
+                                AckVariableHeader(
                                     msg.packetId,
                                     pubRelOrPubCompReasonCode(msg.reasonCode),
-                                    PublishReceived.VariableHeader.Properties(msg.reasonString, userProperties),
+                                    AckProperties(msg.reasonString, userProperties),
                                 ),
                             )
                         }
@@ -630,10 +632,10 @@ class IDBPersistence(
                                     .filter { broker.identifier == it.brokerId && msg.packetId == it.packetId && it.incoming == 1 }
                                     .map { Pair(it.key, it.value) }
                             PublishRelease(
-                                PublishRelease.VariableHeader(
+                                AckVariableHeader(
                                     msg.packetId,
                                     pubRelOrPubCompReasonCode(msg.reasonCode),
-                                    PublishRelease.VariableHeader.Properties(msg.reasonString, userProperties),
+                                    AckProperties(msg.reasonString, userProperties),
                                 ),
                             )
                         }
@@ -644,10 +646,10 @@ class IDBPersistence(
                                     .filter { broker.identifier == it.brokerId && msg.packetId == it.packetId && it.incoming == 0 }
                                     .map { Pair(it.key, it.value) }
                             PublishComplete(
-                                PublishComplete.VariableHeader(
+                                AckVariableHeader(
                                     msg.packetId,
                                     pubRecvReasonCode(msg.reasonCode),
-                                    PublishComplete.VariableHeader.Properties(msg.reasonString, userProperties),
+                                    AckProperties(msg.reasonString, userProperties),
                                 ),
                             )
                         }

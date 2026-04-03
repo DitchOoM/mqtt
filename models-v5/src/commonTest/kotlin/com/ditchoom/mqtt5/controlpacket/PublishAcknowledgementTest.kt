@@ -2,7 +2,6 @@ package com.ditchoom.mqtt5.controlpacket
 
 import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Default
-import com.ditchoom.mqtt.ProtocolError
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readVariableByteInteger
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.writeVariableByteInteger
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.IMPLEMENTATION_SPECIFIC_ERROR
@@ -14,12 +13,10 @@ import com.ditchoom.mqtt.controlpacket.format.ReasonCode.QUOTA_EXCEEDED
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.RECEIVE_MAXIMUM_EXCEEDED
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.TOPIC_NAME_INVALID
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.UNSPECIFIED_ERROR
-import com.ditchoom.mqtt5.controlpacket.PublishAcknowledgment.VariableHeader
 import com.ditchoom.mqtt5.controlpacket.properties.ReasonString
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
 import com.ditchoom.mqtt5.controlpacket.properties.encodedSize
 import com.ditchoom.mqtt5.controlpacket.properties.encodeProperty
-import com.ditchoom.mqtt5.controlpacket.properties.MqttPropertyCodec
 import com.ditchoom.mqtt5.controlpacket.properties.readProperties
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -31,7 +28,7 @@ class PublishAcknowledgementTest {
 
     @Test
     fun packetIdentifier() {
-        val puback = PublishAcknowledgment(VariableHeader(packetIdentifier))
+        val puback = PublishAcknowledgment(AckVariableHeader(packetIdentifier))
         val buffer = BufferFactory.Default.allocate(4)
         puback.serialize(buffer)
         buffer.resetForRead()
@@ -57,7 +54,7 @@ class PublishAcknowledgementTest {
 
     @Test
     fun packetIdentifierSendDefaults() {
-        val puback = PublishAcknowledgment(VariableHeader(packetIdentifier))
+        val puback = PublishAcknowledgment(AckVariableHeader(packetIdentifier))
         val buffer = BufferFactory.Default.allocate(4)
         puback.serialize(buffer)
         buffer.resetForRead()
@@ -68,7 +65,7 @@ class PublishAcknowledgementTest {
     @Test
     fun noMatchingSubscribers() {
         val puback =
-            PublishAcknowledgment(VariableHeader(packetIdentifier, NO_MATCHING_SUBSCRIBERS))
+            PublishAcknowledgment(AckVariableHeader(packetIdentifier, NO_MATCHING_SUBSCRIBERS))
         val buffer = BufferFactory.Default.allocate(6)
         puback.serialize(buffer)
         buffer.resetForRead()
@@ -78,7 +75,7 @@ class PublishAcknowledgementTest {
 
     @Test
     fun unspecifiedError() {
-        val puback = PublishAcknowledgment(VariableHeader(packetIdentifier, UNSPECIFIED_ERROR))
+        val puback = PublishAcknowledgment(AckVariableHeader(packetIdentifier, UNSPECIFIED_ERROR))
         val buffer = BufferFactory.Default.allocate(6)
         puback.serialize(buffer)
         buffer.resetForRead()
@@ -89,7 +86,7 @@ class PublishAcknowledgementTest {
     @Test
     fun implementationSpecificError() {
         val puback =
-            PublishAcknowledgment(VariableHeader(packetIdentifier, IMPLEMENTATION_SPECIFIC_ERROR))
+            PublishAcknowledgment(AckVariableHeader(packetIdentifier, IMPLEMENTATION_SPECIFIC_ERROR))
         val buffer = BufferFactory.Default.allocate(6)
         puback.serialize(buffer)
         buffer.resetForRead()
@@ -99,7 +96,7 @@ class PublishAcknowledgementTest {
 
     @Test
     fun notAuthorized() {
-        val puback = PublishAcknowledgment(VariableHeader(packetIdentifier, NOT_AUTHORIZED))
+        val puback = PublishAcknowledgment(AckVariableHeader(packetIdentifier, NOT_AUTHORIZED))
         val buffer = BufferFactory.Default.allocate(6)
         puback.serialize(buffer)
         buffer.resetForRead()
@@ -109,7 +106,7 @@ class PublishAcknowledgementTest {
 
     @Test
     fun topicNameInvalid() {
-        val puback = PublishAcknowledgment(VariableHeader(packetIdentifier, TOPIC_NAME_INVALID))
+        val puback = PublishAcknowledgment(AckVariableHeader(packetIdentifier, TOPIC_NAME_INVALID))
         val buffer = BufferFactory.Default.allocate(6)
         puback.serialize(buffer)
         buffer.resetForRead()
@@ -120,7 +117,7 @@ class PublishAcknowledgementTest {
     @Test
     fun packetIdentifierInUse() {
         val puback =
-            PublishAcknowledgment(VariableHeader(packetIdentifier, PACKET_IDENTIFIER_IN_USE))
+            PublishAcknowledgment(AckVariableHeader(packetIdentifier, PACKET_IDENTIFIER_IN_USE))
         val buffer = BufferFactory.Default.allocate(6)
         puback.serialize(buffer)
         buffer.resetForRead()
@@ -130,7 +127,7 @@ class PublishAcknowledgementTest {
 
     @Test
     fun quotaExceeded() {
-        val puback = PublishAcknowledgment(VariableHeader(packetIdentifier, QUOTA_EXCEEDED))
+        val puback = PublishAcknowledgment(AckVariableHeader(packetIdentifier, QUOTA_EXCEEDED))
         val buffer = BufferFactory.Default.allocate(6)
         puback.serialize(buffer)
         buffer.resetForRead()
@@ -140,7 +137,7 @@ class PublishAcknowledgementTest {
 
     @Test
     fun payloadFormatInvalid() {
-        val puback = PublishAcknowledgment(VariableHeader(packetIdentifier, PAYLOAD_FORMAT_INVALID))
+        val puback = PublishAcknowledgment(AckVariableHeader(packetIdentifier, PAYLOAD_FORMAT_INVALID))
         val buffer = BufferFactory.Default.allocate(6)
         puback.serialize(buffer)
         buffer.resetForRead()
@@ -150,10 +147,8 @@ class PublishAcknowledgementTest {
 
     @Test
     fun invalidReasonCodeThrowsProtocolError() {
-        try {
-            PublishAcknowledgment(VariableHeader(packetIdentifier, RECEIVE_MAXIMUM_EXCEEDED))
-            fail()
-        } catch (e: ProtocolError) {
+        assertFailsWith<IllegalArgumentException> {
+            PublishAcknowledgment(AckVariableHeader(packetIdentifier, RECEIVE_MAXIMUM_EXCEEDED))
         }
     }
 
@@ -161,9 +156,9 @@ class PublishAcknowledgementTest {
     fun reasonString() {
         val expected =
             PublishAcknowledgment(
-                VariableHeader(
+                AckVariableHeader(
                     packetIdentifier,
-                    properties = VariableHeader.Properties(reasonString = "yolo"),
+                    properties = AckProperties(reasonString = "yolo"),
                 ),
             )
         val buffer = BufferFactory.Default.allocate(13)
@@ -186,7 +181,7 @@ class PublishAcknowledgementTest {
         encodeProperty(buffer, obj1)
         encodeProperty(buffer, obj2)
         buffer.resetForRead()
-        assertFailsWith<ProtocolError> {
+        assertFailsWith<com.ditchoom.mqtt.ProtocolError> {
             DisconnectNotification.VariableHeader.Properties.from(buffer.readProperties())
             fail()
         }
@@ -213,7 +208,7 @@ class PublishAcknowledgementTest {
 
     @Test
     fun variableHeaderPropertyUserProperty() {
-        val props = VariableHeader.Properties.from(setOf(UserProperty("key", "value")))
+        val props = AckProperties.from(setOf(UserProperty("key", "value")), "PUBACK")
         val userPropertyResult = props.userProperty
         for ((key, value) in userPropertyResult) {
             assertEquals(key, "key")
@@ -221,7 +216,7 @@ class PublishAcknowledgementTest {
         }
         assertEquals(userPropertyResult.size, 1)
 
-        val request = PublishAcknowledgment(VariableHeader(packetIdentifier, properties = props))
+        val request = PublishAcknowledgment(AckVariableHeader(packetIdentifier, properties = props))
         val buffer = BufferFactory.Default.allocate(19)
         request.serialize(buffer)
         buffer.resetForRead()

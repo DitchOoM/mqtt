@@ -11,6 +11,8 @@ import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readMqttUtf8Strin
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readVariableByteInteger
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.QualityOfService.AT_MOST_ONCE
+import com.ditchoom.mqtt.controlpacket.TopicName
+import com.ditchoom.mqtt.controlpacket.WillConfig
 import com.ditchoom.mqtt.controlpacket.format.fixed.get
 import com.ditchoom.mqtt5.controlpacket.ConnectionRequest.VariableHeader
 import com.ditchoom.mqtt5.controlpacket.properties.AuthenticationData
@@ -628,9 +630,7 @@ class ConnectionRequestTests {
         willPayload.resetForRead()
         val connectionRequest = ConnectionRequest(
             clientId = "",
-            willTopic = "t",
-            willPayload = willPayload,
-            willQos = AT_MOST_ONCE,
+            will = WillConfig.Enabled(TopicName.fromOrThrow("t"), willPayload, AT_MOST_ONCE),
             willProperties = ConnectionRequest.Payload.WillProperties(),
         )
         val buffer = BufferFactory.Default.allocate(connectionRequest.packetSize())

@@ -11,6 +11,7 @@ import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.writeMqttUtf8Stri
 import com.ditchoom.mqtt.controlpacket.IConnectionRequest
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicName
+import com.ditchoom.mqtt.controlpacket.WillConfig
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
 import com.ditchoom.mqtt.controlpacket.format.fixed.get
 import com.ditchoom.mqtt3.controlpacket.wire.ConnectFlagsValue
@@ -48,10 +49,7 @@ data class ConnectionRequest(
         cleanSession: Boolean = false,
         userName: String? = null,
         password: String? = null,
-        willTopic: String? = null,
-        willPayload: PlatformBuffer? = null,
-        willRetain: Boolean = false,
-        willQos: QualityOfService = QualityOfService.AT_MOST_ONCE,
+        will: WillConfig = WillConfig.Disabled,
         protocolName: String = "MQTT",
         protocolLevel: UByte = 4u,
     ) : this(
@@ -62,18 +60,14 @@ data class ConnectionRequest(
             keepAliveSeconds = keepAliveSeconds,
             hasUserName = userName != null,
             hasPassword = password != null,
-            willRetain = willRetain,
-            willFlag = willPayload != null && willTopic != null,
-            willQos = willQos,
+            willRetain = (will as? WillConfig.Enabled)?.retain ?: false,
+            willFlag = will is WillConfig.Enabled,
+            willQos = (will as? WillConfig.Enabled)?.qos ?: QualityOfService.AT_MOST_ONCE,
         ),
         Payload(
             clientId,
-            if (willTopic == null) {
-                null
-            } else {
-                TopicName.fromOrThrow(willTopic)
-            },
-            willPayload,
+            (will as? WillConfig.Enabled)?.topic,
+            (will as? WillConfig.Enabled)?.payload,
             userName,
             password,
         ),
@@ -86,11 +80,12 @@ data class ConnectionRequest(
     override val clientIdentifier = payload.clientId
     override val protocolName = variableHeader.protocolName
     override val protocolVersion = variableHeader.protocolLevel.toInt()
-    override val willFlag: Boolean = variableHeader.willFlag
-    override val willPayload: ReadBuffer? = payload.willPayload
-    override val willQos: QualityOfService = variableHeader.willQos
-    override val willRetain: Boolean = variableHeader.willRetain
-    override val willTopic: TopicName? = payload.willTopic
+    override val will: WillConfig =
+        if (variableHeader.willFlag && payload.willTopic != null && payload.willPayload != null) {
+            WillConfig.Enabled(payload.willTopic, payload.willPayload, variableHeader.willQos, variableHeader.willRetain)
+        } else {
+            WillConfig.Disabled
+        }
 
     override fun encodeBody(writeBuffer: WriteBuffer) {
         val vh = variableHeader

@@ -24,6 +24,7 @@ import com.ditchoom.mqtt.controlpacket.NO_PACKET_ID
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.TopicName
+import com.ditchoom.mqtt.controlpacket.WillConfig
 import com.ditchoom.mqtt3.controlpacket.ConnectionRequest
 import com.ditchoom.mqtt3.controlpacket.PublishComplete
 import com.ditchoom.mqtt3.controlpacket.PublishMessage
@@ -226,6 +227,17 @@ class SqlDatabasePersistence(
             } else {
                 null
             }
+        val willTopic = connectionRequestDatabaseRecord.will_topic
+        val willConfig = if (willTopic != null && willPayload != null) {
+            WillConfig.Enabled(
+                TopicName.fromOrThrow(willTopic),
+                willPayload,
+                connectionRequestDatabaseRecord.will_qos.toQos(),
+                connectionRequestDatabaseRecord.will_retain == 1L,
+            )
+        } else {
+            WillConfig.Disabled
+        }
         val connectionRequest =
             ConnectionRequest(
                 connectionRequestDatabaseRecord.client_id,
@@ -233,10 +245,7 @@ class SqlDatabasePersistence(
                 connectionRequestDatabaseRecord.clean_session == 1L,
                 connectionRequestDatabaseRecord.username,
                 connectionRequestDatabaseRecord.password,
-                connectionRequestDatabaseRecord.will_topic,
-                willPayload,
-                connectionRequestDatabaseRecord.will_retain == 1L,
-                connectionRequestDatabaseRecord.will_qos.toQos(),
+                willConfig,
                 connectionRequestDatabaseRecord.protocol_name,
                 connectionRequestDatabaseRecord.protocol_level.toUByte(),
             )

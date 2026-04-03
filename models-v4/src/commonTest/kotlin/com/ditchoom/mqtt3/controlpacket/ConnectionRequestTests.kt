@@ -7,6 +7,8 @@ import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readVariableByteI
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.QualityOfService.AT_MOST_ONCE
 import com.ditchoom.mqtt.controlpacket.QualityOfService.EXACTLY_ONCE
+import com.ditchoom.mqtt.controlpacket.TopicName
+import com.ditchoom.mqtt.controlpacket.WillConfig
 import com.ditchoom.mqtt3.controlpacket.ConnectionRequest.VariableHeader
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -568,9 +570,7 @@ class ConnectionRequestTests {
         willPayload.resetForRead()
         val connectionRequest = ConnectionRequest(
             clientId = "",
-            willTopic = "t",
-            willPayload = willPayload,
-            willQos = AT_MOST_ONCE,
+            will = WillConfig.Enabled(TopicName.fromOrThrow("t"), willPayload, AT_MOST_ONCE),
         )
         val buffer = BufferFactory.Default.allocate(connectionRequest.packetSize())
         connectionRequest.serialize(buffer)
@@ -875,10 +875,12 @@ class ConnectionRequestTests {
             clientId = "test-client",
             keepAliveSeconds = 60,
             cleanSession = false,
-            willTopic = "will/topic",
-            willPayload = willBuf,
-            willRetain = true,
-            willQos = QualityOfService.AT_LEAST_ONCE,
+            will = WillConfig.Enabled(
+                TopicName.fromOrThrow("will/topic"),
+                willBuf,
+                QualityOfService.AT_LEAST_ONCE,
+                retain = true,
+            ),
         )
         assertNotNull(request.validateOrNull(), "valid will message should pass validation")
         val buffer = BufferFactory.Default.allocate(request.packetSize())

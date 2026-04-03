@@ -12,6 +12,7 @@ import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.variableByteSize
 import com.ditchoom.mqtt.controlpacket.IConnectionRequest
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicName
+import com.ditchoom.mqtt.controlpacket.WillConfig
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
 import com.ditchoom.mqtt.controlpacket.format.fixed.get
 import com.ditchoom.mqtt5.controlpacket.properties.Authentication
@@ -79,14 +80,11 @@ data class ConnectionRequest(
         cleanStart: Boolean = false,
         userName: String? = null,
         password: String? = null,
-        willTopic: String? = null,
-        willPayload: PlatformBuffer? = null,
-        willRetain: Boolean = false,
-        willQos: QualityOfService = QualityOfService.AT_MOST_ONCE,
+        will: WillConfig = WillConfig.Disabled,
         protocolName: String = "MQTT",
         protocolVersion: UByte = 5u,
         props: VariableHeader.Properties = VariableHeader.Properties(),
-        willProperties: Payload.WillProperties? = null,
+        willProperties: Payload.WillProperties? = if (will is WillConfig.Enabled) Payload.WillProperties() else null,
     ) : this(
         VariableHeader(
             protocolName = protocolName,
@@ -95,20 +93,16 @@ data class ConnectionRequest(
             keepAliveSeconds = keepAliveSeconds,
             hasUserName = userName != null,
             hasPassword = password != null,
-            willRetain = willRetain,
-            willFlag = willPayload != null && willTopic != null,
-            willQos = willQos,
+            willRetain = (will as? WillConfig.Enabled)?.retain ?: false,
+            willFlag = will is WillConfig.Enabled,
+            willQos = (will as? WillConfig.Enabled)?.qos ?: QualityOfService.AT_MOST_ONCE,
             properties = props,
         ),
         Payload(
             clientId,
             willProperties,
-            if (willTopic == null) {
-                null
-            } else {
-                TopicName.fromOrThrow(willTopic)
-            },
-            willPayload,
+            (will as? WillConfig.Enabled)?.topic,
+            (will as? WillConfig.Enabled)?.payload,
             userName,
             password,
         ),
@@ -118,22 +112,19 @@ data class ConnectionRequest(
         clientId: String,
         userName: String? = null,
         password: String? = null,
-        willTopic: TopicName? = null,
-        willPayload: PlatformBuffer? = null,
-        willRetain: Boolean = false,
-        willQos: QualityOfService = QualityOfService.AT_MOST_ONCE,
+        will: WillConfig = WillConfig.Disabled,
     ) : this(
         VariableHeader(
             hasUserName = userName != null,
             hasPassword = password != null,
-            willRetain = willRetain,
-            willFlag = willPayload != null && willTopic != null,
-            willQos = willQos,
+            willRetain = (will as? WillConfig.Enabled)?.retain ?: false,
+            willFlag = will is WillConfig.Enabled,
+            willQos = (will as? WillConfig.Enabled)?.qos ?: QualityOfService.AT_MOST_ONCE,
         ),
         Payload(
             clientId,
-            willTopic = willTopic,
-            willPayload = willPayload,
+            willTopic = (will as? WillConfig.Enabled)?.topic,
+            willPayload = (will as? WillConfig.Enabled)?.payload,
             userName = userName,
             password = password,
         ),
@@ -141,6 +132,12 @@ data class ConnectionRequest(
 
     override val clientIdentifier = payload.clientId
     override val keepAliveTimeoutSeconds: UShort = variableHeader.keepAliveSeconds.toUShort()
+    override val will: WillConfig =
+        if (variableHeader.willFlag && payload.willTopic != null && payload.willPayload != null) {
+            WillConfig.Enabled(payload.willTopic, payload.willPayload, variableHeader.willQos, variableHeader.willRetain)
+        } else {
+            WillConfig.Disabled
+        }
 
     override fun encodeBody(writeBuffer: WriteBuffer) {
         val vh = variableHeader
@@ -188,11 +185,6 @@ data class ConnectionRequest(
     override val topicAliasMax: UShort? = variableHeader.properties.topicAliasMaximum?.toUShort()
     override val userProperty: List<Pair<String, String>> = variableHeader.properties.userProperty
     override val willDelayIntervalSeconds: Long = payload.willProperties?.willDelayIntervalSeconds ?: 0
-    override val willFlag: Boolean = variableHeader.willFlag
-    override val willPayload: ReadBuffer? = payload.willPayload
-    override val willQos: QualityOfService = variableHeader.willQos
-    override val willRetain: Boolean = variableHeader.willRetain
-    override val willTopic: TopicName? = payload.willTopic
 
     override fun validate(): MqttWarning? {
         if (variableHeader.willFlag &&

@@ -7,31 +7,27 @@ interface IConnectionRequest : ControlPacket {
     val protocolVersion: Int
     val hasUserName: Boolean
     val hasPassword: Boolean
-    val willRetain: Boolean
-    val willQos: QualityOfService
-    val willFlag: Boolean
     val cleanStart: Boolean
     val keepAliveTimeoutSeconds: UShort
 
+    /** Single source of truth for will message configuration. */
+    val will: WillConfig
+
+    // Derived will properties (backward compatible)
+    val willFlag: Boolean get() = will is WillConfig.Enabled
+    val willRetain: Boolean get() = (will as? WillConfig.Enabled)?.retain ?: false
+    val willQos: QualityOfService get() = (will as? WillConfig.Enabled)?.qos ?: QualityOfService.AT_MOST_ONCE
+    val willTopic: TopicName? get() = (will as? WillConfig.Enabled)?.topic
+    val willPayload: ReadBuffer? get() = (will as? WillConfig.Enabled)?.payload
+
     // MQTT 5 Variable Header Properties
-
-    // Null if unsupported, 0 if absent or set to 0.
-    val sessionExpiryIntervalSeconds: ULong?
-        get() = null
-    val receiveMaximum: UShort
-        get() = UShort.MAX_VALUE
-
-    val maxPacketSize: ULong
-        get() = ULong.MAX_VALUE
-
-    // Null if unsupported, 0 if absent or set to 0.
-    val topicAliasMax: UShort?
-        get() = null
+    val sessionExpiryIntervalSeconds: ULong? get() = null
+    val receiveMaximum: UShort get() = UShort.MAX_VALUE
+    val maxPacketSize: ULong get() = ULong.MAX_VALUE
+    val topicAliasMax: UShort? get() = null
 
     // Mqtt Variable Header
     val clientIdentifier: String
-    val willTopic: TopicName?
-    val willPayload: ReadBuffer?
     val userName: String?
     val password: String?
 

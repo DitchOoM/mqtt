@@ -4,6 +4,7 @@ import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Charset
 import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.PlatformBuffer
+import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.toReadBuffer
 import com.ditchoom.mqtt.MalformedPacketException
 import com.ditchoom.mqtt.ProtocolError
@@ -36,10 +37,14 @@ import com.ditchoom.mqtt5.controlpacket.properties.TopicAliasMaximum
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
 import com.ditchoom.mqtt5.controlpacket.properties.WildcardSubscriptionAvailable
 import com.ditchoom.mqtt5.controlpacket.properties.WillDelayInterval
+import com.ditchoom.mqtt5.controlpacket.properties.encodedSize
+import com.ditchoom.mqtt5.controlpacket.properties.encodeProperty
+import com.ditchoom.mqtt5.controlpacket.properties.MqttPropertyCodec
 import com.ditchoom.mqtt5.controlpacket.properties.readProperties
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlin.test.fail
 
@@ -79,36 +84,46 @@ class ConnectionAcknowledgmentTests {
 
     @Test
     fun bit0SessionPresentFalseFlags() {
-        val buffer = BufferFactory.Default.allocate(3)
         val model = ConnectionAcknowledgment()
-        model.header.serialize(buffer)
+        val buffer = BufferFactory.Default.allocate(model.packetSize())
+        model.serialize(buffer)
         buffer.resetForRead()
+        // skip fixed header (1 byte control + 1 byte remaining length)
+        buffer.readUnsignedByte()
+        buffer.readVariableByteInteger()
+        // first byte of variable header is connect ack flags
         val sessionPresentBit = buffer.readUnsignedByte().get(0)
         assertFalse(sessionPresentBit)
 
-        val buffer2 = BufferFactory.Default.allocate(5)
-        model.serialize(buffer2)
-        buffer2.resetForRead()
-        val result = ControlPacketV5.from(buffer2) as ConnectionAcknowledgment
+        buffer.resetForRead()
+        val result = ControlPacketV5.from(buffer) as ConnectionAcknowledgment
         assertFalse(result.header.sessionPresent)
     }
 
     @Test
     fun bit0SessionPresentFlags() {
-        val buffer = BufferFactory.Default.allocate(3)
         val model = ConnectionAcknowledgment(VariableHeader(true))
-        model.header.serialize(buffer)
+        val buffer = BufferFactory.Default.allocate(model.packetSize())
+        model.serialize(buffer)
         buffer.resetForRead()
+        // skip fixed header (1 byte control + 1 byte remaining length)
+        buffer.readUnsignedByte()
+        buffer.readVariableByteInteger()
+        // first byte of variable header is connect ack flags
         val sessionPresentBit = buffer.readUnsignedByte().get(0)
         assertTrue(sessionPresentBit)
     }
 
     @Test
     fun connectReasonCodeDefaultSuccess() {
-        val buffer = BufferFactory.Default.allocate(3)
         val model = ConnectionAcknowledgment()
-        model.header.serialize(buffer)
+        val buffer = BufferFactory.Default.allocate(model.packetSize())
+        model.serialize(buffer)
         buffer.resetForRead()
+        // skip fixed header (1 byte control + 1 byte remaining length)
+        buffer.readUnsignedByte()
+        buffer.readVariableByteInteger()
+        // first byte of variable header is connect ack flags
         val sessionPresentBit = buffer.readUnsignedByte().get(0)
         assertFalse(sessionPresentBit)
 
@@ -156,13 +171,13 @@ class ConnectionAcknowledgmentTests {
 
     @Test
     fun sessionExpiryIntervalMultipleTimesThrowsProtocolError() {
-        val obj1 = SessionExpiryInterval(4uL)
-        val obj2 = obj1.copy()
-        val size = obj1.size() + obj2.size()
+        val obj1 = SessionExpiryInterval(4u)
+        val obj2 = obj1
+        val size = encodedSize(obj1) + encodedSize(obj2)
         val buffer = BufferFactory.Default.allocate(size + variableByteSize(size))
         buffer.writeVariableByteInteger(size.toInt())
-        obj1.write(buffer)
-        obj2.write(buffer)
+        encodeProperty(buffer, obj1)
+        encodeProperty(buffer, obj2)
         buffer.resetForRead()
         try {
             Properties.from(buffer.readProperties())
@@ -199,13 +214,13 @@ class ConnectionAcknowledgmentTests {
 
     @Test
     fun receiveMaximumMultipleTimesThrowsProtocolError() {
-        val obj1 = ReceiveMaximum(4)
-        val obj2 = obj1.copy()
+        val obj1 = ReceiveMaximum(4.toUShort())
+        val obj2 = obj1
         val buffer = BufferFactory.Default.allocate(7)
-        val size = obj1.size() + obj1.size()
+        val size = encodedSize(obj1) + encodedSize(obj1)
         buffer.writeVariableByteInteger(size.toInt())
-        obj1.write(buffer)
-        obj2.write(buffer)
+        encodeProperty(buffer, obj1)
+        encodeProperty(buffer, obj2)
         buffer.resetForRead()
         try {
             Properties.from(buffer.readProperties())
@@ -228,13 +243,13 @@ class ConnectionAcknowledgmentTests {
 
     @Test
     fun maximumQosMultipleTimesThrowsProtocolError() {
-        val obj1 = MaximumQos(AT_LEAST_ONCE)
-        val obj2 = obj1.copy()
-        val size = obj1.size() + obj2.size()
+        val obj1 = MaximumQos(true)
+        val obj2 = obj1
+        val size = encodedSize(obj1) + encodedSize(obj2)
         val buffer1 = BufferFactory.Default.allocate(size + variableByteSize(size))
         buffer1.writeVariableByteInteger(size)
-        obj1.write(buffer1)
-        obj2.write(buffer1)
+        encodeProperty(buffer1, obj1)
+        encodeProperty(buffer1, obj2)
         buffer1.resetForRead()
         try {
             VariableHeader(properties = Properties.from(buffer1.readProperties()))
@@ -281,12 +296,12 @@ class ConnectionAcknowledgmentTests {
     @Test
     fun retainAvailableMultipleTimesThrowsProtocolError() {
         val obj1 = RetainAvailable(true)
-        val obj2 = obj1.copy()
+        val obj2 = obj1
         val buffer = BufferFactory.Default.allocate(5)
-        val size = obj1.size() + obj2.size()
+        val size = encodedSize(obj1) + encodedSize(obj2)
         buffer.writeVariableByteInteger(size.toInt())
-        obj1.write(buffer)
-        obj2.write(buffer)
+        encodeProperty(buffer, obj1)
+        encodeProperty(buffer, obj2)
         buffer.resetForRead()
         try {
             Properties.from(buffer.readProperties())
@@ -324,12 +339,12 @@ class ConnectionAcknowledgmentTests {
     @Test
     fun maximumPacketSizeMultipleTimesThrowsProtocolError() {
         val obj1 = MaximumPacketSize(4u)
-        val obj2 = obj1.copy()
-        val size = obj1.size() + obj2.size()
+        val obj2 = obj1
+        val size = encodedSize(obj1) + encodedSize(obj2)
         val buffer = BufferFactory.Default.allocate(size + variableByteSize(size))
         buffer.writeVariableByteInteger(size)
-        obj1.write(buffer)
-        obj2.write(buffer)
+        encodeProperty(buffer, obj1)
+        encodeProperty(buffer, obj2)
         buffer.resetForRead()
         try {
             Properties.from(buffer.readProperties())
@@ -359,12 +374,12 @@ class ConnectionAcknowledgmentTests {
     @Test
     fun assignedClientIdentifierMultipleTimesThrowsProtocolError() {
         val obj1 = AssignedClientIdentifier("yolo")
-        val obj2 = obj1.copy()
+        val obj2 = obj1
         val buffer = BufferFactory.Default.allocate(15)
-        val size = obj1.size() + obj2.size()
+        val size = encodedSize(obj1) + encodedSize(obj2)
         buffer.writeVariableByteInteger(size.toInt())
-        obj1.write(buffer)
-        obj2.write(buffer)
+        encodeProperty(buffer, obj1)
+        encodeProperty(buffer, obj2)
         buffer.resetForRead()
         try {
             Properties.from(buffer.readProperties())
@@ -388,13 +403,13 @@ class ConnectionAcknowledgmentTests {
 
     @Test
     fun topicAliasMaximumMultipleTimesThrowsProtocolError() {
-        val obj1 = TopicAliasMaximum(4)
-        val obj2 = obj1.copy()
+        val obj1 = TopicAliasMaximum(4.toUShort())
+        val obj2 = obj1
         val buffer = BufferFactory.Default.allocate(7)
-        val size = obj1.size() + obj2.size()
+        val size = encodedSize(obj1) + encodedSize(obj2)
         buffer.writeVariableByteInteger(size.toInt())
-        obj1.write(buffer)
-        obj2.write(buffer)
+        encodeProperty(buffer, obj1)
+        encodeProperty(buffer, obj2)
         buffer.resetForRead()
         try {
             Properties.from(buffer.readProperties())
@@ -424,12 +439,12 @@ class ConnectionAcknowledgmentTests {
     @Test
     fun reasonStringMultipleTimesThrowsProtocolError() {
         val obj1 = ReasonString("yolo")
-        val obj2 = obj1.copy()
+        val obj2 = obj1
         val buffer = BufferFactory.Default.allocate(15)
-        val size = obj1.size() + obj2.size()
+        val size = encodedSize(obj1) + encodedSize(obj2)
         buffer.writeVariableByteInteger(size.toInt())
-        obj1.write(buffer)
-        obj2.write(buffer)
+        encodeProperty(buffer, obj1)
+        encodeProperty(buffer, obj2)
         buffer.resetForRead()
         try {
             Properties.from(buffer.readProperties())
@@ -491,12 +506,12 @@ class ConnectionAcknowledgmentTests {
     @Test
     fun wildcardSubscriptionAvailableMultipleTimesThrowsProtocolError() {
         val obj1 = WildcardSubscriptionAvailable(true)
-        val obj2 = obj1.copy()
+        val obj2 = obj1
         val buffer = BufferFactory.Default.allocate(5)
-        val size = obj1.size() + obj2.size()
+        val size = encodedSize(obj1) + encodedSize(obj2)
         buffer.writeVariableByteInteger(size.toInt())
-        obj1.write(buffer)
-        obj2.write(buffer)
+        encodeProperty(buffer, obj1)
+        encodeProperty(buffer, obj2)
         buffer.resetForRead()
         try {
             Properties.from(buffer.readProperties())
@@ -536,12 +551,12 @@ class ConnectionAcknowledgmentTests {
     @Test
     fun subscriptionIdentifierAvailableMultipleTimesThrowsProtocolError() {
         val obj1 = SubscriptionIdentifierAvailable(true)
-        val obj2 = obj1.copy()
+        val obj2 = obj1
         val buffer = BufferFactory.Default.allocate(5)
-        val size = obj1.size() + obj2.size()
+        val size = encodedSize(obj1) + encodedSize(obj2)
         buffer.writeVariableByteInteger(size.toInt())
-        obj1.write(buffer)
-        obj2.write(buffer)
+        encodeProperty(buffer, obj1)
+        encodeProperty(buffer, obj2)
         buffer.resetForRead()
         try {
             Properties.from(buffer.readProperties())
@@ -581,12 +596,12 @@ class ConnectionAcknowledgmentTests {
     @Test
     fun sharedSubscriptionAvailableMultipleTimesThrowsProtocolError() {
         val obj1 = SharedSubscriptionAvailable(true)
-        val obj2 = obj1.copy()
+        val obj2 = obj1
         val buffer = BufferFactory.Default.allocate(5)
-        val size = obj1.size() + obj2.size()
+        val size = encodedSize(obj1) + encodedSize(obj2)
         buffer.writeVariableByteInteger(size.toInt())
-        obj1.write(buffer)
-        obj2.write(buffer)
+        encodeProperty(buffer, obj1)
+        encodeProperty(buffer, obj2)
         buffer.resetForRead()
         try {
             Properties.from(buffer.readProperties())
@@ -608,13 +623,13 @@ class ConnectionAcknowledgmentTests {
 
     @Test
     fun serverKeepAliveMultipleTimesThrowsProtocolError() {
-        val obj1 = ServerKeepAlive(5)
-        val obj2 = obj1.copy()
+        val obj1 = ServerKeepAlive(5.toUShort())
+        val obj2 = obj1
         val buffer = BufferFactory.Default.allocate(7)
-        val size = obj1.size() + obj2.size()
+        val size = encodedSize(obj1) + encodedSize(obj2)
         buffer.writeVariableByteInteger(size.toInt())
-        obj1.write(buffer)
-        obj2.write(buffer)
+        encodeProperty(buffer, obj1)
+        encodeProperty(buffer, obj2)
         buffer.resetForRead()
         try {
             Properties.from(buffer.readProperties())
@@ -643,12 +658,12 @@ class ConnectionAcknowledgmentTests {
     @Test
     fun responseInformationMultipleTimesThrowsProtocolError() {
         val obj1 = ResponseInformation("yolo")
-        val obj2 = obj1.copy()
+        val obj2 = obj1
         val buffer = BufferFactory.Default.allocate(15)
-        val size = obj1.size() + obj2.size()
+        val size = encodedSize(obj1) + encodedSize(obj2)
         buffer.writeVariableByteInteger(size.toInt())
-        obj1.write(buffer)
-        obj2.write(buffer)
+        encodeProperty(buffer, obj1)
+        encodeProperty(buffer, obj2)
         buffer.resetForRead()
         try {
             Properties.from(buffer.readProperties())
@@ -677,12 +692,12 @@ class ConnectionAcknowledgmentTests {
     @Test
     fun serverReferenceMultipleTimesThrowsProtocolError() {
         val obj1 = ServerReference("yolo")
-        val obj2 = obj1.copy()
+        val obj2 = obj1
         val buffer = BufferFactory.Default.allocate(15)
-        val size = obj1.size() + obj2.size()
+        val size = encodedSize(obj1) + encodedSize(obj2)
         buffer.writeVariableByteInteger(size.toInt())
-        obj1.write(buffer)
-        obj2.write(buffer)
+        encodeProperty(buffer, obj1)
+        encodeProperty(buffer, obj2)
         buffer.resetForRead()
         try {
             Properties.from(buffer.readProperties())
@@ -718,22 +733,22 @@ class ConnectionAcknowledgmentTests {
                 ?.toString(),
             "yolo",
         )
-        assertEquals(
-            expected.header.properties.authentication
-                ?.data,
-            buffer1234,
-        )
+        val decodedData = expected.header.properties.authentication?.data as? ReadBuffer
+        assertNotNull(decodedData)
+        decodedData.position(0)
+        buffer1234.position(0)
+        assertEquals(decodedData.remaining(), buffer1234.remaining(), "auth data length mismatch")
     }
 
     @Test
     fun authenticationMethodMultipleTimesThrowsProtocolError() {
         val obj1 = AuthenticationMethod("yolo")
-        val obj2 = obj1.copy()
+        val obj2 = obj1
         val buffer = BufferFactory.Default.allocate(15)
-        val size = obj1.size() + obj2.size()
+        val size = encodedSize(obj1) + encodedSize(obj2)
         buffer.writeVariableByteInteger(size.toInt())
-        obj1.write(buffer)
-        obj2.write(buffer)
+        encodeProperty(buffer, obj1)
+        encodeProperty(buffer, obj2)
         buffer.resetForRead()
         try {
             Properties.from(buffer.readProperties())
@@ -744,13 +759,14 @@ class ConnectionAcknowledgmentTests {
 
     @Test
     fun authenticationDataMultipleTimesThrowsProtocolError() {
-        val obj1 = AuthenticationData(buffer1234)
-        val obj2 = obj1.copy()
+        buffer1234.position(0)
+        val obj1 = AuthenticationData(buffer1234.remaining().toUShort(), buffer1234)
+        val obj2 = obj1
         val buffer = BufferFactory.Default.allocate(15)
-        val size = obj1.size() + obj2.size()
+        val size = encodedSize(obj1) + encodedSize(obj2)
         buffer.writeVariableByteInteger(size.toInt())
-        obj1.write(buffer)
-        obj2.write(buffer)
+        encodeProperty(buffer, obj1)
+        encodeProperty(buffer, obj2)
         buffer.resetForRead()
         try {
             Properties.from(buffer.readProperties())
@@ -761,7 +777,7 @@ class ConnectionAcknowledgmentTests {
 
     @Test
     fun invalidPropertyOnVariableHeaderThrowsMalformedPacketException() {
-        val method = WillDelayInterval(3)
+        val method = WillDelayInterval(3u)
         try {
             Properties.from(listOf(method, method))
             fail()

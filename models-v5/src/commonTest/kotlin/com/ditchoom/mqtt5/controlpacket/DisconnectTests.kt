@@ -38,13 +38,16 @@ import com.ditchoom.mqtt.controlpacket.format.ReasonCode.USE_ANOTHER_SERVER
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.WILDCARD_SUBSCRIPTIONS_NOT_SUPPORTED
 import com.ditchoom.mqtt5.controlpacket.DisconnectNotification.VariableHeader
 import com.ditchoom.mqtt5.controlpacket.DisconnectNotification.VariableHeader.Properties
-import com.ditchoom.mqtt5.controlpacket.properties.Property
 import com.ditchoom.mqtt5.controlpacket.properties.ReasonString
 import com.ditchoom.mqtt5.controlpacket.properties.ServerReference
 import com.ditchoom.mqtt5.controlpacket.properties.SessionExpiryInterval
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
 import com.ditchoom.mqtt5.controlpacket.properties.MaximumPacketSize
+import com.ditchoom.mqtt5.controlpacket.properties.MqttProperty
 import com.ditchoom.mqtt5.controlpacket.properties.WillDelayInterval
+import com.ditchoom.mqtt5.controlpacket.properties.encodedSize
+import com.ditchoom.mqtt5.controlpacket.properties.encodeProperty
+import com.ditchoom.mqtt5.controlpacket.properties.MqttPropertyCodec
 import com.ditchoom.mqtt5.controlpacket.properties.readProperties
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -58,11 +61,12 @@ class DisconnectTests {
      */
     @Test
     fun sessionExpiryIntervalPropertySize() {
-        val prop = SessionExpiryInterval(300)
-        assertEquals(5, prop.size(), "SessionExpiryInterval must be 5 bytes (1 id + 4 value)")
+        val prop = SessionExpiryInterval(300u)
+        assertEquals(5, encodedSize(prop), "SessionExpiryInterval must be 5 bytes (1 id + 4 value)")
         val buffer = BufferFactory.Default.allocate(5)
-        val written = prop.write(buffer)
-        assertEquals(5, written, "SessionExpiryInterval must write exactly 5 bytes")
+        encodeProperty(buffer, prop)
+        buffer.resetForRead()
+        assertEquals(5, buffer.remaining(), "SessionExpiryInterval must write exactly 5 bytes")
     }
 
     /**
@@ -71,11 +75,12 @@ class DisconnectTests {
      */
     @Test
     fun maximumPacketSizePropertySize() {
-        val prop = MaximumPacketSize(65536uL)
-        assertEquals(5, prop.size(), "MaximumPacketSize must be 5 bytes (1 id + 4 value)")
+        val prop = MaximumPacketSize(65536u)
+        assertEquals(5, encodedSize(prop), "MaximumPacketSize must be 5 bytes (1 id + 4 value)")
         val buffer = BufferFactory.Default.allocate(5)
-        val written = prop.write(buffer)
-        assertEquals(5, written, "MaximumPacketSize must write exactly 5 bytes")
+        encodeProperty(buffer, prop)
+        buffer.resetForRead()
+        assertEquals(5, buffer.remaining(), "MaximumPacketSize must write exactly 5 bytes")
     }
 
     @Test
@@ -91,13 +96,13 @@ class DisconnectTests {
 
     @Test
     fun sessionExpiryIntervalMultipleTimesThrowsProtocolError() {
-        val obj1 = SessionExpiryInterval(4)
-        val obj2 = obj1.copy()
-        val size = obj1.size() + obj2.size()
+        val obj1 = SessionExpiryInterval(4u)
+        val obj2 = obj1
+        val size = encodedSize(obj1) + encodedSize(obj2)
         val buffer = BufferFactory.Default.allocate(size + ControlPacket.variableByteSize(size))
         buffer.writeVariableByteInteger(size)
-        obj1.write(buffer)
-        obj2.write(buffer)
+        encodeProperty(buffer, obj1)
+        encodeProperty(buffer, obj2)
         buffer.resetForRead()
         try {
             Properties.from(buffer.readProperties())
@@ -125,11 +130,11 @@ class DisconnectTests {
     @Test
     fun reasonStringMultipleTimesThrowsProtocolError() {
         val obj1 = ReasonString("yolo")
-        val obj2 = obj1.copy()
+        val obj2 = obj1
         val buffer = BufferFactory.Default.allocate(15)
-        buffer.writeVariableByteInteger(obj1.size() + obj2.size())
-        obj1.write(buffer)
-        obj2.write(buffer)
+        buffer.writeVariableByteInteger(encodedSize(obj1) + encodedSize(obj2))
+        encodeProperty(buffer, obj1)
+        encodeProperty(buffer, obj2)
         buffer.resetForRead()
         try {
             Properties.from(buffer.readProperties())
@@ -192,11 +197,11 @@ class DisconnectTests {
     @Test
     fun serverReferenceMultipleTimesThrowsProtocolError() {
         val obj1 = ServerReference("yolo")
-        val obj2 = obj1.copy()
+        val obj2 = obj1
         val buffer = BufferFactory.Default.allocate(15)
-        buffer.writeVariableByteInteger(obj1.size() + obj2.size())
-        obj1.write(buffer)
-        obj2.write(buffer)
+        buffer.writeVariableByteInteger(encodedSize(obj1) + encodedSize(obj2))
+        encodeProperty(buffer, obj1)
+        encodeProperty(buffer, obj2)
         buffer.resetForRead()
         try {
             Properties.from(buffer.readProperties())
@@ -207,7 +212,7 @@ class DisconnectTests {
 
     @Test
     fun invalidPropertyThrowsException() {
-        val pairs = setOf<Property>(WillDelayInterval(3))
+        val pairs = setOf<MqttProperty>(WillDelayInterval(3u))
         try {
             Properties.from(pairs)
             fail()

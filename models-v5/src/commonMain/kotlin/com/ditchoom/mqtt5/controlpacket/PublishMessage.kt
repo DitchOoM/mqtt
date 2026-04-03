@@ -8,7 +8,6 @@ import com.ditchoom.mqtt.ProtocolError
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readMqttUtf8StringNotValidatedSized
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.variableByteSize
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.writeMqttUtf8String
-import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.writeVariableByteInteger
 import com.ditchoom.mqtt.controlpacket.IPublishMessage
 import com.ditchoom.mqtt.controlpacket.NO_PACKET_ID
 import com.ditchoom.mqtt.controlpacket.QualityOfService
@@ -21,13 +20,15 @@ import com.ditchoom.mqtt.controlpacket.validControlPacketIdentifierRange
 import com.ditchoom.mqtt5.controlpacket.properties.ContentType
 import com.ditchoom.mqtt5.controlpacket.properties.CorrelationData
 import com.ditchoom.mqtt5.controlpacket.properties.MessageExpiryInterval
+import com.ditchoom.mqtt5.controlpacket.properties.MqttProperty
 import com.ditchoom.mqtt5.controlpacket.properties.PayloadFormatIndicator
-import com.ditchoom.mqtt5.controlpacket.properties.Property
+import com.ditchoom.mqtt5.controlpacket.properties.PropertyExtractor
 import com.ditchoom.mqtt5.controlpacket.properties.ResponseTopic
 import com.ditchoom.mqtt5.controlpacket.properties.SubscriptionIdentifier
 import com.ditchoom.mqtt5.controlpacket.properties.TopicAlias
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
-import com.ditchoom.mqtt5.controlpacket.properties.readPropertiesSized
+import com.ditchoom.mqtt5.controlpacket.properties.mqttPropertiesSize
+import com.ditchoom.mqtt5.controlpacket.properties.readProperties
 import com.ditchoom.mqtt5.controlpacket.wire.PublishNoIdV5Wire
 import com.ditchoom.mqtt5.controlpacket.wire.PublishNoIdV5WireCodec
 import com.ditchoom.mqtt5.controlpacket.wire.PublishWithIdV5Wire
@@ -93,14 +94,6 @@ data class PublishMessage(
         }
 
     override val qualityOfService: QualityOfService = fixed.qos
-
-    override fun variableHeader(writeBuffer: WriteBuffer) = variable.serialize(writeBuffer)
-
-    override fun payload(writeBuffer: WriteBuffer) {
-        if (payload != null) {
-            writeBuffer.write(payload)
-        }
-    }
 
     override fun encodeBody(writeBuffer: WriteBuffer) {
         val topicStr = variable.topicName.toString()
@@ -361,14 +354,6 @@ data class PublishMessage(
             }
         }
 
-        fun serialize(buffer: WriteBuffer) {
-            buffer.writeMqttUtf8String(topicName.toString())
-            if (packetIdentifier in validControlPacketIdentifierRange) {
-                buffer.writeUShort(packetIdentifier.toUShort())
-            }
-            properties.serialize(buffer)
-        }
-
         fun size(): Int {
             var size = UShort.SIZE_BYTES + topicName.toString().utf8Length()
             if (packetIdentifier in validControlPacketIdentifierRange) {
@@ -598,21 +583,22 @@ data class PublishMessage(
             }
 
             val props by lazy(LazyThreadSafetyMode.NONE) {
-                val list = ArrayList<Property>(7 + userProperty.count())
+                val list = ArrayList<MqttProperty>(7 + userProperty.count())
                 if (payloadFormatIndicator) {
                     list += PayloadFormatIndicator(payloadFormatIndicator)
                 }
                 if (messageExpiryInterval != null) {
-                    list += MessageExpiryInterval(messageExpiryInterval)
+                    list += MessageExpiryInterval(messageExpiryInterval.toUInt())
                 }
                 if (topicAlias != null) {
-                    list += TopicAlias(topicAlias)
+                    list += TopicAlias(topicAlias.toUShort())
                 }
                 if (responseTopic != null) {
-                    list += ResponseTopic(responseTopic)
+                    list += ResponseTopic(responseTopic.toString())
                 }
                 if (correlationData != null) {
-                    list += CorrelationData(correlationData)
+                    correlationData.position(0)
+                    list += CorrelationData(correlationData.remaining().toUShort(), correlationData)
                 }
                 if (userProperty.isNotEmpty()) {
                     for (keyValueProperty in userProperty) {
@@ -623,7 +609,7 @@ data class PublishMessage(
                 }
                 if (subscriptionIdentifier.isNotEmpty()) {
                     for (sub in subscriptionIdentifier) {
-                        list += SubscriptionIdentifier(sub)
+                        list += SubscriptionIdentifier(sub.toInt())
                     }
                 }
                 if (contentType != null) {
@@ -632,106 +618,37 @@ data class PublishMessage(
                 list
             }
 
-            fun size(): Int {
-                var size = 0
-                props.forEach { size += it.size() }
-                return size
-            }
-
-            fun serialize(buffer: WriteBuffer) {
-                val size = size()
-                buffer.writeVariableByteInteger(size)
-                props.forEach { it.write(buffer) }
-            }
+            fun size(): Int = mqttPropertiesSize(props)
 
             companion object {
-                fun from(keyValuePairs: Collection<Property>?): Properties {
-                    var payloadFormatIndicator: Boolean? = null
-                    var messageExpiryInterval: Long? = null
-                    var topicAlias: Int? = null
-                    var responseTopic: TopicName? = null
-                    var correlationData: ReadBuffer? = null
-                    val userProperty = mutableListOf<Pair<String, String>>()
-                    val subscriptionIdentifier = LinkedHashSet<Long>()
-                    var contentType: String? = null
-                    keyValuePairs?.forEach {
-                        when (it) {
-                            is PayloadFormatIndicator -> {
-                                if (payloadFormatIndicator != null) {
-                                    throw ProtocolError("Payload Indicator Format found twice")
-                                }
-                                payloadFormatIndicator = it.willMessageIsUtf8
-                            }
-
-                            is MessageExpiryInterval -> {
-                                if (messageExpiryInterval != null) {
-                                    throw ProtocolError("Message Expiry Interval found twice")
-                                }
-                                messageExpiryInterval = it.seconds
-                            }
-
-                            is TopicAlias -> {
-                                if (topicAlias != null) {
-                                    throw ProtocolError(
-                                        "Topic Alias found twice see:" +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477413",
-                                    )
-                                }
-                                if (it.value == 0) {
-                                    throw ProtocolError(
-                                        "Topic Alias not permitted to be set to 0:" +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477413",
-                                    )
-                                }
-                                topicAlias = it.value
-                            }
-
-                            is ResponseTopic -> {
-                                if (responseTopic != null) {
-                                    throw ProtocolError(
-                                        "Response Topic found twice see:" +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477414",
-                                    )
-                                }
-                                responseTopic = it.value
-                            }
-
-                            is CorrelationData -> {
-                                if (correlationData != null) {
-                                    throw ProtocolError(
-                                        "Correlation Data found twice see:" +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477415",
-                                    )
-                                }
-                                correlationData = it.data
-                            }
-
-                            is UserProperty -> userProperty += Pair(it.key, it.value)
-                            is SubscriptionIdentifier -> {
-                                if (it.value == 0L) {
-                                    throw ProtocolError(
-                                        "Subscription Identifier not permitted to be set to 0:" +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477417",
-                                    )
-                                }
-                                subscriptionIdentifier.add(it.value)
-                            }
-
-                            is ContentType -> {
-                                if (contentType != null) {
-                                    throw ProtocolError(
-                                        "Content Type found twice see:" +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477417",
-                                    )
-                                }
-                                contentType = it.value
-                            }
-
-                            else -> throw MalformedPacketException("Invalid property type found in MQTT properties $it")
+                fun from(keyValuePairs: Collection<MqttProperty>?): Properties {
+                    val p = PropertyExtractor(keyValuePairs, "PUBLISH")
+                    val payloadFormatIndicator = p.single<PayloadFormatIndicator>()?.isUtf8 ?: false
+                    val messageExpiryInterval = p.single<MessageExpiryInterval>()?.seconds?.toLong()
+                    val topicAlias = p.single<TopicAlias>()?.also {
+                        if (it.value == 0.toUShort()) {
+                            throw ProtocolError(
+                                "Topic Alias not permitted to be set to 0:" +
+                                    "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477413",
+                            )
                         }
+                    }?.value?.toInt()
+                    val responseTopic = p.single<ResponseTopic>()?.let { TopicName.fromOrThrow(it.value) }
+                    val correlationData = p.single<CorrelationData<*>>()?.data as? ReadBuffer
+                    val userProperty = p.list<UserProperty>().map { it.key to it.value }
+                    val subscriptionIdentifier = p.list<SubscriptionIdentifier>().mapTo(LinkedHashSet()) {
+                        if (it.value == 0) {
+                            throw ProtocolError(
+                                "Subscription Identifier not permitted to be set to 0:" +
+                                    "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477417",
+                            )
+                        }
+                        it.value.toLong()
                     }
+                    val contentType = p.single<ContentType>()?.value
+                    p.rejectUnknown()
                     return Properties(
-                        payloadFormatIndicator ?: false,
+                        payloadFormatIndicator,
                         messageExpiryInterval,
                         topicAlias,
                         responseTopic,
@@ -759,10 +676,10 @@ data class PublishMessage(
                         size += 2
                         buffer.readUnsignedShort().toInt()
                     }
-                val propertiesSized = buffer.readPropertiesSized()
-                size += 1
-                size += propertiesSized.first
-                val props = Properties.from(propertiesSized.second)
+                val startPos = buffer.position()
+                val propertiesRaw = buffer.readProperties()
+                size += buffer.position() - startPos
+                val props = Properties.from(propertiesRaw)
                 return Pair(
                     size,
                     VariableHeader(TopicName.fromOrThrow(topicName), packetIdentifier, props),

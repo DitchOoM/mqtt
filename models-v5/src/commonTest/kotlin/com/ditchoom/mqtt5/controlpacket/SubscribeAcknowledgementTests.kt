@@ -23,6 +23,9 @@ import com.ditchoom.mqtt5.controlpacket.SubscribeAcknowledgement.VariableHeader
 import com.ditchoom.mqtt5.controlpacket.SubscribeAcknowledgement.VariableHeader.Properties.Companion.from
 import com.ditchoom.mqtt5.controlpacket.properties.ReasonString
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
+import com.ditchoom.mqtt5.controlpacket.properties.encodedSize
+import com.ditchoom.mqtt5.controlpacket.properties.encodeProperty
+import com.ditchoom.mqtt5.controlpacket.properties.MqttPropertyCodec
 import com.ditchoom.mqtt5.controlpacket.properties.readProperties
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -193,11 +196,11 @@ class SubscribeAcknowledgementTests {
     @Test
     fun reasonStringMultipleTimesThrowsProtocolError() {
         val obj1 = ReasonString("yolo")
-        val obj2 = obj1.copy()
+        val obj2 = obj1
         val buffer = BufferFactory.Default.allocate(15)
-        buffer.writeVariableByteInteger(obj1.size() + obj2.size())
-        obj1.write(buffer)
-        obj2.write(buffer)
+        buffer.writeVariableByteInteger(encodedSize(obj1) + encodedSize(obj2))
+        encodeProperty(buffer, obj1)
+        encodeProperty(buffer, obj2)
         buffer.resetForRead()
         assertFailsWith<ProtocolError> { PublishReceived.VariableHeader.Properties.from(buffer.readProperties()) }
     }
@@ -231,9 +234,11 @@ class SubscribeAcknowledgementTests {
 
     @Test
     fun invalidReasonCode() {
-        val variable = VariableHeader(packetIdentifier)
         val buffer = BufferFactory.Default.allocate(5)
-        variable.serialize(buffer)
+        // manually write variable header bytes: packet identifier (2 bytes) + property length (1 byte, value 0)
+        buffer.writeUShort(packetIdentifier.toUShort())
+        buffer.writeVariableByteInteger(0)
+        // append an invalid reason code
         buffer.writeUByte(BANNED.byte)
         buffer.resetForRead()
         assertFailsWith<MalformedPacketException> { SubscribeAcknowledgement.from(buffer, 4) }

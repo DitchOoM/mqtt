@@ -3,9 +3,7 @@ package com.ditchoom.mqtt5.controlpacket
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
 import com.ditchoom.mqtt.MalformedPacketException
-import com.ditchoom.mqtt.ProtocolError
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.variableByteSize
-import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.writeVariableByteInteger
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.CONTINUE_AUTHENTICATION
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.REAUTHENTICATE
@@ -14,9 +12,11 @@ import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
 import com.ditchoom.mqtt5.controlpacket.properties.Authentication
 import com.ditchoom.mqtt5.controlpacket.properties.AuthenticationData
 import com.ditchoom.mqtt5.controlpacket.properties.AuthenticationMethod
-import com.ditchoom.mqtt5.controlpacket.properties.Property
+import com.ditchoom.mqtt5.controlpacket.properties.MqttProperty
+import com.ditchoom.mqtt5.controlpacket.properties.PropertyExtractor
 import com.ditchoom.mqtt5.controlpacket.properties.ReasonString
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
+import com.ditchoom.mqtt5.controlpacket.properties.mqttPropertiesSize
 import com.ditchoom.mqtt5.controlpacket.wire.AuthV5Wire
 import com.ditchoom.mqtt5.controlpacket.wire.AuthV5WireCodec
 
@@ -37,14 +37,13 @@ data class AuthenticationExchange(
     override val direction: DirectionOfFlow get() = DirectionOfFlow.BIDIRECTIONAL
     override fun remainingLength() = variable.size()
 
-    override fun variableHeader(writeBuffer: WriteBuffer) = variable.serialize(writeBuffer)
-
     override fun encodeBody(writeBuffer: WriteBuffer) {
-        val propsList = buildList {
+        val propsList = buildList<MqttProperty> {
             val auth = variable.properties.authentication
             if (auth != null) {
                 add(AuthenticationMethod(auth.method))
-                add(AuthenticationData(auth.data))
+                auth.data.position(0)
+                add(AuthenticationData(auth.data.remaining().toUShort(), auth.data))
             }
             if (variable.properties.reasonString != null) {
                 add(ReasonString(variable.properties.reasonString))
@@ -101,102 +100,42 @@ data class AuthenticationExchange(
             return propSize + UByte.SIZE_BYTES + variableByteSize(propSize)
         }
 
-        fun serialize(writeBuffer: WriteBuffer) {
-            writeBuffer.writeUByte(reasonCode.byte)
-            properties.serialize(writeBuffer)
-        }
-
         data class Properties(
             val authentication: Authentication?,
             val reasonString: String? = null,
             val userProperty: List<Pair<String, String>> = emptyList(),
         ) {
             fun size(): Int {
-                val authMethod =
-                    if (authentication != null) AuthenticationMethod(authentication.method) else null
-                val authData =
-                    if (authentication != null) AuthenticationData(authentication.data) else null
-                val authReasonString =
-                    if (reasonString != null) ReasonString(reasonString) else null
-                val props = userProperty.map { UserProperty(it.first, it.second) }
-                var size = authMethod?.size() ?: 0
-                size += authData?.size() ?: 0
-                size += authReasonString?.size() ?: 0
-                props.forEach {
-                    size += it.size()
+                val propsList = buildList<MqttProperty> {
+                    if (authentication != null) {
+                        add(AuthenticationMethod(authentication.method))
+                        authentication.data.position(0)
+                        add(AuthenticationData(authentication.data.remaining().toUShort(), authentication.data))
+                    }
+                    if (reasonString != null) {
+                        add(ReasonString(reasonString))
+                    }
+                    for (kv in userProperty) {
+                        add(UserProperty(kv.first, kv.second))
+                    }
                 }
-                return size
-            }
-
-            fun serialize(writeBuffer: WriteBuffer) {
-                val authMethod =
-                    if (authentication != null) AuthenticationMethod(authentication.method) else null
-                val authData =
-                    if (authentication != null) AuthenticationData(authentication.data) else null
-                val authReasonString =
-                    if (reasonString != null) ReasonString(reasonString) else null
-                val props = userProperty.map { UserProperty(it.first, it.second) }
-                val size = size()
-                writeBuffer.writeVariableByteInteger(size)
-                authMethod?.write(writeBuffer)
-                authData?.write(writeBuffer)
-                authReasonString?.write(writeBuffer)
-                props.forEach {
-                    it.write(writeBuffer)
-                }
+                return mqttPropertiesSize(propsList)
             }
 
             companion object {
-                fun from(keyValuePairs: Collection<Property>?): Properties {
-                    var method: String? = null
-                    var reasonString: String? = null
-                    val userProperty = mutableListOf<Pair<String, String>>()
-                    var data: ReadBuffer? = null
-                    keyValuePairs?.forEach {
-                        when (it) {
-                            is AuthenticationMethod -> {
-                                if (method != null) {
-                                    throw ProtocolError(
-                                        "Auth Method added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477382",
-                                    )
-                                }
-                                method = it.value
-                            }
-
-                            is ReasonString -> {
-                                if (reasonString != null) {
-                                    throw ProtocolError(
-                                        "Reason String added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477476",
-                                    )
-                                }
-                                reasonString = it.diagnosticInfoDontParse
-                            }
-
-                            is UserProperty -> userProperty.add(Pair(it.key, it.value))
-                            is AuthenticationData -> {
-                                if (data != null) {
-                                    throw ProtocolError(
-                                        "Server Reference added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477396",
-                                    )
-                                }
-                                data = it.data
-                            }
-
-                            else -> throw MalformedPacketException("Invalid UnsubscribeAck property type found in MQTT properties $it")
-                        }
-                    }
-                    if (method != null && data != null) {
-                        return Properties(
-                            Authentication(method!!, data!!),
-                            reasonString,
-                            userProperty,
-                        )
+                fun from(keyValuePairs: Collection<MqttProperty>?): Properties {
+                    val p = PropertyExtractor(keyValuePairs, "AUTH")
+                    val method = p.single<AuthenticationMethod>()?.value
+                    val data = p.single<AuthenticationData<*>>()?.data as? ReadBuffer
+                    val reasonString = p.single<ReasonString>()?.value
+                    val userProperty = p.list<UserProperty>().map { it.key to it.value }
+                    p.rejectUnknown()
+                    val auth = if (method != null && data != null) {
+                        Authentication(method, data)
                     } else {
-                        return Properties(null, reasonString, userProperty)
+                        null
                     }
+                    return Properties(auth, reasonString, userProperty)
                 }
             }
         }

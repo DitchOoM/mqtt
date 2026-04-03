@@ -5,7 +5,6 @@ import com.ditchoom.buffer.WriteBuffer
 import com.ditchoom.mqtt.MalformedPacketException
 import com.ditchoom.mqtt.ProtocolError
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.variableByteSize
-import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.writeVariableByteInteger
 import com.ditchoom.mqtt.controlpacket.IUnsubscribeAcknowledgment
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.IMPLEMENTATION_SPECIFIC_ERROR
@@ -16,10 +15,12 @@ import com.ditchoom.mqtt.controlpacket.format.ReasonCode.SUCCESS
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.TOPIC_FILTER_INVALID
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.UNSPECIFIED_ERROR
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
-import com.ditchoom.mqtt5.controlpacket.properties.Property
+import com.ditchoom.mqtt5.controlpacket.properties.MqttProperty
+import com.ditchoom.mqtt5.controlpacket.properties.PropertyExtractor
 import com.ditchoom.mqtt5.controlpacket.properties.ReasonString
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
-import com.ditchoom.mqtt5.controlpacket.properties.readPropertiesSized
+import com.ditchoom.mqtt5.controlpacket.properties.mqttPropertiesSize
+import com.ditchoom.mqtt5.controlpacket.properties.readProperties
 import com.ditchoom.mqtt5.controlpacket.wire.UnsubAckReasonCodeV5Wire
 import com.ditchoom.mqtt5.controlpacket.wire.UnsubAckV5Wire
 import com.ditchoom.mqtt5.controlpacket.wire.UnsubAckV5WireCodec
@@ -45,8 +46,6 @@ data class UnsubscribeAcknowledgment(
         reasonCodes: List<ReasonCode>,
     ) : this(VariableHeader(packetIdentifier, VariableHeader.Properties(reasonString, userProperty)), reasonCodes)
 
-    override fun variableHeader(writeBuffer: WriteBuffer) = variable.serialize(writeBuffer)
-
     override fun encodeBody(writeBuffer: WriteBuffer) {
         UnsubAckV5WireCodec.encode(
             writeBuffer,
@@ -64,8 +63,6 @@ data class UnsubscribeAcknowledgment(
         return variableSize + subSize
     }
 
-    override fun payload(writeBuffer: WriteBuffer) = reasonCodes.forEach { writeBuffer.writeUByte(it.byte) }
-
     override val packetIdentifier = variable.packetIdentifier
 
     /**
@@ -81,11 +78,6 @@ data class UnsubscribeAcknowledgment(
         val properties: Properties = Properties(),
     ) {
         fun size() = UShort.SIZE_BYTES + variableByteSize(properties.size()) + properties.size()
-
-        fun serialize(writeBuffer: WriteBuffer) {
-            writeBuffer.writeUShort(packetIdentifier.toUShort())
-            properties.serialize(writeBuffer)
-        }
 
         /**
          * 3.9.2.1 SUBACK Properties
@@ -121,7 +113,7 @@ data class UnsubscribeAcknowledgment(
             val userProperty: List<Pair<String, String>> = emptyList(),
         ) {
             val props by lazy(LazyThreadSafetyMode.NONE) {
-                val props = ArrayList<Property>(1 + userProperty.size)
+                val props = ArrayList<MqttProperty>(1 + userProperty.size)
                 if (reasonString != null) {
                     props += ReasonString(reasonString)
                 }
@@ -135,37 +127,14 @@ data class UnsubscribeAcknowledgment(
                 props
             }
 
-            fun size(): Int {
-                var size = 0
-                props.forEach { size += it.size() }
-                return size
-            }
-
-            fun serialize(buffer: WriteBuffer) {
-                buffer.writeVariableByteInteger(size())
-                props.forEach { it.write(buffer) }
-            }
+            fun size(): Int = mqttPropertiesSize(props)
 
             companion object {
-                fun from(keyValuePairs: Collection<Property>?): Properties {
-                    var reasonString: String? = null
-                    val userProperty = mutableListOf<Pair<String, String>>()
-                    keyValuePairs?.forEach {
-                        when (it) {
-                            is ReasonString -> {
-                                if (reasonString != null) {
-                                    throw ProtocolError(
-                                        "Reason String added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477476",
-                                    )
-                                }
-                                reasonString = it.diagnosticInfoDontParse
-                            }
-
-                            is UserProperty -> userProperty += Pair(it.key, it.value)
-                            else -> throw MalformedPacketException("Invalid UnsubscribeAck property type found in MQTT properties $it")
-                        }
-                    }
+                fun from(keyValuePairs: Collection<MqttProperty>?): Properties {
+                    val p = PropertyExtractor(keyValuePairs, "UNSUBACK")
+                    val reasonString = p.single<ReasonString>()?.value
+                    val userProperty = p.list<UserProperty>().map { it.key to it.value }
+                    p.rejectUnknown()
                     return Properties(reasonString, userProperty)
                 }
             }
@@ -174,10 +143,12 @@ data class UnsubscribeAcknowledgment(
         companion object {
             fun from(buffer: ReadBuffer): Pair<Int, VariableHeader> {
                 val packetIdentifier = buffer.readUnsignedShort()
-                val sized = buffer.readPropertiesSized()
-                val props = Properties.from(sized.second)
+                val startPos = buffer.position()
+                val properties = buffer.readProperties()
+                val propsBytes = buffer.position() - startPos
+                val props = Properties.from(properties)
                 return Pair(
-                    UShort.SIZE_BYTES + variableByteSize(sized.first) + sized.first,
+                    UShort.SIZE_BYTES + propsBytes,
                     VariableHeader(packetIdentifier.toInt(), props),
                 )
             }

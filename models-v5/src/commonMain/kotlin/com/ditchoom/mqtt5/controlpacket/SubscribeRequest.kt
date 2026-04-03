@@ -3,12 +3,9 @@ package com.ditchoom.mqtt5.controlpacket
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
 import com.ditchoom.buffer.utf8Length
-import com.ditchoom.mqtt.MalformedPacketException
 import com.ditchoom.mqtt.ProtocolError
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readMqttUtf8StringNotValidatedSized
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.variableByteSize
-import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.writeMqttUtf8String
-import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.writeVariableByteInteger
 import com.ditchoom.mqtt.controlpacket.ISubscribeRequest
 import com.ditchoom.mqtt.controlpacket.ISubscription
 import com.ditchoom.mqtt.controlpacket.ISubscription.RetainHandling
@@ -20,10 +17,12 @@ import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
 import com.ditchoom.mqtt5.controlpacket.SubscribeRequest.VariableHeader.Properties
-import com.ditchoom.mqtt5.controlpacket.properties.Property
+import com.ditchoom.mqtt5.controlpacket.properties.MqttProperty
+import com.ditchoom.mqtt5.controlpacket.properties.PropertyExtractor
 import com.ditchoom.mqtt5.controlpacket.properties.ReasonString
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
-import com.ditchoom.mqtt5.controlpacket.properties.readPropertiesSized
+import com.ditchoom.mqtt5.controlpacket.properties.mqttPropertiesSize
+import com.ditchoom.mqtt5.controlpacket.properties.readProperties
 import com.ditchoom.mqtt5.controlpacket.wire.SubscribeV5Wire
 import com.ditchoom.mqtt5.controlpacket.wire.SubscribeV5WireCodec
 import com.ditchoom.mqtt5.controlpacket.wire.SubscriptionV5Wire
@@ -84,11 +83,7 @@ data class SubscribeRequest(
 
     override val packetIdentifier = variable.packetIdentifier
 
-    override fun variableHeader(writeBuffer: WriteBuffer) = variable.serialize(writeBuffer)
-
     override fun expectedResponse() = SubscribeAcknowledgement(variable.packetIdentifier.toUShort(), ReasonCode.SUCCESS)
-
-    override fun payload(writeBuffer: WriteBuffer) = subscriptions.forEach { (it as Subscription).serialize(writeBuffer) }
 
     override fun encodeBody(writeBuffer: WriteBuffer) {
         SubscribeV5WireCodec.encode(
@@ -136,11 +131,6 @@ data class SubscribeRequest(
     ) {
         fun size() = UShort.SIZE_BYTES + variableByteSize(properties.size()) + properties.size()
 
-        fun serialize(writeBuffer: WriteBuffer) {
-            writeBuffer.writeUShort(packetIdentifier.toUShort())
-            properties.serialize(writeBuffer)
-        }
-
         data class Properties(
             /**
              * 3.2.2.3.9 Reason String
@@ -180,7 +170,7 @@ data class SubscribeRequest(
             val userProperty: List<Pair<String, String>> = emptyList(),
         ) {
             val props by lazy(LazyThreadSafetyMode.NONE) {
-                val props = ArrayList<Property>(1 + userProperty.size)
+                val props = ArrayList<MqttProperty>(1 + userProperty.size)
                 if (reasonString?.isNotBlank() == true) {
                     props += ReasonString(reasonString)
                 }
@@ -194,37 +184,14 @@ data class SubscribeRequest(
                 props
             }
 
-            fun size(): Int {
-                var size = 0
-                props.forEach { size += it.size() }
-                return size
-            }
-
-            fun serialize(buffer: WriteBuffer) {
-                buffer.writeVariableByteInteger(size())
-                props.forEach { it.write(buffer) }
-            }
+            fun size(): Int = mqttPropertiesSize(props)
 
             companion object {
-                fun from(keyValuePairs: Collection<Property>?): Properties {
-                    var reasonString: String? = null
-                    val userProperty = mutableListOf<Pair<String, String>>()
-                    keyValuePairs?.forEach {
-                        when (it) {
-                            is ReasonString -> {
-                                if (reasonString != null) {
-                                    throw ProtocolError(
-                                        "Reason String added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477427",
-                                    )
-                                }
-                                reasonString = it.diagnosticInfoDontParse
-                            }
-
-                            is UserProperty -> userProperty += Pair(it.key, it.value)
-                            else -> throw MalformedPacketException("Invalid Subscribe Request property type found in MQTT properties $it")
-                        }
-                    }
+                fun from(keyValuePairs: Collection<MqttProperty>?): Properties {
+                    val p = PropertyExtractor(keyValuePairs, "SUBSCRIBE")
+                    val reasonString = p.single<ReasonString>()?.value
+                    val userProperty = p.list<UserProperty>().map { it.key to it.value }
+                    p.rejectUnknown()
                     return Properties(reasonString, userProperty)
                 }
             }
@@ -240,9 +207,11 @@ data class SubscribeRequest(
                 return if (remainingLength == 2) {
                     Pair(size, VariableHeader(packetIdentifier))
                 } else {
-                    val propsData = buffer.readPropertiesSized()
-                    val props = Properties.from(propsData.second)
-                    size += propsData.first + variableByteSize(propsData.first)
+                    val startPos = buffer.position()
+                    val properties = buffer.readProperties()
+                    val propsBytes = buffer.position() - startPos
+                    val props = Properties.from(properties)
+                    size += propsBytes
                     Pair(size, VariableHeader(packetIdentifier, props))
                 }
             }
@@ -338,16 +307,6 @@ data class Subscription(
      */
     override val retainHandling: RetainHandling = SEND_RETAINED_MESSAGES_AT_TIME_OF_SUBSCRIBE,
 ) : ISubscription {
-    fun serialize(writeBuffer: WriteBuffer) {
-        writeBuffer.writeMqttUtf8String(topicFilter.toString())
-        val qosInt = maximumQos.integerValue
-        val nlShifted = (if (noLocal) 1 else 0).shl(2)
-        val rapShifted = (if (retainAsPublished) 1 else 0).shl(3)
-        val rH = retainHandling.value.toInt().shl(4)
-        val combinedByte = (qosInt + nlShifted + rapShifted + rH).toByte()
-        writeBuffer.writeByte(combinedByte)
-    }
-
     fun size() = topicFilter.toString().utf8Length() + UShort.SIZE_BYTES + Byte.SIZE_BYTES
 
     companion object {

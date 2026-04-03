@@ -21,6 +21,9 @@ import com.ditchoom.mqtt5.controlpacket.properties.SubscriptionIdentifier
 import com.ditchoom.mqtt5.controlpacket.properties.TopicAlias
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
 import com.ditchoom.mqtt5.controlpacket.properties.WillDelayInterval
+import com.ditchoom.mqtt5.controlpacket.properties.encodedSize
+import com.ditchoom.mqtt5.controlpacket.properties.encodeProperty
+import com.ditchoom.mqtt5.controlpacket.properties.MqttPropertyCodec
 import com.ditchoom.mqtt5.controlpacket.properties.readProperties
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -106,7 +109,7 @@ class PublishMessageTests {
         assertEquals(1, propertiesActual?.count() ?: 0, "properties")
         assertEquals(
             props.payloadFormatIndicator,
-            (propertiesActual?.first() as PayloadFormatIndicator).willMessageIsUtf8,
+            (propertiesActual?.first() as PayloadFormatIndicator).isUtf8,
         )
         buffer.resetForRead()
         val publish = ControlPacketV5.from(buffer) as PublishMessage
@@ -130,7 +133,7 @@ class PublishMessageTests {
         )
         val propertiesActual = buffer.readProperties()
         assertEquals(0, propertiesActual?.count() ?: 0, "properties")
-        assertNull((propertiesActual?.firstOrNull() as? PayloadFormatIndicator)?.willMessageIsUtf8)
+        assertNull((propertiesActual?.firstOrNull() as? PayloadFormatIndicator)?.isUtf8)
         buffer.resetForRead()
         val publish = ControlPacketV5.from(buffer) as PublishMessage
         assertFalse(publish.variable.properties.payloadFormatIndicator)
@@ -139,11 +142,11 @@ class PublishMessageTests {
     @Test
     fun payloadFormatIndicatorDuplicateThrowsProtocolError() {
         val obj1 = PayloadFormatIndicator(false)
-        val obj2 = obj1.copy()
+        val obj2 = obj1
         val buffer = BufferFactory.Default.allocate(5)
-        buffer.writeVariableByteInteger(obj1.size() + obj2.size())
-        obj1.write(buffer)
-        obj2.write(buffer)
+        buffer.writeVariableByteInteger(encodedSize(obj1) + encodedSize(obj2))
+        encodeProperty(buffer, obj1)
+        encodeProperty(buffer, obj2)
         buffer.resetForRead()
         try {
             VariableHeader.Properties.from(buffer.readProperties())
@@ -170,7 +173,7 @@ class PublishMessageTests {
         val propertiesActual = buffer.readProperties()
         assertEquals(1, propertiesActual?.count() ?: 0, "properties")
         assertEquals(
-            props.messageExpiryInterval,
+            props.messageExpiryInterval?.toUInt(),
             (propertiesActual?.firstOrNull() as? MessageExpiryInterval)?.seconds,
         )
         buffer.resetForRead()
@@ -180,12 +183,12 @@ class PublishMessageTests {
 
     @Test
     fun messageExpiryIntervalDuplicateThrowsProtocolError() {
-        val obj1 = MessageExpiryInterval(2)
-        val obj2 = obj1.copy()
+        val obj1 = MessageExpiryInterval(2u)
+        val obj2 = obj1
         val buffer = BufferFactory.Default.allocate(11)
-        buffer.writeVariableByteInteger(obj1.size() + obj2.size())
-        obj1.write(buffer)
-        obj2.write(buffer)
+        buffer.writeVariableByteInteger(encodedSize(obj1) + encodedSize(obj2))
+        encodeProperty(buffer, obj1)
+        encodeProperty(buffer, obj2)
         buffer.resetForRead()
         try {
             VariableHeader.Properties.from(buffer.readProperties())
@@ -211,7 +214,7 @@ class PublishMessageTests {
         )
         val propertiesActual = buffer.readProperties()
         assertEquals(1, propertiesActual?.count() ?: 0, "properties")
-        assertEquals(2, (propertiesActual?.firstOrNull() as? TopicAlias)?.value)
+        assertEquals(2.toUShort(), (propertiesActual?.firstOrNull() as? TopicAlias)?.value)
         buffer.resetForRead()
         val publish = ControlPacketV5.from(buffer) as PublishMessage
         assertEquals(expected, publish)
@@ -237,12 +240,12 @@ class PublishMessageTests {
 
     @Test
     fun topicAliasDuplicateThrowsProtocolError() {
-        val obj1 = TopicAlias(2)
-        val obj2 = obj1.copy()
+        val obj1 = TopicAlias(2.toUShort())
+        val obj2 = obj1
         val buffer = BufferFactory.Default.allocate(7)
-        buffer.writeVariableByteInteger(obj1.size() + obj2.size())
-        obj1.write(buffer)
-        obj2.write(buffer)
+        buffer.writeVariableByteInteger(encodedSize(obj1) + encodedSize(obj2))
+        encodeProperty(buffer, obj1)
+        encodeProperty(buffer, obj2)
         buffer.resetForRead()
         try {
             VariableHeader.Properties.from(buffer.readProperties())
@@ -284,12 +287,12 @@ class PublishMessageTests {
 
     @Test
     fun responseTopicDuplicateThrowsProtocolError() {
-        val obj1 = ResponseTopic(TopicName.fromOrThrow("t/as"))
-        val obj2 = obj1.copy()
+        val obj1 = ResponseTopic("t/as")
+        val obj2 = obj1
         val buffer = BufferFactory.Default.allocate(15)
-        buffer.writeVariableByteInteger(obj1.size() + obj2.size())
-        obj1.write(buffer)
-        obj2.write(buffer)
+        buffer.writeVariableByteInteger(encodedSize(obj1) + encodedSize(obj2))
+        encodeProperty(buffer, obj1)
+        encodeProperty(buffer, obj2)
         buffer.resetForRead()
         try {
             VariableHeader.Properties.from(buffer.readProperties())
@@ -338,12 +341,13 @@ class PublishMessageTests {
 
     @Test
     fun correlationDataDuplicateThrowsProtocolError() {
-        val obj1 = CorrelationData(yoyoBuffer)
-        val obj2 = CorrelationData(yoyoBuffer)
+        yoyoBuffer.position(0)
+        val obj1 = CorrelationData(yoyoBuffer.remaining().toUShort(), yoyoBuffer)
+        val obj2 = CorrelationData(yoyoBuffer.remaining().toUShort(), yoyoBuffer)
         val buffer = BufferFactory.Default.allocate(15)
-        buffer.writeVariableByteInteger(obj1.size() + obj2.size())
-        obj1.write(buffer)
-        obj2.write(buffer)
+        buffer.writeVariableByteInteger(encodedSize(obj1) + encodedSize(obj2))
+        encodeProperty(buffer, obj1)
+        encodeProperty(buffer, obj2)
         buffer.resetForRead()
         try {
             VariableHeader.Properties.from(buffer.readProperties())
@@ -395,9 +399,9 @@ class PublishMessageTests {
     fun subscriptionIdentifierZeroThrowsProtocolError() {
         val obj1 = SubscriptionIdentifier(0)
         val buffer = BufferFactory.Default.allocate(6)
-        val size = obj1.size()
+        val size = encodedSize(obj1)
         buffer.writeVariableByteInteger(size)
-        obj1.write(buffer)
+        encodeProperty(buffer, obj1)
         buffer.resetForRead()
         assertFailsWith<ProtocolError> { VariableHeader.Properties.from(buffer.readProperties()) }
     }
@@ -421,18 +425,18 @@ class PublishMessageTests {
     @Test
     fun contentTypeDuplicateThrowsProtocolError() {
         val obj1 = ContentType("t/as")
-        val obj2 = obj1.copy()
+        val obj2 = obj1
         val buffer = BufferFactory.Default.allocate(15)
-        buffer.writeVariableByteInteger(obj1.size() + obj2.size())
-        obj1.write(buffer)
-        obj2.write(buffer)
+        buffer.writeVariableByteInteger(encodedSize(obj1) + encodedSize(obj2))
+        encodeProperty(buffer, obj1)
+        encodeProperty(buffer, obj2)
         buffer.resetForRead()
         assertFailsWith<ProtocolError> { VariableHeader.Properties.from(buffer.readProperties()) }
     }
 
     @Test
     fun invalidPropertyOnVariableHeaderThrowsMalformedPacketException() {
-        val method = WillDelayInterval(3)
+        val method = WillDelayInterval(3u)
         try {
             VariableHeader.Properties.from(listOf(method, method))
             fail()

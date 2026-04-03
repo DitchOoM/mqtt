@@ -94,13 +94,6 @@ data class ConnectionRequest(
 
     override fun encodeBody(writeBuffer: WriteBuffer) {
         val vh = variableHeader
-        // If willFlag=true but willTopic is null, this is an invalid state (caught by validate()).
-        // Fall back to legacy encoding to preserve byte compatibility for such edge cases.
-        if (vh.willFlag && payload.willTopic == null) {
-            vh.serialize(writeBuffer)
-            payload.serialize(writeBuffer)
-            return
-        }
         val usernameFlag = if (vh.hasUserName) 0b10000000 else 0
         val passwordFlag = if (vh.hasPassword) 0b1000000 else 0
         val wRetain = if (vh.willRetain) 0b100000 else 0
@@ -408,25 +401,6 @@ data class ConnectionRequest(
             return null
         }
 
-        /**
-         * The Variable Header for the CONNECT Packet contains the following fields in this order: Protocol Name,
-         * Protocol Level, Connect Flags, Keep Alive, and Properties
-         */
-        fun serialize(writeBuffer: WriteBuffer) {
-            val usernameFlag = if (hasUserName) 0b10000000 else 0
-            val passwordFlag = if (hasPassword) 0b1000000 else 0
-            val wRetain = if (willRetain) 0b100000 else 0
-            val qos = willQos.integerValue.toInt().shl(3)
-            val wFlag = if (willFlag) 0b100 else 0
-            val cleanStart = if (cleanSession) 0b10 else 0
-            val flags =
-                (usernameFlag or passwordFlag or wRetain or qos or wFlag or cleanStart).toByte()
-            writeBuffer.writeMqttUtf8String(protocolName)
-            writeBuffer.writeUByte(protocolLevel.toUByte())
-            writeBuffer.writeByte(flags)
-            writeBuffer.writeUShort(keepAliveSeconds.toUShort())
-        }
-
         fun size() = protocolName.utf8Length() + 6
 
         companion object {
@@ -562,23 +536,6 @@ data class ConnectionRequest(
                 size += 2 + password.utf8Length()
             }
             return size
-        }
-
-        fun serialize(writeBuffer: WriteBuffer) {
-            writeBuffer.writeMqttUtf8String(clientId)
-            if (willTopic != null) {
-                writeBuffer.writeMqttUtf8String(willTopic.toString())
-            }
-            if (willPayload != null) {
-                writeBuffer.writeUShort(willPayload.remaining().toUShort())
-                writeBuffer.write(willPayload)
-            }
-            if (userName != null) {
-                writeBuffer.writeMqttUtf8String(userName)
-            }
-            if (password != null) {
-                writeBuffer.writeMqttUtf8String(password)
-            }
         }
 
         companion object {

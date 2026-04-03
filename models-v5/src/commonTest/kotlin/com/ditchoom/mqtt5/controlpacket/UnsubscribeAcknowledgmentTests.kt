@@ -16,6 +16,9 @@ import com.ditchoom.mqtt.controlpacket.format.ReasonCode.UNSPECIFIED_ERROR
 import com.ditchoom.mqtt5.controlpacket.UnsubscribeAcknowledgment.VariableHeader
 import com.ditchoom.mqtt5.controlpacket.properties.ReasonString
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
+import com.ditchoom.mqtt5.controlpacket.properties.encodedSize
+import com.ditchoom.mqtt5.controlpacket.properties.encodeProperty
+import com.ditchoom.mqtt5.controlpacket.properties.MqttPropertyCodec
 import com.ditchoom.mqtt5.controlpacket.properties.readProperties
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -215,11 +218,11 @@ class UnsubscribeAcknowledgmentTests {
     @Test
     fun reasonStringMultipleTimesThrowsProtocolError() {
         val obj1 = ReasonString("yolo")
-        val obj2 = obj1.copy()
+        val obj2 = obj1
         val buffer = BufferFactory.Default.allocate(15)
-        buffer.writeVariableByteInteger(obj1.size() + obj2.size())
-        obj1.write(buffer)
-        obj2.write(buffer)
+        buffer.writeVariableByteInteger(encodedSize(obj1) + encodedSize(obj2))
+        encodeProperty(buffer, obj1)
+        encodeProperty(buffer, obj2)
         buffer.resetForRead()
         assertFailsWith<ProtocolError> { VariableHeader.Properties.from(buffer.readProperties()) }
     }

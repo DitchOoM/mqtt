@@ -13,6 +13,9 @@ import com.ditchoom.mqtt.controlpacket.validateMqttUTF8StringOrThrow
 import com.ditchoom.mqtt5.controlpacket.SubscribeRequest.VariableHeader
 import com.ditchoom.mqtt5.controlpacket.properties.ReasonString
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
+import com.ditchoom.mqtt5.controlpacket.properties.encodedSize
+import com.ditchoom.mqtt5.controlpacket.properties.encodeProperty
+import com.ditchoom.mqtt5.controlpacket.properties.MqttPropertyCodec
 import com.ditchoom.mqtt5.controlpacket.properties.readProperties
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -139,9 +142,20 @@ class SubscribeRequestTest {
     @Test
     fun subscriptionPayloadOptions() {
         val subscription = Subscription.from("a/b", AT_LEAST_ONCE)
-        val buffer = BufferFactory.Default.allocate(6)
-        subscription.serialize(buffer)
+        val packet = SubscribeRequest(
+            VariableHeader(packetIdentifier.toInt()),
+            setOf(subscription),
+        )
+        val buffer = BufferFactory.Default.allocate(packet.packetSize())
+        packet.serialize(buffer)
         buffer.resetForRead()
+        // skip fixed header (1 byte control + 1 byte remaining length)
+        buffer.readUnsignedByte()
+        buffer.readVariableByteInteger()
+        // skip variable header: 2 bytes packet ID + 1 byte property length (0)
+        buffer.readUnsignedShort()
+        buffer.readUnsignedByte()
+        // now read subscription payload
         assertEquals("a/b", buffer.readMqttUtf8StringNotValidatedSized().second)
         assertEquals(0b000001, buffer.readByte())
     }
@@ -170,11 +184,11 @@ class SubscribeRequestTest {
     @Test
     fun reasonStringMultipleTimesThrowsProtocolError() {
         val obj1 = ReasonString("yolo")
-        val obj2 = obj1.copy()
+        val obj2 = obj1
         val buffer = BufferFactory.Default.allocate(15)
-        buffer.writeVariableByteInteger(obj1.size() + obj2.size())
-        obj1.write(buffer)
-        obj2.write(buffer)
+        buffer.writeVariableByteInteger(encodedSize(obj1) + encodedSize(obj2))
+        encodeProperty(buffer, obj1)
+        encodeProperty(buffer, obj2)
         buffer.resetForRead()
         assertFailsWith<ProtocolError> { VariableHeader.Properties.from(buffer.readProperties()) }
     }

@@ -20,6 +20,9 @@ import com.ditchoom.mqtt5.controlpacket.properties.AuthenticationMethod
 import com.ditchoom.mqtt5.controlpacket.properties.ReasonString
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
 import com.ditchoom.mqtt5.controlpacket.properties.WillDelayInterval
+import com.ditchoom.mqtt5.controlpacket.properties.encodedSize
+import com.ditchoom.mqtt5.controlpacket.properties.encodeProperty
+import com.ditchoom.mqtt5.controlpacket.properties.MqttPropertyCodec
 import com.ditchoom.mqtt5.controlpacket.properties.readProperties
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -58,11 +61,16 @@ class AuthenticationExchangeTests {
 
     @Test
     fun serializeDeserializeVariableHeader() {
-        val buffer = BufferFactory.Default.allocate(16)
         val variableHeader =
             VariableHeader(SUCCESS, Properties(Authentication("hello", buffer123)))
-        variableHeader.serialize(buffer)
+        val packet = AuthenticationExchange(variableHeader)
+        val buffer = BufferFactory.Default.allocate(packet.packetSize())
+        packet.serialize(buffer)
         buffer.resetForRead()
+        // skip fixed header (1 byte control packet type + variable byte remaining length)
+        buffer.readUnsignedByte() // control byte
+        buffer.readVariableByteInteger() // remaining length
+        // now read the variable header
         assertEquals(SUCCESS.byte, buffer.readUnsignedByte(), "reason code")
         assertEquals(14, buffer.readVariableByteInteger(), "property length")
         assertEquals(0x15, buffer.readVariableByteInteger(), "property identifier auth method")
@@ -133,12 +141,12 @@ class AuthenticationExchangeTests {
     @Test
     fun reasonStringMultipleTimesThrowsProtocolError() {
         val obj1 = ReasonString("yolo")
-        val obj2 = obj1.copy()
+        val obj2 = obj1
         val buffer = BufferFactory.Default.allocate(20)
-        val size = obj1.size() + obj2.size()
+        val size = encodedSize(obj1) + encodedSize(obj2)
         buffer.writeVariableByteInteger(size)
-        obj1.write(buffer)
-        obj2.write(buffer)
+        encodeProperty(buffer, obj1)
+        encodeProperty(buffer, obj2)
         buffer.resetForRead()
         try {
             Properties.from(buffer.readProperties())
@@ -215,12 +223,12 @@ class AuthenticationExchangeTests {
     @Test
     fun authMethodMultipleTimesThrowsProtocolError() {
         val obj1 = AuthenticationMethod("yolo")
-        val obj2 = obj1.copy()
-        val size = obj1.size() + obj2.size()
+        val obj2 = obj1
+        val size = encodedSize(obj1) + encodedSize(obj2)
         val buffer1 = BufferFactory.Default.allocate(size + variableByteSize(size))
         buffer1.writeVariableByteInteger(size)
-        obj1.write(buffer1)
-        obj2.write(buffer1)
+        encodeProperty(buffer1, obj1)
+        encodeProperty(buffer1, obj2)
         buffer1.resetForRead()
         assertFailsWith<ProtocolError>("should throw error because auth method is added twice") {
             Properties.from(buffer1.readProperties())
@@ -230,17 +238,17 @@ class AuthenticationExchangeTests {
     @Test
     fun authDataMultipleTimesThrowsProtocolError() {
         val method = AuthenticationMethod("yolo")
-        val authData = AuthenticationData(buffer123)
-        val methodSize = method.size()
-        val authDataSize = authData.size()
+        val authData = AuthenticationData(buffer123.remaining().toUShort(), buffer123)
+        val methodSize = encodedSize(method)
+        val authDataSize = encodedSize(authData)
         val size = methodSize + authDataSize + authDataSize + 1
         val buffer = BufferFactory.Default.allocate(size)
         buffer.writeVariableByteInteger(size - 1)
-        method.write(buffer)
-        authData.write(buffer)
+        encodeProperty(buffer, method)
+        encodeProperty(buffer, authData)
 
         val obj2 = authData.copy()
-        obj2.write(buffer)
+        encodeProperty(buffer, obj2)
         buffer.resetForRead()
         assertFailsWith<ProtocolError>("should throw error because auth data is added twice") {
             Properties.from(buffer.readProperties())
@@ -259,7 +267,7 @@ class AuthenticationExchangeTests {
     @Test
     fun invalidPropertyThrowsMalformedException() {
         try {
-            Properties.from(setOf(WillDelayInterval(2)))
+            Properties.from(setOf(WillDelayInterval(2u)))
             fail()
         } catch (e: MalformedPacketException) {
         }

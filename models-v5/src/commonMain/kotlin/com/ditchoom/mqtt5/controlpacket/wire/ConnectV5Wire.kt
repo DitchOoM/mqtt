@@ -5,7 +5,7 @@ import com.ditchoom.buffer.codec.annotations.Payload
 import com.ditchoom.buffer.codec.annotations.ProtocolMessage
 import com.ditchoom.buffer.codec.annotations.WhenTrue
 import com.ditchoom.mqtt.codec.annotations.MqttProperties
-import com.ditchoom.mqtt5.controlpacket.properties.Property
+import com.ditchoom.mqtt5.controlpacket.properties.MqttProperty
 import kotlin.jvm.JvmInline
 
 @JvmInline
@@ -27,9 +27,9 @@ data class ConnectV5Wire<@Payload WP>(
     val protocolLevel: UByte,
     val connectFlags: ConnectV5FlagsValue,
     val keepAlive: UShort,
-    @MqttProperties val properties: Collection<Property>?,
+    @MqttProperties val properties: Collection<MqttProperty>?,
     @LengthPrefixed val clientId: String,
-    @WhenTrue("connectFlags.willFlag") @MqttProperties val willProperties: Collection<Property>? = null,
+    @WhenTrue("connectFlags.willFlag") @MqttProperties val willProperties: Collection<MqttProperty>? = null,
     @WhenTrue("connectFlags.willFlag") @LengthPrefixed val willTopic: String? = null,
     @WhenTrue("connectFlags.willFlag") @LengthPrefixed val willPayload: WP? = null,
     @WhenTrue("connectFlags.usernameFlag") @LengthPrefixed val username: String? = null,

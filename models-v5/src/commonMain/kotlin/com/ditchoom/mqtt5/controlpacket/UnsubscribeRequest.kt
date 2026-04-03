@@ -3,19 +3,17 @@ package com.ditchoom.mqtt5.controlpacket
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
 import com.ditchoom.buffer.utf8Length
-import com.ditchoom.mqtt.MalformedPacketException
 import com.ditchoom.mqtt.ProtocolError
-import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readMqttUtf8StringNotValidatedSized
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.variableByteSize
-import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.writeMqttUtf8String
-import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.writeVariableByteInteger
 import com.ditchoom.mqtt.controlpacket.IUnsubscribeRequest
 import com.ditchoom.mqtt.controlpacket.NO_PACKET_ID
 import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
-import com.ditchoom.mqtt5.controlpacket.properties.Property
+import com.ditchoom.mqtt5.controlpacket.properties.MqttProperty
+import com.ditchoom.mqtt5.controlpacket.properties.PropertyExtractor
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
-import com.ditchoom.mqtt5.controlpacket.properties.readPropertiesSized
+import com.ditchoom.mqtt5.controlpacket.properties.mqttPropertiesSize
+import com.ditchoom.mqtt5.controlpacket.properties.readProperties
 import com.ditchoom.mqtt5.controlpacket.wire.TopicFilterV5Wire
 import com.ditchoom.mqtt5.controlpacket.wire.UnsubscribeV5Wire
 import com.ditchoom.mqtt5.controlpacket.wire.UnsubscribeV5WireCodec
@@ -53,8 +51,6 @@ data class UnsubscribeRequest(
     override fun copyWithNewPacketIdentifier(packetIdentifier: Int): IUnsubscribeRequest =
         copy(variable = variable.copy(packetIdentifier = packetIdentifier))
 
-    override fun variableHeader(writeBuffer: WriteBuffer) = variable.serialize(writeBuffer)
-
     override fun encodeBody(writeBuffer: WriteBuffer) {
         UnsubscribeV5WireCodec.encode(
             writeBuffer,
@@ -73,8 +69,6 @@ data class UnsubscribeRequest(
         return variableSize + payloadSize
     }
 
-    override fun payload(writeBuffer: WriteBuffer) = topics.forEach { writeBuffer.writeMqttUtf8String(it.toString()) }
-
     override val packetIdentifier = variable.packetIdentifier
 
     /**
@@ -90,11 +84,6 @@ data class UnsubscribeRequest(
         val properties: Properties = Properties(),
     ) {
         fun size() = UShort.SIZE_BYTES + variableByteSize(properties.size()) + properties.size()
-
-        fun serialize(writeBuffer: WriteBuffer) {
-            writeBuffer.writeUShort(packetIdentifier.toUShort())
-            properties.serialize(writeBuffer)
-        }
 
         /**
          * 3.10.2.1 UNSUBSCRIBE Properties
@@ -119,7 +108,7 @@ data class UnsubscribeRequest(
             val userProperty: List<Pair<String, String>> = emptyList(),
         ) {
             val props by lazy(LazyThreadSafetyMode.NONE) {
-                val props = ArrayList<Property>(userProperty.size)
+                val props = ArrayList<MqttProperty>(userProperty.size)
                 if (userProperty.isNotEmpty()) {
                     for (keyValueProperty in userProperty) {
                         val key = keyValueProperty.first
@@ -130,26 +119,13 @@ data class UnsubscribeRequest(
                 props
             }
 
-            fun size(): Int {
-                var size = 0
-                props.forEach { size += it.size() }
-                return size
-            }
-
-            fun serialize(buffer: WriteBuffer) {
-                buffer.writeVariableByteInteger(size())
-                props.forEach { it.write(buffer) }
-            }
+            fun size(): Int = mqttPropertiesSize(props)
 
             companion object {
-                fun from(keyValuePairs: Collection<Property>?): Properties {
-                    val userProperty = mutableListOf<Pair<String, String>>()
-                    keyValuePairs?.forEach {
-                        when (it) {
-                            is UserProperty -> userProperty += Pair(it.key, it.value)
-                            else -> throw MalformedPacketException("Invalid Unsubscribe Request property type found in MQTT properties $it")
-                        }
-                    }
+                fun from(keyValuePairs: Collection<MqttProperty>?): Properties {
+                    val p = PropertyExtractor(keyValuePairs, "UNSUBSCRIBE")
+                    val userProperty = p.list<UserProperty>().map { it.key to it.value }
+                    p.rejectUnknown()
                     return Properties(userProperty)
                 }
             }
@@ -158,10 +134,12 @@ data class UnsubscribeRequest(
         companion object {
             fun from(buffer: ReadBuffer): Pair<Int, VariableHeader> {
                 val packetIdentifier = buffer.readUnsignedShort().toInt()
-                val sized = buffer.readPropertiesSized()
-                val props = Properties.from(sized.second)
+                val startPos = buffer.position()
+                val properties = buffer.readProperties()
+                val propsBytes = buffer.position() - startPos
+                val props = Properties.from(properties)
                 return Pair(
-                    sized.first + variableByteSize(sized.first) + UShort.SIZE_BYTES,
+                    propsBytes + UShort.SIZE_BYTES,
                     VariableHeader(packetIdentifier, props),
                 )
             }

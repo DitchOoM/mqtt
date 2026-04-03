@@ -3,17 +3,17 @@ package com.ditchoom.mqtt5.controlpacket
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
 import com.ditchoom.mqtt.MalformedPacketException
-import com.ditchoom.mqtt.ProtocolError
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.variableByteSize
-import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.writeVariableByteInteger
 import com.ditchoom.mqtt.controlpacket.IDisconnectNotification
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
-import com.ditchoom.mqtt5.controlpacket.properties.Property
+import com.ditchoom.mqtt5.controlpacket.properties.MqttProperty
+import com.ditchoom.mqtt5.controlpacket.properties.PropertyExtractor
 import com.ditchoom.mqtt5.controlpacket.properties.ReasonString
 import com.ditchoom.mqtt5.controlpacket.properties.ServerReference
 import com.ditchoom.mqtt5.controlpacket.properties.SessionExpiryInterval
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
+import com.ditchoom.mqtt5.controlpacket.properties.mqttPropertiesSize
 import com.ditchoom.mqtt5.controlpacket.wire.DisconnectV5Wire
 import com.ditchoom.mqtt5.controlpacket.wire.DisconnectV5WireCodec
 
@@ -37,8 +37,6 @@ data class DisconnectNotification(
     override val controlPacketValue: Byte get() = 14
     override val direction: DirectionOfFlow get() = DirectionOfFlow.BIDIRECTIONAL
     override fun packetSize(): Int = 2 + remainingLength()
-
-    override fun variableHeader(writeBuffer: WriteBuffer) = variable.serialize(writeBuffer)
 
     override fun encodeBody(writeBuffer: WriteBuffer) {
         DisconnectV5WireCodec.encode(
@@ -64,11 +62,6 @@ data class DisconnectNotification(
         fun size(): Int {
             val propertiesSize = properties.size()
             return UByte.SIZE_BYTES + variableByteSize(propertiesSize) + propertiesSize
-        }
-
-        fun serialize(buffer: WriteBuffer) {
-            buffer.writeUByte(reasonCode.byte)
-            properties.serialize(buffer)
         }
 
         data class Properties(
@@ -132,9 +125,9 @@ data class DisconnectNotification(
             val serverReference: String? = null,
         ) {
             val props by lazy(LazyThreadSafetyMode.NONE) {
-                val list = ArrayList<Property>(3 + userProperty.count())
+                val list = ArrayList<MqttProperty>(3 + userProperty.count())
                 if (sessionExpiryIntervalSeconds != null) {
-                    list += SessionExpiryInterval(sessionExpiryIntervalSeconds)
+                    list += SessionExpiryInterval(sessionExpiryIntervalSeconds.toUInt())
                 }
                 if (reasonString != null) {
                     list += ReasonString(reasonString)
@@ -152,59 +145,16 @@ data class DisconnectNotification(
                 list
             }
 
-            fun size(): Int {
-                var size = 0
-                props.forEach { size += it.size() }
-                return size
-            }
-
-            fun serialize(buffer: WriteBuffer) {
-                buffer.writeVariableByteInteger(size())
-                props.forEach { it.write(buffer) }
-            }
+            fun size(): Int = mqttPropertiesSize(props)
 
             companion object {
-                fun from(keyValuePairs: Collection<Property>?): Properties {
-                    var sessionExpiryIntervalSeconds: ULong? = null
-                    var reasonString: String? = null
-                    val userProperty = mutableListOf<Pair<String, String>>()
-                    var serverReference: String? = null
-                    keyValuePairs?.forEach {
-                        when (it) {
-                            is SessionExpiryInterval -> {
-                                if (sessionExpiryIntervalSeconds != null) {
-                                    throw ProtocolError(
-                                        "Session Expiry Interval added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477382",
-                                    )
-                                }
-                                sessionExpiryIntervalSeconds = it.seconds
-                            }
-
-                            is ReasonString -> {
-                                if (reasonString != null) {
-                                    throw ProtocolError(
-                                        "Reason String added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477476",
-                                    )
-                                }
-                                reasonString = it.diagnosticInfoDontParse
-                            }
-
-                            is UserProperty -> userProperty.add(Pair(it.key, it.value))
-                            is ServerReference -> {
-                                if (serverReference != null) {
-                                    throw ProtocolError(
-                                        "Server Reference added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477396",
-                                    )
-                                }
-                                serverReference = it.otherServer
-                            }
-
-                            else -> throw MalformedPacketException("Invalid UnsubscribeAck property type found in MQTT properties $it")
-                        }
-                    }
+                fun from(keyValuePairs: Collection<MqttProperty>?): Properties {
+                    val p = PropertyExtractor(keyValuePairs, "DISCONNECT")
+                    val sessionExpiryIntervalSeconds = p.single<SessionExpiryInterval>()?.seconds?.toULong()
+                    val reasonString = p.single<ReasonString>()?.value
+                    val userProperty = p.list<UserProperty>().map { it.key to it.value }
+                    val serverReference = p.single<ServerReference>()?.value
+                    p.rejectUnknown()
                     return Properties(
                         sessionExpiryIntervalSeconds,
                         reasonString,

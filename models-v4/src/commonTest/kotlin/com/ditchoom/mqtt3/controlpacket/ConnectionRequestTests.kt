@@ -563,9 +563,16 @@ class ConnectionRequestTests {
 
     @Test
     fun variableHeaderConnectFlagsByte8HasWillFlag() {
-        val connectionRequest =
-            ConnectionRequest(VariableHeader(willQos = AT_MOST_ONCE, willFlag = true))
-        val buffer = BufferFactory.Default.allocate(14)
+        val willPayload = BufferFactory.Default.allocate(1)
+        willPayload.writeByte(0x00)
+        willPayload.resetForRead()
+        val connectionRequest = ConnectionRequest(
+            clientId = "",
+            willTopic = "t",
+            willPayload = willPayload,
+            willQos = AT_MOST_ONCE,
+        )
+        val buffer = BufferFactory.Default.allocate(connectionRequest.packetSize())
         connectionRequest.serialize(buffer)
         buffer.resetForRead()
         buffer.readByte() // skip the first byte
@@ -576,7 +583,7 @@ class ConnectionRequestTests {
         buffer.readByte() // 'Q' or 0b01010001
         buffer.readByte() // 'T' or 0b01010100
         buffer.readByte() // 'T' or 0b01010100
-        buffer.readByte() // 5 or 0b00000101
+        buffer.readByte() // 4 or 0b00000100
         val byte = buffer.readUnsignedByte()
         val connectFlagsPackedInByte = byte.toInt()
         val usernameFlag = connectFlagsPackedInByte.shr(7) == 1
@@ -828,5 +835,60 @@ class ConnectionRequestTests {
             fail()
         } catch (e: MqttWarning) {
         }
+    }
+
+    // ── Impossible state tests: will flag edge cases ────────────────────────
+
+    @Test
+    fun willFlagTrueNullWillTopicValidationWarning() {
+        val request = ConnectionRequest(
+            VariableHeader(willFlag = true),
+            ConnectionRequest.Payload(clientId = "test"),
+        )
+        val warning = request.validate()
+        assertNotNull(warning, "willFlag=true with null willTopic should produce a warning")
+    }
+
+    @Test
+    fun willFlagFalseIgnoresWillFieldsInEncoding() {
+        val request = ConnectionRequest(
+            clientId = "test-client",
+            keepAliveSeconds = 60,
+            cleanSession = true,
+        )
+        val buffer = BufferFactory.Default.allocate(request.packetSize())
+        request.serialize(buffer)
+        buffer.resetForRead()
+        val decoded = ControlPacketV4.from(buffer) as ConnectionRequest
+        assertFalse(decoded.willFlag)
+        assertEquals(null, decoded.willTopic)
+        assertEquals(null, decoded.willPayload)
+    }
+
+    @Test
+    fun willMessageFullRoundTrip() {
+        val willPayload = "will-data".toByteArray()
+        val willBuf = BufferFactory.Default.allocate(willPayload.size)
+        willPayload.forEach { willBuf.writeByte(it) }
+        willBuf.resetForRead()
+        val request = ConnectionRequest(
+            clientId = "test-client",
+            keepAliveSeconds = 60,
+            cleanSession = false,
+            willTopic = "will/topic",
+            willPayload = willBuf,
+            willRetain = true,
+            willQos = QualityOfService.AT_LEAST_ONCE,
+        )
+        assertNotNull(request.validateOrNull(), "valid will message should pass validation")
+        val buffer = BufferFactory.Default.allocate(request.packetSize())
+        request.serialize(buffer)
+        buffer.resetForRead()
+        val decoded = ControlPacketV4.from(buffer) as ConnectionRequest
+        assertEquals("test-client", decoded.clientIdentifier)
+        assertTrue(decoded.willFlag)
+        assertTrue(decoded.willRetain)
+        assertEquals(QualityOfService.AT_LEAST_ONCE, decoded.willQos)
+        assertEquals("will/topic", decoded.willTopic.toString())
     }
 }

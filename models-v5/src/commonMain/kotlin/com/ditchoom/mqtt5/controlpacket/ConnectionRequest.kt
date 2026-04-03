@@ -9,8 +9,6 @@ import com.ditchoom.mqtt.MqttWarning
 import com.ditchoom.mqtt.ProtocolError
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readMqttUtf8StringNotValidatedSized
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.variableByteSize
-import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.writeMqttUtf8String
-import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.writeVariableByteInteger
 import com.ditchoom.mqtt.controlpacket.IConnectionRequest
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicName
@@ -23,8 +21,9 @@ import com.ditchoom.mqtt5.controlpacket.properties.ContentType
 import com.ditchoom.mqtt5.controlpacket.properties.CorrelationData
 import com.ditchoom.mqtt5.controlpacket.properties.MaximumPacketSize
 import com.ditchoom.mqtt5.controlpacket.properties.MessageExpiryInterval
+import com.ditchoom.mqtt5.controlpacket.properties.MqttProperty
 import com.ditchoom.mqtt5.controlpacket.properties.PayloadFormatIndicator
-import com.ditchoom.mqtt5.controlpacket.properties.Property
+import com.ditchoom.mqtt5.controlpacket.properties.PropertyExtractor
 import com.ditchoom.mqtt5.controlpacket.properties.ReceiveMaximum
 import com.ditchoom.mqtt5.controlpacket.properties.RequestProblemInformation
 import com.ditchoom.mqtt5.controlpacket.properties.RequestResponseInformation
@@ -33,6 +32,7 @@ import com.ditchoom.mqtt5.controlpacket.properties.SessionExpiryInterval
 import com.ditchoom.mqtt5.controlpacket.properties.TopicAliasMaximum
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
 import com.ditchoom.mqtt5.controlpacket.properties.WillDelayInterval
+import com.ditchoom.mqtt5.controlpacket.properties.mqttPropertiesSize
 import com.ditchoom.mqtt5.controlpacket.properties.readProperties
 import com.ditchoom.mqtt5.controlpacket.wire.ConnectV5FlagsValue
 import com.ditchoom.mqtt5.controlpacket.wire.ConnectV5Wire
@@ -142,16 +142,8 @@ data class ConnectionRequest(
     override val clientIdentifier = payload.clientId
     override val keepAliveTimeoutSeconds: UShort = variableHeader.keepAliveSeconds.toUShort()
 
-    override fun variableHeader(writeBuffer: WriteBuffer) = variableHeader.serialize(writeBuffer)
-
     override fun encodeBody(writeBuffer: WriteBuffer) {
         val vh = variableHeader
-        // If willFlag=true but required will fields are null, fall back to legacy encoding
-        if (vh.willFlag && (payload.willTopic == null || payload.willPayload == null || payload.willProperties == null)) {
-            vh.serialize(writeBuffer)
-            payload.serialize(writeBuffer)
-            return
-        }
         val usernameFlag = if (vh.hasUserName) 0b10000000 else 0
         val passwordFlag = if (vh.hasPassword) 0b1000000 else 0
         val wRetain = if (vh.willRetain) 0b100000 else 0
@@ -201,8 +193,6 @@ data class ConnectionRequest(
     override val willQos: QualityOfService = variableHeader.willQos
     override val willRetain: Boolean = variableHeader.willRetain
     override val willTopic: TopicName? = payload.willTopic
-
-    override fun payload(writeBuffer: WriteBuffer) = payload.serialize(writeBuffer)
 
     override fun validate(): MqttWarning? {
         if (variableHeader.willFlag &&
@@ -710,18 +700,18 @@ data class ConnectionRequest(
 
             val props by lazy(LazyThreadSafetyMode.NONE) {
                 val userPropertyCount = userProperty.count()
-                val list = ArrayList<Property>(8 + userPropertyCount)
+                val list = ArrayList<MqttProperty>(8 + userPropertyCount)
                 if (sessionExpiryIntervalSeconds != null) {
-                    list += SessionExpiryInterval(sessionExpiryIntervalSeconds)
+                    list += SessionExpiryInterval(sessionExpiryIntervalSeconds.toUInt())
                 }
                 if (receiveMaximum != null) {
-                    list += ReceiveMaximum(receiveMaximum)
+                    list += ReceiveMaximum(receiveMaximum.toUShort())
                 }
                 if (maximumPacketSize != null) {
-                    list += MaximumPacketSize(maximumPacketSize)
+                    list += MaximumPacketSize(maximumPacketSize.toUInt())
                 }
                 if (topicAliasMaximum != null) {
-                    list += TopicAliasMaximum(topicAliasMaximum)
+                    list += TopicAliasMaximum(topicAliasMaximum.toUShort())
                 }
                 if (requestResponseInformation != null) {
                     list += RequestResponseInformation(requestResponseInformation)
@@ -738,141 +728,46 @@ data class ConnectionRequest(
                 }
                 if (authentication != null) {
                     list += AuthenticationMethod(authentication.method)
-                    list += AuthenticationData(authentication.data)
+                    authentication.data.position(0)
+                    list += AuthenticationData(authentication.data.remaining().toUShort(), authentication.data)
                 }
                 list
             }
 
-            fun size(): Int {
-                var size = 0
-                props.forEach { size += it.size() }
-                return size
-            }
-
-            fun serialize(writeBuffer: WriteBuffer) {
-                writeBuffer.writeVariableByteInteger(size())
-                props.forEach { it.write(writeBuffer) }
-            }
+            fun size(): Int = mqttPropertiesSize(props)
 
             companion object {
-                fun from(keyValuePairs: Collection<Property>?): Properties {
-                    var sessionExpiryIntervalSeconds: ULong? = null
-                    var receiveMaximum: Int? = null
-                    var maximumPacketSize: ULong? = null
-                    var topicAliasMaximum: Int? = null
-                    var requestResponseInformation: Boolean? = null
-                    var requestProblemInformation: Boolean? = null
-                    val userProperty = mutableListOf<Pair<String, String>>()
-                    var authenticationMethod: String? = null
-                    var authenticationData: ReadBuffer? = null
-                    keyValuePairs?.forEach {
-                        when (it) {
-                            is SessionExpiryInterval -> {
-                                if (sessionExpiryIntervalSeconds != null) {
-                                    throw ProtocolError(
-                                        "Session Expiry Interval added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477348",
-                                    )
-                                }
-                                sessionExpiryIntervalSeconds = it.seconds
-                            }
-
-                            is ReceiveMaximum -> {
-                                if (receiveMaximum != null) {
-                                    throw ProtocolError(
-                                        "Receive Maximum added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477349",
-                                    )
-                                }
-                                if (it.maxQos1Or2ConcurrentMessages == 0) {
-                                    throw ProtocolError(
-                                        "Receive Maximum cannot be set to 0 see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477349",
-                                    )
-                                }
-                                receiveMaximum = it.maxQos1Or2ConcurrentMessages
-                            }
-
-                            is MaximumPacketSize -> {
-                                if (maximumPacketSize != null) {
-                                    throw ProtocolError(
-                                        "Maximum Packet Size added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477350",
-                                    )
-                                }
-                                if (it.packetSizeLimitationBytes == 0uL) {
-                                    throw ProtocolError(
-                                        "Maximum Packet Size cannot be set to 0 see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477350",
-                                    )
-                                }
-                                maximumPacketSize = it.packetSizeLimitationBytes
-                            }
-
-                            is TopicAliasMaximum -> {
-                                if (topicAliasMaximum != null) {
-                                    throw ProtocolError(
-                                        "Topic Alias Maximum added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477351",
-                                    )
-                                }
-                                topicAliasMaximum = it.highestValueSupported
-                            }
-
-                            is RequestResponseInformation -> {
-                                if (requestResponseInformation != null) {
-                                    throw ProtocolError(
-                                        "Request Response Information added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477352",
-                                    )
-                                }
-                                requestResponseInformation = it.requestServerToReturnInfoInConnack
-                            }
-
-                            is RequestProblemInformation -> {
-                                if (requestProblemInformation != null) {
-                                    throw ProtocolError(
-                                        "Request Problem Information added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477353",
-                                    )
-                                }
-                                requestProblemInformation =
-                                    it.reasonStringOrUserPropertiesAreSentInFailures
-                            }
-
-                            is UserProperty -> userProperty.add(Pair(it.key, it.value))
-                            is AuthenticationMethod -> {
-                                if (authenticationMethod != null) {
-                                    throw ProtocolError(
-                                        "Authentication Method added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477355",
-                                    )
-                                }
-                                authenticationMethod = it.value
-                            }
-
-                            is AuthenticationData -> {
-                                if (authenticationData != null) {
-                                    throw ProtocolError(
-                                        "Authentication Data added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477356",
-                                    )
-                                }
-                                authenticationData = it.data
-                            }
-
-                            else -> throw MalformedPacketException("Invalid CONNECT property type found in MQTT payload $it")
+                fun from(keyValuePairs: Collection<MqttProperty>?): Properties {
+                    val p = PropertyExtractor(keyValuePairs, "CONNECT")
+                    val sessionExpiryIntervalSeconds = p.single<SessionExpiryInterval>()?.seconds?.toULong()
+                    val receiveMaximum = p.single<ReceiveMaximum>()?.also {
+                        if (it.max == 0.toUShort()) {
+                            throw ProtocolError(
+                                "Receive Maximum cannot be set to 0 see: " +
+                                    "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477349",
+                            )
                         }
+                    }?.max?.toInt()
+                    val maximumPacketSize = p.single<MaximumPacketSize>()?.also {
+                        if (it.bytes == 0u) {
+                            throw ProtocolError(
+                                "Maximum Packet Size cannot be set to 0 see: " +
+                                    "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477350",
+                            )
+                        }
+                    }?.bytes?.toULong()
+                    val topicAliasMaximum = p.single<TopicAliasMaximum>()?.max?.toInt()
+                    val requestResponseInformation = p.single<RequestResponseInformation>()?.enabled
+                    val requestProblemInformation = p.single<RequestProblemInformation>()?.enabled
+                    val userProperty = p.list<UserProperty>().map { it.key to it.value }
+                    val authMethod = p.single<AuthenticationMethod>()?.value
+                    val authData = p.single<AuthenticationData<*>>()?.data as? ReadBuffer
+                    p.rejectUnknown()
+                    val auth = if (authMethod != null && authData != null) {
+                        Authentication(authMethod, authData)
+                    } else {
+                        null
                     }
-                    val authMethod = authenticationMethod
-                    val authData = authenticationData
-                    val auth =
-                        if (authMethod != null && authData != null) {
-                            Authentication(authMethod, authData)
-                        } else {
-                            null
-                        }
-                    val finalUserProperty = if (userProperty.isEmpty()) emptyList() else userProperty
                     return Properties(
                         sessionExpiryIntervalSeconds,
                         receiveMaximum,
@@ -880,31 +775,11 @@ data class ConnectionRequest(
                         topicAliasMaximum,
                         requestResponseInformation,
                         requestProblemInformation,
-                        finalUserProperty,
+                        userProperty,
                         auth,
                     )
                 }
             }
-        }
-
-        /**
-         * The Variable Header for the CONNECT Packet contains the following fields in this order: Protocol Name,
-         * Protocol Level, Connect Flags, Keep Alive, and Properties
-         */
-        fun serialize(writeBuffer: WriteBuffer) {
-            val usernameFlag = if (hasUserName) 0b10000000 else 0
-            val passwordFlag = if (hasPassword) 0b1000000 else 0
-            val wRetain = if (willRetain) 0b100000 else 0
-            val qos = willQos.integerValue.toInt().shl(3)
-            val wFlag = if (willFlag) 0b100 else 0
-            val cleanStart = if (cleanStart) 0b10 else 0
-            val flags =
-                (usernameFlag or passwordFlag or wRetain or qos or wFlag or cleanStart).toByte()
-            writeBuffer.writeMqttUtf8String(protocolName)
-            writeBuffer.writeUByte(protocolVersion.toUByte())
-            writeBuffer.writeByte(flags)
-            writeBuffer.writeUShort(keepAliveSeconds.toUShort())
-            properties.serialize(writeBuffer)
         }
 
         fun size(): Int {
@@ -1191,24 +1066,25 @@ data class ConnectionRequest(
             val userProperty: List<Pair<String, String>> = emptyList(),
         ) {
             val props by lazy(LazyThreadSafetyMode.NONE) {
-                val properties = ArrayList<Property>(6 + userProperty.count())
+                val properties = ArrayList<MqttProperty>(6 + userProperty.count())
                 if (willDelayIntervalSeconds != 0L) {
-                    properties += WillDelayInterval(willDelayIntervalSeconds)
+                    properties += WillDelayInterval(willDelayIntervalSeconds.toUInt())
                 }
                 if (payloadFormatIndicator) {
                     properties += PayloadFormatIndicator(payloadFormatIndicator)
                 }
                 if (messageExpiryIntervalSeconds != null) {
-                    properties += MessageExpiryInterval(messageExpiryIntervalSeconds)
+                    properties += MessageExpiryInterval(messageExpiryIntervalSeconds.toUInt())
                 }
                 if (contentType != null) {
                     properties += ContentType(contentType)
                 }
                 if (responseTopic != null) {
-                    properties += ResponseTopic(responseTopic)
+                    properties += ResponseTopic(responseTopic.toString())
                 }
                 if (correlationData != null) {
-                    properties += CorrelationData(correlationData)
+                    correlationData.position(0)
+                    properties += CorrelationData(correlationData.remaining().toUShort(), correlationData)
                 }
                 if (userProperty.isNotEmpty()) {
                     for (keyValueProperty in userProperty) {
@@ -1220,103 +1096,25 @@ data class ConnectionRequest(
                 properties
             }
 
-            fun size(): Int {
-                var size = 0
-                props.forEach { size += it.size() }
-                return size
-            }
-
-            fun serialize(buffer: WriteBuffer) {
-                buffer.writeVariableByteInteger(size())
-                props.forEach { it.write(buffer) }
-            }
+            fun size(): Int = mqttPropertiesSize(props)
 
             companion object {
                 fun from(buffer: ReadBuffer): WillProperties = from(buffer.readProperties())
 
-                fun from(properties: Collection<Property>?): WillProperties {
+                fun from(properties: Collection<MqttProperty>?): WillProperties {
                     if (properties == null) return WillProperties()
-                    var willDelayIntervalSeconds: Long? = null
-                    var payloadFormatIndicator: Boolean? = null
-                    var messageExpiryIntervalSeconds: Long? = null
-                    var contentType: String? = null
-                    var responseTopic: TopicName? = null
-                    var correlationData: ReadBuffer? = null
-                    val userProperty = mutableListOf<Pair<String, String>>()
-                    properties.forEach {
-                        when (it) {
-                            is WillDelayInterval -> {
-                                if (willDelayIntervalSeconds != null) {
-                                    throw ProtocolError(
-                                        "Will Delay Interval added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477362",
-                                    )
-                                }
-                                willDelayIntervalSeconds = it.seconds
-                            }
-
-                            is PayloadFormatIndicator -> {
-                                if (payloadFormatIndicator != null) {
-                                    throw ProtocolError(
-                                        "Payload Format Indicator added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477363",
-                                    )
-                                }
-                                payloadFormatIndicator = it.willMessageIsUtf8
-                            }
-
-                            is MessageExpiryInterval -> {
-                                if (messageExpiryIntervalSeconds != null) {
-                                    throw ProtocolError(
-                                        "Message Expiry Interval added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477363",
-                                    )
-                                }
-                                messageExpiryIntervalSeconds = it.seconds
-                            }
-
-                            is ContentType -> {
-                                if (contentType != null) {
-                                    throw ProtocolError(
-                                        "Content Type added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477365",
-                                    )
-                                }
-                                contentType = it.value
-                            }
-
-                            is ResponseTopic -> {
-                                if (responseTopic != null) {
-                                    throw ProtocolError(
-                                        "Response Topic added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477366",
-                                    )
-                                }
-                                responseTopic = it.value
-                            }
-
-                            is CorrelationData -> {
-                                if (correlationData != null) {
-                                    throw ProtocolError(
-                                        "Coorelation data added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477367",
-                                    )
-                                }
-                                correlationData = it.data
-                            }
-
-                            is UserProperty -> {
-                                val key = it.key
-                                val value = it.value
-                                userProperty.add(Pair(key, value))
-                            }
-
-                            else -> throw MalformedPacketException("Invalid property type found in MQTT payload $it")
-                        }
-                    }
+                    val p = PropertyExtractor(properties, "CONNECT Will")
+                    val willDelayIntervalSeconds = p.single<WillDelayInterval>()?.seconds?.toLong() ?: 0L
+                    val payloadFormatIndicator = p.single<PayloadFormatIndicator>()?.isUtf8 ?: false
+                    val messageExpiryIntervalSeconds = p.single<MessageExpiryInterval>()?.seconds?.toLong()
+                    val contentType = p.single<ContentType>()?.value
+                    val responseTopic = p.single<ResponseTopic>()?.let { TopicName.fromOrThrow(it.value) }
+                    val correlationData = p.single<CorrelationData<*>>()?.data as? ReadBuffer
+                    val userProperty = p.list<UserProperty>().map { it.key to it.value }
+                    p.rejectUnknown()
                     return WillProperties(
-                        willDelayIntervalSeconds ?: 0L,
-                        payloadFormatIndicator ?: false,
+                        willDelayIntervalSeconds,
+                        payloadFormatIndicator,
                         messageExpiryIntervalSeconds,
                         contentType,
                         responseTopic,
@@ -1324,24 +1122,6 @@ data class ConnectionRequest(
                         userProperty,
                     )
                 }
-            }
-        }
-
-        fun serialize(writeBuffer: WriteBuffer) {
-            writeBuffer.writeMqttUtf8String(clientId)
-            willProperties?.serialize(writeBuffer)
-            if (willTopic != null) {
-                writeBuffer.writeMqttUtf8String(willTopic.toString())
-            }
-            if (willPayload != null) {
-                writeBuffer.writeUShort(willPayload.remaining().toUShort())
-                writeBuffer.write(willPayload)
-            }
-            if (userName != null) {
-                writeBuffer.writeMqttUtf8String(userName)
-            }
-            if (password != null) {
-                writeBuffer.writeMqttUtf8String(password)
             }
         }
 

@@ -2,7 +2,7 @@ package com.ditchoom.mqtt5.controlpacket.wire
 
 import com.ditchoom.buffer.codec.annotations.ProtocolMessage
 import com.ditchoom.mqtt.codec.annotations.MqttProperties
-import com.ditchoom.mqtt5.controlpacket.properties.Property
+import com.ditchoom.mqtt5.controlpacket.properties.MqttProperty
 
 /**
  * Wire model shared by PUBACK, PUBREC, PUBREL, PUBCOMP v5 packets.
@@ -13,5 +13,5 @@ import com.ditchoom.mqtt5.controlpacket.properties.Property
 data class AckV5Wire(
     val packetId: UShort,
     val reasonCode: UByte,
-    @MqttProperties val properties: Collection<Property>?,
+    @MqttProperties val properties: Collection<MqttProperty>?,
 )

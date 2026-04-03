@@ -5,7 +5,6 @@ import com.ditchoom.buffer.WriteBuffer
 import com.ditchoom.mqtt.MalformedPacketException
 import com.ditchoom.mqtt.ProtocolError
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.variableByteSize
-import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.writeVariableByteInteger
 import com.ditchoom.mqtt.controlpacket.IConnectionAcknowledgment
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
@@ -38,7 +37,8 @@ import com.ditchoom.mqtt5.controlpacket.properties.AuthenticationData
 import com.ditchoom.mqtt5.controlpacket.properties.AuthenticationMethod
 import com.ditchoom.mqtt5.controlpacket.properties.MaximumPacketSize
 import com.ditchoom.mqtt5.controlpacket.properties.MaximumQos
-import com.ditchoom.mqtt5.controlpacket.properties.Property
+import com.ditchoom.mqtt5.controlpacket.properties.MqttProperty
+import com.ditchoom.mqtt5.controlpacket.properties.PropertyExtractor
 import com.ditchoom.mqtt5.controlpacket.properties.ReasonString
 import com.ditchoom.mqtt5.controlpacket.properties.ReceiveMaximum
 import com.ditchoom.mqtt5.controlpacket.properties.ResponseInformation
@@ -52,6 +52,7 @@ import com.ditchoom.mqtt5.controlpacket.properties.TopicAlias
 import com.ditchoom.mqtt5.controlpacket.properties.TopicAliasMaximum
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
 import com.ditchoom.mqtt5.controlpacket.properties.WildcardSubscriptionAvailable
+import com.ditchoom.mqtt5.controlpacket.properties.mqttPropertiesSize
 import com.ditchoom.mqtt5.controlpacket.wire.ConnAckV5Wire
 import com.ditchoom.mqtt5.controlpacket.wire.ConnAckV5WireCodec
 
@@ -74,8 +75,6 @@ data class ConnectionAcknowledgment(
     override val isSuccessful: Boolean = header.connectReason == SUCCESS
     override val connectionReason: String = header.connectReason.name
     override val sessionPresent: Boolean = header.sessionPresent
-
-    override fun variableHeader(writeBuffer: WriteBuffer) = header.serialize(writeBuffer)
 
     override fun encodeBody(writeBuffer: WriteBuffer) {
         ConnAckV5WireCodec.encode(
@@ -441,27 +440,27 @@ data class ConnectionAcknowledgment(
             val authentication: Authentication? = null,
         ) {
             val props by lazy(LazyThreadSafetyMode.NONE) {
-                val props = ArrayList<Property>(16 + userProperty.size)
+                val props = ArrayList<MqttProperty>(16 + userProperty.size)
                 if (sessionExpiryIntervalSeconds != null) {
-                    props += SessionExpiryInterval(sessionExpiryIntervalSeconds)
+                    props += SessionExpiryInterval(sessionExpiryIntervalSeconds.toUInt())
                 }
                 if (receiveMaximum != UShort.MAX_VALUE.toInt()) {
-                    props += ReceiveMaximum(receiveMaximum)
+                    props += ReceiveMaximum(receiveMaximum.toUShort())
                 }
                 if (maximumQos != QualityOfService.EXACTLY_ONCE) {
-                    props += MaximumQos(maximumQos)
+                    props += MaximumQos(maximumQos != QualityOfService.AT_MOST_ONCE)
                 }
                 if (!retainAvailable) {
                     props += RetainAvailable(retainAvailable)
                 }
                 if (maximumPacketSize != null) {
-                    props += MaximumPacketSize(maximumPacketSize)
+                    props += MaximumPacketSize(maximumPacketSize.toUInt())
                 }
                 if (assignedClientIdentifier != null) {
                     props += AssignedClientIdentifier(assignedClientIdentifier)
                 }
                 if (topicAliasMaximum != 0) {
-                    props += TopicAliasMaximum(topicAliasMaximum)
+                    props += TopicAliasMaximum(topicAliasMaximum.toUShort())
                 }
                 if (reasonString != null) {
                     props += ReasonString(reasonString)
@@ -483,7 +482,7 @@ data class ConnectionAcknowledgment(
                     props += SharedSubscriptionAvailable(sharedSubscriptionAvailable)
                 }
                 if (serverKeepAlive != null) {
-                    props += ServerKeepAlive(serverKeepAlive)
+                    props += ServerKeepAlive(serverKeepAlive.toUShort())
                 }
                 if (responseInformation != null) {
                     props += ResponseInformation(responseInformation)
@@ -493,266 +492,79 @@ data class ConnectionAcknowledgment(
                 }
                 if (authentication != null) {
                     props += AuthenticationMethod(authentication.method)
-                    props += AuthenticationData(authentication.data)
+                    authentication.data.position(0)
+                    props += AuthenticationData(authentication.data.remaining().toUShort(), authentication.data)
                 }
                 props
             }
 
-            fun serialize(writeBuffer: WriteBuffer) {
-                var size = 0
-                props.forEach { size += it.size() }
-                writeBuffer.writeVariableByteInteger(size)
-                props.forEach { it.write(writeBuffer) }
-            }
-
             fun size(): Int {
-                var size = 0
-                props.forEach { size += it.size() }
-                return size + variableByteSize(size)
+                val bodySize = mqttPropertiesSize(props)
+                return bodySize + variableByteSize(bodySize)
             }
 
             companion object {
-                fun from(keyValuePairs: Collection<Property>?): Properties {
-                    var sessionExpiryIntervalSeconds: ULong? = null
-                    var receiveMaximum: Int? = null
-                    var maximumQos: QualityOfService? = null
-                    var retainAvailable: Boolean? = null
-                    var maximumPacketSize: ULong? = null
-                    var assignedClientIdentifier: String? = null
-                    var topicAlias: Int? = null
-                    var reasonString: String? = null
-                    val userProperty: MutableList<Pair<String, String>> =
-                        mutableListOf()
-                    var supportsWildcardSubscriptions: Boolean? = null
-                    var subscriptionIdentifiersAvailable: Boolean? = null
-                    var sharedSubscriptionAvailable: Boolean? = null
-                    var serverKeepAlive: Int? = null
-                    var responseInformation: String? = null
-                    var serverReference: String? = null
-                    var authenticationMethod: String? = null
-                    var authenticationData: ReadBuffer? = null
-                    keyValuePairs?.forEach {
-                        when (it) {
-                            is SessionExpiryInterval -> {
-                                if (sessionExpiryIntervalSeconds != null) {
-                                    throw ProtocolError(
-                                        "Session Expiry Interval added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477382",
-                                    )
-                                }
-                                sessionExpiryIntervalSeconds = it.seconds
-                            }
-
-                            is ReceiveMaximum -> {
-                                if (receiveMaximum != null) {
-                                    throw ProtocolError(
-                                        "Receive Maximum added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477383",
-                                    )
-                                }
-                                if (it.maxQos1Or2ConcurrentMessages == 0) {
-                                    throw ProtocolError(
-                                        "Receive Maximum cannot be set to 0 see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477383",
-                                    )
-                                }
-                                receiveMaximum = it.maxQos1Or2ConcurrentMessages
-                            }
-
-                            is MaximumQos -> {
-                                if (maximumQos != null) {
-                                    throw ProtocolError(
-                                        "Maximum QoS added multiple times see:" +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477384",
-                                    )
-                                }
-                                maximumQos = it.qos
-                            }
-
-                            is RetainAvailable -> {
-                                if (retainAvailable != null) {
-                                    throw ProtocolError(
-                                        "Retain Available added multiple times see:" +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477385",
-                                    )
-                                }
-                                retainAvailable = it.serverSupported
-                            }
-
-                            is MaximumPacketSize -> {
-                                if (maximumPacketSize != null) {
-                                    throw ProtocolError(
-                                        "Maximum Packet Size added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477386",
-                                    )
-                                }
-                                if (it.packetSizeLimitationBytes == 0uL) {
-                                    throw ProtocolError(
-                                        "Maximum Packet Size cannot be set to 0 see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477350",
-                                    )
-                                }
-                                maximumPacketSize = it.packetSizeLimitationBytes
-                            }
-
-                            is AssignedClientIdentifier -> {
-                                if (assignedClientIdentifier != null) {
-                                    throw ProtocolError(
-                                        "Assigned Client Identifier added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477387",
-                                    )
-                                }
-                                assignedClientIdentifier = it.value
-                            }
-
-                            is TopicAlias -> {
-                                if (topicAlias != null) {
-                                    throw ProtocolError(
-                                        "Topic Alias Maximum added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477388",
-                                    )
-                                }
-                                topicAlias = it.value
-                            }
-
-                            is TopicAliasMaximum -> {
-                                if (topicAlias != null) {
-                                    throw ProtocolError(
-                                        "Topic Alias Maximum added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477388",
-                                    )
-                                }
-                                topicAlias = it.highestValueSupported
-                            }
-
-                            is ReasonString -> {
-                                if (reasonString != null) {
-                                    throw ProtocolError(
-                                        "Reason String added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477389",
-                                    )
-                                }
-                                reasonString = it.diagnosticInfoDontParse
-                            }
-
-                            is UserProperty -> userProperty += Pair(it.key, it.value)
-                            is WildcardSubscriptionAvailable -> {
-                                if (supportsWildcardSubscriptions != null) {
-                                    throw ProtocolError(
-                                        "Wildcard Subscription Available added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477391",
-                                    )
-                                }
-                                supportsWildcardSubscriptions = it.serverSupported
-                            }
-
-                            is SubscriptionIdentifierAvailable -> {
-                                if (subscriptionIdentifiersAvailable != null) {
-                                    throw ProtocolError(
-                                        "Subscription Identifier Available added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477392",
-                                    )
-                                }
-                                subscriptionIdentifiersAvailable = it.serverSupported
-                            }
-
-                            is SharedSubscriptionAvailable -> {
-                                if (sharedSubscriptionAvailable != null) {
-                                    throw ProtocolError(
-                                        "Shared Subscription Available added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477393",
-                                    )
-                                }
-                                sharedSubscriptionAvailable = it.serverSupported
-                            }
-
-                            is ServerKeepAlive -> {
-                                if (serverKeepAlive != null) {
-                                    throw ProtocolError(
-                                        "Server Keep Alive added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477394",
-                                    )
-                                }
-                                serverKeepAlive = it.seconds
-                            }
-
-                            is ResponseInformation -> {
-                                if (responseInformation != null) {
-                                    throw ProtocolError(
-                                        "Response Information added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477395",
-                                    )
-                                }
-                                responseInformation = it.requestResponseInformationInConnack
-                            }
-
-                            is ServerReference -> {
-                                if (serverReference != null) {
-                                    throw ProtocolError(
-                                        "Server Reference added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477396",
-                                    )
-                                }
-                                serverReference = it.otherServer
-                            }
-
-                            is AuthenticationMethod -> {
-                                if (authenticationMethod != null) {
-                                    throw ProtocolError(
-                                        "Authentication Method added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477397",
-                                    )
-                                }
-                                authenticationMethod = it.value
-                            }
-
-                            is AuthenticationData -> {
-                                if (authenticationData != null) {
-                                    throw ProtocolError(
-                                        "Authentication Data added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477398",
-                                    )
-                                }
-                                authenticationData = it.data
-                            }
-
-                            else -> throw MalformedPacketException("Invalid CONNACK property type found in MQTT payload $it")
+                fun from(keyValuePairs: Collection<MqttProperty>?): Properties {
+                    val p = PropertyExtractor(keyValuePairs, "CONNACK")
+                    val sessionExpiry = p.single<SessionExpiryInterval>()?.seconds?.toULong()
+                    val receiveMax = p.single<ReceiveMaximum>()?.also {
+                        if (it.max == 0.toUShort()) {
+                            throw ProtocolError(
+                                "Receive Maximum cannot be set to 0 see: " +
+                                    "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477383",
+                            )
                         }
+                    }?.max?.toInt()
+                    val maximumQos = p.single<MaximumQos>()?.let {
+                        if (it.qos1Allowed) QualityOfService.AT_LEAST_ONCE else QualityOfService.AT_MOST_ONCE
                     }
-                    val authMethod = authenticationMethod
-                    val authData = authenticationData
-                    val auth =
-                        if (authMethod != null && authData != null) {
-                            Authentication(authMethod, authData)
-                        } else {
-                            null
+                    val retainAvailable = p.single<RetainAvailable>()?.supported
+                    val maximumPacketSize = p.single<MaximumPacketSize>()?.also {
+                        if (it.bytes == 0u) {
+                            throw ProtocolError(
+                                "Maximum Packet Size cannot be set to 0 see: " +
+                                    "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477350",
+                            )
                         }
+                    }?.bytes?.toULong()
+                    val assignedClientId = p.single<AssignedClientIdentifier>()?.value
+                    val topicAlias = (p.single<TopicAliasMaximum>()?.max ?: p.single<TopicAlias>()?.value)?.toInt()
+                    val reasonString = p.single<ReasonString>()?.value
+                    val userProperty = p.list<UserProperty>().map { it.key to it.value }
+                    val wildcardSub = p.single<WildcardSubscriptionAvailable>()?.supported
+                    val subIdAvailable = p.single<SubscriptionIdentifierAvailable>()?.supported
+                    val sharedSub = p.single<SharedSubscriptionAvailable>()?.supported
+                    val serverKeepAlive = p.single<ServerKeepAlive>()?.seconds?.toInt()
+                    val responseInfo = p.single<ResponseInformation>()?.value
+                    val serverRef = p.single<ServerReference>()?.value
+                    val authMethod = p.single<AuthenticationMethod>()?.value
+                    val authData = p.single<AuthenticationData<*>>()?.data as? ReadBuffer
+                    p.rejectUnknown()
+                    val auth = if (authMethod != null && authData != null) {
+                        Authentication(authMethod, authData)
+                    } else {
+                        null
+                    }
                     return Properties(
-                        sessionExpiryIntervalSeconds,
-                        receiveMaximum ?: UShort.MAX_VALUE.toInt(),
+                        sessionExpiry,
+                        receiveMax ?: UShort.MAX_VALUE.toInt(),
                         maximumQos ?: QualityOfService.EXACTLY_ONCE,
                         retainAvailable ?: true,
                         maximumPacketSize,
-                        assignedClientIdentifier,
+                        assignedClientId,
                         topicAlias ?: 0,
                         reasonString,
                         userProperty,
-                        supportsWildcardSubscriptions ?: true,
-                        subscriptionIdentifiersAvailable ?: true,
-                        sharedSubscriptionAvailable ?: true,
+                        wildcardSub ?: true,
+                        subIdAvailable ?: true,
+                        sharedSub ?: true,
                         serverKeepAlive,
-                        responseInformation,
-                        serverReference,
+                        responseInfo,
+                        serverRef,
                         auth,
                     )
                 }
             }
-        }
-
-        fun serialize(writeBuffer: WriteBuffer) {
-            writeBuffer.writeByte((if (sessionPresent) 0b1 else 0b0).toByte())
-            writeBuffer.writeUByte(connectReason.byte)
-            properties.serialize(writeBuffer)
         }
 
         fun size() = 2 + properties.size()

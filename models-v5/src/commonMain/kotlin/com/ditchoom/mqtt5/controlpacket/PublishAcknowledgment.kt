@@ -5,7 +5,6 @@ import com.ditchoom.buffer.WriteBuffer
 import com.ditchoom.mqtt.MalformedPacketException
 import com.ditchoom.mqtt.ProtocolError
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.variableByteSize
-import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.writeVariableByteInteger
 import com.ditchoom.mqtt.controlpacket.IPublishAcknowledgment
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.IMPLEMENTATION_SPECIFIC_ERROR
@@ -18,9 +17,11 @@ import com.ditchoom.mqtt.controlpacket.format.ReasonCode.SUCCESS
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.TOPIC_NAME_INVALID
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.UNSPECIFIED_ERROR
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
-import com.ditchoom.mqtt5.controlpacket.properties.Property
+import com.ditchoom.mqtt5.controlpacket.properties.MqttProperty
+import com.ditchoom.mqtt5.controlpacket.properties.PropertyExtractor
 import com.ditchoom.mqtt5.controlpacket.properties.ReasonString
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
+import com.ditchoom.mqtt5.controlpacket.properties.mqttPropertiesSize
 import com.ditchoom.mqtt5.controlpacket.wire.AckV5Wire
 import com.ditchoom.mqtt5.controlpacket.wire.AckV5WireCodec
 
@@ -44,8 +45,6 @@ data class PublishAcknowledgment(
         props: List<Pair<String, String>> = emptyList(),
     ) :
         this(VariableHeader(packetId, reasonCode, VariableHeader.Properties(reasonString, props)))
-
-    override fun variableHeader(writeBuffer: WriteBuffer) = variable.serialize(writeBuffer)
 
     override fun encodeBody(writeBuffer: WriteBuffer) {
         val canOmit = variable.reasonCode == SUCCESS &&
@@ -100,19 +99,6 @@ data class PublishAcknowledgment(
             }
         }
 
-        fun serialize(buffer: WriteBuffer) {
-            val canOmitReasonCodeAndProperties = (
-                reasonCode == SUCCESS &&
-                    properties.userProperty.isEmpty() &&
-                    properties.reasonString == null
-            )
-            buffer.writeUShort(packetIdentifier.toUShort())
-            if (!canOmitReasonCodeAndProperties) {
-                buffer.writeUByte(reasonCode.byte)
-                properties.serialize(buffer)
-            }
-        }
-
         fun size(): Int {
             val canOmitReasonCodeAndProperties = (
                 reasonCode == SUCCESS &&
@@ -157,7 +143,7 @@ data class PublishAcknowledgment(
             val userProperty: List<Pair<String, String>> = emptyList(),
         ) {
             val props by lazy(LazyThreadSafetyMode.NONE) {
-                val list = ArrayList<Property>(1 + userProperty.count())
+                val list = ArrayList<MqttProperty>(1 + userProperty.count())
                 if (reasonString != null) {
                     list += ReasonString(reasonString)
                 }
@@ -171,37 +157,14 @@ data class PublishAcknowledgment(
                 list
             }
 
-            fun size(): Int {
-                var size = 0
-                props.forEach { size += it.size() }
-                return size
-            }
-
-            fun serialize(buffer: WriteBuffer) {
-                buffer.writeVariableByteInteger(size())
-                props.forEach { it.write(buffer) }
-            }
+            fun size(): Int = mqttPropertiesSize(props)
 
             companion object {
-                fun from(keyValuePairs: Collection<Property>?): Properties {
-                    var reasonString: String? = null
-                    val userProperty = mutableListOf<Pair<String, String>>()
-                    keyValuePairs?.forEach {
-                        when (it) {
-                            is ReasonString -> {
-                                if (reasonString != null) {
-                                    throw ProtocolError(
-                                        "Reason String added multiple times see: " +
-                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477427",
-                                    )
-                                }
-                                reasonString = it.diagnosticInfoDontParse
-                            }
-
-                            is UserProperty -> userProperty += Pair(it.key, it.value)
-                            else -> throw MalformedPacketException("Invalid Publish Ack property type found in MQTT properties $it")
-                        }
-                    }
+                fun from(keyValuePairs: Collection<MqttProperty>?): Properties {
+                    val p = PropertyExtractor(keyValuePairs, "PUBACK")
+                    val reasonString = p.single<ReasonString>()?.value
+                    val userProperty = p.list<UserProperty>().map { it.key to it.value }
+                    p.rejectUnknown()
                     return Properties(reasonString, userProperty)
                 }
             }

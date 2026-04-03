@@ -124,25 +124,23 @@ data class DisconnectNotification(
              */
             val serverReference: String? = null,
         ) {
-            val props by lazy(LazyThreadSafetyMode.NONE) {
-                val list = ArrayList<MqttProperty>(3 + userProperty.count())
+            val props: List<MqttProperty> = buildList {
                 if (sessionExpiryIntervalSeconds != null) {
-                    list += SessionExpiryInterval(sessionExpiryIntervalSeconds.toUInt())
+                    add(SessionExpiryInterval(sessionExpiryIntervalSeconds.toUInt()))
                 }
                 if (reasonString != null) {
-                    list += ReasonString(reasonString)
+                    add(ReasonString(reasonString))
                 }
                 if (userProperty.isNotEmpty()) {
                     for (keyValueProperty in userProperty) {
                         val key = keyValueProperty.first
                         val value = keyValueProperty.second
-                        list += UserProperty(key, value)
+                        add(UserProperty(key, value))
                     }
                 }
                 if (serverReference != null) {
-                    list += ServerReference(serverReference)
+                    add(ServerReference(serverReference))
                 }
-                list
             }
 
             fun size(): Int = mqttPropertiesSize(props)

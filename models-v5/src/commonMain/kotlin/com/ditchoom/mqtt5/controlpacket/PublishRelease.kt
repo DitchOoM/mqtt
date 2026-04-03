@@ -153,19 +153,17 @@ data class PublishRelease(
              */
             val userProperty: List<Pair<String, String>> = emptyList(),
         ) {
-            val props by lazy(LazyThreadSafetyMode.NONE) {
-                val props = ArrayList<MqttProperty>(1 + userProperty.size)
+            val props: List<MqttProperty> = buildList {
                 if (reasonString != null) {
-                    props += ReasonString(reasonString)
+                    add(ReasonString(reasonString))
                 }
                 if (userProperty.isNotEmpty()) {
                     for (keyValueProperty in userProperty) {
                         val key = keyValueProperty.first
                         val value = keyValueProperty.second
-                        props += UserProperty(key, value)
+                        add(UserProperty(key, value))
                     }
                 }
-                props
             }
 
             fun size(): Int = mqttPropertiesSize(props)

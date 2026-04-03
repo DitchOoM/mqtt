@@ -142,19 +142,17 @@ data class PublishAcknowledgment(
              */
             val userProperty: List<Pair<String, String>> = emptyList(),
         ) {
-            val props by lazy(LazyThreadSafetyMode.NONE) {
-                val list = ArrayList<MqttProperty>(1 + userProperty.count())
+            val props: List<MqttProperty> = buildList {
                 if (reasonString != null) {
-                    list += ReasonString(reasonString)
+                    add(ReasonString(reasonString))
                 }
                 if (userProperty.isNotEmpty()) {
                     for (keyValueProperty in userProperty) {
                         val key = keyValueProperty.first
                         val value = keyValueProperty.second
-                        list += UserProperty(key, value)
+                        add(UserProperty(key, value))
                     }
                 }
-                list
             }
 
             fun size(): Int = mqttPropertiesSize(props)

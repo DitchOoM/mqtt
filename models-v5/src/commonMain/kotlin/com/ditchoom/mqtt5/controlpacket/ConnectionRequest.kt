@@ -703,40 +703,37 @@ data class ConnectionRequest(
                 }
             }
 
-            val props by lazy(LazyThreadSafetyMode.NONE) {
-                val userPropertyCount = userProperty.count()
-                val list = ArrayList<MqttProperty>(8 + userPropertyCount)
+            val props: List<MqttProperty> = buildList {
                 if (sessionExpiryIntervalSeconds != null) {
-                    list += SessionExpiryInterval(sessionExpiryIntervalSeconds.toUInt())
+                    add(SessionExpiryInterval(sessionExpiryIntervalSeconds.toUInt()))
                 }
                 if (receiveMaximum != null) {
-                    list += ReceiveMaximum(receiveMaximum.toUShort())
+                    add(ReceiveMaximum(receiveMaximum.toUShort()))
                 }
                 if (maximumPacketSize != null) {
-                    list += MaximumPacketSize(maximumPacketSize.toUInt())
+                    add(MaximumPacketSize(maximumPacketSize.toUInt()))
                 }
                 if (topicAliasMaximum != null) {
-                    list += TopicAliasMaximum(topicAliasMaximum.toUShort())
+                    add(TopicAliasMaximum(topicAliasMaximum.toUShort()))
                 }
                 if (requestResponseInformation != null) {
-                    list += RequestResponseInformation(requestResponseInformation)
+                    add(RequestResponseInformation(requestResponseInformation))
                 }
                 if (requestProblemInformation != null) {
-                    list += RequestProblemInformation(requestProblemInformation)
+                    add(RequestProblemInformation(requestProblemInformation))
                 }
                 if (userProperty.isNotEmpty()) {
                     for (keyValueProperty in userProperty) {
                         val key = keyValueProperty.first
                         val value = keyValueProperty.second
-                        list += UserProperty(key, value)
+                        add(UserProperty(key, value))
                     }
                 }
                 if (authentication != null) {
-                    list += AuthenticationMethod(authentication.method)
+                    add(AuthenticationMethod(authentication.method))
                     authentication.data.position(0)
-                    list += AuthenticationData(authentication.data.remaining().toUShort(), authentication.data)
+                    add(AuthenticationData(authentication.data.remaining().toUShort(), authentication.data))
                 }
-                list
             }
 
             fun size(): Int = mqttPropertiesSize(props)
@@ -1070,35 +1067,33 @@ data class ConnectionRequest(
              */
             val userProperty: List<Pair<String, String>> = emptyList(),
         ) {
-            val props by lazy(LazyThreadSafetyMode.NONE) {
-                val properties = ArrayList<MqttProperty>(6 + userProperty.count())
+            val props: List<MqttProperty> = buildList {
                 if (willDelayIntervalSeconds != 0L) {
-                    properties += WillDelayInterval(willDelayIntervalSeconds.toUInt())
+                    add(WillDelayInterval(willDelayIntervalSeconds.toUInt()))
                 }
                 if (payloadFormatIndicator) {
-                    properties += PayloadFormatIndicator(payloadFormatIndicator)
+                    add(PayloadFormatIndicator(payloadFormatIndicator))
                 }
                 if (messageExpiryIntervalSeconds != null) {
-                    properties += MessageExpiryInterval(messageExpiryIntervalSeconds.toUInt())
+                    add(MessageExpiryInterval(messageExpiryIntervalSeconds.toUInt()))
                 }
                 if (contentType != null) {
-                    properties += ContentType(contentType)
+                    add(ContentType(contentType))
                 }
                 if (responseTopic != null) {
-                    properties += ResponseTopic(responseTopic.toString())
+                    add(ResponseTopic(responseTopic.toString()))
                 }
                 if (correlationData != null) {
                     correlationData.position(0)
-                    properties += CorrelationData(correlationData.remaining().toUShort(), correlationData)
+                    add(CorrelationData(correlationData.remaining().toUShort(), correlationData))
                 }
                 if (userProperty.isNotEmpty()) {
                     for (keyValueProperty in userProperty) {
                         val key = keyValueProperty.first
                         val value = keyValueProperty.second
-                        properties += UserProperty(key, value)
+                        add(UserProperty(key, value))
                     }
                 }
-                properties
             }
 
             fun size(): Int = mqttPropertiesSize(props)

@@ -582,40 +582,38 @@ data class PublishMessage(
                 }
             }
 
-            val props by lazy(LazyThreadSafetyMode.NONE) {
-                val list = ArrayList<MqttProperty>(7 + userProperty.count())
+            val props: List<MqttProperty> = buildList {
                 if (payloadFormatIndicator) {
-                    list += PayloadFormatIndicator(payloadFormatIndicator)
+                    add(PayloadFormatIndicator(payloadFormatIndicator))
                 }
                 if (messageExpiryInterval != null) {
-                    list += MessageExpiryInterval(messageExpiryInterval.toUInt())
+                    add(MessageExpiryInterval(messageExpiryInterval.toUInt()))
                 }
                 if (topicAlias != null) {
-                    list += TopicAlias(topicAlias.toUShort())
+                    add(TopicAlias(topicAlias.toUShort()))
                 }
                 if (responseTopic != null) {
-                    list += ResponseTopic(responseTopic.toString())
+                    add(ResponseTopic(responseTopic.toString()))
                 }
                 if (correlationData != null) {
                     correlationData.position(0)
-                    list += CorrelationData(correlationData.remaining().toUShort(), correlationData)
+                    add(CorrelationData(correlationData.remaining().toUShort(), correlationData))
                 }
                 if (userProperty.isNotEmpty()) {
                     for (keyValueProperty in userProperty) {
                         val key = keyValueProperty.first
                         val value = keyValueProperty.second
-                        list += UserProperty(key, value)
+                        add(UserProperty(key, value))
                     }
                 }
                 if (subscriptionIdentifier.isNotEmpty()) {
                     for (sub in subscriptionIdentifier) {
-                        list += SubscriptionIdentifier(sub.toInt())
+                        add(SubscriptionIdentifier(sub.toInt()))
                     }
                 }
                 if (contentType != null) {
-                    list += ContentType(contentType)
+                    add(ContentType(contentType))
                 }
-                list
             }
 
             fun size(): Int = mqttPropertiesSize(props)

@@ -46,7 +46,7 @@ sealed interface ControlPacketV5 : ControlPacket {
             val byte1AsUInt = byte1.toUInt()
             val packetValue = byte1AsUInt.shr(4).toInt()
             return when (packetValue) {
-                0 -> Reserved
+                0 -> throw MalformedPacketException("Reserved packet type 0 is not permitted")
                 1 -> ConnectionRequest.from(buffer)
                 2 -> ConnectionAcknowledgment.from(buffer, remainingLength)
                 3 -> PublishMessage.from(buffer, byte1, remainingLength)

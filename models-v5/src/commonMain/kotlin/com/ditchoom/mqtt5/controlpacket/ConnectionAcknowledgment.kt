@@ -439,63 +439,61 @@ data class ConnectionAcknowledgment(
             val serverReference: String? = null,
             val authentication: Authentication? = null,
         ) {
-            val props by lazy(LazyThreadSafetyMode.NONE) {
-                val props = ArrayList<MqttProperty>(16 + userProperty.size)
+            val props: List<MqttProperty> = buildList {
                 if (sessionExpiryIntervalSeconds != null) {
-                    props += SessionExpiryInterval(sessionExpiryIntervalSeconds.toUInt())
+                    add(SessionExpiryInterval(sessionExpiryIntervalSeconds.toUInt()))
                 }
                 if (receiveMaximum != UShort.MAX_VALUE.toInt()) {
-                    props += ReceiveMaximum(receiveMaximum.toUShort())
+                    add(ReceiveMaximum(receiveMaximum.toUShort()))
                 }
                 if (maximumQos != QualityOfService.EXACTLY_ONCE) {
-                    props += MaximumQos(maximumQos != QualityOfService.AT_MOST_ONCE)
+                    add(MaximumQos(maximumQos != QualityOfService.AT_MOST_ONCE))
                 }
                 if (!retainAvailable) {
-                    props += RetainAvailable(retainAvailable)
+                    add(RetainAvailable(retainAvailable))
                 }
                 if (maximumPacketSize != null) {
-                    props += MaximumPacketSize(maximumPacketSize.toUInt())
+                    add(MaximumPacketSize(maximumPacketSize.toUInt()))
                 }
                 if (assignedClientIdentifier != null) {
-                    props += AssignedClientIdentifier(assignedClientIdentifier)
+                    add(AssignedClientIdentifier(assignedClientIdentifier))
                 }
                 if (topicAliasMaximum != 0) {
-                    props += TopicAliasMaximum(topicAliasMaximum.toUShort())
+                    add(TopicAliasMaximum(topicAliasMaximum.toUShort()))
                 }
                 if (reasonString != null) {
-                    props += ReasonString(reasonString)
+                    add(ReasonString(reasonString))
                 }
                 if (userProperty.isNotEmpty()) {
                     for (keyValueProperty in userProperty) {
                         val key = keyValueProperty.first
                         val value = keyValueProperty.second
-                        props += UserProperty(key, value)
+                        add(UserProperty(key, value))
                     }
                 }
                 if (!supportsWildcardSubscriptions) {
-                    props += WildcardSubscriptionAvailable(supportsWildcardSubscriptions)
+                    add(WildcardSubscriptionAvailable(supportsWildcardSubscriptions))
                 }
                 if (!subscriptionIdentifiersAvailable) {
-                    props += SubscriptionIdentifierAvailable(subscriptionIdentifiersAvailable)
+                    add(SubscriptionIdentifierAvailable(subscriptionIdentifiersAvailable))
                 }
                 if (!sharedSubscriptionAvailable) {
-                    props += SharedSubscriptionAvailable(sharedSubscriptionAvailable)
+                    add(SharedSubscriptionAvailable(sharedSubscriptionAvailable))
                 }
                 if (serverKeepAlive != null) {
-                    props += ServerKeepAlive(serverKeepAlive.toUShort())
+                    add(ServerKeepAlive(serverKeepAlive.toUShort()))
                 }
                 if (responseInformation != null) {
-                    props += ResponseInformation(responseInformation)
+                    add(ResponseInformation(responseInformation))
                 }
                 if (serverReference != null) {
-                    props += ServerReference(serverReference)
+                    add(ServerReference(serverReference))
                 }
                 if (authentication != null) {
-                    props += AuthenticationMethod(authentication.method)
+                    add(AuthenticationMethod(authentication.method))
                     authentication.data.position(0)
-                    props += AuthenticationData(authentication.data.remaining().toUShort(), authentication.data)
+                    add(AuthenticationData(authentication.data.remaining().toUShort(), authentication.data))
                 }
-                props
             }
 
             fun size(): Int {

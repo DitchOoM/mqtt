@@ -891,4 +891,13 @@ class ConnectionRequestTests {
         assertEquals(QualityOfService.AT_LEAST_ONCE, decoded.willQos)
         assertEquals("will/topic", decoded.willTopic.toString())
     }
+
+    // ── MQTT spec §3.1.2-11: willQos MUST be 0 when willFlag is 0 ──────────
+
+    @Test
+    fun willQosWithoutWillFlagValidationWarning() {
+        val vh = VariableHeader(willFlag = false, willQos = QualityOfService.AT_LEAST_ONCE)
+        val warning = vh.validateOrGetWarning()
+        assertNotNull(warning, "willQos != AT_MOST_ONCE with willFlag=false should warn")
+    }
 }

@@ -1353,4 +1353,28 @@ class ConnectionRequestTests {
         val connectionRequest = ConnectionRequest(VariableHeader(hasPassword = true))
         assertFailsWith<MqttWarning> { connectionRequest.validateOrThrow() }
     }
+
+    // ── MQTT spec §3.1.2-11: willQos MUST be 0 when willFlag is 0 ──────────
+
+    @Test
+    fun willQosWithoutWillFlagValidationWarning() {
+        val vh = VariableHeader(willFlag = false, willQos = QualityOfService.AT_LEAST_ONCE)
+        val warning = vh.validateOrGetWarning()
+        assertNotNull(warning, "willQos != AT_MOST_ONCE with willFlag=false should warn")
+    }
+
+    @Test
+    fun willQosExactlyOnceWithoutWillFlagValidationWarning() {
+        val vh = VariableHeader(willFlag = false, willQos = QualityOfService.EXACTLY_ONCE)
+        val warning = vh.validateOrGetWarning()
+        assertNotNull(warning, "willQos=EXACTLY_ONCE with willFlag=false should warn")
+    }
+
+    @Test
+    fun willQosWithWillFlagNoWarning() {
+        val vh = VariableHeader(willFlag = true, willQos = QualityOfService.AT_LEAST_ONCE)
+        val warning = vh.validateOrGetWarning()
+        // willFlag=true allows willQos to be set (willRetain=false so no other warning)
+        assertEquals(null, warning)
+    }
 }

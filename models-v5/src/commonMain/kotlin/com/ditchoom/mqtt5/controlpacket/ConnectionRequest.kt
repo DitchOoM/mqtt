@@ -446,8 +446,13 @@ data class ConnectionRequest(
             if (!willFlag && willRetain) {
                 return MqttWarning(
                     "[MQTT-3.1.2-13]",
-                    "If the Will Flag is set" +
-                        " to 0, then Will Retain MUST be set to 0",
+                    "If the Will Flag is set to 0, then Will Retain MUST be set to 0",
+                )
+            }
+            if (!willFlag && willQos != QualityOfService.AT_MOST_ONCE) {
+                return MqttWarning(
+                    "[MQTT-3.1.2-11]",
+                    "If the Will Flag is set to 0, then Will QoS MUST be set to 0 (AT_MOST_ONCE)",
                 )
             }
             return null
@@ -1199,6 +1204,11 @@ data class ConnectionRequest(
                 )
             }
             val willQos = QualityOfService.fromBooleans(wire.connectFlags.willQosBit2, wire.connectFlags.willQosBit1)
+            if (!wire.connectFlags.willFlag && willQos != QualityOfService.AT_MOST_ONCE) {
+                throw MalformedPacketException(
+                    "[MQTT-3.1.2-11] Will QoS must be 0 when Will Flag is 0",
+                )
+            }
             val properties = VariableHeader.Properties.from(wire.properties)
             val variableHeader = VariableHeader(
                 wire.protocolName,

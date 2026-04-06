@@ -220,17 +220,42 @@ class LocalMqttClient(
         topicFilter: String,
         maxQos: QualityOfService,
         decoder: PayloadDecoder<P>,
-    ): MqttSubscription<P> {
-        TODO("Implement typed subscription with PayloadDecoder")
-    }
+    ): MqttSubscription<P> = subscribeTypedInternal(topicFilter, maxQos, decoder, handler = null)
 
     override suspend fun <P> subscribe(
         topicFilter: String,
         maxQos: QualityOfService,
         decoder: PayloadDecoder<P>,
         handler: suspend (P) -> Unit,
+    ): MqttSubscription<P> = subscribeTypedInternal(topicFilter, maxQos, decoder, handler)
+
+    private suspend fun <P> subscribeTypedInternal(
+        topicFilter: String,
+        maxQos: QualityOfService,
+        decoder: PayloadDecoder<P>,
+        handler: (suspend (P) -> Unit)?,
     ): MqttSubscription<P> {
-        TODO("Implement typed subscription with handler")
+        val filter = TopicFilter.fromOrThrow(topicFilter)
+        val sub = packetFactory.subscribe(filter, maxQos)
+        val flow = processor.publishDispatcher.subscribeTyped(filter, decoder, handler)
+        val subOp = processor.subscribe(sub)
+        val subAck = scope.async {
+            processor.awaitIncomingPacketId<ISubscribeAcknowledgement>(
+                subOp.packetIdentifier,
+                ISubscribeAcknowledgement.CONTROL_PACKET_VALUE,
+            )
+        }
+        return object : MqttSubscription<P> {
+            override val topicFilter: String = topicFilter
+            override val suback = subAck
+            override fun receive() = flow
+            override suspend fun unsubscribe() = scope.async {
+                val unsub = packetFactory.unsubscribe(filter)
+                val op = this@LocalMqttClient.unsubscribe(unsub)
+                processor.publishDispatcher.unsubscribe(filter)
+                op.unsubAck.await()
+            }
+        }
     }
 
     internal fun isStopped() = connectionJob?.isActive != true

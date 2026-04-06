@@ -1,8 +1,11 @@
 package com.ditchoom.mqtt.client
 
+import com.ditchoom.buffer.codec.payload.ReadBufferPayloadReader
 import com.ditchoom.mqtt.controlpacket.IPublishMessage
 import com.ditchoom.mqtt.controlpacket.IncomingPublish
 import com.ditchoom.mqtt.controlpacket.TopicFilter
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 
 /**
  * Dispatches incoming publish messages to registered [SubscriptionHandler]s
@@ -20,8 +23,10 @@ internal class PublishDispatcher {
     private val trie = TopicTrie<SubscriptionHandler>()
 
     /** Register a handler for the given topic filter. Returns any previous handler. */
-    fun subscribe(filter: TopicFilter, handler: SubscriptionHandler): SubscriptionHandler? =
-        trie.insert(filter, handler)
+    fun subscribe(
+        filter: TopicFilter,
+        handler: SubscriptionHandler,
+    ): SubscriptionHandler? = trie.insert(filter, handler)
 
     /** Remove the handler for the given topic filter. */
     fun unsubscribe(filter: TopicFilter): SubscriptionHandler? = trie.remove(filter)
@@ -66,4 +71,29 @@ internal class PublishDispatcher {
 
     /** Remove all handlers. */
     fun clear() = trie.clear()
+
+    /**
+     * Register a typed subscription that decodes the payload and emits to a flow.
+     * Optionally invokes [handler] for each decoded message (auto-ack on return).
+     */
+    fun <P> subscribeTyped(
+        filter: TopicFilter,
+        decoder: PayloadDecoder<P>,
+        handler: (suspend (P) -> Unit)? = null,
+    ): Flow<P> {
+        val flow = MutableSharedFlow<P>(extraBufferCapacity = 16)
+        val wrappedHandler = SubscriptionHandler.Async { publish ->
+            val payload = publish.payload ?: return@Async
+            val reader = ReadBufferPayloadReader(payload)
+            try {
+                val decoded = decoder.decode(reader)
+                handler?.invoke(decoded)
+                flow.emit(decoded)
+            } finally {
+                reader.release()
+            }
+        }
+        trie.insert(filter, wrappedHandler)
+        return flow
+    }
 }

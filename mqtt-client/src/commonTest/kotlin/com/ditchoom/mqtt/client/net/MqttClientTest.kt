@@ -3,15 +3,16 @@ package com.ditchoom.mqtt.client.net
 import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Charset
 import com.ditchoom.buffer.Default
-import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.ReadBuffer.Companion.EMPTY_BUFFER
 import com.ditchoom.buffer.toReadBuffer
 import com.ditchoom.mqtt.InMemoryPersistence
 import com.ditchoom.mqtt.client.LocalMqttClient
 import com.ditchoom.mqtt.client.MqttClient
+import com.ditchoom.mqtt.client.PublishResult
+import com.ditchoom.mqtt.client.QoS1State
+import com.ditchoom.mqtt.client.QoS2State
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.IConnectionRequest
-import com.ditchoom.mqtt.controlpacket.IPingResponse
 import com.ditchoom.mqtt.controlpacket.IPublishMessage
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
@@ -21,13 +22,10 @@ import com.ditchoom.socket.NetworkCapabilities
 import com.ditchoom.socket.getNetworkCapabilities
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
-import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.take
-import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withTimeout
@@ -187,7 +185,7 @@ class MqttClientTest {
         val persistence = connectionRequest.controlPacketFactory.defaultPersistence(inMemory)
         val connections = listOf(wsBadPort, goodOptions)
         val broker = persistence.addBroker(connections, connectionRequest)
-        val client = LocalMqttClient.connectOnce(scope, broker, persistence)
+        val client = LocalMqttClient.start(scope, broker, persistence, createConnectFactory(broker))
         assertEquals(2L, client.connectionAttempts())
         assertEquals(1L, client.connectionCount())
         client.shutdown()
@@ -224,7 +222,7 @@ class MqttClientTest {
         val connections = listOf(wsBadPort, goodOptions)
         val persistence = connectionRequest.controlPacketFactory.defaultPersistence(inMemory)
         val broker = persistence.addBroker(connections, connectionRequest)
-        val client = LocalMqttClient.stayConnected(scope, broker, persistence)
+        val client = LocalMqttClient.start(scope, broker, persistence, createConnectFactory(broker))
         client.awaitConnectivity()
         assertEquals(2L, client.connectionAttempts())
         assertEquals(1L, client.connectionCount())
@@ -250,30 +248,17 @@ class MqttClientTest {
     ) {
         val persistence = InMemoryPersistence()
         val broker = persistence.addBroker(connectionOptions, connectionRequest)
-        var client: LocalMqttClient? = null
         val expectedPingCount = 2
+        val client = LocalMqttClient.start(scope, broker, persistence, createConnectFactory(broker))
+        // Wait long enough for keepAlive pings to be exchanged
         withTimeout((connectionRequestMqtt4.variableHeader.keepAliveSeconds * expectedPingCount + 5).seconds) {
-            val pongs =
-                callbackFlow {
-                    var count = 0
-                    val incomingMessageCb: (UByte, Int, ReadBuffer) -> Unit = { byte1, remaining, buffer ->
-                        val p = connectionRequest.controlPacketFactory.from(buffer, byte1, remaining)
-                        if (p is IPingResponse) {
-                            trySend(p)
-                            count++
-                        }
-                        if (count == 2) {
-                            channel.close()
-                        }
-                    }
-                    client = LocalMqttClient.connectOnce(scope, broker, persistence, incomingMessage = incomingMessageCb)
-                    awaitClose()
-                }
-            pongs.take(expectedPingCount).toList()
+            while (client.pingResponseCount() < expectedPingCount) {
+                delay(0.25.seconds)
+            }
         }
-        client!!.shutdown()
-        assertEquals(expectedPingCount.toLong(), client!!.pingCount())
-        assertEquals(expectedPingCount.toLong(), client!!.pingResponseCount())
+        client.shutdown()
+        assertEquals(expectedPingCount.toLong(), client.pingCount())
+        assertEquals(expectedPingCount.toLong(), client.pingResponseCount())
     }
 
     @Test
@@ -339,9 +324,9 @@ class MqttClientTest {
         val wsOptions = if (isMqtt5) testWsMqtt5ConnectionOptions else testWsMqttConnectionOptions
         val persistence = connectionRequest.controlPacketFactory.defaultPersistence(inMemory)
         val brokerLwt = persistence.addBroker(wsOptions, lwtConnectionRequest)
-        val clientLwt = LocalMqttClient.connectOnce(scope, brokerLwt, persistence)
+        val clientLwt = LocalMqttClient.start(scope, brokerLwt, persistence, createConnectFactory(brokerLwt))
         val broker = persistence.addBroker(wsOptions, connectionRequest)
-        val clientOther = LocalMqttClient.connectOnce(scope, broker, persistence)
+        val clientOther = LocalMqttClient.start(scope, broker, persistence, createConnectFactory(broker))
 
         val willTopicFilter = TopicFilter.fromOrThrow(willTopic.toString())
         val receivedLwt =
@@ -373,7 +358,7 @@ class MqttClientTest {
         Mutex(true)
         val persistence = connectionRequest.controlPacketFactory.defaultPersistence(inMemory)
         val broker = persistence.addBroker(connectionOptions, connectionRequest)
-        val client = LocalMqttClient.stayConnected(scope, broker, persistence)
+        val client = LocalMqttClient.start(scope, broker, persistence, createConnectFactory(broker))
         client.awaitConnectivity()
         sendAllMessageTypes2(client)
         client.sendDisconnect()
@@ -390,15 +375,16 @@ class MqttClientTest {
     ) {
         val persistence = connectionRequest.controlPacketFactory.defaultPersistence(inMemory)
         val broker = persistence.addBroker(connectionOptions, connectionRequest)
-        val client = LocalMqttClient.connectOnce(scope, broker, persistence)
+        val client = LocalMqttClient.start(scope, broker, persistence, createConnectFactory(broker))
         val flow = client.observe(TopicFilter.fromOrThrow(topic.toString()))
-        val collectJob = scope.launch {
-            flow.filterIsInstance<IPublishMessage>().take(3).collect {
-                val payload = it.payload ?: EMPTY_BUFFER
-                val qosValue = it.qualityOfService.integerValue.toString()
-                assertEquals(payloadString + qosValue, payload.readString(payload.limit()))
+        val collectJob =
+            scope.launch {
+                flow.filterIsInstance<IPublishMessage>().take(3).collect {
+                    val payload = it.payload ?: EMPTY_BUFFER
+                    val qosValue = it.qualityOfService.integerValue.toString()
+                    assertEquals(payloadString + qosValue, payload.readString(payload.limit()))
+                }
             }
-        }
         sendAllMessageTypes2(client)
         collectJob.join()
         client.shutdown(drain = true)
@@ -434,8 +420,9 @@ suspend fun sendAllMessageTypes(
         )
     client.subscribe(factory.subscribe(topicFilter, maximumQos = QualityOfService.EXACTLY_ONCE)).subAck.await()
     val pub = client.publish(pubQos2)
-    pub.awaitAll()
-    client.publish(pubQos0).awaitAll()
-    client.publish(pubQos1).awaitAll()
+    if (pub is PublishResult.QoS2) pub.state.first { it is QoS2State.Complete }
+    val pub0 = client.publish(pubQos0) // QoS 0 — no ack to wait for
+    val pub1 = client.publish(pubQos1)
+    if (pub1 is PublishResult.QoS1) pub1.state.first { it is QoS1State.Acknowledged }
     client.unsubscribe(factory.unsubscribe(topicFilter)).unsubAck.await()
 }

@@ -1,23 +1,33 @@
 package com.ditchoom.mqtt.client.net
 
-import com.ditchoom.mqtt.client.MqttSocketSession
+import com.ditchoom.mqtt.client.MqttCodec
+import com.ditchoom.mqtt.client.mqttPeekFrameSize
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
+import com.ditchoom.mqtt.controlpacket.ControlPacket
+import com.ditchoom.mqtt.controlpacket.IConnectionAcknowledgment
+import com.ditchoom.mqtt.controlpacket.IConnectionRequest
 import com.ditchoom.mqtt.controlpacket.IPublishAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IPublishMessage
 import com.ditchoom.mqtt.controlpacket.ISubscribeAcknowledgement
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.TopicName
-import com.ditchoom.mqtt.controlpacket.IConnectionRequest
 import com.ditchoom.mqtt3.controlpacket.ConnectionRequest
+import com.ditchoom.socket.ConnectionOptions
 import com.ditchoom.socket.NetworkCapabilities
+import com.ditchoom.socket.SocketOptions
+import com.ditchoom.socket.TlsConfig
 import com.ditchoom.socket.getNetworkCapabilities
-import com.ditchoom.mqtt5.controlpacket.ConnectionRequest as ConnectionRequestV5
+import com.ditchoom.socket.transport.CodecConnection
+import com.ditchoom.buffer.flow.Connection
+import com.ditchoom.socket.transport.TcpTransport
+import kotlinx.coroutines.flow.first
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.seconds
+import com.ditchoom.mqtt5.controlpacket.ConnectionRequest as ConnectionRequestV5
 
 /**
  * Validates MQTT connectivity against public brokers.
@@ -320,14 +330,77 @@ class PublicBrokerValidationTest {
             ConnectionRequest(payload = ConnectionRequest.Payload(clientId = clientId))
         }
 
+    /**
+     * Opens a [MessageConnection] for the given [MqttConnectionOptions].
+     * TCP connections use [CodecConnection] + [MqttCodec].
+     * WebSocket connections are not yet supported (requires WebSocketByteStream adapter).
+     */
+    private suspend fun openConnection(
+        connectionOptions: MqttConnectionOptions,
+        connectionRequest: IConnectionRequest,
+    ): Connection<ControlPacket> {
+        val factory = connectionRequest.controlPacketFactory
+        return when (connectionOptions) {
+            is MqttConnectionOptions.SocketConnection -> {
+                val socketOptions =
+                    if (connectionOptions.tlsEnabled) {
+                        SocketOptions(
+                            tls =
+                                TlsConfig(
+                                    verifyCertificates = connectionOptions.tlsVerifyCerts,
+                                    verifyHostname = connectionOptions.tlsVerifyHostname,
+                                    allowExpiredCertificates = connectionOptions.tlsAllowExpired,
+                                    allowSelfSigned = connectionOptions.tlsAllowSelfSigned,
+                                ),
+                        )
+                    } else {
+                        SocketOptions()
+                    }
+                CodecConnection.connect(
+                    connectionOptions.host,
+                    connectionOptions.port,
+                    MqttCodec(factory),
+                    TcpTransport(),
+                    ConnectionOptions(
+                        socketOptions = socketOptions,
+                        connectionTimeout = connectionOptions.connectionTimeout,
+                        readTimeout = connectionOptions.readTimeout,
+                        writeTimeout = connectionOptions.writeTimeout,
+                    ),
+                )
+            }
+
+            is MqttConnectionOptions.WebSocketConnectionOptions -> {
+                throw UnsupportedOperationException(
+                    "WebSocket transport not yet supported in tests. Requires WebSocketByteStream adapter.",
+                )
+            }
+        }
+    }
+
+    /**
+     * Sends CONNECT, validates CONNACK, and returns the connection.
+     */
+    private suspend fun connectAndValidate(
+        connectionOptions: MqttConnectionOptions,
+        connectionRequest: IConnectionRequest,
+        clientId: String,
+    ): Connection<ControlPacket> {
+        val connection = openConnection(connectionOptions, connectionRequest)
+        connection.send(connectionRequest as ControlPacket)
+        val connack = connection.receive().first()
+        assertTrue(connack is IConnectionAcknowledgment, "CONNACK failed for $clientId, got ${connack::class.simpleName}")
+        assertTrue(connack.isSuccessful, "CONNACK rejected for $clientId: ${connack.connectionReason}")
+        return connection
+    }
+
     private suspend fun connectPublishDisconnect(
         connectionOptions: MqttConnectionOptions,
         mqttV5: Boolean = false,
     ) {
         val clientId = "ditchoom-test-${Random.nextInt()}"
         val connectionRequest = makeConnectionRequest(clientId, mqttV5)
-        val session = MqttSocketSession.open(-1, connectionRequest, connectionOptions)
-        assertTrue(session.connectionAcknowledgement.isSuccessful, "CONNACK failed for $clientId")
+        val connection = connectAndValidate(connectionOptions, connectionRequest, clientId)
 
         val publish =
             connectionRequest.controlPacketFactory
@@ -335,12 +408,12 @@ class PublicBrokerValidationTest {
                     topicName = TopicName.fromOrThrow("ditchoom/validation/test"),
                     qos = QualityOfService.AT_LEAST_ONCE,
                 ).maybeCopyWithNewPacketIdentifier(1)
-        session.write(publish)
-        val ack = session.read()
+        connection.send(publish)
+        val ack = connection.receive().first()
         assertTrue(ack is IPublishAcknowledgment, "Expected PUBACK, got ${ack::class.simpleName}")
 
-        session.write(connectionRequest.controlPacketFactory.disconnect())
-        session.close()
+        connection.send(connectionRequest.controlPacketFactory.disconnect())
+        connection.close()
     }
 
     private suspend fun connectMultiplePublishes(
@@ -350,8 +423,7 @@ class PublicBrokerValidationTest {
     ) {
         val clientId = "ditchoom-multi-${Random.nextInt()}"
         val connectionRequest = makeConnectionRequest(clientId, mqttV5)
-        val session = MqttSocketSession.open(-1, connectionRequest, connectionOptions)
-        assertTrue(session.connectionAcknowledgement.isSuccessful, "CONNACK failed for $clientId")
+        val connection = connectAndValidate(connectionOptions, connectionRequest, clientId)
 
         repeat(publishCount) { i ->
             val publish =
@@ -360,13 +432,13 @@ class PublicBrokerValidationTest {
                         topicName = TopicName.fromOrThrow("ditchoom/validation/multi/$i"),
                         qos = QualityOfService.AT_LEAST_ONCE,
                     ).maybeCopyWithNewPacketIdentifier(i + 1)
-            session.write(publish)
-            val ack = session.read()
+            connection.send(publish)
+            val ack = connection.receive().first()
             assertTrue(ack is IPublishAcknowledgment, "Expected PUBACK for message $i, got ${ack::class.simpleName}")
         }
 
-        session.write(connectionRequest.controlPacketFactory.disconnect())
-        session.close()
+        connection.send(connectionRequest.controlPacketFactory.disconnect())
+        connection.close()
     }
 
     private suspend fun connectSubscribeReceive(
@@ -376,16 +448,15 @@ class PublicBrokerValidationTest {
         val clientId = "ditchoom-sub-${Random.nextInt()}"
         val uniqueTopic = "ditchoom/validation/sub/${Random.nextInt()}"
         val connectionRequest = makeConnectionRequest(clientId, mqttV5)
-        val session = MqttSocketSession.open(-1, connectionRequest, connectionOptions)
-        assertTrue(session.connectionAcknowledgement.isSuccessful, "CONNACK failed for $clientId")
+        val connection = connectAndValidate(connectionOptions, connectionRequest, clientId)
 
         // Subscribe
         val subscribe =
             connectionRequest.controlPacketFactory
                 .subscribe(TopicFilter.fromOrThrow(uniqueTopic))
                 .copyWithNewPacketIdentifier(1)
-        session.write(subscribe)
-        val suback = session.read()
+        connection.send(subscribe)
+        val suback = connection.receive().first()
         assertTrue(suback is ISubscribeAcknowledgement, "Expected SUBACK, got ${suback::class.simpleName}")
 
         // Publish to the topic we subscribed to
@@ -395,18 +466,18 @@ class PublicBrokerValidationTest {
                     topicName = TopicName.fromOrThrow(uniqueTopic),
                     qos = QualityOfService.AT_LEAST_ONCE,
                 ).maybeCopyWithNewPacketIdentifier(2)
-        session.write(publish)
+        connection.send(publish)
 
         // Read PUBACK and incoming PUBLISH (order is not guaranteed)
-        val packet1 = session.read()
-        val packet2 = session.read()
+        val packet1 = connection.receive().first()
+        val packet2 = connection.receive().first()
         val packets = listOf(packet1, packet2)
         assertTrue(packets.any { it is IPublishAcknowledgment }, "Expected PUBACK in response, got ${packets.map { it::class.simpleName }}")
         val received = packets.filterIsInstance<IPublishMessage>().firstOrNull()
         assertTrue(received != null, "Expected incoming PUBLISH, got ${packets.map { it::class.simpleName }}")
         assertEquals(uniqueTopic, received.topic.toString(), "Received message should be on subscribed topic")
 
-        session.write(connectionRequest.controlPacketFactory.disconnect())
-        session.close()
+        connection.send(connectionRequest.controlPacketFactory.disconnect())
+        connection.close()
     }
 }

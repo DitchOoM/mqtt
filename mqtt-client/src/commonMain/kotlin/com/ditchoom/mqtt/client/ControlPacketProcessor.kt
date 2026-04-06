@@ -18,6 +18,7 @@ import com.ditchoom.mqtt.controlpacket.IUnsubscribeRequest
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.last
@@ -38,6 +39,19 @@ class ControlPacketProcessor(
         private set
     var pingResponseCount = 0L
         private set
+
+    /** Active outbound QoS 1 publish state flows, keyed by packet ID. */
+    internal val qos1States = mutableMapOf<Int, MutableStateFlow<QoS1State>>()
+
+    /** Active outbound QoS 2 publish state flows, keyed by packet ID. */
+    internal val qos2States = mutableMapOf<Int, MutableStateFlow<QoS2State>>()
+
+    /** Called by writeLoop when a packet is actually written to wire. */
+    fun onPacketSent(packet: ControlPacket) {
+        val packetId = packet.packetIdentifier
+        qos1States[packetId]?.let { if (it.value == QoS1State.Queued) it.value = QoS1State.Sent }
+        qos2States[packetId]?.let { if (it.value == QoS2State.Queued) it.value = QoS2State.Sent }
+    }
 
     @kotlin.concurrent.Volatile
     private var lastActivityMark = TimeSource.Monotonic.markNow()
@@ -132,6 +146,7 @@ class ControlPacketProcessor(
                 is IPingResponse -> pingResponseCount++
                 is IPublishAcknowledgment -> {
                     persistence.ackPub(broker, packet)
+                    qos1States.remove(packet.packetIdentifier)?.value = QoS1State.Acknowledged(packet)
                 }
                 is IPublishMessage -> {
                     val replyMessage = packet.expectedResponse()
@@ -144,12 +159,13 @@ class ControlPacketProcessor(
                     }
                 }
                 is IPublishReceived -> {
-                    // QoS 2 outbound: PUBREC received → update state, send PUBREL
                     persistence.updatePublishState(broker, packet.packetIdentifier, Persistence.STATE_PUBREC_RECEIVED)
+                    qos2States[packet.packetIdentifier]?.value = QoS2State.Received
                     val pubRel = packet.expectedResponse()
                     persistence.ackPubReceivedQueuePubRelease(broker, packet, pubRel)
                     write(pubRel)
                     persistence.updatePublishState(broker, packet.packetIdentifier, Persistence.STATE_PUBREL_SENT)
+                    qos2States[packet.packetIdentifier]?.value = QoS2State.Released
                 }
                 is IPublishRelease -> {
                     val pubComp = packet.expectedResponse()
@@ -159,6 +175,7 @@ class ControlPacketProcessor(
                 }
                 is IPublishComplete -> {
                     persistence.ackPubComplete(broker, packet)
+                    qos2States.remove(packet.packetIdentifier)?.value = QoS2State.Complete(packet)
                 }
                 is ISubscribeAcknowledgement -> persistence.ackSub(broker, packet)
                 is IUnsubscribeAcknowledgment -> persistence.ackUnsub(broker, packet)

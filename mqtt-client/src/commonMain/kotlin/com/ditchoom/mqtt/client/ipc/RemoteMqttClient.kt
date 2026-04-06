@@ -35,6 +35,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 
 abstract class RemoteMqttClient(
@@ -123,24 +126,60 @@ abstract class RemoteMqttClient(
         retain: Boolean,
         encoder: PayloadEncoder<P>,
     ): PublishResult {
-        TODO("Implement typed publish over IPC")
+        // Encode P → bytes, then delegate to existing byte-level publish
+        val payloadSize = encoder.sizeOf(payload)
+        val payloadBuffer = bufferFactory.allocate(payloadSize)
+        encoder.encode(payloadBuffer, payload)
+        val pub = packetFactory.publish(
+            topicName = com.ditchoom.mqtt.controlpacket.TopicName.fromOrThrow(topic),
+            qos = qos,
+            retain = retain,
+            payload = payloadBuffer,
+        )
+        return publish(pub)
     }
 
     override suspend fun <P> subscribe(
         topicFilter: String,
         maxQos: QualityOfService,
         decoder: PayloadDecoder<P>,
-    ): MqttSubscription<P> {
-        TODO("Implement typed subscription over IPC")
-    }
+    ): MqttSubscription<P> = subscribeTypedIpc(topicFilter, maxQos, decoder, handler = null)
 
     override suspend fun <P> subscribe(
         topicFilter: String,
         maxQos: QualityOfService,
         decoder: PayloadDecoder<P>,
         handler: suspend (P) -> Unit,
+    ): MqttSubscription<P> = subscribeTypedIpc(topicFilter, maxQos, decoder, handler)
+
+    private suspend fun <P> subscribeTypedIpc(
+        topicFilter: String,
+        maxQos: QualityOfService,
+        decoder: PayloadDecoder<P>,
+        handler: (suspend (P) -> Unit)?,
     ): MqttSubscription<P> {
-        TODO("Implement typed subscription with handler over IPC")
+        val filter = com.ditchoom.mqtt.controlpacket.TopicFilter.fromOrThrow(topicFilter)
+        val sub = packetFactory.subscribe(filter, maxQos)
+        val subOp = subscribe(sub)
+        // Decode incoming IPublishMessage payload → P using the consumer's decoder
+        val typedFlow = subOp.subscriptions.values.asSequence()
+            .reduce { a, b -> kotlinx.coroutines.flow.merge(a, b) }
+            .map { msg ->
+                val payload = msg.payload ?: error("Expected payload in PUBLISH")
+                val reader = com.ditchoom.buffer.codec.payload.ReadBufferPayloadReader(payload)
+                try { decoder.decode(reader) } finally { reader.release() }
+            }
+            .onEach { decoded -> handler?.invoke(decoded) }
+        return object : MqttSubscription<P> {
+            override val topicFilter: String = topicFilter
+            override val suback = subOp.subAck
+            override fun receive() = typedFlow
+            override suspend fun unsubscribe() = scope.async {
+                val unsub = packetFactory.unsubscribe(filter)
+                val op = this@RemoteMqttClient.unsubscribe(unsub)
+                op.unsubAck.await()
+            }
+        }
     }
 
     override suspend fun unsubscribe(unsub: IUnsubscribeRequest): UnsubscribeOperation {

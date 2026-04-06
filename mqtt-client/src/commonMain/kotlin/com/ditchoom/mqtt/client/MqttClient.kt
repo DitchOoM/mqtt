@@ -156,6 +156,13 @@ interface MqttClient {
         drain: Boolean = false,
     )
 
+    /**
+     * Returns in-flight publish operations that survived a process restart.
+     * Each has a [PublishResult] with a [StateFlow] reconstructed from the persisted state.
+     * Useful for recovering UI state or tracking delivery after restart.
+     */
+    suspend fun pendingPublishes(): List<PublishResult>
+
     suspend fun connectionCount(): Long
 
     suspend fun connectionAttempts(): Long

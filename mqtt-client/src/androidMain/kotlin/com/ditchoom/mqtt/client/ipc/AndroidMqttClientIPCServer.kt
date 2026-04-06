@@ -9,6 +9,7 @@ class AndroidMqttClientIPCServer(
     private val clientServer: RemoteMqttClientWorker,
 ) : IPCMqttClient.Stub() {
     private val observers = HashMap<Int, MqttMessageTransferredCallback>()
+    private val publishStateObservers = HashMap<Int, MqttPublishStateCallback>()
 
     init {
         clientServer.observers += { incoming, byte1, remaining, buffer ->
@@ -45,6 +46,19 @@ class AndroidMqttClientIPCServer(
 
     override fun unregisterObserver(observer: MqttMessageTransferredCallback) {
         observers.remove(observer.id())
+    }
+
+    override fun registerPublishStateObserver(observer: MqttPublishStateCallback) {
+        publishStateObservers[observer.hashCode()] = observer
+    }
+
+    override fun unregisterPublishStateObserver(observer: MqttPublishStateCallback) {
+        publishStateObservers.remove(observer.hashCode())
+    }
+
+    /** Notify all registered state observers of a publish state change. */
+    internal fun notifyPublishStateChanged(packetId: Int, state: Int) {
+        publishStateObservers.values.forEach { it.onStateChanged(packetId, state) }
     }
 
     override fun currentConnectionAcknowledgmentOrNull(): JvmBuffer? =

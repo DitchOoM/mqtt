@@ -5,10 +5,7 @@ import com.ditchoom.mqtt.connection.MqttBroker
 import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.ControlPacketFactory
 import com.ditchoom.mqtt.controlpacket.IConnectionAcknowledgment
-import com.ditchoom.mqtt.controlpacket.IPublishAcknowledgment
-import com.ditchoom.mqtt.controlpacket.IPublishComplete
 import com.ditchoom.mqtt.controlpacket.IPublishMessage
-import com.ditchoom.mqtt.controlpacket.IPublishReceived
 import com.ditchoom.mqtt.controlpacket.ISubscribeAcknowledgement
 import com.ditchoom.mqtt.controlpacket.ISubscribeRequest
 import com.ditchoom.mqtt.controlpacket.IUnsubscribeAcknowledgment
@@ -85,45 +82,26 @@ class LocalMqttClient(
         return result
     }
 
-    private fun observePub(publishMessage: IPublishMessage): PublishResult =
-        when (publishMessage.qualityOfService) {
+    private fun observePub(publishMessage: IPublishMessage): PublishResult {
+        val packetId = publishMessage.packetIdentifier
+        return when (publishMessage.qualityOfService) {
             QualityOfService.AT_MOST_ONCE -> PublishResult.QoS0Sent
 
             QualityOfService.AT_LEAST_ONCE -> {
-                check(publishMessage.packetIdentifier != NO_PACKET_ID) { "PacketId must be set by the persistence" }
-                val packetId = publishMessage.packetIdentifier
+                check(packetId != NO_PACKET_ID) { "PacketId must be set by the persistence" }
                 val stateFlow = MutableStateFlow<QoS1State>(QoS1State.Queued)
-                scope.launch {
-                    val ack = processor.awaitIncomingPacketId<IPublishAcknowledgment>(
-                        packetId,
-                        IPublishAcknowledgment.CONTROL_PACKET_VALUE,
-                    )
-                    stateFlow.value = QoS1State.Acknowledged(ack)
-                }
+                processor.qos1States[packetId] = stateFlow
                 PublishResult.QoS1(packetId, stateFlow)
             }
 
             QualityOfService.EXACTLY_ONCE -> {
-                val packetId = publishMessage.packetIdentifier
-                check(publishMessage.packetIdentifier != NO_PACKET_ID) { "PacketId must be set by the persistence" }
+                check(packetId != NO_PACKET_ID) { "PacketId must be set by the persistence" }
                 val stateFlow = MutableStateFlow<QoS2State>(QoS2State.Queued)
-                scope.launch {
-                    processor.awaitIncomingPacketId<IPublishReceived>(
-                        packetId,
-                        IPublishReceived.CONTROL_PACKET_VALUE,
-                    )
-                    stateFlow.value = QoS2State.Received
-                    processor.awaitIncomingPacketId<IPublishComplete>(
-                        packetId,
-                        IPublishComplete.CONTROL_PACKET_VALUE,
-                    )
-                    stateFlow.value = QoS2State.Complete(
-                        processor.awaitIncomingPacketId(packetId, IPublishComplete.CONTROL_PACKET_VALUE),
-                    )
-                }
+                processor.qos2States[packetId] = stateFlow
                 PublishResult.QoS2(packetId, stateFlow)
             }
         }
+    }
 
     override fun observe(filter: TopicFilter): Flow<IPublishMessage> =
         processor.readChannel.filterIsInstance<IPublishMessage>().filter {
@@ -256,6 +234,17 @@ class LocalMqttClient(
                 op.unsubAck.await()
             }
         }
+    }
+
+    override suspend fun pendingPublishes(): List<PublishResult> {
+        val results = mutableListOf<PublishResult>()
+        for ((packetId, stateFlow) in processor.qos1States) {
+            results += PublishResult.QoS1(packetId, stateFlow)
+        }
+        for ((packetId, stateFlow) in processor.qos2States) {
+            results += PublishResult.QoS2(packetId, stateFlow)
+        }
+        return results
     }
 
     internal fun isStopped() = connectionJob?.isActive != true

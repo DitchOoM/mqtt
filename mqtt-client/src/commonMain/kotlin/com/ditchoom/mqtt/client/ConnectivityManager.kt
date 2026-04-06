@@ -138,6 +138,7 @@ class ConnectivityManager(
                 }
             for (packet in packets) {
                 conn.send(packet)
+                processor.onPacketSent(packet)
                 observer?.wrotePackets(
                     broker.identifier,
                     broker.connectionRequest.mqttVersion,

@@ -38,8 +38,7 @@ class LocalMqttClient(
 ) : MqttClient {
     internal val processor: ControlPacketProcessor get() = connectivityManager.processor
     override val broker: MqttBroker = connectivityManager.broker
-    private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
-    override val connectionState: StateFlow<ConnectionState> = _connectionState
+    override val connectionState: StateFlow<ConnectionState> get() = connectivityManager.connectionState
     var observer: Observer? = null
         set(value) {
             connectivityManager.observer = value

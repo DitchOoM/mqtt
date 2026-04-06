@@ -12,7 +12,9 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -39,6 +41,9 @@ class ConnectivityManager(
         private set
 
     var observer: Observer? = null
+
+    private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
+    val connectionState: StateFlow<ConnectionState> = _connectionState
 
     private val readChannel = MutableSharedFlow<ControlPacket>(1)
     private val writeChannel = Channel<Collection<ControlPacket>>(Channel.BUFFERED)
@@ -81,6 +86,7 @@ class ConnectivityManager(
             }
         } finally {
             withContext(NonCancellable) {
+                _connectionState.value = ConnectionState.Disconnected
                 conn.close()
             }
         }
@@ -90,11 +96,13 @@ class ConnectivityManager(
         connectionAttempts++
         val conn = connect()
         try {
+            _connectionState.value = ConnectionState.Handshaking
             conn.send(broker.connectionRequest as ControlPacket)
             val response = conn.receive().first()
             if (response is IConnectionAcknowledgment && response.isSuccessful) {
                 connectionCount++
                 currentConnack = response
+                _connectionState.value = ConnectionState.Connected(response)
                 prepareSession(response)
                 connectionBroadcastInternal.emit(response)
                 return conn

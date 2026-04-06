@@ -1,17 +1,16 @@
 package com.ditchoom.mqtt.client
 
-import com.ditchoom.buffer.BufferFactory
-import com.ditchoom.buffer.Default
-import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.mqtt.InMemoryPersistence
 import com.ditchoom.mqtt.Persistence
 import com.ditchoom.mqtt.connection.MqttBroker
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
+import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.ControlPacketFactory
 import com.ditchoom.mqtt.controlpacket.IConnectionRequest
 import com.ditchoom.mqtt3.controlpacket.ConnectionRequest
 import com.ditchoom.mqtt3.controlpacket.ControlPacketV4Factory
 import com.ditchoom.mqtt5.controlpacket.ControlPacketV5Factory
+import com.ditchoom.buffer.flow.Connection
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -24,12 +23,10 @@ class LocalMqttService private constructor(
     internal val scope: CoroutineScope,
     private val persistenceV4: Persistence,
     private val persistenceV5: Persistence,
+    private val connectionFactory: (MqttBroker) -> suspend () -> Connection<ControlPacket>,
 ) : MqttService {
     private val brokerClientMap = mutableMapOf<Byte, HashMap<Int, LocalMqttClient>>()
     private var observer: Observer? = null
-    var factory: BufferFactory = BufferFactory.Default
-    var incomingMessages: (MqttBroker, UByte, Int, ReadBuffer) -> Unit = { _, _, _, _ -> }
-    var sentMessages: (MqttBroker, ReadBuffer) -> Unit = { _, _ -> }
 
     fun assignObservers(observer: Observer?) {
         this.observer = observer
@@ -52,22 +49,12 @@ class LocalMqttService private constructor(
         val client = brokerClientMap[broker.protocolVersion]?.get(broker.identifier)
 
         if (client == null) {
-            val c =
-                LocalMqttClient.stayConnected(scope, broker, getPersistence(broker), factory, observer, {
-                    sentMessages(broker, it)
-                }) { byte1, remainingLength, buffer ->
-                    incomingMessages(broker, byte1, remainingLength, buffer)
-                }
+            val c = LocalMqttClient.start(scope, broker, getPersistence(broker), connectionFactory(broker), observer)
             brokerClientMap
                 .getOrPut(broker.protocolVersion) { HashMap() }
                 .getOrPut(broker.identifier) { c }
         } else if (client.isStopped()) {
-            val c =
-                LocalMqttClient.stayConnected(scope, broker, getPersistence(broker), factory, observer, {
-                    sentMessages(broker, it)
-                }) { byte1, remainingLength, buffer ->
-                    incomingMessages(broker, byte1, remainingLength, buffer)
-                }
+            val c = LocalMqttClient.start(scope, broker, getPersistence(broker), connectionFactory(broker), observer)
             brokerClientMap
                 .getOrPut(broker.protocolVersion) { HashMap() }[broker.identifier] = c
         }
@@ -85,12 +72,7 @@ class LocalMqttService private constructor(
         newBrokers.forEach { pair ->
             val (protocolVersion, brokerId) = pair
             val broker = allBrokers[pair]!!
-            val c =
-                LocalMqttClient.stayConnected(scope, broker, getPersistence(broker), factory, observer, {
-                    sentMessages(broker, it)
-                }) { byte1, remainingLength, buffer ->
-                    incomingMessages(broker, byte1, remainingLength, buffer)
-                }
+            val c = LocalMqttClient.start(scope, broker, getPersistence(broker), connectionFactory(broker), observer)
             brokerClientMap.getOrPut(protocolVersion) { HashMap() }[brokerId] = c
         }
     }
@@ -142,14 +124,16 @@ class LocalMqttService private constructor(
             }
 
         suspend fun buildService(
+            connectionFactory: (MqttBroker) -> suspend () -> Connection<ControlPacket>,
             androidContext: Any? = null,
             inMemory: Boolean = false,
         ): LocalMqttService =
             suspendCoroutine { cont ->
-                buildService(androidContext, inMemory) { cont.resume(it) }
+                buildService(connectionFactory, androidContext, inMemory) { cont.resume(it) }
             }
 
         fun buildService(
+            connectionFactory: (MqttBroker) -> suspend () -> Connection<ControlPacket>,
             androidContext: Any? = null,
             inMemory: Boolean = false,
             cb: (LocalMqttService) -> Unit,
@@ -158,28 +142,24 @@ class LocalMqttService private constructor(
             scope.launch {
                 val persistenceV4 =
                     try {
-                        val p =
-                            ConnectionRequest("")
-                                .controlPacketFactory
-                                .defaultPersistence(androidContext, inMemory = inMemory)
-                        p
+                        ConnectionRequest("")
+                            .controlPacketFactory
+                            .defaultPersistence(androidContext, inMemory = inMemory)
                     } catch (e: Exception) {
                         println("\r\nFailed to allocate default persistence, using InMemory")
                         InMemoryPersistence()
                     }
                 val persistenceV5 =
                     try {
-                        val p =
-                            com.ditchoom.mqtt5.controlpacket
-                                .ConnectionRequest("")
-                                .controlPacketFactory
-                                .defaultPersistence(androidContext, inMemory = inMemory)
-                        p
+                        com.ditchoom.mqtt5.controlpacket
+                            .ConnectionRequest("")
+                            .controlPacketFactory
+                            .defaultPersistence(androidContext, inMemory = inMemory)
                     } catch (e: Exception) {
                         println("\r\nFailed to allocate default persistence, using InMemory")
                         InMemoryPersistence()
                     }
-                val service = LocalMqttService(scope, persistenceV4, persistenceV5)
+                val service = LocalMqttService(scope, persistenceV4, persistenceV5, connectionFactory)
                 cb(service)
             }
         }

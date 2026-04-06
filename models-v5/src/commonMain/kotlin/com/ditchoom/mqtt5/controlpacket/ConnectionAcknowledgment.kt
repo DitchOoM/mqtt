@@ -1,12 +1,13 @@
 package com.ditchoom.mqtt5.controlpacket
 
 import com.ditchoom.buffer.ReadBuffer
-import com.ditchoom.buffer.WriteBuffer
+import com.ditchoom.buffer.codec.Codec
 import com.ditchoom.mqtt.MalformedPacketException
 import com.ditchoom.mqtt.ProtocolError
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.variableByteSize
 import com.ditchoom.mqtt.controlpacket.IConnectionAcknowledgment
 import com.ditchoom.mqtt.controlpacket.QualityOfService
+import com.ditchoom.mqtt.controlpacket.WireEncoded
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.BAD_AUTHENTICATION_METHOD
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.BAD_USER_NAME_OR_PASSWORD
@@ -69,25 +70,20 @@ import com.ditchoom.mqtt5.controlpacket.wire.ConnAckV5WireCodec
 data class ConnectionAcknowledgment(
     val header: VariableHeader = VariableHeader(),
 ) : ControlPacketV5,
-    IConnectionAcknowledgment {
+    IConnectionAcknowledgment,
+    WireEncoded<ConnAckV5Wire> {
     override val controlPacketValue: Byte get() = 2
     override val direction: DirectionOfFlow get() = DirectionOfFlow.SERVER_TO_CLIENT
+    override val wireCodec: Codec<ConnAckV5Wire> get() = ConnAckV5WireCodec
     override val isSuccessful: Boolean = header.connectReason == SUCCESS
     override val connectionReason: String = header.connectReason.name
     override val sessionPresent: Boolean = header.sessionPresent
 
-    override fun encodeBody(writeBuffer: WriteBuffer) {
-        ConnAckV5WireCodec.encode(
-            writeBuffer,
-            ConnAckV5Wire(
-                (if (header.sessionPresent) 1u else 0u).toUByte(),
-                header.connectReason.byte,
-                header.properties.props,
-            ),
-        )
-    }
-
-    override fun remainingLength() = header.size()
+    override fun toWire() = ConnAckV5Wire(
+        (if (header.sessionPresent) 1u else 0u).toUByte(),
+        header.connectReason.byte,
+        header.properties.props,
+    )
 
     override val sessionExpiryInterval: ULong = header.properties.sessionExpiryIntervalSeconds ?: 0uL
     override val assignedClientIdentifier: String? = header.properties.assignedClientIdentifier
@@ -496,10 +492,6 @@ data class ConnectionAcknowledgment(
                 }
             }
 
-            fun size(): Int {
-                val bodySize = mqttPropertiesSize(props)
-                return bodySize + variableByteSize(bodySize)
-            }
 
             companion object {
                 fun from(keyValuePairs: Collection<MqttProperty>?): Properties {
@@ -564,8 +556,6 @@ data class ConnectionAcknowledgment(
                 }
             }
         }
-
-        fun size() = 2 + properties.size()
 
         companion object {
             fun from(

@@ -115,33 +115,6 @@ data class Subscription(
     override val maximumQos: QualityOfService = AT_LEAST_ONCE,
 ) : ISubscription {
     companion object {
-        fun fromMany(
-            buffer: ReadBuffer,
-            remaining: Int,
-        ): Set<Subscription> {
-            val subscriptions = HashSet<Subscription>()
-            var bytesRead = 0
-            while (bytesRead < remaining) {
-                val result = fromOrThrow(buffer)
-                bytesRead += result.first
-                subscriptions.add(result.second)
-            }
-            return subscriptions
-        }
-
-        fun fromOrThrow(buffer: ReadBuffer): Pair<Int, Subscription> {
-            val result = buffer.readMqttUtf8StringNotValidatedSized()
-            var bytesRead = UShort.SIZE_BYTES + result.first
-            val topicString = result.second
-            val subOptionsInt = buffer.readUnsignedByte().toInt()
-            bytesRead++
-            val qosBit1 = subOptionsInt.shl(6).shr(7) == 1
-            val qosBit0 = subOptionsInt.shl(7).shr(7) == 1
-            val qos = QualityOfService.fromBooleans(qosBit1, qosBit0)
-            val topic = TopicFilter.fromOrThrow(topicString)
-            return Pair(bytesRead, Subscription(topic, qos))
-        }
-
         fun from(
             topics: List<TopicFilter>,
             qos: List<QualityOfService>,
@@ -182,14 +155,5 @@ data class Subscription(
             return size
         }
 
-        fun writeMany(
-            subscriptions: Collection<ISubscription>,
-            writeBuffer: WriteBuffer,
-        ) {
-            subscriptions.forEach {
-                writeBuffer.writeMqttUtf8String(it.topicFilter.toString())
-                writeBuffer.writeByte(it.maximumQos.integerValue)
-            }
-        }
     }
 }

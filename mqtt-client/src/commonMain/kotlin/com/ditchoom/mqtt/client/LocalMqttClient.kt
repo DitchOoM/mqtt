@@ -1,10 +1,8 @@
 package com.ditchoom.mqtt.client
 
-import com.ditchoom.buffer.BufferFactory
-import com.ditchoom.buffer.Default
-import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.mqtt.Persistence
 import com.ditchoom.mqtt.connection.MqttBroker
+import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.ControlPacketFactory
 import com.ditchoom.mqtt.controlpacket.IConnectionAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IPublishAcknowledgment
@@ -18,30 +16,38 @@ import com.ditchoom.mqtt.controlpacket.IUnsubscribeRequest
 import com.ditchoom.mqtt.controlpacket.NO_PACKET_ID
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
+import com.ditchoom.mqtt.controlpacket.TopicName
+import com.ditchoom.buffer.flow.Connection
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.launch
 
 class LocalMqttClient(
     internal val connectivityManager: ConnectivityManager,
+    internal val scope: CoroutineScope,
 ) : MqttClient {
-    internal val scope: CoroutineScope = connectivityManager.scope
-    internal val processor: ControlPacketProcessor = connectivityManager.processor
+    internal val processor: ControlPacketProcessor get() = connectivityManager.processor
     override val broker: MqttBroker = connectivityManager.broker
+    private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
+    override val connectionState: StateFlow<ConnectionState> = _connectionState
     var observer: Observer? = null
         set(value) {
             connectivityManager.observer = value
-            processor.observer = value
             field = value
         }
-    val factory: BufferFactory get() = connectivityManager.factory
     override val packetFactory: ControlPacketFactory = connectivityManager.broker.connectionRequest.controlPacketFactory
+
+    private var connectionJob: Job? = null
 
     override suspend fun currentConnectionAcknowledgment(): IConnectionAcknowledgment? = connectivityManager.currentConnack()
 
@@ -73,51 +79,50 @@ class LocalMqttClient(
         processor.publish(pub, false)
     }
 
-    override suspend fun publish(pub: IPublishMessage): PublishOperation {
-        // Prepare the message (persist + assign packet ID) without sending
+    override suspend fun publish(pub: IPublishMessage): PublishResult {
         val prepared = processor.preparePublish(pub)
-        // Set up response observers BEFORE the packet hits the wire, to avoid
-        // a race where the broker responds before the SharedFlow collectors start.
-        val operation = observePub(prepared)
-        // Now send
+        val result = observePub(prepared)
         processor.sendPacket(prepared)
-        return operation
+        return result
     }
 
-    private fun observePub(publishMessage: IPublishMessage): PublishOperation =
+    private fun observePub(publishMessage: IPublishMessage): PublishResult =
         when (publishMessage.qualityOfService) {
-            QualityOfService.AT_MOST_ONCE -> {
-                PublishOperation.QoSAtMostOnceComplete
-            }
+            QualityOfService.AT_MOST_ONCE -> PublishResult.QoS0Sent
 
             QualityOfService.AT_LEAST_ONCE -> {
                 check(publishMessage.packetIdentifier != NO_PACKET_ID) { "PacketId must be set by the persistence" }
                 val packetId = publishMessage.packetIdentifier
-                val pubAck =
-                    scope.async {
-                        processor.awaitIncomingPacketId<IPublishAcknowledgment>(
-                            packetId,
-                            IPublishAcknowledgment.CONTROL_PACKET_VALUE,
-                        )
-                    }
-                PublishOperation.QoSAtLeastOnce(packetId, pubAck)
+                val stateFlow = MutableStateFlow<QoS1State>(QoS1State.Queued)
+                scope.launch {
+                    val ack = processor.awaitIncomingPacketId<IPublishAcknowledgment>(
+                        packetId,
+                        IPublishAcknowledgment.CONTROL_PACKET_VALUE,
+                    )
+                    stateFlow.value = QoS1State.Acknowledged(ack)
+                }
+                PublishResult.QoS1(packetId, stateFlow)
             }
 
             QualityOfService.EXACTLY_ONCE -> {
                 val packetId = publishMessage.packetIdentifier
                 check(publishMessage.packetIdentifier != NO_PACKET_ID) { "PacketId must be set by the persistence" }
-                val pubRecReceived =
-                    scope.async {
-                        processor.awaitIncomingPacketId(
-                            packetId,
-                            IPublishReceived.CONTROL_PACKET_VALUE,
-                        ) as IPublishReceived
-                    }
-                val pubCompReceived =
-                    scope.async {
-                        processor.awaitIncomingPacketId<IPublishComplete>(packetId, IPublishComplete.CONTROL_PACKET_VALUE)
-                    }
-                PublishOperation.QoSExactlyOnce(packetId, pubRecReceived, pubCompReceived)
+                val stateFlow = MutableStateFlow<QoS2State>(QoS2State.Queued)
+                scope.launch {
+                    processor.awaitIncomingPacketId<IPublishReceived>(
+                        packetId,
+                        IPublishReceived.CONTROL_PACKET_VALUE,
+                    )
+                    stateFlow.value = QoS2State.Received
+                    processor.awaitIncomingPacketId<IPublishComplete>(
+                        packetId,
+                        IPublishComplete.CONTROL_PACKET_VALUE,
+                    )
+                    stateFlow.value = QoS2State.Complete(
+                        processor.awaitIncomingPacketId(packetId, IPublishComplete.CONTROL_PACKET_VALUE),
+                    )
+                }
+                PublishResult.QoS2(packetId, stateFlow)
             }
         }
 
@@ -134,8 +139,10 @@ class LocalMqttClient(
 
     override suspend fun subscribe(sub: ISubscribeRequest): SubscribeOperation = observeSub(processor.subscribe(sub))
 
-    override suspend fun subscribe(sub: ISubscribeRequest, handler: SubscriptionHandler): SubscribeOperation {
-        // Register handler in the dispatcher for each subscription topic
+    override suspend fun subscribe(
+        sub: ISubscribeRequest,
+        handler: SubscriptionHandler,
+    ): SubscribeOperation {
         for (subscription in sub.subscriptions) {
             processor.publishDispatcher.subscribe(subscription.topicFilter, handler)
         }
@@ -163,7 +170,6 @@ class LocalMqttClient(
     }
 
     override suspend fun unsubscribe(unsub: IUnsubscribeRequest): UnsubscribeOperation {
-        // Remove handlers from the dispatcher for each topic
         for (topic in unsub.topics) {
             processor.publishDispatcher.unsubscribe(topic)
         }
@@ -190,61 +196,67 @@ class LocalMqttClient(
         drain: Boolean,
     ) {
         connectivityManager.shutdown(sendDisconnect, drain)
+        connectionJob?.cancel()
+        connectionJob = null
     }
 
-    internal fun isStopped() = connectivityManager.isStopped
+    override suspend fun <P> publish(
+        topic: String,
+        payload: P,
+        qos: QualityOfService,
+        retain: Boolean,
+        encoder: PayloadEncoder<P>,
+    ): PublishResult {
+        val pub = packetFactory.publish(
+            topicName = TopicName.fromOrThrow(topic),
+            qos = qos,
+            retain = retain,
+            payload = null, // payload encoded via backpatching in serializeToSlice
+        )
+        // TODO: integrate encoder into serializeToSlice path for zero-copy
+        return publish(pub)
+    }
+
+    override suspend fun <P> subscribe(
+        topicFilter: String,
+        maxQos: QualityOfService,
+        decoder: PayloadDecoder<P>,
+    ): MqttSubscription<P> {
+        TODO("Implement typed subscription with PayloadDecoder")
+    }
+
+    override suspend fun <P> subscribe(
+        topicFilter: String,
+        maxQos: QualityOfService,
+        decoder: PayloadDecoder<P>,
+        handler: suspend (P) -> Unit,
+    ): MqttSubscription<P> {
+        TODO("Implement typed subscription with handler")
+    }
+
+    internal fun isStopped() = connectionJob?.isActive != true
 
     override suspend fun connectionCount(): Long = connectivityManager.connectionCount
 
     override suspend fun connectionAttempts(): Long = connectivityManager.connectionAttempts
 
     companion object {
-        fun stayConnected(
-            scope: CoroutineScope = CoroutineScope(Dispatchers.Default + CoroutineName("MQTT Stay Connected")),
+        /**
+         * Creates a client and starts the connection. If the caller wants reconnection,
+         * wrap the [connect] factory with a reconnecting connection before passing it in.
+         */
+        fun start(
+            scope: CoroutineScope = CoroutineScope(Dispatchers.Default + CoroutineName("MQTT Client")),
             broker: MqttBroker,
             persistence: Persistence,
-            factory: BufferFactory = BufferFactory.Default,
+            connect: suspend () -> Connection<ControlPacket>,
             observer: Observer? = null,
-            sentMessage: (ReadBuffer) -> Unit = {},
-            incomingMessage: (UByte, Int, ReadBuffer) -> Unit = { _, _, _ -> },
         ): LocalMqttClient {
-            val connectivityManager =
-                ConnectivityManager(
-                    scope,
-                    persistence,
-                    broker,
-                    factory,
-                    sentMessage,
-                    incomingMessage,
-                )
-            val c = LocalMqttClient(connectivityManager)
-            c.observer = observer
-            connectivityManager.stayConnected()
-            return c
-        }
-
-        suspend fun connectOnce(
-            scope: CoroutineScope = CoroutineScope(Dispatchers.Default + CoroutineName("MQTT Connect Once")),
-            broker: MqttBroker,
-            persistence: Persistence,
-            factory: BufferFactory = BufferFactory.Default,
-            observer: Observer? = null,
-            sentMessage: (ReadBuffer) -> Unit = {},
-            incomingMessage: (UByte, Int, ReadBuffer) -> Unit = { _, _, _ -> },
-        ): LocalMqttClient {
-            val connectivityManager =
-                ConnectivityManager(
-                    scope,
-                    persistence,
-                    broker,
-                    factory,
-                    sentMessage,
-                    incomingMessage,
-                )
-            val c = LocalMqttClient(connectivityManager)
-            c.observer = observer
-            connectivityManager.connectOnce()
-            return c
+            val cm = ConnectivityManager(persistence, broker, connect)
+            val client = LocalMqttClient(cm, scope)
+            client.observer = observer
+            client.connectionJob = scope.launch { cm.run() }
+            return client
         }
     }
 }

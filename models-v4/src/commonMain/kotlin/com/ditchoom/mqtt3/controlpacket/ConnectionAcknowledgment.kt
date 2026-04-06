@@ -2,8 +2,10 @@ package com.ditchoom.mqtt3.controlpacket
 
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
+import com.ditchoom.buffer.codec.Codec
 import com.ditchoom.mqtt.MalformedPacketException
 import com.ditchoom.mqtt.controlpacket.IConnectionAcknowledgment
+import com.ditchoom.mqtt.controlpacket.WireEncoded
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
 import com.ditchoom.mqtt3.controlpacket.ConnectionAcknowledgment.VariableHeader.ReturnCode
 import com.ditchoom.mqtt3.controlpacket.wire.ConnAckWire
@@ -30,9 +32,17 @@ typealias CONNACK = ConnectionAcknowledgment
 data class ConnectionAcknowledgment(
     val header: VariableHeader = VariableHeader(),
 ) : ControlPacketV4,
-    IConnectionAcknowledgment {
+    IConnectionAcknowledgment,
+    WireEncoded<ConnAckWire> {
     override val controlPacketValue: Byte get() = 2
     override val direction: DirectionOfFlow get() = DirectionOfFlow.SERVER_TO_CLIENT
+    override val wireCodec: Codec<ConnAckWire> get() = ConnAckWireCodec
+
+    override fun toWire() = ConnAckWire(
+        (if (header.sessionPresent) 1u else 0u).toUByte(),
+        header.connectReason.value,
+    )
+
     constructor(sessionPresent: Boolean, connectReason: ReturnCode) : this(
         VariableHeader(
             sessionPresent,
@@ -43,18 +53,6 @@ data class ConnectionAcknowledgment(
     override val sessionPresent: Boolean = header.sessionPresent
     override val isSuccessful: Boolean = header.connectReason == CONNECTION_ACCEPTED
     override val connectionReason: String = header.connectReason.name
-
-    override fun encodeBody(writeBuffer: WriteBuffer) {
-        ConnAckWireCodec.encode(
-            writeBuffer,
-            ConnAckWire(
-                (if (header.sessionPresent) 1u else 0u).toUByte(),
-                header.connectReason.value,
-            ),
-        )
-    }
-
-    override fun remainingLength() = 2
 
     /**
      * The Variable Header of the CONNACK Packet contains the following fields in the order: Connect Acknowledge Flags,

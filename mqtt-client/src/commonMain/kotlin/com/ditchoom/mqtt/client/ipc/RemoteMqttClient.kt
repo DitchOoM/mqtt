@@ -4,7 +4,13 @@ import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.PlatformBuffer
 import com.ditchoom.mqtt.Persistence
 import com.ditchoom.mqtt.client.MqttClient
-import com.ditchoom.mqtt.client.PublishOperation
+import com.ditchoom.mqtt.client.MqttSubscription
+import com.ditchoom.mqtt.client.PayloadDecoder
+import com.ditchoom.mqtt.client.PayloadEncoder
+import com.ditchoom.mqtt.client.PublishResult
+import com.ditchoom.mqtt.client.QoS1State
+import com.ditchoom.mqtt.client.QoS2State
+import com.ditchoom.mqtt.client.ConnectionState
 import com.ditchoom.mqtt.client.SubscribeOperation
 import com.ditchoom.mqtt.client.SubscriptionHandler
 import com.ditchoom.mqtt.client.UnsubscribeOperation
@@ -24,6 +30,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -34,6 +43,8 @@ abstract class RemoteMqttClient(
     private val persistence: Persistence,
 ) : MqttClient {
     abstract val bufferFactory: BufferFactory
+    private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
+    override val connectionState: StateFlow<ConnectionState> = _connectionState
     private val _incomingPackets = MutableSharedFlow<ControlPacket>(2, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     val incomingPackets: SharedFlow<ControlPacket> = _incomingPackets
     private val _sentPackets = MutableSharedFlow<ControlPacket>(2, onBufferOverflow = BufferOverflow.DROP_OLDEST)
@@ -41,8 +52,10 @@ abstract class RemoteMqttClient(
 
     protected open suspend fun sendSubscribe(packetId: Int) {}
 
-    override suspend fun subscribe(sub: ISubscribeRequest, handler: SubscriptionHandler): SubscribeOperation =
-        subscribe(sub) // handler-based dispatch not supported across IPC boundary
+    override suspend fun subscribe(
+        sub: ISubscribeRequest,
+        handler: SubscriptionHandler,
+    ): SubscribeOperation = subscribe(sub) // handler-based dispatch not supported across IPC boundary
 
     override suspend fun subscribe(sub: ISubscribeRequest): SubscribeOperation {
         val subscribe = persistence.writeSubUpdatePacketIdAndSimplifySubscriptions(broker, sub)
@@ -65,7 +78,7 @@ abstract class RemoteMqttClient(
         pubBuffer: PlatformBuffer,
     ) {}
 
-    override suspend fun publish(pub: IPublishMessage): PublishOperation {
+    override suspend fun publish(pub: IPublishMessage): PublishResult {
         val publishPacketId =
             if (pub.qualityOfService == QualityOfService.AT_MOST_ONCE) {
                 NO_PACKET_ID
@@ -76,34 +89,59 @@ abstract class RemoteMqttClient(
         val pubBuffer = pub.serialize(bufferFactory)
         sendPublish(publishPacketId, pubBuffer)
         return when (pub.qualityOfService) {
-            QualityOfService.AT_MOST_ONCE -> PublishOperation.QoSAtMostOnceComplete
+            QualityOfService.AT_MOST_ONCE -> PublishResult.QoS0Sent
             QualityOfService.AT_LEAST_ONCE -> {
-                val puback =
-                    scope.async {
-                        awaitControlPacketReceivedMatching(publishPacketId, IPublishAcknowledgment.CONTROL_PACKET_VALUE)
-                            as IPublishAcknowledgment
-                    }
-                PublishOperation.QoSAtLeastOnce(publishPacketId, puback)
+                val stateFlow = MutableStateFlow<QoS1State>(QoS1State.Queued)
+                scope.launch {
+                    val ack = awaitControlPacketReceivedMatching(publishPacketId, IPublishAcknowledgment.CONTROL_PACKET_VALUE)
+                        as IPublishAcknowledgment
+                    stateFlow.value = QoS1State.Acknowledged(ack)
+                }
+                PublishResult.QoS1(publishPacketId, stateFlow)
             }
 
             QualityOfService.EXACTLY_ONCE -> {
-                val pubrec =
-                    scope.async {
-                        awaitControlPacketReceivedMatching(publishPacketId, IPublishReceived.CONTROL_PACKET_VALUE)
-                            as IPublishReceived
-                    }
-                val pubcomp =
-                    scope.async {
-                        pubrec.await()
-                        awaitControlPacketReceivedMatching(publishPacketId, IPublishComplete.CONTROL_PACKET_VALUE)
-                            as IPublishComplete
-                    }
-                PublishOperation.QoSExactlyOnce(publishPacketId, pubrec, pubcomp)
+                val stateFlow = MutableStateFlow<QoS2State>(QoS2State.Queued)
+                scope.launch {
+                    awaitControlPacketReceivedMatching(publishPacketId, IPublishReceived.CONTROL_PACKET_VALUE)
+                    stateFlow.value = QoS2State.Received
+                    val comp = awaitControlPacketReceivedMatching(publishPacketId, IPublishComplete.CONTROL_PACKET_VALUE)
+                        as IPublishComplete
+                    stateFlow.value = QoS2State.Complete(comp)
+                }
+                PublishResult.QoS2(publishPacketId, stateFlow)
             }
         }
     }
 
     protected open suspend fun sendUnsubscribe(packetId: Int) = Unit
+
+    override suspend fun <P> publish(
+        topic: String,
+        payload: P,
+        qos: QualityOfService,
+        retain: Boolean,
+        encoder: PayloadEncoder<P>,
+    ): PublishResult {
+        TODO("Implement typed publish over IPC")
+    }
+
+    override suspend fun <P> subscribe(
+        topicFilter: String,
+        maxQos: QualityOfService,
+        decoder: PayloadDecoder<P>,
+    ): MqttSubscription<P> {
+        TODO("Implement typed subscription over IPC")
+    }
+
+    override suspend fun <P> subscribe(
+        topicFilter: String,
+        maxQos: QualityOfService,
+        decoder: PayloadDecoder<P>,
+        handler: suspend (P) -> Unit,
+    ): MqttSubscription<P> {
+        TODO("Implement typed subscription with handler over IPC")
+    }
 
     override suspend fun unsubscribe(unsub: IUnsubscribeRequest): UnsubscribeOperation {
         val packetId = persistence.writeUnsubGetPacketId(broker, unsub)

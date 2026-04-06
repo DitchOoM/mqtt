@@ -5,6 +5,7 @@ import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
 import com.ditchoom.buffer.utf8Length
 import com.ditchoom.mqtt.MalformedPacketException
+import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readMqttUtf8StringNotValidatedSized
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.writeMqttUtf8String
 import com.ditchoom.mqtt.controlpacket.IPublishMessage
@@ -86,7 +87,7 @@ data class PublishMessage(
         reasonCode: ReasonCode,
         reasonString: String?,
         userProperty: List<Pair<String, String>>,
-    ) = when (fixed.qos) {
+    ): ControlPacket? = when (fixed.qos) {
         AT_LEAST_ONCE -> {
             PublishAcknowledgment(variable.packetIdentifier)
         }

@@ -45,6 +45,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(libs.buffer)
+            implementation(libs.buffer.codec)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))

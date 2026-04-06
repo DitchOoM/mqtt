@@ -1,10 +1,11 @@
 package com.ditchoom.mqtt5.controlpacket
 
 import com.ditchoom.buffer.ReadBuffer
-import com.ditchoom.buffer.WriteBuffer
+import com.ditchoom.buffer.codec.Codec
 import com.ditchoom.mqtt.MalformedPacketException
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.variableByteSize
 import com.ditchoom.mqtt.controlpacket.IDisconnectNotification
+import com.ditchoom.mqtt.controlpacket.WireEncoded
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
 import com.ditchoom.mqtt5.controlpacket.properties.MqttProperty
@@ -33,22 +34,16 @@ import com.ditchoom.mqtt5.controlpacket.wire.DisconnectV5WireCodec
 data class DisconnectNotification(
     val variable: VariableHeader = VariableHeader(),
 ) : ControlPacketV5,
-    IDisconnectNotification {
+    IDisconnectNotification,
+    WireEncoded<DisconnectV5Wire> {
     override val controlPacketValue: Byte get() = 14
     override val direction: DirectionOfFlow get() = DirectionOfFlow.BIDIRECTIONAL
-    override fun packetSize(): Int = 2 + remainingLength()
+    override val wireCodec: Codec<DisconnectV5Wire> get() = DisconnectV5WireCodec
 
-    override fun encodeBody(writeBuffer: WriteBuffer) {
-        DisconnectV5WireCodec.encode(
-            writeBuffer,
-            DisconnectV5Wire(
-                variable.reasonCode.byte,
-                variable.properties.props,
-            ),
-        )
-    }
-
-    override fun remainingLength(): Int = variable.size()
+    override fun toWire() = DisconnectV5Wire(
+        variable.reasonCode.byte,
+        variable.properties.props,
+    )
 
     data class VariableHeader(
         val reasonCode: ReasonCode = ReasonCode.NORMAL_DISCONNECTION,
@@ -59,10 +54,6 @@ data class DisconnectNotification(
             getDisconnectCode(reasonCode.byte)
         }
 
-        fun size(): Int {
-            val propertiesSize = properties.size()
-            return UByte.SIZE_BYTES + variableByteSize(propertiesSize) + propertiesSize
-        }
 
         data class Properties(
             /**
@@ -143,7 +134,6 @@ data class DisconnectNotification(
                 }
             }
 
-            fun size(): Int = mqttPropertiesSize(props)
 
             companion object {
                 fun from(keyValuePairs: Collection<MqttProperty>?): Properties {

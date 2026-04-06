@@ -7,9 +7,9 @@ mavenPublish = "0.35.0"
 dokka = "2.1.0"
 kotlinxCoroutines = "1.10.2"
 kotlinWrappers = "2025.12.6"
-buffer = "4.2.0"
+buffer = "4.2.2-SNAPSHOT"
 ksp = "2.3.0"
-socket = "3.0.0"
+socket = "3.0.1-SNAPSHOT"
 websocket = "1.1.2-SNAPSHOT"
 kotlinxBenchmark = "0.4.15"
 sqldelight = "2.2.1"
@@ -22,6 +22,7 @@ androidxTestCore = "1.7.0"
 buffer = { module = "com.ditchoom:buffer", version.ref = "buffer" }
 buffer-codec = { module = "com.ditchoom:buffer-codec", version.ref = "buffer" }
 buffer-codec-processor = { module = "com.ditchoom:buffer-codec-processor", version.ref = "buffer" }
+buffer-flow = { module = "com.ditchoom:buffer-flow", version.ref = "buffer" }
 socket = { module = "com.ditchoom:socket", version.ref = "socket" }
 websocket = { module = "com.ditchoom:websocket", version.ref = "websocket" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }

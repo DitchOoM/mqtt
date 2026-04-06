@@ -12,10 +12,14 @@ import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.TopicName
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 
 interface MqttClient {
     val packetFactory: ControlPacketFactory
     val broker: MqttBroker
+
+    /** Observable connection state. Collect to track Connected/Disconnected/Reconnecting/Failed. */
+    val connectionState: StateFlow<ConnectionState>
 
     suspend fun currentConnectionAcknowledgment(): IConnectionAcknowledgment?
 
@@ -30,7 +34,7 @@ interface MqttClient {
         qos: QualityOfService = QualityOfService.AT_MOST_ONCE,
         payload: ReadBuffer? = null,
         retain: Boolean = false,
-    ): PublishOperation =
+    ): PublishResult =
         publish(
             packetFactory.publish(
                 topicName = TopicName.fromOrThrow(topicName),
@@ -40,7 +44,7 @@ interface MqttClient {
             ),
         )
 
-    suspend fun publish(pub: IPublishMessage): PublishOperation
+    suspend fun publish(pub: IPublishMessage): PublishResult
 
     fun observe(filter: TopicFilter): Flow<IPublishMessage>
 
@@ -89,6 +93,43 @@ interface MqttClient {
         sub: ISubscribeRequest,
         handler: SubscriptionHandler,
     ): SubscribeOperation
+
+    // --- v2 typed API ---
+
+    /**
+     * Publish a typed payload. The [encoder] writes [payload] directly into the wire buffer
+     * via backpatching — no intermediate allocation, no sizeOf on the hot path.
+     */
+    suspend fun <P> publish(
+        topic: String,
+        payload: P,
+        qos: QualityOfService = QualityOfService.AT_LEAST_ONCE,
+        retain: Boolean = false,
+        encoder: PayloadEncoder<P>,
+    ): PublishResult
+
+    /**
+     * Subscribe and receive a typed [Flow] of decoded messages via [MqttSubscription].
+     * Each incoming PUBLISH payload is decoded by [decoder] — zero-copy from network buffer.
+     */
+    suspend fun <P> subscribe(
+        topicFilter: String,
+        maxQos: QualityOfService = QualityOfService.AT_LEAST_ONCE,
+        decoder: PayloadDecoder<P>,
+    ): MqttSubscription<P>
+
+    /**
+     * Subscribe with a typed handler. Auto-ack on handler return — if the handler throws,
+     * the message is NOT acknowledged and will be redelivered.
+     */
+    suspend fun <P> subscribe(
+        topicFilter: String,
+        maxQos: QualityOfService = QualityOfService.AT_LEAST_ONCE,
+        decoder: PayloadDecoder<P>,
+        handler: suspend (P) -> Unit,
+    ): MqttSubscription<P>
+
+    // --- unsubscribe ---
 
     suspend fun unsubscribe(topicFilter: String): UnsubscribeOperation =
         unsubscribe(packetFactory.unsubscribe(TopicFilter.fromOrThrow(topicFilter)))

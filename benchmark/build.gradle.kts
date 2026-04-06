@@ -36,6 +36,7 @@ kotlin {
             implementation(project(":models-v5"))
             implementation(project(":mqtt-client"))
             implementation(libs.buffer)
+            implementation(libs.buffer.flow)
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.benchmark.runtime)
         }

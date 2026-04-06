@@ -1,35 +1,37 @@
 package com.ditchoom.mqtt.client
 
-import com.ditchoom.buffer.BufferFactory
-import com.ditchoom.buffer.Default
-import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.mqtt.Persistence
 import com.ditchoom.mqtt.connection.MqttBroker
 import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.IConnectionAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IDisconnectNotification
-import com.ditchoom.socket.DefaultReconnectionClassifier
-import com.ditchoom.socket.ReconnectDecision
-import com.ditchoom.socket.ReconnectionClassifier
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
+import com.ditchoom.buffer.flow.Connection
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
-import kotlin.time.Duration
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Duration.Companion.seconds
 
+/**
+ * Manages a single MQTT connection: handshake, read/write loops, ping timer, session recovery.
+ *
+ * Does NOT handle reconnection — the caller provides a [Connection] that may already be wrapped
+ * with reconnection logic (e.g. socket's `ReconnectingConnection`). This keeps mqtt-client
+ * transport-agnostic with no hard dependency on the socket library.
+ */
 class ConnectivityManager(
-    internal val scope: CoroutineScope,
     internal val persistence: Persistence,
     internal val broker: MqttBroker,
-    val factory: BufferFactory = BufferFactory.Default,
-    private var sentMessage: (ReadBuffer) -> Unit = {},
-    private var incomingMessage: (UByte, Int, ReadBuffer) -> Unit = { _, _, _ -> },
+    private val connect: suspend () -> Connection<ControlPacket>,
 ) {
     var connectionCount = 0L
         private set
@@ -37,389 +39,166 @@ class ConnectivityManager(
         private set
 
     var observer: Observer? = null
-        set(value) {
-            currentSocketSession?.observer = value
-            field = value
-        }
 
-    private var incomingProcessingJob: Job? = null
-    internal var isStopped = false
     private val readChannel = MutableSharedFlow<ControlPacket>(1)
     private val writeChannel = Channel<Collection<ControlPacket>>(Channel.BUFFERED)
-    private val connectionBroadcastChannelInternal = MutableSharedFlow<IConnectionAcknowledgment>()
-    val connectionBroadcastChannel: SharedFlow<IConnectionAcknowledgment> = connectionBroadcastChannelInternal
+    private val connectionBroadcastInternal = MutableSharedFlow<IConnectionAcknowledgment>()
+    val connectionBroadcastChannel: SharedFlow<IConnectionAcknowledgment> = connectionBroadcastInternal
 
-    private var currentConnectionJob: Job? = null
-    val processor = ControlPacketProcessor(scope, broker, readChannel, writeChannel, persistence)
-    internal var currentSocketSession: MqttSocketSession? = null
+    lateinit var processor: ControlPacketProcessor
+        private set
 
-    fun currentConnack(): IConnectionAcknowledgment? = currentSocketSession?.connectionAcknowledgement
+    private var currentConnack: IConnectionAcknowledgment? = null
 
-    @Deprecated("Use stayConnected(classifier) instead", ReplaceWith("stayConnected(MqttReconnectionClassifier())"))
-    fun stayConnected(
-        initialDelay: Duration = 0.1.seconds,
-        maxDelay: Duration = 15.seconds,
-        factor: Double = 2.0,
-    ) {
-        currentConnectionJob?.cancel()
-        currentConnectionJob = null
-        var currentDelay = initialDelay
-        val job =
-            scope.launch {
-                while (isActive && !isStopped) {
-                    val result = buildConnectionShouldRetry(this)
-                    processor.cancelPingTimer()
-                    if (!result.shouldContinueReconnecting) {
-                        observer?.stopReconnecting(
-                            broker.identifier,
-                            broker.connectionRequest.protocolVersion.toByte(),
-                            result,
-                        )
-                        break
-                    }
-                    currentDelay =
-                        if (result.shouldResetTimer || isStopped) {
-                            observer?.reconnectAndResetTimer(
-                                broker.identifier,
-                                broker.connectionRequest.protocolVersion.toByte(),
-                                result,
-                            )
-                            initialDelay
-                        } else {
-                            observer?.reconnectIn(
-                                broker.identifier,
-                                broker.connectionRequest.protocolVersion.toByte(),
-                                currentDelay,
-                                result,
-                            )
-                            delay(currentDelay)
-                            (currentDelay * factor).coerceAtMost(maxDelay)
-                        }
-                }
-                currentConnectionJob = null
-            }
-        currentConnectionJob = job
-    }
+    fun currentConnack(): IConnectionAcknowledgment? = currentConnack
 
-    fun stayConnected(classifier: ReconnectionClassifier = MqttReconnectionClassifier()) {
-        currentConnectionJob?.cancel()
-        currentConnectionJob = null
-        val job =
-            scope.launch {
-                while (isActive && !isStopped) {
-                    val result = buildConnectionShouldRetry(this)
-                    processor.cancelPingTimer()
-                    if (!result.shouldContinueReconnecting) {
-                        observer?.stopReconnecting(
-                            broker.identifier,
-                            broker.connectionRequest.protocolVersion.toByte(),
-                            result,
-                        )
-                        break
-                    }
-                    val cause = result.cause
-                    if (cause != null) {
-                        val decision = classifier.classify(cause)
-                        when (decision) {
-                            is ReconnectDecision.GiveUp -> {
-                                observer?.stopReconnecting(
-                                    broker.identifier,
-                                    broker.connectionRequest.protocolVersion.toByte(),
-                                    result,
-                                )
-                                break
-                            }
-                            is ReconnectDecision.RetryAfter -> {
-                                observer?.reconnectIn(
-                                    broker.identifier,
-                                    broker.connectionRequest.protocolVersion.toByte(),
-                                    decision.delay,
-                                    result,
-                                )
-                                delay(decision.delay)
-                            }
-                        }
-                    } else if (result.shouldResetTimer || isStopped) {
-                        if (classifier is MqttReconnectionClassifier) classifier.reset()
-                        observer?.reconnectAndResetTimer(
-                            broker.identifier,
-                            broker.connectionRequest.protocolVersion.toByte(),
-                            result,
-                        )
-                    } else {
-                        // No cause but should continue — treat as immediate reconnect
-                        observer?.reconnectAndResetTimer(
-                            broker.identifier,
-                            broker.connectionRequest.protocolVersion.toByte(),
-                            result,
-                        )
-                    }
-                }
-                currentConnectionJob = null
-            }
-        currentConnectionJob = job
-    }
+    /**
+     * Connects, performs the MQTT handshake, then runs read/write loops until the connection
+     * ends or the coroutine is cancelled.
+     *
+     * If the caller wants reconnection, wrap the [connect] factory with a reconnecting
+     * connection (e.g. socket's `ReconnectingConnection`) before passing it in.
+     */
+    suspend fun run() {
+        processor = ControlPacketProcessor(broker, readChannel, writeChannel, persistence)
+        processor.observer = observer
 
-    suspend fun shutdown(
-        sendDisconnect: Boolean = true,
-        drain: Boolean = false,
-    ) {
-        if (isStopped) return
-        isStopped = true
+        val conn = connectAndHandshake()
         try {
-            if (drain) {
-                // Wait for in-flight QoS 2 ack handshakes to complete before disconnecting.
-                // Without this, PUBREL/PUBCOMP exchanges are interrupted and persistence
-                // retains stale entries.
-                withTimeout(5.seconds) {
-                    while (!persistence.isQueueClear(broker, includeSubscriptions = false)) {
-                        delay(10)
-                    }
-                }
-            }
-            if (sendDisconnect) {
-                sendDisconnect()
-            }
-        } finally {
-            currentSocketSession?.close()
-            processor.cancelPingTimer()
-            incomingProcessingJob?.cancel()
-            incomingProcessingJob = null
-            writeChannel.close()
-            currentConnectionJob?.cancel()
-            currentConnectionJob = null
-            observer?.shutdown(broker.identifier, broker.connectionRequest.protocolVersion.toByte())
-        }
-    }
+            coroutineScope {
+                launch { processor.processIncomingMessages() }
+                launch { processor.runPingTimer() }
+                launch { writeLoop(conn) }
 
-    private suspend fun connectMqttSocketSessionOrThrow(): MqttSocketSession {
-        var lastException: Throwable? = null
-        var allNonRecoverable = true
-        for (connectionOp in broker.connectionOps) {
-            val session =
-                try {
-                    withTimeout(connectionOp.connectionTimeout) {
-                        connectionAttempts++
-                        observer?.openSocketSession(
-                            broker.identifier,
-                            broker.connectionRequest.protocolVersion.toByte(),
-                            broker.connectionRequest,
-                            connectionOp,
-                        )
-                        val socketSession =
-                            MqttSocketSession.open(
-                                broker.identifier,
-                                broker.connectionRequest,
-                                connectionOp,
-                                factory,
-                                observer,
-                                sentMessage,
-                                incomingMessage,
-                            )
-                        if (socketSession.connectionAcknowledgement.isSuccessful) {
-                            connectionCount++
-                            socketSession
-                        } else {
-                            null
-                        }
-                    }
-                } catch (e: Throwable) {
-                    lastException = e
-                    if (isNonRecoverableError(e)) {
-                        observer?.nonRecoverableError(
-                            broker.identifier,
-                            broker.connectionRequest.protocolVersion.toByte(),
-                            connectionOp,
-                            e,
-                        )
-                    } else {
-                        allNonRecoverable = false
-                    }
-                    null
-                } ?: continue
-            return session
-        }
-        val s =
-            broker.connectionOps.joinToString(
-                prefix = "Failed to connect to services:",
-                postfix = (" " + lastException?.message),
-            )
-        val exception =
-            UnavailableMqttServiceException(
-                broker.connectionOps,
-                Exception("Failed to connect to services: $s " + lastException?.message),
-            )
-        exception.allNonRecoverable = allNonRecoverable
-        throw exception
-    }
-
-    suspend fun connectOnce() {
-        val socketSession = connectMqttSocketSessionOrThrow()
-        currentSocketSession = socketSession
-        prepareSocketSession(socketSession)
-        incomingProcessingJob =
-            scope.launch {
-                processor.processIncomingMessages()
-            }
-        scope.launch {
-            while (isActive && socketSession.isOpen() && !isStopped) {
-                val packetToWrite =
-                    try {
-                        writeChannel.receive()
-                    } catch (e: Exception) {
-                        observer?.connectOnceWriteChannelReceiveException(
-                            broker.identifier,
-                            broker.connectionRequest.protocolVersion.toByte(),
-                            e,
-                        )
-                        shutdown()
-                        return@launch
-                    }
-                try {
-                    socketSession.write(packetToWrite)
-                } catch (e: Exception) {
-                    // ignore
-                    observer?.connectOnceSocketSessionWriteException(
+                conn.receive().collect { packet ->
+                    observer?.incomingPacket(
                         broker.identifier,
                         broker.connectionRequest.protocolVersion.toByte(),
-                        e,
+                        packet,
                     )
-                    shutdown()
-                    return@launch
-                }
-                if (packetToWrite is IDisconnectNotification) {
-                    shutdown()
-                    return@launch
+                    readChannel.emit(packet)
                 }
             }
-        }
-        scope.launch {
-            try {
-                socketSession.incomingPacketFlow.collect {
-                    readChannel.emit(it)
-                }
-            } finally {
-                shutdown()
+        } finally {
+            withContext(NonCancellable) {
+                conn.close()
             }
         }
     }
 
-    private suspend fun prepareSocketSession(socketSession: MqttSocketSession): ConnectionEndReason? {
-        processor.resetPingTimer()
-        val sessionPresent = socketSession.connectionAcknowledgement.sessionPresent
+    private suspend fun connectAndHandshake(): Connection<ControlPacket> {
+        connectionAttempts++
+        val conn = connect()
+        try {
+            conn.send(broker.connectionRequest as ControlPacket)
+            val response = conn.receive().first()
+            if (response is IConnectionAcknowledgment && response.isSuccessful) {
+                connectionCount++
+                currentConnack = response
+                prepareSession(response)
+                connectionBroadcastInternal.emit(response)
+                return conn
+            }
+            conn.close()
+            if (response is IConnectionAcknowledgment) {
+                throw MqttConnectionException.ConnackRejected(
+                    "CONNACK rejected: ${response.connectionReason}",
+                    response.byte1,
+                )
+            }
+            throw MqttConnectionException.ProtocolError(
+                "Expected CONNACK, got ${response::class.simpleName}",
+            )
+        } catch (e: MqttConnectionException) {
+            throw e
+        } catch (e: CancellationException) {
+            conn.close()
+            throw e
+        } catch (e: Exception) {
+            conn.close()
+            throw e
+        }
+    }
+
+    private suspend fun writeLoop(conn: Connection<ControlPacket>) {
+        while (currentCoroutineContext().isActive) {
+            val packets =
+                try {
+                    writeChannel.receive()
+                } catch (_: Exception) {
+                    break
+                }
+            for (packet in packets) {
+                conn.send(packet)
+                observer?.wrotePackets(
+                    broker.identifier,
+                    broker.connectionRequest.mqttVersion,
+                    listOf(packet),
+                )
+            }
+            processor.noteActivity()
+            if (packets.any { it is IDisconnectNotification }) {
+                break
+            }
+        }
+    }
+
+    private suspend fun prepareSession(connack: IConnectionAcknowledgment) {
+        val sessionPresent = connack.sessionPresent
         if (broker.connectionRequest.cleanStart && sessionPresent) {
-            socketSession.close()
-            return ConnectionEndReason(
-                shouldContinueReconnecting = false,
-                shouldResetTimer = true,
-                msg = "[MQTT-3.2.2-4] failure. Try reconnecting with cleanStart = true",
+            throw MqttConnectionException.ProtocolError(
+                "[MQTT-3.2.2-4] Server reported session present but cleanStart was requested",
             )
         }
         if (sessionPresent) {
             emptyWriteChannel()
             val messages = processor.queueMessagesOnReconnect()
-            if (messages.isNotEmpty()) {
-                socketSession.write(messages)
+            for (packet in messages) {
+                writeChannel.send(listOf(packet))
             }
         } else {
             persistence.clearMessages(broker)
         }
-        connectionBroadcastChannelInternal.emit(socketSession.connectionAcknowledgement)
-        return null
     }
 
-    private suspend fun buildConnectionShouldRetry(scope: CoroutineScope): ConnectionEndReason {
-        var writeJob: Job? = null
-        val processingJob =
-            scope.launch {
-                processor.processIncomingMessages()
-            }
-        try {
-            val socketSession =
-                try {
-                    connectMqttSocketSessionOrThrow()
-                } catch (e: UnavailableMqttServiceException) {
-                    val shouldRetry = !e.allNonRecoverable
-                    return ConnectionEndReason(
-                        shouldContinueReconnecting = shouldRetry,
-                        shouldResetTimer = false,
-                        msg = e.message,
-                        cause = e,
-                    )
-                }
-            currentSocketSession = socketSession
-            val endReason = prepareSocketSession(socketSession)
-            if (endReason != null) {
-                return endReason
-            }
-            writeJob =
-                scope.launch {
-                    while (isActive && socketSession.isOpen()) {
-                        try {
-                            val packetToWrite = writeChannel.receive()
-                            socketSession.write(packetToWrite)
-                        } catch (e: Exception) {
-                            // ignore
-                            break
-                        }
+    /**
+     * Gracefully shuts down the connection.
+     * Call from a NonCancellable context if needed during cancellation cleanup.
+     */
+    suspend fun shutdown(
+        sendDisconnect: Boolean = true,
+        drain: Boolean = false,
+    ) {
+        if (drain) {
+            try {
+                withTimeout(5.seconds) {
+                    while (!persistence.isQueueClear(broker, includeSubscriptions = false)) {
+                        delay(10)
                     }
                 }
-            socketSession.incomingPacketFlow.collect {
-                readChannel.emit(it)
+            } catch (_: Exception) {
+                // drain timeout — proceed with shutdown
             }
-        } catch (e: Exception) {
-            return ConnectionEndReason(
-                shouldContinueReconnecting = true,
-                shouldResetTimer = false,
-                msg = e.message,
-            )
-        } finally {
-            currentSocketSession = null
-            writeJob?.cancel()
-            processingJob.cancel()
         }
-        return ConnectionEndReason(
-            shouldContinueReconnecting = true,
-            shouldResetTimer = true,
-            msg = "Normal disconnect",
-        )
-    }
-
-    private fun emptyWriteChannel() {
-        // empty all the write buffers with the new connection
-        var shouldContinueEmptyingChannel = writeChannel.tryReceive().isSuccess
-        while (shouldContinueEmptyingChannel) {
-            shouldContinueEmptyingChannel = writeChannel.tryReceive().isSuccess
+        if (sendDisconnect) {
+            sendDisconnect()
         }
+        writeChannel.close()
+        observer?.shutdown(broker.identifier, broker.connectionRequest.protocolVersion.toByte())
     }
 
     suspend fun sendDisconnect() {
         val disconnect = broker.connectionRequest.controlPacketFactory.disconnect()
-        val socketSession = currentSocketSession
-        currentSocketSession = null
-        if (socketSession != null && socketSession.isOpen()) {
-            try {
-                socketSession.write(listOf(disconnect))
-            } catch (e: Exception) {
-                // ignore
-            }
+        try {
+            writeChannel.send(listOf(disconnect))
+        } catch (_: Exception) {
+            // channel closed or send failed — ignore
         }
-        socketSession?.close()
     }
 
-    data class ConnectionEndReason(
-        val shouldContinueReconnecting: Boolean,
-        val shouldResetTimer: Boolean,
-        val msg: String?,
-        val cause: Throwable? = null,
-    )
+    private fun emptyWriteChannel() {
+        while (writeChannel.tryReceive().isSuccess) {
+            // drain
+        }
+    }
 }
-
-/**
- * Determines whether a socket error is non-recoverable (should not be retried).
- *
- * TLS configuration errors and DNS failures are non-recoverable because retrying
- * with the same parameters will always fail. Transient errors like connection
- * resets, timeouts, and refused connections may succeed on retry.
- */
-internal fun isNonRecoverableError(e: Throwable): Boolean = DefaultReconnectionClassifier.isNonRecoverable(e)

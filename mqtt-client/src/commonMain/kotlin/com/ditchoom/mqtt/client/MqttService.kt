@@ -3,7 +3,9 @@ package com.ditchoom.mqtt.client
 import com.ditchoom.mqtt.client.ipc.remoteMqttServiceWorkerClient
 import com.ditchoom.mqtt.connection.MqttBroker
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
+import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.IConnectionRequest
+import com.ditchoom.buffer.flow.Connection
 
 interface MqttService {
     suspend fun addBroker(
@@ -48,6 +50,7 @@ interface MqttService {
 
     companion object {
         suspend fun buildNewService(
+            connectionFactory: (MqttBroker) -> suspend () -> Connection<ControlPacket>,
             ipcEnabled: Boolean,
             androidContextOrAbstractWorker: Any? = null,
             inMemory: Boolean = false,
@@ -57,7 +60,7 @@ interface MqttService {
                 serviceFound = remoteMqttServiceWorkerClient(androidContextOrAbstractWorker, inMemory)
             }
             if (serviceFound == null) {
-                return LocalMqttService.buildService(androidContextOrAbstractWorker, inMemory)
+                return LocalMqttService.buildService(connectionFactory, androidContextOrAbstractWorker, inMemory)
             }
 
             return serviceFound

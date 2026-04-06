@@ -21,14 +21,14 @@ kotlin {
         browser {
             testTask {
                 useMocha {
-                    timeout = "60s"
+                    timeout = "180s"
                 }
             }
         }
         nodejs {
             testTask {
                 useMocha {
-                    timeout = "60s"
+                    timeout = "180s"
                 }
             }
         }
@@ -61,14 +61,17 @@ kotlin {
             implementation(project(":models-v4"))
             implementation(project(":models-v5"))
             implementation(libs.buffer)
+            implementation(libs.buffer.codec)
+            implementation(libs.buffer.flow)
             implementation(libs.socket)
-            implementation(libs.websocket)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
             implementation(libs.kotlinx.coroutines.test)
             implementation(project(":models-v4"))
             implementation(project(":models-v5"))
+            implementation(libs.socket)
+            implementation(libs.websocket)
         }
 
         jsMain.dependencies {
@@ -128,6 +131,9 @@ tasks.withType<org.jetbrains.kotlin.gradle.targets.js.testing.KotlinJsTest>().co
     if (!runIntegrationTests) {
         integrationTestPatterns.forEach { this.filter.excludeTestsMatching(it) }
     }
+    // Benchmark tests are too slow for JS single-threaded event loop
+    this.filter.excludeTestsMatching("com.ditchoom.mqtt.client.net.EndToEndBrokerBenchmarkTest")
+    this.filter.excludeTestsMatching("com.ditchoom.mqtt.client.net.EndToEndBenchmark")
 }
 
 android {

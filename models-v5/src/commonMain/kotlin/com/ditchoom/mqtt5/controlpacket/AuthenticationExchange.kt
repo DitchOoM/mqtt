@@ -1,9 +1,10 @@
 package com.ditchoom.mqtt5.controlpacket
 
 import com.ditchoom.buffer.ReadBuffer
-import com.ditchoom.buffer.WriteBuffer
+import com.ditchoom.buffer.codec.Codec
 import com.ditchoom.mqtt.MalformedPacketException
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.variableByteSize
+import com.ditchoom.mqtt.controlpacket.WireEncoded
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.CONTINUE_AUTHENTICATION
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.REAUTHENTICATE
@@ -32,12 +33,13 @@ import com.ditchoom.mqtt5.controlpacket.wire.AuthV5WireCodec
 
 data class AuthenticationExchange(
     val variable: VariableHeader,
-) : ControlPacketV5 {
+) : ControlPacketV5,
+    WireEncoded<AuthV5Wire> {
     override val controlPacketValue: Byte get() = 15
     override val direction: DirectionOfFlow get() = DirectionOfFlow.BIDIRECTIONAL
-    override fun remainingLength() = variable.size()
+    override val wireCodec: Codec<AuthV5Wire> get() = AuthV5WireCodec
 
-    override fun encodeBody(writeBuffer: WriteBuffer) {
+    override fun toWire(): AuthV5Wire {
         val propsList = buildList<MqttProperty> {
             val auth = variable.properties.authentication
             if (auth != null) {
@@ -52,12 +54,9 @@ data class AuthenticationExchange(
                 add(UserProperty(kv.first, kv.second))
             }
         }
-        AuthV5WireCodec.encode(
-            writeBuffer,
-            AuthV5Wire(
-                variable.reasonCode.byte,
-                propsList.ifEmpty { null },
-            ),
+        return AuthV5Wire(
+            variable.reasonCode.byte,
+            propsList.ifEmpty { null },
         )
     }
 
@@ -95,33 +94,11 @@ data class AuthenticationExchange(
             getReasonCode(reasonCode.byte)
         }
 
-        fun size(): Int {
-            val propSize = properties.size()
-            return propSize + UByte.SIZE_BYTES + variableByteSize(propSize)
-        }
-
         data class Properties(
             val authentication: Authentication?,
             val reasonString: String? = null,
             val userProperty: List<Pair<String, String>> = emptyList(),
         ) {
-            fun size(): Int {
-                val propsList = buildList<MqttProperty> {
-                    if (authentication != null) {
-                        add(AuthenticationMethod(authentication.method))
-                        authentication.data.position(0)
-                        add(AuthenticationData(authentication.data.remaining().toUShort(), authentication.data))
-                    }
-                    if (reasonString != null) {
-                        add(ReasonString(reasonString))
-                    }
-                    for (kv in userProperty) {
-                        add(UserProperty(kv.first, kv.second))
-                    }
-                }
-                return mqttPropertiesSize(propsList)
-            }
-
             companion object {
                 fun from(keyValuePairs: Collection<MqttProperty>?): Properties {
                     val p = PropertyExtractor(keyValuePairs, "AUTH")

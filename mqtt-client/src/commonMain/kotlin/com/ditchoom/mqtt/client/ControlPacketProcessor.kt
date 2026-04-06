@@ -130,7 +130,9 @@ class ControlPacketProcessor(
                 is IDisconnectNotification -> {}
                 is IPingRequest -> write(packet.controlPacketFactory.pingResponse())
                 is IPingResponse -> pingResponseCount++
-                is IPublishAcknowledgment -> persistence.ackPub(broker, packet)
+                is IPublishAcknowledgment -> {
+                    persistence.ackPub(broker, packet)
+                }
                 is IPublishMessage -> {
                     val replyMessage = packet.expectedResponse()
                     if (replyMessage != null) {
@@ -142,9 +144,12 @@ class ControlPacketProcessor(
                     }
                 }
                 is IPublishReceived -> {
+                    // QoS 2 outbound: PUBREC received → update state, send PUBREL
+                    persistence.updatePublishState(broker, packet.packetIdentifier, Persistence.STATE_PUBREC_RECEIVED)
                     val pubRel = packet.expectedResponse()
                     persistence.ackPubReceivedQueuePubRelease(broker, packet, pubRel)
                     write(pubRel)
+                    persistence.updatePublishState(broker, packet.packetIdentifier, Persistence.STATE_PUBREL_SENT)
                 }
                 is IPublishRelease -> {
                     val pubComp = packet.expectedResponse()
@@ -152,7 +157,9 @@ class ControlPacketProcessor(
                     write(pubComp)
                     persistence.onPubCompWritten(broker, pubComp)
                 }
-                is IPublishComplete -> persistence.ackPubComplete(broker, packet)
+                is IPublishComplete -> {
+                    persistence.ackPubComplete(broker, packet)
+                }
                 is ISubscribeAcknowledgement -> persistence.ackSub(broker, packet)
                 is IUnsubscribeAcknowledgment -> persistence.ackUnsub(broker, packet)
             }

@@ -119,4 +119,21 @@ interface Persistence {
         broker: MqttBroker,
         includeSubscriptions: Boolean = true,
     ): Boolean
+
+    /**
+     * Update the publish state for an outbound message.
+     * State values: 0=QUEUED, 1=SENT, 2=PUBREC_RECEIVED, 3=PUBREL_SENT.
+     */
+    suspend fun updatePublishState(
+        broker: MqttBroker,
+        packetId: Int,
+        state: Int,
+    )
+
+    companion object {
+        const val STATE_QUEUED = 0
+        const val STATE_SENT = 1
+        const val STATE_PUBREC_RECEIVED = 2
+        const val STATE_PUBREL_SENT = 3
+    }
 }

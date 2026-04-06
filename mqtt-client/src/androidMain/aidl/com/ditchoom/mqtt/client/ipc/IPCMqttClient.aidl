@@ -4,6 +4,7 @@ package com.ditchoom.mqtt.client.ipc;
 import com.ditchoom.mqtt.client.ipc.MqttMessageTransferredCallback;
 import com.ditchoom.mqtt.client.ipc.MqttMessageCallback;
 import com.ditchoom.mqtt.client.ipc.MqttCompletionCallback;
+import com.ditchoom.mqtt.client.ipc.MqttPublishStateCallback;
 import com.ditchoom.buffer.JvmBuffer;
 
 interface IPCMqttClient {
@@ -13,6 +14,9 @@ interface IPCMqttClient {
 
     void registerObserver(MqttMessageTransferredCallback observer);
     void unregisterObserver(MqttMessageTransferredCallback observer);
+
+    void registerPublishStateObserver(MqttPublishStateCallback observer);
+    void unregisterPublishStateObserver(MqttPublishStateCallback observer);
 
     JvmBuffer currentConnectionAcknowledgmentOrNull();
     void awaitConnectivity(MqttMessageCallback cb);

@@ -906,6 +906,15 @@ class SqlDatabasePersistence(
         val unsubCount = unsubQueries.queuedMessageCount(broker.identifier.toLong()).executeAsOne()
         return msgCount == 0L && qos2Count == 0L && subscriptionCount == 0L && subCount == 0L && unsubCount == 0L
     }
+
+    override suspend fun updatePublishState(broker: MqttBroker, packetId: Int, state: Int) {
+        pubQueries.updateState(
+            state = state.toLong(),
+            brokerId = broker.identifier.toLong(),
+            incoming = 0, // outbound only
+            packetId = packetId.toLong(),
+        )
+    }
 }
 
 fun Boolean.toLong(): Long =

@@ -10,6 +10,8 @@ CREATE TABLE IF NOT EXISTS PublishMessage (
 	packet_id INTEGER NOT NULL CHECK(packet_id BETWEEN 0 AND 65535),
 -- 	payload
 	payload BLOB,
+--  publish state: 0=QUEUED, 1=SENT, 2=PUBREC_RECEIVED, 3=PUBREL_SENT
+	state INTEGER NOT NULL DEFAULT 0 CHECK(state BETWEEN 0 AND 3),
 	FOREIGN KEY(broker_id) REFERENCES Broker(id) ON DELETE CASCADE,
 	PRIMARY KEY (broker_id, incoming, packet_id)
 );
@@ -36,3 +38,6 @@ SELECT * FROM PublishMessage WHERE broker_id = :brokerId;
 
 messageWithId:
 SELECT * FROM PublishMessage WHERE broker_id = :brokerId AND incoming = :incoming AND packet_id = :packetId LIMIT 1;
+
+updateState:
+UPDATE PublishMessage SET state = :state WHERE broker_id = :brokerId AND incoming = :incoming AND packet_id = :packetId;

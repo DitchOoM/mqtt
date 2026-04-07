@@ -6,7 +6,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class PublishAcknowledgementTest {
-    private val packetIdentifier = 2
+    private val packetIdentifier = 2.toUShort()
 
     @Test
     fun packetIdentifier() {
@@ -16,7 +16,7 @@ class PublishAcknowledgementTest {
         puback.serialize(buffer)
         buffer.resetForRead()
         val pubackResult = ControlPacketV4.from(buffer) as PublishAcknowledgment
-        assertEquals(pubackResult.packetIdentifier, packetIdentifier)
+        assertEquals(pubackResult.packetIdentifier, packetIdentifier.toInt())
     }
 
     @Test
@@ -27,12 +27,12 @@ class PublishAcknowledgementTest {
         puback.serialize(buffer)
         buffer.resetForRead()
         val pubackResult = ControlPacketV4.from(buffer) as PublishAcknowledgment
-        assertEquals(pubackResult.packetIdentifier, packetIdentifier)
+        assertEquals(pubackResult.packetIdentifier, packetIdentifier.toInt())
     }
 
     @Test
     fun wireFormatBytes() {
-        val puback = PublishAcknowledgment(0x1234)
+        val puback = PublishAcknowledgment(0x1234.toUShort())
         val buffer = BufferFactory.Default.allocate(4)
         puback.serialize(buffer)
         buffer.resetForRead()
@@ -45,8 +45,8 @@ class PublishAcknowledgementTest {
 
     @Test
     fun valueClassEquality() {
-        val a = PublishAcknowledgment(42)
-        val b = PublishAcknowledgment(42)
+        val a = PublishAcknowledgment(42.toUShort())
+        val b = PublishAcknowledgment(42.toUShort())
         assertEquals(a, b)
         assertEquals(a.hashCode(), b.hashCode())
     }

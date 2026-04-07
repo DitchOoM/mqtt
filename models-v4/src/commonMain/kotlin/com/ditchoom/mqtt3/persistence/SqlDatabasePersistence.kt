@@ -353,9 +353,9 @@ class SqlDatabasePersistence(
         map +=
             qos2Messages.allMessages(broker.identifier.toLong()).executeAsList().map {
                 when (it.type) {
-                    5L -> PublishReceived(it.packet_id.toInt())
-                    6L -> PublishRelease(it.packet_id.toInt())
-                    7L -> PublishComplete(it.packet_id.toInt())
+                    5L -> PublishReceived(it.packet_id.toUShort())
+                    6L -> PublishRelease(it.packet_id.toUShort())
+                    7L -> PublishComplete(it.packet_id.toUShort())
                     else -> throw IllegalArgumentException("Unexpected type ${it.type}")
                 }
             }

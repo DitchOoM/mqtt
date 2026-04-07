@@ -6,7 +6,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class PublishReceivedTests {
-    private val packetIdentifier = 2
+    private val packetIdentifier = 2.toUShort()
 
     @Test
     fun packetIdentifier() {
@@ -16,7 +16,7 @@ class PublishReceivedTests {
         puback.serialize(buffer)
         buffer.resetForRead()
         val pubackResult = ControlPacketV4.from(buffer) as PublishReceived
-        assertEquals(pubackResult.packetIdentifier, packetIdentifier)
+        assertEquals(pubackResult.packetIdentifier, packetIdentifier.toInt())
     }
 
     @Test
@@ -27,12 +27,12 @@ class PublishReceivedTests {
         puback.serialize(buffer)
         buffer.resetForRead()
         val pubackResult = ControlPacketV4.from(buffer) as PublishReceived
-        assertEquals(pubackResult.packetIdentifier, packetIdentifier)
+        assertEquals(pubackResult.packetIdentifier, packetIdentifier.toInt())
     }
 
     @Test
     fun wireFormatBytes() {
-        val pubrec = PublishReceived(0x1234)
+        val pubrec = PublishReceived(0x1234.toUShort())
         val buffer = BufferFactory.Default.allocate(4)
         pubrec.serialize(buffer)
         buffer.resetForRead()

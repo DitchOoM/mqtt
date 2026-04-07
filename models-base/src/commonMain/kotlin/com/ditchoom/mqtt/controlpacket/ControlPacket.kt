@@ -7,8 +7,6 @@ import com.ditchoom.buffer.WriteBuffer
 import com.ditchoom.buffer.managed
 import com.ditchoom.buffer.ReadWriteBuffer
 import com.ditchoom.buffer.codec.Codec
-import com.ditchoom.buffer.codec.EncodeContext
-import com.ditchoom.buffer.codec.SizeEstimate
 import com.ditchoom.mqtt.MalformedInvalidVariableByteInteger
 import com.ditchoom.mqtt.controlpacket.encoding.readLengthPrefixedUtf8String
 import com.ditchoom.mqtt.controlpacket.encoding.writeLengthPrefixedUtf8String
@@ -18,9 +16,8 @@ import com.ditchoom.mqtt.controlpacket.encoding.variableByteSize as encodingVari
 import com.ditchoom.mqtt.controlpacket.encoding.writeVariableByteInteger as encodingWriteVariableByteInteger
 
 /**
- * Marker interface for ControlPacket types whose serialization is fully handled by a
- * generated [Codec]. Implementing types provide [wireCodec] and [toWire]; the base
- * [ControlPacket] default methods delegate [encodeBody] and [remainingLength] automatically.
+ * Marker interface for v5 packets whose serialization delegates to a wire codec.
+ * Will be removed when v5 models are refactored.
  */
 interface WireEncoded<W : Any> {
     val wireCodec: Codec<W>
@@ -78,12 +75,12 @@ interface ControlPacket {
 
     /**
      * Encodes the variable header + payload (everything after the fixed header).
-     * If this implements [WireEncoded], delegates to the generated codec automatically.
+     * If this implements [WireEncoded], delegates to the wire codec automatically.
      */
     fun encodeBody(writeBuffer: WriteBuffer) {
         if (this is WireEncoded<*>) {
             @Suppress("UNCHECKED_CAST")
-            (wireCodec as Codec<Any>).encode(writeBuffer, toWire(), EncodeContext.Empty)
+            (wireCodec as Codec<Any>).encode(writeBuffer, toWire())
         } else {
             variableHeader(writeBuffer)
             payload(writeBuffer)
@@ -93,16 +90,10 @@ interface ControlPacket {
     fun packetSize() = 1 + encodingVariableByteSize(remainingLength()) + remainingLength()
 
     /**
-     * Byte count of the variable header + payload. If this implements [WireEncoded] and the
-     * codec provides an exact size, delegates to [Codec.sizeOf] automatically.
+     * Byte count of the variable header + payload.
+     * Subclasses that use generated codecs should override this.
      */
-    fun remainingLength(): Int {
-        if (this is WireEncoded<*>) {
-            val estimate = wireCodec.sizeOf(toWire())
-            if (estimate is SizeEstimate.Exact) return estimate.bytes
-        }
-        return 0
-    }
+    fun remainingLength(): Int = 0
 
     fun serialize(factory: BufferFactory = BufferFactory.managed()): PlatformBuffer {
         val size = packetSize()

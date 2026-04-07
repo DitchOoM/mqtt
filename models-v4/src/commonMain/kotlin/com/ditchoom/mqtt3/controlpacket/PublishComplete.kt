@@ -1,12 +1,11 @@
 package com.ditchoom.mqtt3.controlpacket
 
 import com.ditchoom.buffer.ReadBuffer
-import com.ditchoom.buffer.codec.Codec
+import com.ditchoom.buffer.WriteBuffer
+
+import com.ditchoom.buffer.codec.annotations.ProtocolMessage
 import com.ditchoom.mqtt.controlpacket.IPublishComplete
-import com.ditchoom.mqtt.controlpacket.WireEncoded
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
-import com.ditchoom.mqtt3.controlpacket.wire.AckWire
-import com.ditchoom.mqtt3.controlpacket.wire.AckWireCodec
 import kotlin.jvm.JvmInline
 
 /**
@@ -14,19 +13,21 @@ import kotlin.jvm.JvmInline
  *
  * The PUBCOMP packet is the response to a PUBREL packet. It is the fourth and final packet of the QoS 2 protocol exchange.
  */
+@ProtocolMessage
 @JvmInline
 value class PublishComplete(
-    override val packetIdentifier: Int,
+    val packetId: UShort,
 ) : ControlPacketV4,
-    IPublishComplete,
-    WireEncoded<AckWire> {
+    IPublishComplete {
+    override val packetIdentifier: Int get() = packetId.toInt()
     override val controlPacketValue: Byte get() = IPublishComplete.CONTROL_PACKET_VALUE
     override val direction: DirectionOfFlow get() = DirectionOfFlow.BIDIRECTIONAL
-    override val wireCodec: Codec<AckWire> get() = AckWireCodec
 
-    override fun toWire() = AckWire(packetIdentifier.toUShort())
+    override fun encodeBody(writeBuffer: WriteBuffer) = PublishCompleteCodec.encode(writeBuffer, this)
+
+    override fun remainingLength() = UShort.SIZE_BYTES
 
     companion object {
-        fun from(buffer: ReadBuffer) = PublishComplete(AckWireCodec.decode(buffer).packetId.toInt())
+        fun from(buffer: ReadBuffer) = PublishCompleteCodec.decode(buffer)
     }
 }

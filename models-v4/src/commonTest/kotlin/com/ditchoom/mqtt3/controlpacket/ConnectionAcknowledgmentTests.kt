@@ -2,7 +2,6 @@ package com.ditchoom.mqtt3.controlpacket
 
 import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Default
-import com.ditchoom.mqtt.controlpacket.format.fixed.get
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -23,15 +22,9 @@ class ConnectionAcknowledgmentTests {
     fun bit0SessionPresentFalseFlags() {
         val buffer = BufferFactory.Default.allocate(4)
         val model = ConnectionAcknowledgment()
-        model.header.serialize(buffer)
+        model.serialize(buffer)
         buffer.resetForRead()
-        val sessionPresentBit = buffer.readUnsignedByte().get(0)
-        assertFalse(sessionPresentBit)
-
-        val buffer2 = BufferFactory.Default.allocate(4)
-        model.serialize(buffer2)
-        buffer2.resetForRead()
-        val result = ControlPacketV4.from(buffer2) as ConnectionAcknowledgment
+        val result = ControlPacketV4.from(buffer) as ConnectionAcknowledgment
         assertFalse(result.header.sessionPresent)
     }
 
@@ -39,8 +32,9 @@ class ConnectionAcknowledgmentTests {
     fun bit0SessionPresentFlags() {
         val buffer = BufferFactory.Default.allocate(4)
         val model = ConnectionAcknowledgment(ConnectionAcknowledgment.VariableHeader(true))
-        model.header.serialize(buffer)
+        model.serialize(buffer)
         buffer.resetForRead()
-        assertTrue(buffer.readUnsignedByte().get(0))
+        val result = ControlPacketV4.from(buffer) as ConnectionAcknowledgment
+        assertTrue(result.header.sessionPresent)
     }
 }

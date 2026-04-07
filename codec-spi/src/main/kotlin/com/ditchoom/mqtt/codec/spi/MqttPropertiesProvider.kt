@@ -24,6 +24,5 @@ class MqttPropertiesProvider : CodecFieldProvider {
             readFunction = FunctionRef("com.ditchoom.mqtt5.controlpacket.properties", "readProperties"),
             writeFunction = FunctionRef("com.ditchoom.mqtt5.controlpacket.properties", "writeProperties"),
             fixedSize = -1,
-            sizeOfFunction = FunctionRef("com.ditchoom.mqtt5.controlpacket.properties", "propertiesSize"),
         )
 }

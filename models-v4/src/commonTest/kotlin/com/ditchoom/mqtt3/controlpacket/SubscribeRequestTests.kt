@@ -7,9 +7,6 @@ import com.ditchoom.mqtt.controlpacket.QualityOfService.AT_MOST_ONCE
 import com.ditchoom.mqtt.controlpacket.QualityOfService.EXACTLY_ONCE
 import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.validateMqttUTF8StringOrThrowWith
-import com.ditchoom.mqtt3.controlpacket.wire.SubscribeWire
-import com.ditchoom.mqtt3.controlpacket.wire.SubscribeWireCodec
-import com.ditchoom.mqtt3.controlpacket.wire.SubscriptionWire
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -21,16 +18,20 @@ class SubscribeRequestTests {
      */
     @Test
     fun subscriptionPayloadBytesMatchSpec() {
-        val wire = SubscribeWire(
-            packetIdentifier = 1u,
-            subscriptions = listOf(
-                SubscriptionWire("a/b", AT_LEAST_ONCE.integerValue.toUByte()),
-                SubscriptionWire("c/d", EXACTLY_ONCE.integerValue.toUByte()),
+        val request = SubscribeRequest(
+            1.toUShort(),
+            listOf(
+                SubscriptionEntry("a/b", AT_LEAST_ONCE.integerValue.toUByte()),
+                SubscriptionEntry("c/d", EXACTLY_ONCE.integerValue.toUByte()),
             ),
         )
-        val buffer = BufferFactory.Default.allocate(16)
-        SubscribeWireCodec.encode(buffer, wire)
+        val buffer = BufferFactory.Default.allocate(20)
+        request.serialize(buffer)
         buffer.resetForRead()
+
+        // Fixed header: 0x82 (type=8, flags=0010), remaining length
+        assertEquals(0x82.toUByte(), buffer.readUnsignedByte())
+        buffer.readByte() // remaining length
 
         // Packet Identifier (2 bytes)
         assertEquals(0x00.toByte(), buffer.readByte()) // MSB
@@ -56,26 +57,26 @@ class SubscribeRequestTests {
     }
 
     /**
-     * Validates encode → decode roundtrip produces identical wire object.
+     * Validates encode → decode roundtrip produces identical object.
      */
     @Test
-    fun subscribeWireRoundtrip() {
-        val wire = SubscribeWire(
-            packetIdentifier = 42u,
-            subscriptions = listOf(
-                SubscriptionWire("sensor/temp", AT_LEAST_ONCE.integerValue.toUByte()),
-                SubscriptionWire("sensor/humidity", EXACTLY_ONCE.integerValue.toUByte()),
+    fun subscribeRoundtrip() {
+        val request = SubscribeRequest(
+            42.toUShort(),
+            listOf(
+                SubscriptionEntry("sensor/temp", AT_LEAST_ONCE.integerValue.toUByte()),
+                SubscriptionEntry("sensor/humidity", EXACTLY_ONCE.integerValue.toUByte()),
             ),
         )
         val buffer = BufferFactory.Default.allocate(64)
-        SubscribeWireCodec.encode(buffer, wire)
+        request.serialize(buffer)
         buffer.resetForRead()
-        val decoded = SubscribeWireCodec.decode(buffer)
-        assertEquals(wire.packetIdentifier, decoded.packetIdentifier)
-        assertEquals(wire.subscriptions.size, decoded.subscriptions.size)
-        wire.subscriptions.zip(decoded.subscriptions).forEach { (expected, actual) ->
-            assertEquals(expected.topicFilter, actual.topicFilter)
-            assertEquals(expected.requestedQos, actual.requestedQos)
+        val decoded = ControlPacketV4.from(buffer) as SubscribeRequest
+        assertEquals(request.packetIdentifier, decoded.packetIdentifier)
+        assertEquals(request.entries.size, decoded.entries.size)
+        request.entries.zip(decoded.entries).forEach { (expected, actual) ->
+            assertEquals(expected.filter, actual.filter)
+            assertEquals(expected.qos, actual.qos)
         }
     }
 

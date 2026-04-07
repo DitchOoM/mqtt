@@ -6,7 +6,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class UnsubscribeAcknowledgmentTests {
-    private val packetIdentifier = 2
+    private val packetIdentifier = 2.toUShort()
 
     @Test
     fun serializeDeserializeDefault() {
@@ -20,7 +20,7 @@ class UnsubscribeAcknowledgmentTests {
 
     @Test
     fun wireFormatBytes() {
-        val unsuback = UnsubscribeAcknowledgment(0x1234)
+        val unsuback = UnsubscribeAcknowledgment(0x1234.toUShort())
         val buffer = BufferFactory.Default.allocate(4)
         unsuback.serialize(buffer)
         buffer.resetForRead()

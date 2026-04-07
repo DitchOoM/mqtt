@@ -2,10 +2,11 @@ package com.ditchoom.mqtt3.controlpacket
 
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
+import com.ditchoom.buffer.codec.annotations.LengthPrefixed
+import com.ditchoom.buffer.codec.annotations.ProtocolMessage
+import com.ditchoom.buffer.codec.annotations.RemainingBytes
 import com.ditchoom.buffer.utf8Length
 import com.ditchoom.mqtt.ProtocolError
-import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readMqttUtf8StringNotValidatedSized
-import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.writeMqttUtf8String
 import com.ditchoom.mqtt.controlpacket.ISubscribeRequest
 import com.ditchoom.mqtt.controlpacket.ISubscription
 import com.ditchoom.mqtt.controlpacket.QualityOfService
@@ -15,43 +16,71 @@ import com.ditchoom.mqtt.controlpacket.QualityOfService.EXACTLY_ONCE
 import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
-import com.ditchoom.mqtt3.controlpacket.wire.SubscribeWire
-import com.ditchoom.mqtt3.controlpacket.wire.SubscribeWireCodec
-import com.ditchoom.mqtt3.controlpacket.wire.SubscriptionWire
+
+/**
+ * Wire model for a single subscription entry: topic filter + requested QoS byte.
+ */
+@ProtocolMessage
+data class SubscriptionEntry(
+    @LengthPrefixed val filter: String,
+    val qos: UByte,
+) : ISubscription {
+    override val topicFilter: TopicFilter get() = TopicFilter.fromOrThrow(filter)
+    override val maximumQos: QualityOfService
+        get() = QualityOfService.fromBooleans(
+            qos.toInt().shr(1) and 1 == 1,
+            qos.toInt() and 1 == 1,
+        )
+}
 
 /**
  * 3.8 SUBSCRIBE - Subscribe request
  *
  * The SUBSCRIBE packet is sent from the Client to the Server to create one or more Subscriptions. Each Subscription
- * registers a Client’s interest in one or more Topics. The Server sends PUBLISH packets to the Client to forward
+ * registers a Client's interest in one or more Topics. The Server sends PUBLISH packets to the Client to forward
  * Application Messages that were published to Topics that match these Subscriptions. The SUBSCRIBE packet also
  * specifies (for each Subscription) the maximum QoS with which the Server can send Application Messages to the Client.
  *
  * Bits 3,2,1 and 0 of the Fixed Header of the SUBSCRIBE packet are reserved and MUST be set to 0,0,1 and 0
  * respectively. The Server MUST treat any other value as malformed and close the Network Connection [MQTT-3.8.1-1].
  */
+@ProtocolMessage
 data class SubscribeRequest(
-    override val packetIdentifier: Int,
-    override val subscriptions: Set<ISubscription>,
+    val packetId: UShort,
+    @RemainingBytes val entries: List<SubscriptionEntry>,
 ) : ControlPacketV4,
     ISubscribeRequest {
+    override val packetIdentifier: Int get() = packetId.toInt()
+    override val subscriptions: Set<ISubscription> get() = entries.toSet()
     override val controlPacketValue: Byte get() = ISubscribeRequest.CONTROL_PACKET_VALUE
     override val direction: DirectionOfFlow get() = DirectionOfFlow.CLIENT_TO_SERVER
     override val flags: Byte get() = 0b10
+
+    constructor(packetIdentifier: Int, subscriptions: Set<ISubscription>) :
+        this(
+            packetIdentifier.toUShort(),
+            subscriptions
+                .sortedBy { it.topicFilter.toString() }
+                .map { SubscriptionEntry(it.topicFilter.toString(), it.maximumQos.integerValue.toUByte()) },
+        )
+
     constructor(packetIdentifier: UShort, topic: TopicFilter, qos: QualityOfService) :
         this(
-            packetIdentifier.toInt(),
-            subscriptions = setOf(Subscription(topic, qos)),
+            packetIdentifier,
+            listOf(SubscriptionEntry(topic.toString(), qos.integerValue.toUByte())),
         )
 
     constructor(packetIdentifier: UShort, topic: String, qos: QualityOfService) :
         this(
-            packetIdentifier.toInt(),
-            subscriptions = setOf(Subscription(TopicFilter.fromOrThrow(topic), qos)),
+            packetIdentifier,
+            listOf(SubscriptionEntry(topic, qos.integerValue.toUByte())),
         )
 
     constructor(packetIdentifier: UShort, topics: List<TopicFilter>, qos: List<QualityOfService>) :
-        this(packetIdentifier.toInt(), subscriptions = Subscription.from(topics, qos))
+        this(
+            packetIdentifier.toInt(),
+            subscriptions = Subscription.from(topics, qos),
+        )
 
     constructor(packetIdentifier: Int, topicsQosMap: Map<TopicFilter, QualityOfService>) :
         this(
@@ -59,30 +88,23 @@ data class SubscribeRequest(
             subscriptions = Subscription.from(topicsQosMap.keys.toList(), topicsQosMap.values.toList()),
         )
 
-    override fun copyWithNewPacketIdentifier(packetIdentifier: Int): ISubscribeRequest = copy(packetIdentifier = packetIdentifier)
+    override fun copyWithNewPacketIdentifier(packetIdentifier: Int): ISubscribeRequest =
+        copy(packetId = packetIdentifier.toUShort())
 
-    override fun encodeBody(writeBuffer: WriteBuffer) {
-        SubscribeWireCodec.encode(
-            writeBuffer,
-            SubscribeWire(
-                packetIdentifier.toUShort(),
-                subscriptions.map { SubscriptionWire(it.topicFilter.toString(), it.maximumQos.integerValue.toUByte()) },
-            ),
-        )
-    }
+    override fun encodeBody(writeBuffer: WriteBuffer) = SubscribeRequestCodec.encode(writeBuffer, this)
 
-    override fun remainingLength() = UShort.SIZE_BYTES + Subscription.sizeMany(subscriptions)
+    override fun remainingLength() = UShort.SIZE_BYTES + entries.sumOf { it.filter.utf8Length() + UShort.SIZE_BYTES + Byte.SIZE_BYTES }
 
     override fun expectedResponse(): SubscribeAcknowledgement {
         val returnCodes =
-            subscriptions.map {
+            entries.map {
                 when (it.maximumQos) {
                     AT_MOST_ONCE -> ReasonCode.GRANTED_QOS_0
                     AT_LEAST_ONCE -> ReasonCode.GRANTED_QOS_1
                     EXACTLY_ONCE -> ReasonCode.GRANTED_QOS_2
                 }
             }
-        return SubscribeAcknowledgement(packetIdentifier, returnCodes)
+        return SubscribeAcknowledgement(packetId.toInt(), returnCodes)
     }
 
     companion object {
@@ -91,27 +113,17 @@ data class SubscribeRequest(
             remaining: Int,
         ): SubscribeRequest {
             val sliced = buffer.readBytes(remaining)
-            val wire = SubscribeWireCodec.decode(sliced)
-            val subscriptions = wire.subscriptions.map { sub ->
-                val qosBit1 = sub.requestedQos.toInt().shr(1) and 1 == 1
-                val qosBit0 = sub.requestedQos.toInt() and 1 == 1
-                Subscription(
-                    TopicFilter.fromOrThrow(sub.topicFilter),
-                    QualityOfService.fromBooleans(qosBit1, qosBit0),
-                )
-            }.toSet()
-            return SubscribeRequest(wire.packetIdentifier.toInt(), subscriptions)
+            return SubscribeRequestCodec.decode(sliced)
         }
     }
 }
 
+/**
+ * Legacy helper for constructing subscription sets from lists.
+ * Used by convenience constructors.
+ */
 data class Subscription(
     override val topicFilter: TopicFilter,
-    /**
-     * Bits 0 and 1 of the Subscription Options represent Maximum QoS field. This gives the maximum
-     * QoS level at which the Server can send Application Messages to the Client. It is a Protocol
-     * Error if the Maximum QoS field has the value 3.
-     */
     override val maximumQos: QualityOfService = AT_LEAST_ONCE,
 ) : ISubscription {
     companion object {
@@ -146,14 +158,5 @@ data class Subscription(
             }
             return subscriptions
         }
-
-        fun sizeMany(subscriptions: Collection<ISubscription>): Int {
-            var size = 0
-            subscriptions.forEach {
-                size += it.topicFilter.toString().utf8Length() + UShort.SIZE_BYTES + Byte.SIZE_BYTES
-            }
-            return size
-        }
-
     }
 }

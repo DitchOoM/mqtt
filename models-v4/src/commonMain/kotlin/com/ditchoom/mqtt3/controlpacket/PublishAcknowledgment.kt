@@ -1,12 +1,10 @@
 package com.ditchoom.mqtt3.controlpacket
 
 import com.ditchoom.buffer.ReadBuffer
-import com.ditchoom.buffer.codec.Codec
+import com.ditchoom.buffer.WriteBuffer
+import com.ditchoom.buffer.codec.annotations.ProtocolMessage
 import com.ditchoom.mqtt.controlpacket.IPublishAcknowledgment
-import com.ditchoom.mqtt.controlpacket.WireEncoded
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
-import com.ditchoom.mqtt3.controlpacket.wire.AckWire
-import com.ditchoom.mqtt3.controlpacket.wire.AckWireCodec
 import kotlin.jvm.JvmInline
 
 /**
@@ -14,19 +12,21 @@ import kotlin.jvm.JvmInline
  *
  * A PUBACK packet is the response to a PUBLISH packet with QoS 1.
  */
+@ProtocolMessage
 @JvmInline
 value class PublishAcknowledgment(
-    override val packetIdentifier: Int,
+    val packetId: UShort,
 ) : ControlPacketV4,
-    IPublishAcknowledgment,
-    WireEncoded<AckWire> {
+    IPublishAcknowledgment {
+    override val packetIdentifier: Int get() = packetId.toInt()
     override val controlPacketValue: Byte get() = IPublishAcknowledgment.CONTROL_PACKET_VALUE
     override val direction: DirectionOfFlow get() = DirectionOfFlow.BIDIRECTIONAL
-    override val wireCodec: Codec<AckWire> get() = AckWireCodec
 
-    override fun toWire() = AckWire(packetIdentifier.toUShort())
+    override fun encodeBody(writeBuffer: WriteBuffer) = PublishAcknowledgmentCodec.encode(writeBuffer, this)
+
+    override fun remainingLength() = UShort.SIZE_BYTES
 
     companion object {
-        fun from(buffer: ReadBuffer) = PublishAcknowledgment(AckWireCodec.decode(buffer).packetId.toInt())
+        fun from(buffer: ReadBuffer) = PublishAcknowledgmentCodec.decode(buffer)
     }
 }

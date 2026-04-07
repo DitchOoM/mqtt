@@ -2,6 +2,8 @@ package com.ditchoom.mqtt3.controlpacket
 
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
+import com.ditchoom.buffer.codec.annotations.ProtocolMessage
+import com.ditchoom.buffer.codec.annotations.RemainingBytes
 import com.ditchoom.mqtt.MalformedPacketException
 import com.ditchoom.mqtt.controlpacket.ISubscribeAcknowledgement
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
@@ -10,9 +12,14 @@ import com.ditchoom.mqtt.controlpacket.format.ReasonCode.GRANTED_QOS_1
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.GRANTED_QOS_2
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.UNSPECIFIED_ERROR
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
-import com.ditchoom.mqtt3.controlpacket.wire.SubAckReturnCodeWire
-import com.ditchoom.mqtt3.controlpacket.wire.SubAckWire
-import com.ditchoom.mqtt3.controlpacket.wire.SubAckWireCodec
+import kotlin.jvm.JvmInline
+
+/**
+ * Wire model for a single SUBACK return code byte.
+ */
+@ProtocolMessage
+@JvmInline
+value class SubAckReturnCode(val raw: UByte)
 
 /**
  * 3.9 SUBACK – Subscribe acknowledgement
@@ -22,24 +29,35 @@ import com.ditchoom.mqtt3.controlpacket.wire.SubAckWireCodec
  * A SUBACK Packet contains a list of return codes, that specify the maximum QoS level that was granted in each
  * Subscription that was requested by the SUBSCRIBE.
  */
+@ProtocolMessage
 data class SubscribeAcknowledgement(
-    override val packetIdentifier: Int,
-    val payload: List<ReasonCode>,
+    val packetId: UShort,
+    @RemainingBytes val returnCodes: List<SubAckReturnCode>,
 ) : ControlPacketV4,
     ISubscribeAcknowledgement {
+    override val packetIdentifier: Int get() = packetId.toInt()
     override val controlPacketValue: Byte get() = ISubscribeAcknowledgement.CONTROL_PACKET_VALUE
     override val direction: DirectionOfFlow get() = DirectionOfFlow.SERVER_TO_CLIENT
-    override fun remainingLength() = 2 + payload.size
+    override fun remainingLength() = UShort.SIZE_BYTES + returnCodes.size
 
-    override fun encodeBody(writeBuffer: WriteBuffer) {
-        SubAckWireCodec.encode(
-            writeBuffer,
-            SubAckWire(
-                packetIdentifier.toUShort(),
-                payload.map { SubAckReturnCodeWire(it.byte) },
-            ),
-        )
-    }
+    /**
+     * Convenience constructor from domain-level [ReasonCode] list.
+     */
+    constructor(packetIdentifier: Int, payload: List<ReasonCode>) :
+        this(packetIdentifier.toUShort(), payload.map { SubAckReturnCode(it.byte) })
+
+    val payload: List<ReasonCode>
+        get() = returnCodes.map { rc ->
+            when (rc.raw) {
+                GRANTED_QOS_0.byte -> GRANTED_QOS_0
+                GRANTED_QOS_1.byte -> GRANTED_QOS_1
+                GRANTED_QOS_2.byte -> GRANTED_QOS_2
+                UNSPECIFIED_ERROR.byte -> UNSPECIFIED_ERROR
+                else -> throw MalformedPacketException("Invalid return code ${rc.raw}")
+            }
+        }
+
+    override fun encodeBody(writeBuffer: WriteBuffer) = SubscribeAcknowledgementCodec.encode(writeBuffer, this)
 
     companion object {
         fun from(
@@ -47,17 +65,7 @@ data class SubscribeAcknowledgement(
             remainingLength: Int,
         ): SubscribeAcknowledgement {
             val sliced = buffer.readBytes(remainingLength)
-            val wire = SubAckWireCodec.decode(sliced)
-            val returnCodes = wire.returnCodes.map { rc ->
-                when (rc.raw) {
-                    GRANTED_QOS_0.byte -> GRANTED_QOS_0
-                    GRANTED_QOS_1.byte -> GRANTED_QOS_1
-                    GRANTED_QOS_2.byte -> GRANTED_QOS_2
-                    UNSPECIFIED_ERROR.byte -> UNSPECIFIED_ERROR
-                    else -> throw MalformedPacketException("Invalid return code ${rc.raw}")
-                }
-            }
-            return SubscribeAcknowledgement(wire.packetIdentifier.toInt(), returnCodes)
+            return SubscribeAcknowledgementCodec.decode(sliced)
         }
     }
 }

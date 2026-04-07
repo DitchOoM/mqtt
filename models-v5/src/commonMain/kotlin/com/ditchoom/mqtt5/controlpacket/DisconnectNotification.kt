@@ -1,11 +1,13 @@
 package com.ditchoom.mqtt5.controlpacket
 
 import com.ditchoom.buffer.ReadBuffer
-import com.ditchoom.buffer.codec.Codec
+import com.ditchoom.buffer.WriteBuffer
+import com.ditchoom.buffer.codec.annotations.ProtocolMessage
+import com.ditchoom.buffer.codec.annotations.WhenRemaining
 import com.ditchoom.mqtt.MalformedPacketException
+import com.ditchoom.mqtt.codec.annotations.MqttProperties
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.variableByteSize
 import com.ditchoom.mqtt.controlpacket.IDisconnectNotification
-import com.ditchoom.mqtt.controlpacket.WireEncoded
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
 import com.ditchoom.mqtt5.controlpacket.properties.MqttProperty
@@ -15,8 +17,6 @@ import com.ditchoom.mqtt5.controlpacket.properties.ServerReference
 import com.ditchoom.mqtt5.controlpacket.properties.SessionExpiryInterval
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
 import com.ditchoom.mqtt5.controlpacket.properties.mqttPropertiesSize
-import com.ditchoom.mqtt5.controlpacket.wire.DisconnectV5Wire
-import com.ditchoom.mqtt5.controlpacket.wire.DisconnectV5WireCodec
 
 /**
  * 3.14 DISCONNECT – Disconnect notification
@@ -31,19 +31,41 @@ import com.ditchoom.mqtt5.controlpacket.wire.DisconnectV5WireCodec
  * [MQTT-3.14.0-1].
  */
 
+/**
+ * Wire body for DISCONNECT: reasonCode + optional properties.
+ * Both fields optional when Remaining Length is 0 (NORMAL_DISCONNECTION with no properties).
+ */
+@ProtocolMessage
+data class DisconnectV5Body(
+    @WhenRemaining(1) val reasonCode: UByte? = null,
+    @WhenRemaining(1) @MqttProperties val properties: Collection<MqttProperty>? = null,
+)
+
 data class DisconnectNotification(
     val variable: VariableHeader = VariableHeader(),
 ) : ControlPacketV5,
-    IDisconnectNotification,
-    WireEncoded<DisconnectV5Wire> {
+    IDisconnectNotification {
     override val controlPacketValue: Byte get() = 14
     override val direction: DirectionOfFlow get() = DirectionOfFlow.BIDIRECTIONAL
-    override val wireCodec: Codec<DisconnectV5Wire> get() = DisconnectV5WireCodec
 
-    override fun toWire() = DisconnectV5Wire(
-        variable.reasonCode.byte,
-        variable.properties.props,
-    )
+    override fun encodeBody(writeBuffer: WriteBuffer) {
+        val canOmit = variable.reasonCode == ReasonCode.NORMAL_DISCONNECTION &&
+            variable.properties.props.isEmpty()
+        if (!canOmit) {
+            DisconnectV5BodyCodec.encode(
+                writeBuffer,
+                DisconnectV5Body(variable.reasonCode.byte, variable.properties.props.ifEmpty { null }),
+            )
+        }
+    }
+
+    override fun remainingLength(): Int {
+        val canOmit = variable.reasonCode == ReasonCode.NORMAL_DISCONNECTION &&
+            variable.properties.props.isEmpty()
+        if (canOmit) return 0
+        val propsSize = mqttPropertiesSize(variable.properties.props)
+        return 1 + variableByteSize(propsSize) + propsSize
+    }
 
     data class VariableHeader(
         val reasonCode: ReasonCode = ReasonCode.NORMAL_DISCONNECTION,
@@ -158,14 +180,13 @@ data class DisconnectNotification(
                 if (remainingLength == 0) {
                     return VariableHeader(ReasonCode.NORMAL_DISCONNECTION)
                 }
-                val wire =
-                    if (remainingLength == 1) {
-                        DisconnectV5Wire(buffer.readUnsignedByte(), null)
-                    } else {
-                        DisconnectV5WireCodec.decode(buffer)
-                    }
-                val reasonCode = getDisconnectCode(wire.reasonCode)
-                val props = Properties.from(wire.properties)
+                val body = if (remainingLength == 1) {
+                    DisconnectV5Body(buffer.readUnsignedByte(), null)
+                } else {
+                    DisconnectV5BodyCodec.decode(buffer)
+                }
+                val reasonCode = getDisconnectCode(body.reasonCode ?: ReasonCode.NORMAL_DISCONNECTION.byte)
+                val props = Properties.from(body.properties)
                 return VariableHeader(reasonCode, props)
             }
         }

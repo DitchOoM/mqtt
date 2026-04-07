@@ -402,9 +402,9 @@ class IDBPersistence(
                         dynamicIt.incoming as Int,
                     )
                 when (msg.type) {
-                    IPublishReceived.CONTROL_PACKET_VALUE -> PublishReceived(msg.packetId)
-                    IPublishRelease.CONTROL_PACKET_VALUE -> PublishRelease(msg.packetId)
-                    IPublishComplete.CONTROL_PACKET_VALUE -> PublishComplete(msg.packetId)
+                    IPublishReceived.CONTROL_PACKET_VALUE -> PublishReceived(msg.packetId.toUShort())
+                    IPublishRelease.CONTROL_PACKET_VALUE -> PublishRelease(msg.packetId.toUShort())
+                    IPublishComplete.CONTROL_PACKET_VALUE -> PublishComplete(msg.packetId.toUShort())
                     else -> error("IDB Persistence failed to get a valid qos 2 type")
                 }
             }

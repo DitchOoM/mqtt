@@ -1,10 +1,12 @@
 package com.ditchoom.mqtt5.controlpacket
 
 import com.ditchoom.buffer.ReadBuffer
-import com.ditchoom.buffer.codec.Codec
+import com.ditchoom.buffer.WriteBuffer
+import com.ditchoom.buffer.codec.annotations.ProtocolMessage
+import com.ditchoom.buffer.codec.annotations.WhenRemaining
 import com.ditchoom.mqtt.MalformedPacketException
+import com.ditchoom.mqtt.codec.annotations.MqttProperties
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.variableByteSize
-import com.ditchoom.mqtt.controlpacket.WireEncoded
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.CONTINUE_AUTHENTICATION
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.REAUTHENTICATE
@@ -18,8 +20,6 @@ import com.ditchoom.mqtt5.controlpacket.properties.PropertyExtractor
 import com.ditchoom.mqtt5.controlpacket.properties.ReasonString
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
 import com.ditchoom.mqtt5.controlpacket.properties.mqttPropertiesSize
-import com.ditchoom.mqtt5.controlpacket.wire.AuthV5Wire
-import com.ditchoom.mqtt5.controlpacket.wire.AuthV5WireCodec
 
 /**
  * 3.15 AUTH – Authentication exchange
@@ -31,15 +31,23 @@ import com.ditchoom.mqtt5.controlpacket.wire.AuthV5WireCodec
  * MUST treat any other value as malformed and close the Network Connection [MQTT-3.15.1-1].
  */
 
+/**
+ * Wire body for AUTH packet: reasonCode + optional properties.
+ * Both fields optional when Remaining Length is 0 (SUCCESS with no properties).
+ */
+@ProtocolMessage
+data class AuthV5Body(
+    @WhenRemaining(1) val reasonCode: UByte? = null,
+    @WhenRemaining(1) @MqttProperties val properties: Collection<MqttProperty>? = null,
+)
+
 data class AuthenticationExchange(
     val variable: VariableHeader,
-) : ControlPacketV5,
-    WireEncoded<AuthV5Wire> {
+) : ControlPacketV5 {
     override val controlPacketValue: Byte get() = 15
     override val direction: DirectionOfFlow get() = DirectionOfFlow.BIDIRECTIONAL
-    override val wireCodec: Codec<AuthV5Wire> get() = AuthV5WireCodec
 
-    override fun toWire(): AuthV5Wire {
+    override fun encodeBody(writeBuffer: WriteBuffer) {
         val propsList = buildList<MqttProperty> {
             val auth = variable.properties.authentication
             if (auth != null) {
@@ -54,10 +62,34 @@ data class AuthenticationExchange(
                 add(UserProperty(kv.first, kv.second))
             }
         }
-        return AuthV5Wire(
-            variable.reasonCode.byte,
-            propsList.ifEmpty { null },
-        )
+        val canOmit = variable.reasonCode == SUCCESS && propsList.isEmpty()
+        if (!canOmit) {
+            AuthV5BodyCodec.encode(
+                writeBuffer,
+                AuthV5Body(variable.reasonCode.byte, propsList.ifEmpty { null }),
+            )
+        }
+    }
+
+    override fun remainingLength(): Int {
+        val propsList = buildList<MqttProperty> {
+            val auth = variable.properties.authentication
+            if (auth != null) {
+                add(AuthenticationMethod(auth.method))
+                auth.data.position(0)
+                add(AuthenticationData(auth.data.remaining().toUShort(), auth.data))
+            }
+            if (variable.properties.reasonString != null) {
+                add(ReasonString(variable.properties.reasonString))
+            }
+            for (kv in variable.properties.userProperty) {
+                add(UserProperty(kv.first, kv.second))
+            }
+        }
+        val canOmit = variable.reasonCode == SUCCESS && propsList.isEmpty()
+        if (canOmit) return 0
+        val propsSize = mqttPropertiesSize(propsList)
+        return 1 + variableByteSize(propsSize) + propsSize
     }
 
     /**
@@ -119,9 +151,9 @@ data class AuthenticationExchange(
 
         companion object {
             fun from(buffer: ReadBuffer): VariableHeader {
-                val wire = AuthV5WireCodec.decode(buffer)
-                val reasonCode = getReasonCode(wire.reasonCode)
-                val props = Properties.from(wire.properties)
+                val body = AuthV5BodyCodec.decode(buffer)
+                val reasonCode = getReasonCode(body.reasonCode ?: SUCCESS.byte)
+                val props = Properties.from(body.properties)
                 return VariableHeader(reasonCode, props)
             }
         }

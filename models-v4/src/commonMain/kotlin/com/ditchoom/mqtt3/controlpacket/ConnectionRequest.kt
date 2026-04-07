@@ -14,9 +14,6 @@ import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt.controlpacket.WillConfig
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
 import com.ditchoom.mqtt.controlpacket.format.fixed.get
-import com.ditchoom.mqtt3.controlpacket.wire.ConnectFlagsValue
-import com.ditchoom.mqtt3.controlpacket.wire.ConnectWire
-import com.ditchoom.mqtt3.controlpacket.wire.ConnectWireCodec
 
 /**
  * 3.1 CONNECT – Client requests a connection to a Server
@@ -89,27 +86,31 @@ data class ConnectionRequest(
 
     override fun encodeBody(writeBuffer: WriteBuffer) {
         val vh = variableHeader
+        // Variable header
+        writeBuffer.writeMqttUtf8String(vh.protocolName)
+        writeBuffer.writeUByte(vh.protocolLevel)
         val usernameFlag = if (vh.hasUserName) 0b10000000 else 0
         val passwordFlag = if (vh.hasPassword) 0b1000000 else 0
         val wRetain = if (vh.willRetain) 0b100000 else 0
         val qos = vh.willQos.integerValue.toInt().shl(3)
         val wFlag = if (vh.willFlag) 0b100 else 0
         val cleanStart = if (vh.cleanSession) 0b10 else 0
-        val flagsByte = (usernameFlag or passwordFlag or wRetain or qos or wFlag or cleanStart).toUByte()
-        val connectFlags = ConnectFlagsValue(flagsByte)
-        val wire = ConnectWire<ReadBuffer?>(
-            protocolName = vh.protocolName,
-            protocolLevel = vh.protocolLevel,
-            connectFlags = connectFlags,
-            keepAlive = vh.keepAliveSeconds.toUShort(),
-            clientId = payload.clientId,
-            willTopic = payload.willTopic?.toString(),
-            willPayload = payload.willPayload,
-            username = payload.userName,
-            password = payload.password,
-        )
-        ConnectWireCodec.encode(writeBuffer, wire) { buf, wp ->
-            if (wp != null) buf.write(wp)
+        writeBuffer.writeUByte((usernameFlag or passwordFlag or wRetain or qos or wFlag or cleanStart).toUByte())
+        writeBuffer.writeUShort(vh.keepAliveSeconds.toUShort())
+        // Payload
+        writeBuffer.writeMqttUtf8String(payload.clientId)
+        if (vh.willFlag && payload.willTopic != null) {
+            writeBuffer.writeMqttUtf8String(payload.willTopic.toString())
+        }
+        if (vh.willFlag && payload.willPayload != null) {
+            writeBuffer.writeUShort(payload.willPayload.remaining().toUShort())
+            writeBuffer.write(payload.willPayload)
+        }
+        if (vh.hasUserName && payload.userName != null) {
+            writeBuffer.writeMqttUtf8String(payload.userName)
+        }
+        if (vh.hasPassword && payload.password != null) {
+            writeBuffer.writeMqttUtf8String(payload.password)
         }
     }
 
@@ -582,33 +583,8 @@ data class ConnectionRequest(
 
     companion object {
         fun from(buffer: ReadBuffer): ConnectionRequest {
-            val wire = ConnectWireCodec.decode<ReadBuffer>(buffer) { pr ->
-                pr.copyToBuffer()
-            }
-            val flags = wire.connectFlags
-            if (flags.reserved) {
-                throw MalformedPacketException(
-                    "Reserved flag in Connect Variable Header packet is set incorrectly to 1",
-                )
-            }
-            val variableHeader = VariableHeader(
-                protocolName = wire.protocolName,
-                protocolLevel = wire.protocolLevel,
-                hasUserName = flags.usernameFlag,
-                hasPassword = flags.passwordFlag,
-                willRetain = flags.willRetain,
-                willQos = QualityOfService.fromBooleans(flags.willQosBit2, flags.willQosBit1),
-                willFlag = flags.willFlag,
-                cleanSession = flags.cleanSession,
-                keepAliveSeconds = wire.keepAlive.toInt(),
-            )
-            val payload = Payload(
-                clientId = wire.clientId,
-                willTopic = wire.willTopic?.let { TopicName.fromOrThrow(it) },
-                willPayload = wire.willPayload,
-                userName = wire.username,
-                password = wire.password,
-            )
+            val variableHeader = VariableHeader.from(buffer)
+            val payload = Payload.from(buffer, variableHeader)
             return ConnectionRequest(variableHeader, payload)
         }
     }

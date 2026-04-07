@@ -1,13 +1,15 @@
 package com.ditchoom.mqtt5.controlpacket
 
 import com.ditchoom.buffer.ReadBuffer
-import com.ditchoom.buffer.codec.Codec
+import com.ditchoom.buffer.WriteBuffer
+import com.ditchoom.buffer.codec.annotations.ProtocolMessage
+import com.ditchoom.buffer.codec.annotations.WhenRemaining
 import com.ditchoom.mqtt.MalformedPacketException
 import com.ditchoom.mqtt.ProtocolError
+import com.ditchoom.mqtt.codec.annotations.MqttProperties
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.variableByteSize
 import com.ditchoom.mqtt.controlpacket.IConnectionAcknowledgment
 import com.ditchoom.mqtt.controlpacket.QualityOfService
-import com.ditchoom.mqtt.controlpacket.WireEncoded
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.BAD_AUTHENTICATION_METHOD
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.BAD_USER_NAME_OR_PASSWORD
@@ -54,8 +56,6 @@ import com.ditchoom.mqtt5.controlpacket.properties.TopicAliasMaximum
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
 import com.ditchoom.mqtt5.controlpacket.properties.WildcardSubscriptionAvailable
 import com.ditchoom.mqtt5.controlpacket.properties.mqttPropertiesSize
-import com.ditchoom.mqtt5.controlpacket.wire.ConnAckV5Wire
-import com.ditchoom.mqtt5.controlpacket.wire.ConnAckV5WireCodec
 
 /**
  * The CONNACK packet is the packet sent by the Server in response to a CONNECT packet received from a Client.
@@ -67,23 +67,42 @@ import com.ditchoom.mqtt5.controlpacket.wire.ConnAckV5WireCodec
  * communications infrastructure.
  */
 
+/**
+ * Wire body for CONNACK: acknowledgeFlags + reasonCode + properties.
+ * Properties are always present (VBI 0 when empty) — no @WhenRemaining.
+ */
+@ProtocolMessage
+data class ConnAckV5Body(
+    val acknowledgeFlags: UByte,
+    val reasonCode: UByte,
+    @MqttProperties val properties: Collection<MqttProperty>?,
+)
+
 data class ConnectionAcknowledgment(
     val header: VariableHeader = VariableHeader(),
 ) : ControlPacketV5,
-    IConnectionAcknowledgment,
-    WireEncoded<ConnAckV5Wire> {
+    IConnectionAcknowledgment {
     override val controlPacketValue: Byte get() = 2
     override val direction: DirectionOfFlow get() = DirectionOfFlow.SERVER_TO_CLIENT
-    override val wireCodec: Codec<ConnAckV5Wire> get() = ConnAckV5WireCodec
     override val isSuccessful: Boolean = header.connectReason == SUCCESS
     override val connectionReason: String = header.connectReason.name
     override val sessionPresent: Boolean = header.sessionPresent
 
-    override fun toWire() = ConnAckV5Wire(
-        (if (header.sessionPresent) 1u else 0u).toUByte(),
-        header.connectReason.byte,
-        header.properties.props,
-    )
+    override fun encodeBody(writeBuffer: WriteBuffer) {
+        ConnAckV5BodyCodec.encode(
+            writeBuffer,
+            ConnAckV5Body(
+                (if (header.sessionPresent) 1u else 0u).toUByte(),
+                header.connectReason.byte,
+                header.properties.props.ifEmpty { null },
+            ),
+        )
+    }
+
+    override fun remainingLength(): Int {
+        val propsSize = mqttPropertiesSize(header.properties.props)
+        return 2 + variableByteSize(propsSize) + propsSize
+    }
 
     override val sessionExpiryInterval: ULong = header.properties.sessionExpiryIntervalSeconds ?: 0uL
     override val assignedClientIdentifier: String? = header.properties.assignedClientIdentifier
@@ -569,11 +588,11 @@ data class ConnectionAcknowledgment(
                         ?: throw MalformedPacketException("Invalid property type found in MQTT payload $connectionReasonByte")
                     return VariableHeader(sessionPresent, connectionReason)
                 }
-                val wire = ConnAckV5WireCodec.decode(buffer)
-                val sessionPresent = wire.acknowledgeFlags.toInt() and 1 == 1
-                val connectionReason = connackConnectReason[wire.reasonCode]
-                    ?: throw MalformedPacketException("Invalid property type found in MQTT payload ${wire.reasonCode}")
-                val props = Properties.from(wire.properties)
+                val body = ConnAckV5BodyCodec.decode(buffer)
+                val sessionPresent = body.acknowledgeFlags.toInt() and 1 == 1
+                val connectionReason = connackConnectReason[body.reasonCode]
+                    ?: throw MalformedPacketException("Invalid property type found in MQTT payload ${body.reasonCode}")
+                val props = Properties.from(body.properties)
                 return VariableHeader(sessionPresent, connectionReason, props)
             }
         }

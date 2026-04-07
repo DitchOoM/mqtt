@@ -57,7 +57,7 @@ class PersistenceTests {
             assertEquals(1, queuedPackets.size)
             val queuedPacket = queuedPackets.first()
             assertEquals(expectedPub, queuedPacket)
-            persistence.ackPub(broker, PublishAcknowledgment(packetId))
+            persistence.ackPub(broker, PublishAcknowledgment(packetId.toUShort()))
             assertEquals(0, persistence.messagesToSendOnReconnect(broker).size)
         }
 
@@ -78,14 +78,14 @@ class PersistenceTests {
             var queuedPacket = queuedPackets.first()
             assertEquals(expectedPub, queuedPacket)
 
-            val pubRel = PublishRelease(packetId)
-            persistence.ackPubReceivedQueuePubRelease(broker, PublishReceived(packetId), pubRel)
+            val pubRel = PublishRelease(packetId.toUShort())
+            persistence.ackPubReceivedQueuePubRelease(broker, PublishReceived(packetId.toUShort()), pubRel)
             queuedPackets = persistence.messagesToSendOnReconnect(broker)
             assertEquals(1, queuedPackets.size, "queued pub rel ${queuedPackets.joinToString()}")
             queuedPacket = queuedPackets.first()
             assertEquals(pubRel, queuedPacket)
 
-            persistence.ackPubComplete(broker, PublishComplete(packetId))
+            persistence.ackPubComplete(broker, PublishComplete(packetId.toUShort()))
             queuedPackets = persistence.messagesToSendOnReconnect(broker)
             assertEquals(0, queuedPackets.size)
         }
@@ -104,8 +104,8 @@ class PersistenceTests {
             var queuedPacket = queuedPackets.first()
             assertEquals(pubRecv, queuedPacket)
 
-            val pubRel = PublishRelease(packetId)
-            val pubComp = PublishComplete(packetId)
+            val pubRel = PublishRelease(packetId.toUShort())
+            val pubComp = PublishComplete(packetId.toUShort())
             persistence.ackPubRelease(broker, pubRel, pubComp)
             queuedPackets = persistence.messagesToSendOnReconnect(broker)
             assertEquals(1, queuedPackets.size, "ack publish release")
@@ -166,7 +166,7 @@ class PersistenceTests {
             assertEquals(1, queuedPackets.size, "unsub: ${queuedPackets.joinToString()}")
             queuedPacket = queuedPackets.first()
             assertEquals(packetId, queuedPacket.packetIdentifier, "packetId")
-            persistence.ackUnsub(broker, UnsubscribeAcknowledgment(packetId))
+            persistence.ackUnsub(broker, UnsubscribeAcknowledgment(packetId.toUShort()))
             queuedPackets = persistence.messagesToSendOnReconnect(broker)
             assertEquals(0, queuedPackets.size, "ackUnsub: ${queuedPackets.joinToString()}")
             subs = persistence.activeSubscriptions(broker)

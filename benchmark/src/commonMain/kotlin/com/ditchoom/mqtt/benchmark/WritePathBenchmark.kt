@@ -63,7 +63,7 @@ class WritePathBenchmark {
 
     @Benchmark
     fun serializePuback(bh: Blackhole) {
-        val puback = PublishAcknowledgment(1)
+        val puback = PublishAcknowledgment(1u.toUShort())
         val buf = puback.toBuffer()
         bh.consume(buf)
     }

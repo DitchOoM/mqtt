@@ -1,13 +1,12 @@
 package com.ditchoom.mqtt3.controlpacket
 
 import com.ditchoom.buffer.ReadBuffer
-import com.ditchoom.buffer.codec.Codec
+import com.ditchoom.buffer.WriteBuffer
+
+import com.ditchoom.buffer.codec.annotations.ProtocolMessage
 import com.ditchoom.mqtt.controlpacket.IPublishReceived
-import com.ditchoom.mqtt.controlpacket.WireEncoded
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
-import com.ditchoom.mqtt3.controlpacket.wire.AckWire
-import com.ditchoom.mqtt3.controlpacket.wire.AckWireCodec
 import kotlin.jvm.JvmInline
 
 /**
@@ -15,25 +14,27 @@ import kotlin.jvm.JvmInline
  *
  * A PUBREC packet is the response to a PUBLISH packet with QoS 2. It is the second packet of the QoS 2 protocol exchange.
  */
+@ProtocolMessage
 @JvmInline
 value class PublishReceived(
-    override val packetIdentifier: Int,
+    val packetId: UShort,
 ) : ControlPacketV4,
-    IPublishReceived,
-    WireEncoded<AckWire> {
+    IPublishReceived {
+    override val packetIdentifier: Int get() = packetId.toInt()
     override val controlPacketValue: Byte get() = IPublishReceived.CONTROL_PACKET_VALUE
     override val direction: DirectionOfFlow get() = DirectionOfFlow.BIDIRECTIONAL
-    override val wireCodec: Codec<AckWire> get() = AckWireCodec
 
-    override fun toWire() = AckWire(packetIdentifier.toUShort())
+    override fun encodeBody(writeBuffer: WriteBuffer) = PublishReceivedCodec.encode(writeBuffer, this)
+
+    override fun remainingLength() = UShort.SIZE_BYTES
 
     override fun expectedResponse(
         reasonCode: ReasonCode,
         reasonString: String?,
         userProperty: List<Pair<String, String>>,
-    ) = PublishRelease(packetIdentifier.toUShort().toInt())
+    ) = PublishRelease(packetId)
 
     companion object {
-        fun from(buffer: ReadBuffer) = PublishReceived(AckWireCodec.decode(buffer).packetId.toInt())
+        fun from(buffer: ReadBuffer) = PublishReceivedCodec.decode(buffer)
     }
 }

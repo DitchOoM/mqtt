@@ -1,5 +1,6 @@
 package com.ditchoom.mqtt.client
 
+import com.ditchoom.buffer.flow.Connection
 import com.ditchoom.mqtt.InMemoryPersistence
 import com.ditchoom.mqtt.Persistence
 import com.ditchoom.mqtt.connection.MqttBroker
@@ -10,7 +11,6 @@ import com.ditchoom.mqtt.controlpacket.IConnectionRequest
 import com.ditchoom.mqtt3.controlpacket.ConnectionRequest
 import com.ditchoom.mqtt3.controlpacket.ControlPacketV4Factory
 import com.ditchoom.mqtt5.controlpacket.ControlPacketV5Factory
-import com.ditchoom.buffer.flow.Connection
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

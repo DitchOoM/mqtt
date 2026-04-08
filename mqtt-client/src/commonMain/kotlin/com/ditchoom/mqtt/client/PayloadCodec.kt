@@ -24,6 +24,10 @@ fun interface PayloadDecoder<out P> {
  * Contravariant: a `PayloadEncoder<Any>` can be used where `PayloadEncoder<ChatMessage>` is expected.
  */
 interface PayloadEncoder<in P> {
-    fun encode(buffer: WriteBuffer, value: P)
+    fun encode(
+        buffer: WriteBuffer,
+        value: P,
+    )
+
     fun sizeOf(value: P): Int
 }

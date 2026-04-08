@@ -1,7 +1,7 @@
 package com.ditchoom.mqtt.client.net
 
+import com.ditchoom.buffer.flow.Connection
 import com.ditchoom.mqtt.client.MqttCodec
-import com.ditchoom.mqtt.client.mqttPeekFrameSize
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.IConnectionAcknowledgment
@@ -19,7 +19,6 @@ import com.ditchoom.socket.SocketOptions
 import com.ditchoom.socket.TlsConfig
 import com.ditchoom.socket.getNetworkCapabilities
 import com.ditchoom.socket.transport.CodecConnection
-import com.ditchoom.buffer.flow.Connection
 import com.ditchoom.socket.transport.TcpTransport
 import kotlinx.coroutines.flow.first
 import kotlin.random.Random

@@ -18,7 +18,10 @@ internal class TopicTrie<T> {
     private val root = TrieNode<T>()
 
     /** Insert a handler for the given topic filter. Returns any previous handler. */
-    fun insert(filter: TopicFilter, value: T): T? {
+    fun insert(
+        filter: TopicFilter,
+        value: T,
+    ): T? {
         val segments = filter.toString().split('/')
         var node = root
         for (segment in segments) {
@@ -84,7 +87,12 @@ internal class TopicTrie<T> {
         root.children.clear()
     }
 
-    private fun matchRecursive(node: TrieNode<T>, segments: List<String>, depth: Int, results: MutableList<T>) {
+    private fun matchRecursive(
+        node: TrieNode<T>,
+        segments: List<String>,
+        depth: Int,
+        results: MutableList<T>,
+    ) {
         // '#' at any level matches everything remaining
         node.children["#"]?.value?.let { results.add(it) }
 
@@ -107,7 +115,11 @@ internal class TopicTrie<T> {
         }
     }
 
-    private fun hasMatchRecursive(node: TrieNode<T>, segments: List<String>, depth: Int): Boolean {
+    private fun hasMatchRecursive(
+        node: TrieNode<T>,
+        segments: List<String>,
+        depth: Int,
+    ): Boolean {
         if (node.children.containsKey("#") && node.children["#"]?.value != null) return true
 
         if (depth == segments.size) {

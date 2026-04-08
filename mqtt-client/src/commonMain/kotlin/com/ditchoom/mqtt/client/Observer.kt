@@ -1,11 +1,8 @@
 package com.ditchoom.mqtt.client
 
-import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.ControlPacket
-import com.ditchoom.mqtt.controlpacket.IConnectionRequest
 import kotlin.time.Duration
 
-// TODO: Reorganize and clean this up
 interface Observer {
     fun incomingPacket(
         brokerId: Int,
@@ -17,18 +14,6 @@ interface Observer {
         brokerId: Int,
         protocolVersion: Byte,
         controlPackets: Collection<ControlPacket>,
-    )
-
-    fun openSocketSession(
-        brokerId: Int,
-        protocolVersion: Byte,
-        connectionRequest: IConnectionRequest,
-        connectionOp: MqttConnectionOptions,
-    )
-
-    fun onReaderClosed(
-        brokerId: Int,
-        protocolVersion: Byte,
     )
 
     fun shutdown(
@@ -62,51 +47,12 @@ interface Observer {
     fun stopReconnecting(
         brokerId: Int,
         protocolVersion: Byte,
-        endReason: ConnectivityManager.ConnectionEndReason,
-    )
-
-    fun reconnectAndResetTimer(
-        brokerId: Int,
-        protocolVersion: Byte,
-        endReason: ConnectivityManager.ConnectionEndReason,
+        cause: Throwable?,
     )
 
     fun reconnectIn(
         brokerId: Int,
         protocolVersion: Byte,
-        currentDelay: Duration,
-        endReason: ConnectivityManager.ConnectionEndReason,
+        delay: Duration,
     )
-
-    // TODO: Delete?
-    fun readFirstByteFromStream(
-        brokerId: Int,
-        protocolVersion: Byte,
-    )
-
-    // TODO: Delete?
-    fun connectOnceWriteChannelReceiveException(
-        brokerId: Int,
-        protocolVersion: Byte,
-        e: Exception,
-    )
-
-    // TODO: Delete?
-    fun connectOnceSocketSessionWriteException(
-        brokerId: Int,
-        protocolVersion: Byte,
-        e: Exception,
-    )
-
-    /**
-     * Called when a non-recoverable socket error occurs (e.g., SSL handshake failure, DNS failure).
-     * The endpoint has been skipped. If all endpoints fail with non-recoverable errors,
-     * reconnection will stop.
-     */
-    fun nonRecoverableError(
-        brokerId: Int,
-        protocolVersion: Byte,
-        connectionOp: MqttConnectionOptions,
-        error: Throwable,
-    ) {}
 }

@@ -2,7 +2,11 @@ package com.ditchoom.mqtt5.controlpacket
 
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
+import com.ditchoom.buffer.codec.annotations.LengthPrefixed
+import com.ditchoom.buffer.codec.annotations.ProtocolMessage
+import com.ditchoom.buffer.codec.annotations.RemainingBytes
 import com.ditchoom.buffer.utf8Length
+import com.ditchoom.mqtt.codec.annotations.MqttProperties
 import com.ditchoom.mqtt.ProtocolError
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readMqttUtf8StringNotValidatedSized
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.variableByteSize
@@ -23,9 +27,19 @@ import com.ditchoom.mqtt5.controlpacket.properties.ReasonString
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
 import com.ditchoom.mqtt5.controlpacket.properties.mqttPropertiesSize
 import com.ditchoom.mqtt5.controlpacket.properties.readProperties
-import com.ditchoom.mqtt5.controlpacket.wire.SubscribeV5Wire
-import com.ditchoom.mqtt5.controlpacket.wire.SubscribeV5WireCodec
-import com.ditchoom.mqtt5.controlpacket.wire.SubscriptionV5Wire
+
+@ProtocolMessage
+data class SubscriptionV5Entry(
+    @LengthPrefixed val topicFilter: String,
+    val subscriptionOptions: UByte,
+)
+
+@ProtocolMessage
+data class SubscribeV5Body(
+    val packetIdentifier: UShort,
+    @MqttProperties val properties: Collection<MqttProperty>?,
+    @RemainingBytes val subscriptions: List<SubscriptionV5Entry>,
+)
 
 /**
  * 3.8 SUBSCRIBE - Subscribe request
@@ -86,9 +100,9 @@ data class SubscribeRequest(
     override fun expectedResponse() = SubscribeAcknowledgement(variable.packetIdentifier.toUShort(), ReasonCode.SUCCESS)
 
     override fun encodeBody(writeBuffer: WriteBuffer) {
-        SubscribeV5WireCodec.encode(
+        SubscribeV5BodyCodec.encode(
             writeBuffer,
-            SubscribeV5Wire(
+            SubscribeV5Body(
                 variable.packetIdentifier.toUShort(),
                 variable.properties.props,
                 subscriptions.map { sub ->
@@ -98,7 +112,7 @@ data class SubscribeRequest(
                     val rapShifted = (if (sub.retainAsPublished) 1 else 0).shl(3)
                     val rH = sub.retainHandling.value.toInt().shl(4)
                     val combinedByte = (qosInt + nlShifted + rapShifted + rH).toUByte()
-                    SubscriptionV5Wire(sub.topicFilter.toString(), combinedByte)
+                    SubscriptionV5Entry(sub.topicFilter.toString(), combinedByte)
                 },
             ),
         )
@@ -221,7 +235,7 @@ data class SubscribeRequest(
             buffer: ReadBuffer,
             remainingLength: Int,
         ): SubscribeRequest {
-            val wire = SubscribeV5WireCodec.decode(buffer)
+            val wire = SubscribeV5BodyCodec.decode(buffer)
             val props = Properties.from(wire.properties)
             val header = VariableHeader(wire.packetIdentifier.toInt(), props)
             val subscriptions =

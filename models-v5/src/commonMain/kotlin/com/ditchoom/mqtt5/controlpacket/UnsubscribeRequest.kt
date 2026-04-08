@@ -2,7 +2,11 @@ package com.ditchoom.mqtt5.controlpacket
 
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
+import com.ditchoom.buffer.codec.annotations.LengthPrefixed
+import com.ditchoom.buffer.codec.annotations.ProtocolMessage
+import com.ditchoom.buffer.codec.annotations.RemainingBytes
 import com.ditchoom.buffer.utf8Length
+import com.ditchoom.mqtt.codec.annotations.MqttProperties
 import com.ditchoom.mqtt.ProtocolError
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.variableByteSize
 import com.ditchoom.mqtt.controlpacket.IUnsubscribeRequest
@@ -14,9 +18,18 @@ import com.ditchoom.mqtt5.controlpacket.properties.PropertyExtractor
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
 import com.ditchoom.mqtt5.controlpacket.properties.mqttPropertiesSize
 import com.ditchoom.mqtt5.controlpacket.properties.readProperties
-import com.ditchoom.mqtt5.controlpacket.wire.TopicFilterV5Wire
-import com.ditchoom.mqtt5.controlpacket.wire.UnsubscribeV5Wire
-import com.ditchoom.mqtt5.controlpacket.wire.UnsubscribeV5WireCodec
+
+@ProtocolMessage
+data class TopicFilterV5Entry(
+    @LengthPrefixed val topicFilter: String,
+)
+
+@ProtocolMessage
+data class UnsubscribeV5Body(
+    val packetIdentifier: UShort,
+    @MqttProperties val properties: Collection<MqttProperty>?,
+    @RemainingBytes val topics: List<TopicFilterV5Entry>,
+)
 
 /**
  * 3.10 UNSUBSCRIBE – Unsubscribe request
@@ -52,12 +65,12 @@ data class UnsubscribeRequest(
         copy(variable = variable.copy(packetIdentifier = packetIdentifier))
 
     override fun encodeBody(writeBuffer: WriteBuffer) {
-        UnsubscribeV5WireCodec.encode(
+        UnsubscribeV5BodyCodec.encode(
             writeBuffer,
-            UnsubscribeV5Wire(
+            UnsubscribeV5Body(
                 variable.packetIdentifier.toUShort(),
                 variable.properties.props,
-                topics.map { TopicFilterV5Wire(it.toString()) },
+                topics.map { TopicFilterV5Entry(it.toString()) },
             ),
         )
     }
@@ -149,7 +162,7 @@ data class UnsubscribeRequest(
             buffer: ReadBuffer,
             remainingLength: Int,
         ): UnsubscribeRequest {
-            val wire = UnsubscribeV5WireCodec.decode(buffer)
+            val wire = UnsubscribeV5BodyCodec.decode(buffer)
             val props = VariableHeader.Properties.from(wire.properties)
             val header = VariableHeader(wire.packetIdentifier.toInt(), props)
             val topics = wire.topics.map { TopicFilter.fromOrThrow(it.topicFilter) }.toSet()

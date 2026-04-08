@@ -2,8 +2,11 @@ package com.ditchoom.mqtt5.controlpacket
 
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
+import com.ditchoom.buffer.codec.annotations.ProtocolMessage
+import com.ditchoom.buffer.codec.annotations.RemainingBytes
 import com.ditchoom.mqtt.MalformedPacketException
 import com.ditchoom.mqtt.ProtocolError
+import com.ditchoom.mqtt.codec.annotations.MqttProperties
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.variableByteSize
 import com.ditchoom.mqtt.controlpacket.ISubscribeAcknowledgement
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
@@ -28,9 +31,18 @@ import com.ditchoom.mqtt5.controlpacket.properties.ReasonString
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
 import com.ditchoom.mqtt5.controlpacket.properties.mqttPropertiesSize
 import com.ditchoom.mqtt5.controlpacket.properties.readProperties
-import com.ditchoom.mqtt5.controlpacket.wire.SubAckReasonCodeV5Wire
-import com.ditchoom.mqtt5.controlpacket.wire.SubAckV5Wire
-import com.ditchoom.mqtt5.controlpacket.wire.SubAckV5WireCodec
+import kotlin.jvm.JvmInline
+
+@ProtocolMessage
+@JvmInline
+value class SubAckReasonCodeV5(val raw: UByte)
+
+@ProtocolMessage
+data class SubAckV5Body(
+    val packetIdentifier: UShort,
+    @MqttProperties val properties: Collection<MqttProperty>?,
+    @RemainingBytes val returnCodes: List<SubAckReasonCodeV5>,
+)
 
 /**
  * 3.9 SUBACK – Subscribe acknowledgement
@@ -70,12 +82,12 @@ data class SubscribeAcknowledgement(
     override val packetIdentifier: Int = variable.packetIdentifier
 
     override fun encodeBody(writeBuffer: WriteBuffer) {
-        SubAckV5WireCodec.encode(
+        SubAckV5BodyCodec.encode(
             writeBuffer,
-            SubAckV5Wire(
+            SubAckV5Body(
                 variable.packetIdentifier.toUShort(),
                 variable.properties.props,
-                payload.map { SubAckReasonCodeV5Wire(it.byte) },
+                payload.map { SubAckReasonCodeV5(it.byte) },
             ),
         )
     }
@@ -191,7 +203,7 @@ data class SubscribeAcknowledgement(
             buffer: ReadBuffer,
             remainingLength: Int,
         ): SubscribeAcknowledgement {
-            val wire = SubAckV5WireCodec.decode(buffer)
+            val wire = SubAckV5BodyCodec.decode(buffer)
             val props = Properties.from(wire.properties)
             val variableHeader = VariableHeader(wire.packetIdentifier.toInt(), props)
             val codes =

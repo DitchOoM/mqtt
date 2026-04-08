@@ -3,8 +3,6 @@ package com.ditchoom.mqtt.benchmark
 import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.PlatformBuffer
-import com.ditchoom.buffer.ReadBuffer
-import com.ditchoom.mqtt.client.serializeHeaderToSlice
 import com.ditchoom.mqtt.client.toBuffer
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicName
@@ -30,7 +28,6 @@ class ZeroCopyPublishBenchmark {
     private lateinit var publish: PublishMessage
     private lateinit var payload: PlatformBuffer
     private val topic = TopicName.fromOrThrow("bench/zero-copy/test")
-    private val topicStr = "bench/zero-copy/test"
 
     @Setup
     fun setup() {
@@ -45,19 +42,10 @@ class ZeroCopyPublishBenchmark {
         )
     }
 
-    /** Full serialize to a single buffer (copies payload). */
+    /** Full serialize to a single buffer. */
     @Benchmark
     fun publishToBuffer(bh: Blackhole) {
         val buf = publish.toBuffer()
         bh.consume(buf)
-    }
-
-    /** Header-only serialize + buffer list creation (zero-copy path). */
-    @Benchmark
-    fun publishZeroCopyHeader(bh: Blackhole) {
-        val headerBuf = BufferFactory.Default.allocate(128)
-        val header = publish.serializeHeaderToSlice(headerBuf, payload.remaining())
-        val gathered: List<ReadBuffer> = listOf(header, payload)
-        bh.consume(gathered)
     }
 }

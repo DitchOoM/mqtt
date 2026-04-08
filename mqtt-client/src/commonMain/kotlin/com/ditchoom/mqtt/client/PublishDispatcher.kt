@@ -82,17 +82,18 @@ internal class PublishDispatcher {
         handler: (suspend (P) -> Unit)? = null,
     ): Flow<P> {
         val flow = MutableSharedFlow<P>(extraBufferCapacity = 16)
-        val wrappedHandler = SubscriptionHandler.Async { publish ->
-            val payload = publish.payload ?: return@Async
-            val reader = ReadBufferPayloadReader(payload)
-            try {
-                val decoded = decoder.decode(reader)
-                handler?.invoke(decoded)
-                flow.emit(decoded)
-            } finally {
-                reader.release()
+        val wrappedHandler =
+            SubscriptionHandler.Async { publish ->
+                val payload = publish.payload ?: return@Async
+                val reader = ReadBufferPayloadReader(payload)
+                try {
+                    val decoded = decoder.decode(reader)
+                    handler?.invoke(decoded)
+                    flow.emit(decoded)
+                } finally {
+                    reader.release()
+                }
             }
-        }
         trie.insert(filter, wrappedHandler)
         return flow
     }

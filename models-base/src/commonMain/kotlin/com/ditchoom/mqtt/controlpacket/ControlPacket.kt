@@ -3,10 +3,10 @@ package com.ditchoom.mqtt.controlpacket
 import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.PlatformBuffer
 import com.ditchoom.buffer.ReadBuffer
-import com.ditchoom.buffer.WriteBuffer
-import com.ditchoom.buffer.managed
 import com.ditchoom.buffer.ReadWriteBuffer
+import com.ditchoom.buffer.WriteBuffer
 import com.ditchoom.buffer.codec.Codec
+import com.ditchoom.buffer.managed
 import com.ditchoom.mqtt.MalformedInvalidVariableByteInteger
 import com.ditchoom.mqtt.controlpacket.encoding.readLengthPrefixedUtf8String
 import com.ditchoom.mqtt.controlpacket.encoding.writeLengthPrefixedUtf8String
@@ -21,6 +21,7 @@ import com.ditchoom.mqtt.controlpacket.encoding.writeVariableByteInteger as enco
  */
 interface WireEncoded<W : Any> {
     val wireCodec: Codec<W>
+
     fun toWire(): W
 }
 

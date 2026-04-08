@@ -22,12 +22,13 @@ class PooledToBufferLeakTest {
         val payload = BufferFactory.Default.allocate(64)
         repeat(64) { payload.writeByte(it.toByte()) }
         payload.resetForRead()
-        val publish = PublishMessage.buildPayload(
-            topicName = TopicName.fromOrThrow("test/leak"),
-            qos = QualityOfService.AT_LEAST_ONCE,
-            packetIdentifier = 1,
-            payload = payload,
-        )
+        val publish =
+            PublishMessage.buildPayload(
+                topicName = TopicName.fromOrThrow("test/leak"),
+                qos = QualityOfService.AT_LEAST_ONCE,
+                packetIdentifier = 1,
+                payload = payload,
+            )
 
         // Allocate and release 10_000 times — would OOM without proper release
         repeat(10_000) {

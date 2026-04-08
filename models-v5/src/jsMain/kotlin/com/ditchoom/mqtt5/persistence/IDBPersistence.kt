@@ -1035,6 +1035,10 @@ class IDBPersistence(
         )
     }
 
+    override suspend fun updatePublishState(broker: MqttBroker, packetId: Int, state: Int) {
+        // IDB persistence doesn't track QoS2 state separately
+    }
+
     private suspend fun awaitAll(vararg requests: IDBRequest<*>) {
         requests.forEach { await(it) }
     }

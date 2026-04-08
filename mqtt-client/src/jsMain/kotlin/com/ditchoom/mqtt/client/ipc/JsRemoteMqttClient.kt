@@ -1,9 +1,9 @@
 package com.ditchoom.mqtt.client.ipc
 
 import com.ditchoom.buffer.BufferFactory
-import com.ditchoom.buffer.deterministic
 import com.ditchoom.buffer.JsBuffer
 import com.ditchoom.buffer.PlatformBuffer
+import com.ditchoom.buffer.deterministic
 import com.ditchoom.mqtt.Persistence
 import com.ditchoom.mqtt.connection.MqttBroker
 import com.ditchoom.mqtt.controlpacket.ControlPacketFactory
@@ -67,7 +67,10 @@ class JsRemoteMqttClient(
         awaitMessage(MESSAGE_TYPE_CLIENT_UNSUBSCRIBE_COMPLETION, messageId)
     }
 
-    override suspend fun shutdown(sendDisconnect: Boolean, drain: Boolean) {
+    override suspend fun shutdown(
+        sendDisconnect: Boolean,
+        drain: Boolean,
+    ) {
         val messageId = nextMessageId++
         port.postMessage(buildSimpleMessage(MESSAGE_TYPE_CLIENT_SHUTDOWN, sendDisconnect, messageId))
         awaitMessage(MESSAGE_TYPE_CLIENT_SHUTDOWN_COMPLETION, messageId)

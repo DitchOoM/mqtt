@@ -4,18 +4,16 @@ import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Default
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicName
-import com.ditchoom.mqtt3.controlpacket.ConnectionRequest as ConnectV4
-import com.ditchoom.mqtt3.controlpacket.PublishMessage as PublishV4
 import java.lang.management.ManagementFactory
-import java.lang.management.MemoryType
 import javax.management.ObjectName
 import kotlin.test.Test
+import com.ditchoom.mqtt3.controlpacket.ConnectionRequest as ConnectV4
+import com.ditchoom.mqtt3.controlpacket.PublishMessage as PublishV4
 
 /**
  * Trace where direct memory allocations come from.
  */
 class DirectMemoryTraceTest {
-
     private fun directBufferUsage(): Pair<Long, Long> {
         // JMX direct buffer pool: count and total capacity
         return try {
@@ -53,18 +51,21 @@ class DirectMemoryTraceTest {
             val s = connect.serialize()
         }
         printDirect("after 100 CONNECT serializes")
-        System.gc(); Thread.sleep(100)
+        System.gc()
+        Thread.sleep(100)
         printDirect("after 100 CONNECT serializes + GC")
 
         // 4. Publish with 128B payload
         val payload = BufferFactory.Default.allocate(128)
         repeat(128) { payload.writeByte(it.toByte()) }
         payload.resetForRead()
-        val pub = PublishV4.buildPayload(
-            topicName = TopicName.fromOrThrow("test/trace"),
-            qos = QualityOfService.AT_LEAST_ONCE,
-            payload = payload,
-        ).maybeCopyWithNewPacketIdentifier(1)
+        val pub =
+            PublishV4
+                .buildPayload(
+                    topicName = TopicName.fromOrThrow("test/trace"),
+                    qos = QualityOfService.AT_LEAST_ONCE,
+                    payload = payload,
+                ).maybeCopyWithNewPacketIdentifier(1)
         println("  publish packetSize = ${pub.packetSize()} bytes")
         val pubSerialized = pub.serialize()
         printDirect("after 1 PUBLISH serialize (${pub.packetSize()}B)")
@@ -73,30 +74,36 @@ class DirectMemoryTraceTest {
         repeat(1000) {
             val s = pub.serialize()
             s.resetForRead()
-            com.ditchoom.mqtt3.controlpacket.ControlPacketV4.from(s)
+            com.ditchoom.mqtt3.controlpacket.ControlPacketV4
+                .from(s)
         }
         printDirect("after 1000 PUBLISH round-trips")
-        System.gc(); Thread.sleep(200)
+        System.gc()
+        Thread.sleep(200)
         printDirect("after 1000 PUBLISH round-trips + GC")
 
         // 6. 10000 round-trips
         repeat(10_000) {
             val s = pub.serialize()
             s.resetForRead()
-            com.ditchoom.mqtt3.controlpacket.ControlPacketV4.from(s)
+            com.ditchoom.mqtt3.controlpacket.ControlPacketV4
+                .from(s)
         }
         printDirect("after 10000 PUBLISH round-trips")
-        System.gc(); Thread.sleep(200)
+        System.gc()
+        Thread.sleep(200)
         printDirect("after 10000 PUBLISH round-trips + GC")
 
         // 7. 50000 round-trips
         repeat(50_000) {
             val s = pub.serialize()
             s.resetForRead()
-            com.ditchoom.mqtt3.controlpacket.ControlPacketV4.from(s)
+            com.ditchoom.mqtt3.controlpacket.ControlPacketV4
+                .from(s)
         }
         printDirect("after 50000 PUBLISH round-trips")
-        System.gc(); Thread.sleep(200)
+        System.gc()
+        Thread.sleep(200)
         printDirect("after 50000 PUBLISH round-trips + GC")
     }
 }

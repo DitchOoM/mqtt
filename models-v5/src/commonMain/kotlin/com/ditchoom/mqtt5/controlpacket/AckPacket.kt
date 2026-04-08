@@ -7,13 +7,20 @@ import com.ditchoom.mqtt.ProtocolError
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.variableByteSize
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.SUCCESS
+import com.ditchoom.buffer.codec.annotations.ProtocolMessage
+import com.ditchoom.mqtt.codec.annotations.MqttProperties
 import com.ditchoom.mqtt5.controlpacket.properties.MqttProperty
 import com.ditchoom.mqtt5.controlpacket.properties.PropertyExtractor
 import com.ditchoom.mqtt5.controlpacket.properties.ReasonString
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
 import com.ditchoom.mqtt5.controlpacket.properties.mqttPropertiesSize
-import com.ditchoom.mqtt5.controlpacket.wire.AckV5Wire
-import com.ditchoom.mqtt5.controlpacket.wire.AckV5WireCodec
+
+@ProtocolMessage
+data class AckV5Body(
+    val packetId: UShort,
+    val reasonCode: UByte,
+    @MqttProperties val properties: Collection<MqttProperty>?,
+)
 
 /**
  * Shared variable header for PUBACK, PUBREC, PUBREL, PUBCOMP packets (MQTT 5.0).
@@ -47,9 +54,9 @@ data class AckVariableHeader(
                 return AckVariableHeader(buffer.readUnsignedShort().toInt())
             }
             val wire = if (remainingLength == 3) {
-                AckV5Wire(buffer.readUnsignedShort(), buffer.readUnsignedByte(), null)
+                AckV5Body(buffer.readUnsignedShort(), buffer.readUnsignedByte(), null)
             } else {
-                AckV5WireCodec.decode(buffer)
+                AckV5BodyCodec.decode(buffer)
             }
             val reasonCode = validReasonCodes[wire.reasonCode]
                 ?: throw MalformedPacketException(
@@ -100,9 +107,9 @@ fun encodeAckBody(writeBuffer: WriteBuffer, variable: AckVariableHeader) {
     if (canOmit) {
         writeBuffer.writeUShort(variable.packetIdentifier.toUShort())
     } else {
-        AckV5WireCodec.encode(
+        AckV5BodyCodec.encode(
             writeBuffer,
-            AckV5Wire(
+            AckV5Body(
                 variable.packetIdentifier.toUShort(),
                 variable.reasonCode.byte,
                 variable.properties.props,

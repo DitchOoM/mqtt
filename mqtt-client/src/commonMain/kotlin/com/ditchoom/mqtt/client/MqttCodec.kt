@@ -5,7 +5,7 @@ import com.ditchoom.buffer.WriteBuffer
 import com.ditchoom.buffer.codec.Codec
 import com.ditchoom.buffer.codec.DecodeContext
 import com.ditchoom.buffer.codec.EncodeContext
-import com.ditchoom.buffer.codec.SizeEstimate
+import com.ditchoom.buffer.stream.PeekResult
 import com.ditchoom.buffer.stream.StreamProcessor
 import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.ControlPacketFactory
@@ -13,7 +13,10 @@ import com.ditchoom.mqtt.controlpacket.ControlPacketFactory
 class MqttCodec(
     private val factory: ControlPacketFactory,
 ) : Codec<ControlPacket> {
-    override fun decode(buffer: ReadBuffer, context: DecodeContext): ControlPacket = factory.from(buffer)
+    override fun decode(
+        buffer: ReadBuffer,
+        context: DecodeContext,
+    ): ControlPacket = factory.from(buffer)
 
     override fun encode(
         buffer: WriteBuffer,
@@ -21,7 +24,13 @@ class MqttCodec(
         context: EncodeContext,
     ) = value.serialize(buffer)
 
-    override fun sizeOf(value: ControlPacket): SizeEstimate = SizeEstimate.Exact(value.packetSize())
+    override fun peekFrameSize(
+        stream: StreamProcessor,
+        baseOffset: Int,
+    ): PeekResult {
+        val size = mqttPeekFrameSize(stream, baseOffset) ?: return PeekResult.NeedsMoreData
+        return PeekResult.Size(size)
+    }
 }
 
 /**

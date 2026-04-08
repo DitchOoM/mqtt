@@ -139,8 +139,7 @@ class TopicName internal constructor(
 ) : Topic {
     override fun toString(): String = root.toString()
 
-    override fun equals(other: Any?): Boolean =
-        other is TopicName && root == other.root
+    override fun equals(other: Any?): Boolean = other is TopicName && root == other.root
 
     override fun hashCode(): Int = root.hashCode()
 
@@ -153,8 +152,7 @@ class TopicName internal constructor(
             }
 
         @Throws(MqttException::class)
-        fun fromOrThrow(topic: String): TopicName =
-            TopicName(Topic.parseRoot(topic, Topic.Type.Name))
+        fun fromOrThrow(topic: String): TopicName = TopicName(Topic.parseRoot(topic, Topic.Type.Name))
     }
 }
 
@@ -169,8 +167,7 @@ class TopicFilter internal constructor(
 
     override fun toString(): String = root.toString()
 
-    override fun equals(other: Any?): Boolean =
-        other is TopicFilter && root == other.root
+    override fun equals(other: Any?): Boolean = other is TopicFilter && root == other.root
 
     override fun hashCode(): Int = root.hashCode()
 
@@ -183,7 +180,6 @@ class TopicFilter internal constructor(
             }
 
         @Throws(MqttException::class)
-        fun fromOrThrow(topic: String): TopicFilter =
-            TopicFilter(Topic.parseRoot(topic, Topic.Type.Filter))
+        fun fromOrThrow(topic: String): TopicFilter = TopicFilter(Topic.parseRoot(topic, Topic.Type.Filter))
     }
 }

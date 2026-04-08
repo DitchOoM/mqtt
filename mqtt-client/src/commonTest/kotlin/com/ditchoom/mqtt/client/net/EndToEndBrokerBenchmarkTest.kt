@@ -2,7 +2,6 @@ package com.ditchoom.mqtt.client.net
 
 import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Default
-import com.ditchoom.buffer.managed
 import com.ditchoom.buffer.pool.BufferPool
 import com.ditchoom.buffer.withPooling
 import com.ditchoom.mqtt.InMemoryPersistence
@@ -13,13 +12,13 @@ import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt3.controlpacket.ConnectionRequest
+import com.ditchoom.socket.NetworkCapabilities
+import com.ditchoom.socket.getNetworkCapabilities
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.withTimeout
-import com.ditchoom.socket.NetworkCapabilities
-import com.ditchoom.socket.getNetworkCapabilities
 import kotlin.random.Random
 import kotlin.random.nextUInt
 import kotlin.test.Test
@@ -44,20 +43,25 @@ import kotlin.time.TimeSource
  *   ./gradlew :mqtt-client:linuxX64Test -PintegrationTests --tests "*EndToEndBrokerBenchmarkTest*" --rerun
  */
 class EndToEndBrokerBenchmarkTest {
-
     private val isAndroidDevice: Boolean = getPlatform() == Platform.Android
     private val host = if (isAndroidDevice) "10.0.2.2" else "localhost"
     private val port = 1883
     private val messageCount = 200
 
-    private fun connectionOptions() = MqttConnectionOptions.SocketConnection(
-        host, port, tlsEnabled = false, connectionTimeout = 10.seconds, readTimeout = 30.seconds,
-    )
+    private fun connectionOptions() =
+        MqttConnectionOptions.SocketConnection(
+            host,
+            port,
+            tlsEnabled = false,
+            connectionTimeout = 10.seconds,
+            readTimeout = 30.seconds,
+        )
 
-    private fun connectionRequest() = ConnectionRequest(
-        variableHeader = ConnectionRequest.VariableHeader(cleanSession = true, keepAliveSeconds = 60),
-        payload = ConnectionRequest.Payload(clientId = "bench-${Random.nextUInt()}"),
-    )
+    private fun connectionRequest() =
+        ConnectionRequest(
+            variableHeader = ConnectionRequest.VariableHeader(cleanSession = true, keepAliveSeconds = 60),
+            payload = ConnectionRequest.Payload(clientId = "bench-${Random.nextUInt()}"),
+        )
 
     private fun runSingle(
         label: String,
@@ -65,54 +69,62 @@ class EndToEndBrokerBenchmarkTest {
         qos: QualityOfService,
         payloadSize: Int,
         count: Int = messageCount,
-    ): TestRunResult = runTestNoTimeSkipping(timeout = 120.seconds) {
-        if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTestNoTimeSkipping
+    ): TestRunResult =
+        runTestNoTimeSkipping(timeout = 120.seconds) {
+            if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTestNoTimeSkipping
 
-        val topicStr = "bench/${Random.nextUInt()}"
-        val topic = TopicName.fromOrThrow(topicStr)
-        val filter = TopicFilter.fromOrThrow(topicStr)
-        val persistence = InMemoryPersistence()
-        val connReq = connectionRequest()
-        val broker = persistence.addBroker(listOf(connectionOptions()), connReq)
-        val client = LocalMqttClient.connectOnce(
-            CoroutineScope(Dispatchers.Default), broker, persistence, factory,
-        )
-
-        try {
-            val received = MutableStateFlow(0)
-            val allReceived = CompletableDeferred<Unit>()
-            val handler = SubscriptionHandler.Blocking { _ ->
-                val newVal = received.value + 1
-                received.value = newVal
-                if (newVal >= count) {
-                    allReceived.complete(Unit)
-                }
-            }
-            val sub = connReq.controlPacketFactory.subscribe(filter, qos)
-            client.subscribe(sub, handler).subAck.await()
-
-            val payloadBytes = ByteArray(payloadSize) { (it % 256).toByte() }
-
-            val mark = TimeSource.Monotonic.markNow()
-            for (i in 0 until count) {
-                client.publish(
-                    connReq.controlPacketFactory.publish(
-                        topicName = topic, qos = qos, payload = BufferFactory.Default.wrap(payloadBytes),
-                    ),
+            val topicStr = "bench/${Random.nextUInt()}"
+            val topic = TopicName.fromOrThrow(topicStr)
+            val filter = TopicFilter.fromOrThrow(topicStr)
+            val persistence = InMemoryPersistence()
+            val connReq = connectionRequest()
+            val broker = persistence.addBroker(listOf(connectionOptions()), connReq)
+            val client =
+                LocalMqttClient.start(
+                    CoroutineScope(Dispatchers.Default),
+                    broker,
+                    persistence,
+                    createConnectFactory(broker),
                 )
-            }
-            withTimeout(60.seconds) { allReceived.await() }
-            val elapsedMs = mark.elapsedNow().inWholeMilliseconds
-            val opsPerSec = if (elapsedMs > 0) count.toLong() * 1000 / elapsedMs else count.toLong()
-            val totalBytes = count.toLong() * payloadSize
-            val mbPerSec = if (elapsedMs > 0) totalBytes / 1024.0 / 1024.0 * 1000 / elapsedMs else 0.0
 
-            val mbStr = ((mbPerSec * 10).toLong() / 10.0).toString()
-            println("$label: $count msgs in ${elapsedMs}ms = $opsPerSec msgs/s ($mbStr MB/s)")
-        } finally {
-            client.shutdown()
+            try {
+                val received = MutableStateFlow(0)
+                val allReceived = CompletableDeferred<Unit>()
+                val handler =
+                    SubscriptionHandler.Blocking { _ ->
+                        val newVal = received.value + 1
+                        received.value = newVal
+                        if (newVal >= count) {
+                            allReceived.complete(Unit)
+                        }
+                    }
+                val sub = connReq.controlPacketFactory.subscribe(filter, qos)
+                client.subscribe(sub, handler).subAck.await()
+
+                val payloadBytes = ByteArray(payloadSize) { (it % 256).toByte() }
+
+                val mark = TimeSource.Monotonic.markNow()
+                for (i in 0 until count) {
+                    client.publish(
+                        connReq.controlPacketFactory.publish(
+                            topicName = topic,
+                            qos = qos,
+                            payload = BufferFactory.Default.wrap(payloadBytes),
+                        ),
+                    )
+                }
+                withTimeout(60.seconds) { allReceived.await() }
+                val elapsedMs = mark.elapsedNow().inWholeMilliseconds
+                val opsPerSec = if (elapsedMs > 0) count.toLong() * 1000 / elapsedMs else count.toLong()
+                val totalBytes = count.toLong() * payloadSize
+                val mbPerSec = if (elapsedMs > 0) totalBytes / 1024.0 / 1024.0 * 1000 / elapsedMs else 0.0
+
+                val mbStr = ((mbPerSec * 10).toLong() / 10.0).toString()
+                println("$label: $count msgs in ${elapsedMs}ms = $opsPerSec msgs/s ($mbStr MB/s)")
+            } finally {
+                client.shutdown()
+            }
         }
-    }
 
     // ── QoS 0, 64B payload ──────────────────────────────────────────
 

@@ -16,5 +16,7 @@ sealed interface ConnectionState {
     data object Handshaking : ConnectionState
 
     /** CONNACK received with success — session is active. */
-    data class Connected(val connack: IConnectionAcknowledgment) : ConnectionState
+    data class Connected(
+        val connack: IConnectionAcknowledgment,
+    ) : ConnectionState
 }

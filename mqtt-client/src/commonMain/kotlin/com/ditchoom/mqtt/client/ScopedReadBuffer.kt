@@ -18,7 +18,9 @@ import com.ditchoom.buffer.ReadBuffer
  * via [readByteArray] or [readBytes] (both guarded and delegate to the
  * platform-optimized implementation).
  */
-internal class ScopedReadBuffer(private val delegate: ReadBuffer) : ReadBuffer {
+internal class ScopedReadBuffer(
+    private val delegate: ReadBuffer,
+) : ReadBuffer {
     private var valid = true
 
     fun invalidate() {
@@ -76,7 +78,10 @@ internal class ScopedReadBuffer(private val delegate: ReadBuffer) : ReadBuffer {
         return delegate.readByteArray(size)
     }
 
-    override fun readString(length: Int, charset: Charset): String {
+    override fun readString(
+        length: Int,
+        charset: Charset,
+    ): String {
         checkValid()
         return delegate.readString(length, charset)
     }

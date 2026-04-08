@@ -18,10 +18,14 @@ import kotlinx.coroutines.flow.combine
 sealed interface QoS1State {
     /** Message persisted locally, waiting to be written to wire. */
     data object Queued : QoS1State
+
     /** Written to wire, waiting for PUBACK. */
     data object Sent : QoS1State
+
     /** PUBACK received — delivery confirmed. */
-    data class Acknowledged(val ack: IPublishAcknowledgment) : QoS1State
+    data class Acknowledged(
+        val ack: IPublishAcknowledgment,
+    ) : QoS1State
 }
 
 /**
@@ -30,14 +34,20 @@ sealed interface QoS1State {
 sealed interface QoS2State {
     /** Message persisted locally, waiting to be written to wire. */
     data object Queued : QoS2State
+
     /** PUBLISH written to wire, waiting for PUBREC. */
     data object Sent : QoS2State
+
     /** PUBREC received from broker. */
     data object Received : QoS2State
+
     /** PUBREL written to wire, waiting for PUBCOMP. */
     data object Released : QoS2State
+
     /** PUBCOMP received — exactly-once delivery confirmed. */
-    data class Complete(val comp: IPublishComplete) : QoS2State
+    data class Complete(
+        val comp: IPublishComplete,
+    ) : QoS2State
 }
 
 /**
@@ -49,10 +59,16 @@ sealed interface PublishResult {
     data object QoS0Sent : PublishResult
 
     /** QoS 1: observe [state] for Queued → Sent → Acknowledged progression. */
-    data class QoS1(val packetId: Int, val state: StateFlow<QoS1State>) : PublishResult
+    data class QoS1(
+        val packetId: Int,
+        val state: StateFlow<QoS1State>,
+    ) : PublishResult
 
     /** QoS 2: observe [state] for Queued → Sent → Received → Released → Complete progression. */
-    data class QoS2(val packetId: Int, val state: StateFlow<QoS2State>) : PublishResult
+    data class QoS2(
+        val packetId: Int,
+        val state: StateFlow<QoS2State>,
+    ) : PublishResult
 }
 
 data class SubscribeOperation(

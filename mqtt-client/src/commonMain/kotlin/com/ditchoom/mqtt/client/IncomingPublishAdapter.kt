@@ -42,7 +42,10 @@ internal class IncomingPublishV5Adapter(
  * Preserves the V5 smart-cast: if the delegate is [IncomingPublishV5],
  * the wrapper also implements [IncomingPublishV5].
  */
-internal fun ScopedIncomingPublish(delegate: IncomingPublish, scopedPayload: ScopedReadBuffer): IncomingPublish =
+internal fun ScopedIncomingPublish(
+    delegate: IncomingPublish,
+    scopedPayload: ScopedReadBuffer,
+): IncomingPublish =
     when (delegate) {
         is IncomingPublishV5 -> ScopedIncomingPublishV5(delegate, scopedPayload)
         else -> ScopedIncomingPublishV4(delegate, scopedPayload)

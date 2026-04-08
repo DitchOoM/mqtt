@@ -3,6 +3,7 @@ package com.ditchoom.mqtt.client.ipc
 import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.PlatformBuffer
 import com.ditchoom.mqtt.Persistence
+import com.ditchoom.mqtt.client.ConnectionState
 import com.ditchoom.mqtt.client.MqttClient
 import com.ditchoom.mqtt.client.MqttSubscription
 import com.ditchoom.mqtt.client.PayloadDecoder
@@ -10,7 +11,6 @@ import com.ditchoom.mqtt.client.PayloadEncoder
 import com.ditchoom.mqtt.client.PublishResult
 import com.ditchoom.mqtt.client.QoS1State
 import com.ditchoom.mqtt.client.QoS2State
-import com.ditchoom.mqtt.client.ConnectionState
 import com.ditchoom.mqtt.client.SubscribeOperation
 import com.ditchoom.mqtt.client.SubscriptionHandler
 import com.ditchoom.mqtt.client.UnsubscribeOperation
@@ -31,9 +31,8 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
@@ -52,6 +51,8 @@ abstract class RemoteMqttClient(
     val incomingPackets: SharedFlow<ControlPacket> = _incomingPackets
     private val _sentPackets = MutableSharedFlow<ControlPacket>(2, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     val sentPackets: SharedFlow<ControlPacket> = _sentPackets
+
+    override suspend fun pendingPublishes(): List<PublishResult> = emptyList()
 
     protected open suspend fun sendSubscribe(packetId: Int) {}
 
@@ -96,8 +97,9 @@ abstract class RemoteMqttClient(
             QualityOfService.AT_LEAST_ONCE -> {
                 val stateFlow = MutableStateFlow<QoS1State>(QoS1State.Queued)
                 scope.launch {
-                    val ack = awaitControlPacketReceivedMatching(publishPacketId, IPublishAcknowledgment.CONTROL_PACKET_VALUE)
-                        as IPublishAcknowledgment
+                    val ack =
+                        awaitControlPacketReceivedMatching(publishPacketId, IPublishAcknowledgment.CONTROL_PACKET_VALUE)
+                            as IPublishAcknowledgment
                     stateFlow.value = QoS1State.Acknowledged(ack)
                 }
                 PublishResult.QoS1(publishPacketId, stateFlow)
@@ -108,8 +110,9 @@ abstract class RemoteMqttClient(
                 scope.launch {
                     awaitControlPacketReceivedMatching(publishPacketId, IPublishReceived.CONTROL_PACKET_VALUE)
                     stateFlow.value = QoS2State.Received
-                    val comp = awaitControlPacketReceivedMatching(publishPacketId, IPublishComplete.CONTROL_PACKET_VALUE)
-                        as IPublishComplete
+                    val comp =
+                        awaitControlPacketReceivedMatching(publishPacketId, IPublishComplete.CONTROL_PACKET_VALUE)
+                            as IPublishComplete
                     stateFlow.value = QoS2State.Complete(comp)
                 }
                 PublishResult.QoS2(publishPacketId, stateFlow)
@@ -130,12 +133,15 @@ abstract class RemoteMqttClient(
         val payloadSize = encoder.sizeOf(payload)
         val payloadBuffer = bufferFactory.allocate(payloadSize)
         encoder.encode(payloadBuffer, payload)
-        val pub = packetFactory.publish(
-            topicName = com.ditchoom.mqtt.controlpacket.TopicName.fromOrThrow(topic),
-            qos = qos,
-            retain = retain,
-            payload = payloadBuffer,
-        )
+        val pub =
+            packetFactory.publish(
+                topicName =
+                    com.ditchoom.mqtt.controlpacket.TopicName
+                        .fromOrThrow(topic),
+                qos = qos,
+                retain = retain,
+                payload = payloadBuffer,
+            )
         return publish(pub)
     }
 
@@ -158,27 +164,39 @@ abstract class RemoteMqttClient(
         decoder: PayloadDecoder<P>,
         handler: (suspend (P) -> Unit)?,
     ): MqttSubscription<P> {
-        val filter = com.ditchoom.mqtt.controlpacket.TopicFilter.fromOrThrow(topicFilter)
+        val filter =
+            com.ditchoom.mqtt.controlpacket.TopicFilter
+                .fromOrThrow(topicFilter)
         val sub = packetFactory.subscribe(filter, maxQos)
         val subOp = subscribe(sub)
         // Decode incoming IPublishMessage payload → P using the consumer's decoder
-        val typedFlow = subOp.subscriptions.values.asSequence()
-            .reduce { a, b -> kotlinx.coroutines.flow.merge(a, b) }
-            .map { msg ->
-                val payload = msg.payload ?: error("Expected payload in PUBLISH")
-                val reader = com.ditchoom.buffer.codec.payload.ReadBufferPayloadReader(payload)
-                try { decoder.decode(reader) } finally { reader.release() }
-            }
-            .onEach { decoded -> handler?.invoke(decoded) }
+        val typedFlow =
+            subOp.subscriptions.values
+                .asSequence()
+                .reduce { a, b -> kotlinx.coroutines.flow.merge(a, b) }
+                .map { msg ->
+                    val payload = msg.payload ?: error("Expected payload in PUBLISH")
+                    val reader =
+                        com.ditchoom.buffer.codec.payload
+                            .ReadBufferPayloadReader(payload)
+                    try {
+                        decoder.decode(reader)
+                    } finally {
+                        reader.release()
+                    }
+                }.onEach { decoded -> handler?.invoke(decoded) }
         return object : MqttSubscription<P> {
             override val topicFilter: String = topicFilter
             override val suback = subOp.subAck
+
             override fun receive() = typedFlow
-            override suspend fun unsubscribe() = scope.async {
-                val unsub = packetFactory.unsubscribe(filter)
-                val op = this@RemoteMqttClient.unsubscribe(unsub)
-                op.unsubAck.await()
-            }
+
+            override suspend fun unsubscribe() =
+                scope.async {
+                    val unsub = packetFactory.unsubscribe(filter)
+                    val op = this@RemoteMqttClient.unsubscribe(unsub)
+                    op.unsubAck.await()
+                }
         }
     }
 

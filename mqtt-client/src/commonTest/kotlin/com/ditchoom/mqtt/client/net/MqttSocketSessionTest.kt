@@ -1,7 +1,6 @@
 package com.ditchoom.mqtt.client.net
 
 import com.ditchoom.mqtt.client.MqttCodec
-import com.ditchoom.mqtt.client.mqttPeekFrameSize
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.IConnectionAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IPublishAcknowledgment

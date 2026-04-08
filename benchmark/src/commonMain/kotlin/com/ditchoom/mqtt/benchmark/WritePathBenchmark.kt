@@ -2,7 +2,6 @@ package com.ditchoom.mqtt.benchmark
 
 import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Default
-import com.ditchoom.mqtt.client.serializeHeaderToSlice
 import com.ditchoom.mqtt.client.toBuffer
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
@@ -30,7 +29,6 @@ class WritePathBenchmark {
     private lateinit var publishLarge: PublishMessage
     private lateinit var subscribe: SubscribeRequest
     private val topic = TopicName.fromOrThrow("bench/topic/foo")
-    private val topicStr = "bench/topic/foo"
 
     @Setup
     fun setup() {
@@ -90,13 +88,5 @@ class WritePathBenchmark {
     fun serializeSubscribe(bh: Blackhole) {
         val buf = subscribe.toBuffer()
         bh.consume(buf)
-    }
-
-    @Benchmark
-    fun headerOnlyPublish(bh: Blackhole) {
-        val payloadRemaining = publishSmall.payload!!.remaining()
-        val headerBuf = BufferFactory.Default.allocate(128)
-        val header = publishSmall.serializeHeaderToSlice(headerBuf, payloadRemaining)
-        bh.consume(header)
     }
 }

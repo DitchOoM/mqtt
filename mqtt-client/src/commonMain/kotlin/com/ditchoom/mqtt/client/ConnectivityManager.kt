@@ -1,11 +1,11 @@
 package com.ditchoom.mqtt.client
 
+import com.ditchoom.buffer.flow.Connection
 import com.ditchoom.mqtt.Persistence
 import com.ditchoom.mqtt.connection.MqttBroker
 import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.IConnectionAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IDisconnectNotification
-import com.ditchoom.buffer.flow.Connection
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope

@@ -867,7 +867,7 @@ class ConnectionRequestTests {
 
     @Test
     fun willMessageFullRoundTrip() {
-        val willPayload = "will-data".toByteArray()
+        val willPayload = "will-data".encodeToByteArray()
         val willBuf = BufferFactory.Default.allocate(willPayload.size)
         willPayload.forEach { willBuf.writeByte(it) }
         willBuf.resetForRead()

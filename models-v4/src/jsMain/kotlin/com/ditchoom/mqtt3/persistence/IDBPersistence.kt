@@ -237,6 +237,10 @@ class IDBPersistence(
         return MqttBroker(countOp, connectionOps, connectionRequest)
     }
 
+    override suspend fun updatePublishState(broker: MqttBroker, packetId: Int, state: Int) {
+        // IDB persistence doesn't track QoS2 state separately
+    }
+
     private suspend fun await(request: IDBRequest<*>) {
         if (request.readyState == IDBRequestReadyState.done) {
             return

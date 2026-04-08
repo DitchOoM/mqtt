@@ -3,7 +3,6 @@ package com.ditchoom.mqtt.client.net
 import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.deterministic
-import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.managed
 import com.ditchoom.buffer.pool.BufferPool
 import com.ditchoom.buffer.pool.ThreadingMode
@@ -12,16 +11,15 @@ import com.ditchoom.mqtt.client.toBuffer
 import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicName
-import com.ditchoom.mqtt3.controlpacket.ConnectionRequest as ConnectV4
 import com.ditchoom.mqtt3.controlpacket.ControlPacketV4
-import com.ditchoom.mqtt3.controlpacket.PublishMessage as PublishV4
-import com.ditchoom.mqtt3.controlpacket.SubscribeRequest as SubscribeV4
 import java.io.File
-import java.lang.management.GarbageCollectorMXBean
 import java.lang.management.ManagementFactory
 import javax.management.ObjectName
 import kotlin.test.Test
 import kotlin.time.measureTime
+import com.ditchoom.mqtt3.controlpacket.ConnectionRequest as ConnectV4
+import com.ditchoom.mqtt3.controlpacket.PublishMessage as PublishV4
+import com.ditchoom.mqtt3.controlpacket.SubscribeRequest as SubscribeV4
 
 /**
  * Comparative benchmark across all BufferFactory types.
@@ -31,7 +29,6 @@ import kotlin.time.measureTime
  * (toBuffer + freeNativeMemory) and full round-trip (serialize + decode).
  */
 class FactoryComparisonBenchmark {
-
     // ── Metrics ──────────────────────────────────────────────────────
 
     data class MemSnapshot(
@@ -41,7 +38,10 @@ class FactoryComparisonBenchmark {
         val rssMB: Double,
     )
 
-    data class GcSnapshot(val count: Long, val timeMs: Long)
+    data class GcSnapshot(
+        val count: Long,
+        val timeMs: Long,
+    )
 
     data class BenchResult(
         val label: String,
@@ -58,26 +58,38 @@ class FactoryComparisonBenchmark {
     )
 
     private fun snapshot(): MemSnapshot {
-        repeat(3) { System.gc(); Thread.sleep(30) }
+        repeat(3) {
+            System.gc()
+            Thread.sleep(30)
+        }
         val runtime = Runtime.getRuntime()
         val heapMB = (runtime.totalMemory() - runtime.freeMemory()) / MB
 
-        val (directCount, directBytes) = try {
-            val mbs = ManagementFactory.getPlatformMBeanServer()
-            val name = ObjectName("java.nio:type=BufferPool,name=direct")
-            Pair(
-                mbs.getAttribute(name, "Count") as Long,
-                mbs.getAttribute(name, "MemoryUsed") as Long,
-            )
-        } catch (_: Exception) {
-            Pair(-1L, -1L)
-        }
+        val (directCount, directBytes) =
+            try {
+                val mbs = ManagementFactory.getPlatformMBeanServer()
+                val name = ObjectName("java.nio:type=BufferPool,name=direct")
+                Pair(
+                    mbs.getAttribute(name, "Count") as Long,
+                    mbs.getAttribute(name, "MemoryUsed") as Long,
+                )
+            } catch (_: Exception) {
+                Pair(-1L, -1L)
+            }
 
-        val rssMB = try {
-            val status = File("/proc/self/status").readText()
-            status.lines().firstOrNull { it.startsWith("VmRSS:") }
-                ?.split("\\s+".toRegex())?.get(1)?.toLongOrNull()?.div(1024.0) ?: -1.0
-        } catch (_: Exception) { -1.0 }
+        val rssMB =
+            try {
+                val status = File("/proc/self/status").readText()
+                status
+                    .lines()
+                    .firstOrNull { it.startsWith("VmRSS:") }
+                    ?.split("\\s+".toRegex())
+                    ?.get(1)
+                    ?.toLongOrNull()
+                    ?.div(1024.0) ?: -1.0
+            } catch (_: Exception) {
+                -1.0
+            }
 
         return MemSnapshot(heapMB, directBytes / MB, directCount, rssMB)
     }
@@ -96,7 +108,9 @@ class FactoryComparisonBenchmark {
         val bean = ManagementFactory.getThreadMXBean()
         return if (bean.isCurrentThreadCpuTimeSupported) {
             bean.currentThreadCpuTime / 1_000_000
-        } else -1
+        } else {
+            -1
+        }
     }
 
     // ── Packet builders ──────────────────────────────────────────────
@@ -107,11 +121,12 @@ class FactoryComparisonBenchmark {
         payload.resetForRead()
         return listOf(
             ConnectV4(payload = ConnectV4.Payload(clientId = "bench")),
-            PublishV4.buildPayload(
-                topicName = TopicName.fromOrThrow("bench/topic"),
-                qos = QualityOfService.AT_LEAST_ONCE,
-                payload = payload,
-            ).maybeCopyWithNewPacketIdentifier(1),
+            PublishV4
+                .buildPayload(
+                    topicName = TopicName.fromOrThrow("bench/topic"),
+                    qos = QualityOfService.AT_LEAST_ONCE,
+                    payload = payload,
+                ).maybeCopyWithNewPacketIdentifier(1),
             SubscribeV4(packetIdentifier = 1.toUShort(), topic = "bench/+", qos = QualityOfService.AT_LEAST_ONCE),
         )
     }
@@ -121,11 +136,12 @@ class FactoryComparisonBenchmark {
         repeat(4096) { payload.writeByte((it % 256).toByte()) }
         payload.resetForRead()
         return listOf(
-            PublishV4.buildPayload(
-                topicName = TopicName.fromOrThrow("bench/large"),
-                qos = QualityOfService.EXACTLY_ONCE,
-                payload = payload,
-            ).maybeCopyWithNewPacketIdentifier(1),
+            PublishV4
+                .buildPayload(
+                    topicName = TopicName.fromOrThrow("bench/large"),
+                    qos = QualityOfService.EXACTLY_ONCE,
+                    payload = payload,
+                ).maybeCopyWithNewPacketIdentifier(1),
         )
     }
 
@@ -151,24 +167,28 @@ class FactoryComparisonBenchmark {
         val memBefore = snapshot()
         val cpuBefore = threadCpuMs()
 
-        val elapsed = measureTime {
-            repeat(iterations) {
-                for (p in packets) {
-                    val buf = listOf(p).toBuffer(factory)
-                    buf.resetForWrite()
-                    buf.freeNativeMemory()
+        val elapsed =
+            measureTime {
+                repeat(iterations) {
+                    for (p in packets) {
+                        val buf = listOf(p).toBuffer(factory)
+                        buf.resetForWrite()
+                        buf.freeNativeMemory()
+                    }
                 }
             }
-        }
 
         val cpuAfter = threadCpuMs()
         val memAfter = snapshot()
         val gcAfter = gcSnapshot()
 
         val totalPackets = iterations.toLong() * packets.size
-        val opsPerSec = if (elapsed.inWholeMilliseconds > 0) {
-            totalPackets * 1000 / elapsed.inWholeMilliseconds
-        } else totalPackets
+        val opsPerSec =
+            if (elapsed.inWholeMilliseconds > 0) {
+                totalPackets * 1000 / elapsed.inWholeMilliseconds
+            } else {
+                totalPackets
+            }
 
         val stats = pool?.stats()
 
@@ -208,25 +228,29 @@ class FactoryComparisonBenchmark {
         val memBefore = snapshot()
         val cpuBefore = threadCpuMs()
 
-        val elapsed = measureTime {
-            repeat(iterations) {
-                for (p in packets) {
-                    val buf = listOf(p).toBuffer(factory)
-                    buf.resetForRead()
-                    ControlPacketV4.from(buf)
-                    buf.freeNativeMemory()
+        val elapsed =
+            measureTime {
+                repeat(iterations) {
+                    for (p in packets) {
+                        val buf = listOf(p).toBuffer(factory)
+                        buf.resetForRead()
+                        ControlPacketV4.from(buf)
+                        buf.freeNativeMemory()
+                    }
                 }
             }
-        }
 
         val cpuAfter = threadCpuMs()
         val memAfter = snapshot()
         val gcAfter = gcSnapshot()
 
         val totalPackets = iterations.toLong() * packets.size
-        val opsPerSec = if (elapsed.inWholeMilliseconds > 0) {
-            totalPackets * 1000 / elapsed.inWholeMilliseconds
-        } else totalPackets
+        val opsPerSec =
+            if (elapsed.inWholeMilliseconds > 0) {
+                totalPackets * 1000 / elapsed.inWholeMilliseconds
+            } else {
+                totalPackets
+            }
 
         val stats = pool?.stats()
 
@@ -247,15 +271,25 @@ class FactoryComparisonBenchmark {
 
     // ── Reporting ────────────────────────────────────────────────────
 
-    private fun printTable(title: String, results: List<BenchResult>) {
+    private fun printTable(
+        title: String,
+        results: List<BenchResult>,
+    ) {
         println()
         println("═".repeat(120))
         println("  $title")
         println("═".repeat(120))
         println(
             "%-28s %10s %8s %8s %8s %8s %10s %10s %8s".format(
-                "Factory", "ops/s", "ms", "cpu ms", "GC #", "GC ms",
-                "direct Δ", "heap Δ MB", "pool hit",
+                "Factory",
+                "ops/s",
+                "ms",
+                "cpu ms",
+                "GC #",
+                "GC ms",
+                "direct Δ",
+                "heap Δ MB",
+                "pool hit",
             ),
         )
         println("─".repeat(120))
@@ -269,8 +303,15 @@ class FactoryComparisonBenchmark {
 
             println(
                 "%-28s %,10d %,8d %,8d %,8d %,8d %+10d %+10.1f %8s".format(
-                    r.label, r.opsPerSec, r.elapsedMs, r.cpuMs,
-                    gcCount, gcTime, directDelta, heapDelta, poolStr,
+                    r.label,
+                    r.opsPerSec,
+                    r.elapsedMs,
+                    r.cpuMs,
+                    gcCount,
+                    gcTime,
+                    directDelta,
+                    heapDelta,
+                    poolStr,
                 ),
             )
         }
@@ -305,10 +346,11 @@ class FactoryComparisonBenchmark {
     fun writePathSmallPackets() {
         val packets = smallPackets()
         val iterations = 50_000
-        val results = allFactories().map { (name, factory, pool) ->
-            pool?.clear()
-            benchWritePath(name, factory, packets, iterations, pool)
-        }
+        val results =
+            allFactories().map { (name, factory, pool) ->
+                pool?.clear()
+                benchWritePath(name, factory, packets, iterations, pool)
+            }
         printTable("WRITE PATH — small packets (CONNECT + PUBLISH-64B + SUBSCRIBE) × $iterations", results)
     }
 
@@ -316,10 +358,11 @@ class FactoryComparisonBenchmark {
     fun writePathLargePayload() {
         val packets = largePayloadPackets()
         val iterations = 50_000
-        val results = allFactories().map { (name, factory, pool) ->
-            pool?.clear()
-            benchWritePath(name, factory, packets, iterations, pool)
-        }
+        val results =
+            allFactories().map { (name, factory, pool) ->
+                pool?.clear()
+                benchWritePath(name, factory, packets, iterations, pool)
+            }
         printTable("WRITE PATH — large payload (PUBLISH-4KB) × $iterations", results)
     }
 
@@ -327,10 +370,11 @@ class FactoryComparisonBenchmark {
     fun roundTripSmallPackets() {
         val packets = smallPackets()
         val iterations = 50_000
-        val results = allFactories().map { (name, factory, pool) ->
-            pool?.clear()
-            benchRoundTrip(name, factory, packets, iterations, pool)
-        }
+        val results =
+            allFactories().map { (name, factory, pool) ->
+                pool?.clear()
+                benchRoundTrip(name, factory, packets, iterations, pool)
+            }
         printTable("ROUND-TRIP — small packets (serialize + decode) × $iterations", results)
     }
 
@@ -338,10 +382,11 @@ class FactoryComparisonBenchmark {
     fun roundTripLargePayload() {
         val packets = largePayloadPackets()
         val iterations = 50_000
-        val results = allFactories().map { (name, factory, pool) ->
-            pool?.clear()
-            benchRoundTrip(name, factory, packets, iterations, pool)
-        }
+        val results =
+            allFactories().map { (name, factory, pool) ->
+                pool?.clear()
+                benchRoundTrip(name, factory, packets, iterations, pool)
+            }
         printTable("ROUND-TRIP — large payload (PUBLISH-4KB serialize + decode) × $iterations", results)
     }
 
@@ -357,7 +402,13 @@ class FactoryComparisonBenchmark {
         println("═".repeat(100))
         println(
             "%-12s %12s %12s %12s %12s %10s %10s".format(
-                "Iterations", "Default ops", "Pooled ops", "Default GC", "Pooled GC", "Def cpu", "Pool cpu",
+                "Iterations",
+                "Default ops",
+                "Pooled ops",
+                "Default GC",
+                "Pooled GC",
+                "Def cpu",
+                "Pool cpu",
             ),
         )
         println("─".repeat(100))
@@ -373,8 +424,13 @@ class FactoryComparisonBenchmark {
 
             println(
                 "%,12d %,12d %,12d %,12d %,12d %,10d %,10d".format(
-                    scale, rDefault.opsPerSec, rPooled.opsPerSec,
-                    defaultGc, pooledGc, rDefault.cpuMs, rPooled.cpuMs,
+                    scale,
+                    rDefault.opsPerSec,
+                    rPooled.opsPerSec,
+                    defaultGc,
+                    pooledGc,
+                    rDefault.cpuMs,
+                    rPooled.cpuMs,
                 ),
             )
         }
@@ -406,7 +462,13 @@ class FactoryComparisonBenchmark {
         println("═".repeat(110))
         println(
             "%-10s %-14s %10s %10s %10s %10s %10s".format(
-                "Iter (K)", "Factory", "direct #", "direct MB", "heap MB", "RSS MB", "pool peak",
+                "Iter (K)",
+                "Factory",
+                "direct #",
+                "direct MB",
+                "heap MB",
+                "RSS MB",
+                "pool peak",
             ),
         )
         println("─".repeat(110))
@@ -439,14 +501,24 @@ class FactoryComparisonBenchmark {
 
             println(
                 "%-10s %-14s %,10d %10.2f %10.1f %10.1f %10s".format(
-                    "${totalK}K", "Default", snapDefault.directCount, snapDefault.directMB,
-                    snapDefault.heapMB, snapDefault.rssMB, "n/a",
+                    "${totalK}K",
+                    "Default",
+                    snapDefault.directCount,
+                    snapDefault.directMB,
+                    snapDefault.heapMB,
+                    snapDefault.rssMB,
+                    "n/a",
                 ),
             )
             println(
                 "%-10s %-14s %,10d %10.2f %10.1f %10.1f %,10d".format(
-                    "${totalK}K", "Pooled-direct", snapPooled.directCount, snapPooled.directMB,
-                    snapPooled.heapMB, snapPooled.rssMB, stats.peakPoolSize,
+                    "${totalK}K",
+                    "Pooled-direct",
+                    snapPooled.directCount,
+                    snapPooled.directMB,
+                    snapPooled.heapMB,
+                    snapPooled.rssMB,
+                    stats.peakPoolSize,
                 ),
             )
         }

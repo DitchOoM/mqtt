@@ -231,7 +231,11 @@ class InMemoryPersistence : Persistence {
         return isClear
     }
 
-    override suspend fun updatePublishState(broker: MqttBroker, packetId: Int, state: Int) {
+    override suspend fun updatePublishState(
+        broker: MqttBroker,
+        packetId: Int,
+        state: Int,
+    ) {
         // In-memory persistence doesn't track state separately — the state is implicit
         // in which map (clientMessages vs serverMessages) holds the packet.
     }

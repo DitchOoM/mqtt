@@ -3,7 +3,12 @@ package com.ditchoom.mqtt5.controlpacket
 import com.ditchoom.buffer.PlatformBuffer
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
+import com.ditchoom.buffer.codec.annotations.LengthPrefixed
+import com.ditchoom.buffer.codec.annotations.Payload
+import com.ditchoom.buffer.codec.annotations.ProtocolMessage
+import com.ditchoom.buffer.codec.annotations.WhenTrue
 import com.ditchoom.buffer.utf8Length
+import com.ditchoom.mqtt.codec.annotations.MqttProperties
 import com.ditchoom.mqtt.MalformedPacketException
 import com.ditchoom.mqtt.MqttWarning
 import com.ditchoom.mqtt.ProtocolError
@@ -35,9 +40,35 @@ import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
 import com.ditchoom.mqtt5.controlpacket.properties.WillDelayInterval
 import com.ditchoom.mqtt5.controlpacket.properties.mqttPropertiesSize
 import com.ditchoom.mqtt5.controlpacket.properties.readProperties
-import com.ditchoom.mqtt5.controlpacket.wire.ConnectV5FlagsValue
-import com.ditchoom.mqtt5.controlpacket.wire.ConnectV5Wire
-import com.ditchoom.mqtt5.controlpacket.wire.ConnectV5WireCodec
+import kotlin.jvm.JvmInline
+
+@JvmInline
+value class ConnectV5FlagsValue(val raw: UByte) {
+    val reserved: Boolean get() = raw.toInt() and 1 == 1
+    val cleanStart: Boolean get() = (raw.toInt() shr 1) and 1 == 1
+    val willFlag: Boolean get() = (raw.toInt() shr 2) and 1 == 1
+    val willQosBit1: Boolean get() = (raw.toInt() shr 3) and 1 == 1
+    val willQosBit2: Boolean get() = (raw.toInt() shr 4) and 1 == 1
+    val willQos: Int get() = (raw.toInt() shr 3) and 3
+    val willRetain: Boolean get() = (raw.toInt() shr 5) and 1 == 1
+    val passwordFlag: Boolean get() = (raw.toInt() shr 6) and 1 == 1
+    val usernameFlag: Boolean get() = (raw.toInt() shr 7) and 1 == 1
+}
+
+@ProtocolMessage
+data class ConnectV5Body<@Payload WP>(
+    @LengthPrefixed val protocolName: String,
+    val protocolLevel: UByte,
+    val connectFlags: ConnectV5FlagsValue,
+    val keepAlive: UShort,
+    @MqttProperties val properties: Collection<MqttProperty>?,
+    @LengthPrefixed val clientId: String,
+    @WhenTrue("connectFlags.willFlag") @MqttProperties val willProperties: Collection<MqttProperty>? = null,
+    @WhenTrue("connectFlags.willFlag") @LengthPrefixed val willTopic: String? = null,
+    @WhenTrue("connectFlags.willFlag") @LengthPrefixed val willPayload: WP? = null,
+    @WhenTrue("connectFlags.usernameFlag") @LengthPrefixed val username: String? = null,
+    @WhenTrue("connectFlags.passwordFlag") @LengthPrefixed val password: String? = null,
+)
 
 /**
  * 3.1 CONNECT – Connection Request
@@ -149,7 +180,7 @@ data class ConnectionRequest(
         val cleanStart = if (vh.cleanStart) 0b10 else 0
         val flagsByte = (usernameFlag or passwordFlag or wRetain or qos or wFlag or cleanStart).toUByte()
         val connectFlags = ConnectV5FlagsValue(flagsByte)
-        val wire = ConnectV5Wire<ReadBuffer?>(
+        val wire = ConnectV5Body<ReadBuffer?>(
             protocolName = vh.protocolName,
             protocolLevel = vh.protocolVersion,
             connectFlags = connectFlags,
@@ -162,7 +193,7 @@ data class ConnectionRequest(
             username = payload.userName,
             password = payload.password,
         )
-        ConnectV5WireCodec.encode(writeBuffer, wire) { buf, wp ->
+        ConnectV5BodyCodec.encode(writeBuffer, wire) { buf, wp ->
             if (wp != null) buf.write(wp)
         }
     }
@@ -1172,7 +1203,7 @@ data class ConnectionRequest(
 
     companion object {
         fun from(buffer: ReadBuffer): ConnectionRequest {
-            val wire = ConnectV5WireCodec.decode<ReadBuffer?>(buffer) { pr ->
+            val wire = ConnectV5BodyCodec.decode<ReadBuffer?>(buffer) { pr ->
                 if (pr.remaining() > 0) pr.copyToBuffer() else null
             }
             if (wire.connectFlags.reserved) {

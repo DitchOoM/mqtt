@@ -57,7 +57,10 @@ class AndroidMqttClientIPCServer(
     }
 
     /** Notify all registered state observers of a publish state change. */
-    internal fun notifyPublishStateChanged(packetId: Int, state: Int) {
+    internal fun notifyPublishStateChanged(
+        packetId: Int,
+        state: Int,
+    ) {
         publishStateObservers.values.forEach { it.onStateChanged(packetId, state) }
     }
 

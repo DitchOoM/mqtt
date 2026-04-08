@@ -1,7 +1,5 @@
 package com.ditchoom.mqtt.client.ipc
 
-import com.ditchoom.buffer.BufferFactory
-import com.ditchoom.buffer.Default
 import com.ditchoom.mqtt.client.LocalMqttService
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -13,13 +11,15 @@ import org.w3c.workers.ServiceWorker
 
 private var worker: JsRemoteMqttServiceWorker? = null
 
-suspend fun buildMqttServiceIPCServer(factory: BufferFactory = BufferFactory.Default): JsRemoteMqttServiceWorker {
+suspend fun buildMqttServiceIPCServer(): JsRemoteMqttServiceWorker {
     val workerTmp = worker
     if (workerTmp != null) {
         return workerTmp
     }
-    val service = LocalMqttService.buildService(null)
-    service.factory = factory
+    val service =
+        LocalMqttService.buildService(
+            connectionFactory = { broker -> { throw UnsupportedOperationException("IPC worker does not create connections directly") } },
+        )
     val serviceServer = RemoteMqttServiceWorker(service)
     val workerLocal = JsRemoteMqttServiceWorker(serviceServer)
     worker = workerLocal

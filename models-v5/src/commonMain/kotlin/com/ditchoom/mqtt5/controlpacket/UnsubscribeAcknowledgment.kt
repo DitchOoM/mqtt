@@ -2,8 +2,11 @@ package com.ditchoom.mqtt5.controlpacket
 
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
+import com.ditchoom.buffer.codec.annotations.ProtocolMessage
+import com.ditchoom.buffer.codec.annotations.RemainingBytes
 import com.ditchoom.mqtt.MalformedPacketException
 import com.ditchoom.mqtt.ProtocolError
+import com.ditchoom.mqtt.codec.annotations.MqttProperties
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.variableByteSize
 import com.ditchoom.mqtt.controlpacket.IUnsubscribeAcknowledgment
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
@@ -21,9 +24,18 @@ import com.ditchoom.mqtt5.controlpacket.properties.ReasonString
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
 import com.ditchoom.mqtt5.controlpacket.properties.mqttPropertiesSize
 import com.ditchoom.mqtt5.controlpacket.properties.readProperties
-import com.ditchoom.mqtt5.controlpacket.wire.UnsubAckReasonCodeV5Wire
-import com.ditchoom.mqtt5.controlpacket.wire.UnsubAckV5Wire
-import com.ditchoom.mqtt5.controlpacket.wire.UnsubAckV5WireCodec
+import kotlin.jvm.JvmInline
+
+@ProtocolMessage
+@JvmInline
+value class UnsubAckReasonCodeV5(val raw: UByte)
+
+@ProtocolMessage
+data class UnsubAckV5Body(
+    val packetIdentifier: UShort,
+    @MqttProperties val properties: Collection<MqttProperty>?,
+    @RemainingBytes val reasonCodes: List<UnsubAckReasonCodeV5>,
+)
 
 data class UnsubscribeAcknowledgment(
     val variable: VariableHeader,
@@ -47,12 +59,12 @@ data class UnsubscribeAcknowledgment(
     ) : this(VariableHeader(packetIdentifier, VariableHeader.Properties(reasonString, userProperty)), reasonCodes)
 
     override fun encodeBody(writeBuffer: WriteBuffer) {
-        UnsubAckV5WireCodec.encode(
+        UnsubAckV5BodyCodec.encode(
             writeBuffer,
-            UnsubAckV5Wire(
+            UnsubAckV5Body(
                 variable.packetIdentifier.toUShort(),
                 variable.properties.props,
-                reasonCodes.map { UnsubAckReasonCodeV5Wire(it.byte) },
+                reasonCodes.map { UnsubAckReasonCodeV5(it.byte) },
             ),
         )
     }
@@ -158,7 +170,7 @@ data class UnsubscribeAcknowledgment(
             buffer: ReadBuffer,
             remainingLength: Int,
         ): UnsubscribeAcknowledgment {
-            val wire = UnsubAckV5WireCodec.decode(buffer)
+            val wire = UnsubAckV5BodyCodec.decode(buffer)
             val props = VariableHeader.Properties.from(wire.properties)
             val variableHeader = VariableHeader(wire.packetIdentifier.toInt(), props)
             val list =

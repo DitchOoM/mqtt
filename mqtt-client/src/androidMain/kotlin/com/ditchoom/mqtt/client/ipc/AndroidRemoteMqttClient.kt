@@ -53,12 +53,16 @@ class AndroidRemoteMqttClient(
             }
         }
 
-    private val publishStateCb = object : MqttPublishStateCallback.Stub() {
-        override fun onStateChanged(packetId: Int, state: Int) {
-            // Bridge IPC state callback → processor's state flows
-            // State values: 0=QUEUED, 1=SENT, 2=PUBREC_RECEIVED, 3=PUBREL_SENT, 4=ACKNOWLEDGED, 5=COMPLETE
+    private val publishStateCb =
+        object : MqttPublishStateCallback.Stub() {
+            override fun onStateChanged(
+                packetId: Int,
+                state: Int,
+            ) {
+                // Bridge IPC state callback → processor's state flows
+                // State values: 0=QUEUED, 1=SENT, 2=PUBREC_RECEIVED, 3=PUBREL_SENT, 4=ACKNOWLEDGED, 5=COMPLETE
+            }
         }
-    }
 
     init {
         aidl.registerObserver(cb)

@@ -2,8 +2,8 @@ package com.ditchoom.mqtt.client.net
 
 import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Default
-import com.ditchoom.buffer.deterministic
 import com.ditchoom.buffer.ReadBuffer
+import com.ditchoom.buffer.deterministic
 import com.ditchoom.buffer.pool.BufferPool
 import com.ditchoom.buffer.stream.StreamProcessor
 import com.ditchoom.buffer.stream.builder
@@ -12,19 +12,19 @@ import com.ditchoom.mqtt.client.toBuffer
 import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicName
-import com.ditchoom.mqtt3.controlpacket.ConnectionRequest as ConnectV4
 import com.ditchoom.mqtt3.controlpacket.ControlPacketV4
-import com.ditchoom.mqtt3.controlpacket.PublishMessage as PublishV4
-import com.ditchoom.mqtt3.controlpacket.SubscribeRequest as SubscribeV4
-import com.ditchoom.mqtt5.controlpacket.ConnectionRequest as ConnectV5
 import com.ditchoom.mqtt5.controlpacket.ControlPacketV5
-import com.ditchoom.mqtt5.controlpacket.PublishMessage as PublishV5
-import com.ditchoom.mqtt5.controlpacket.SubscribeRequest as SubscribeV5
 import java.io.File
 import java.lang.management.ManagementFactory
 import javax.management.ObjectName
 import kotlin.test.Test
 import kotlin.test.assertTrue
+import com.ditchoom.mqtt3.controlpacket.ConnectionRequest as ConnectV4
+import com.ditchoom.mqtt3.controlpacket.PublishMessage as PublishV4
+import com.ditchoom.mqtt3.controlpacket.SubscribeRequest as SubscribeV4
+import com.ditchoom.mqtt5.controlpacket.ConnectionRequest as ConnectV5
+import com.ditchoom.mqtt5.controlpacket.PublishMessage as PublishV5
+import com.ditchoom.mqtt5.controlpacket.SubscribeRequest as SubscribeV5
 
 /**
  * Memory pressure tests for MQTT packet serialization/deserialization.
@@ -32,7 +32,6 @@ import kotlin.test.assertTrue
  * in the codec paths that use DirectByteBuffer (off-heap) allocations.
  */
 class MemoryPressureTest {
-
     // --- Memory measurement ---
 
     data class MemSnapshot(
@@ -41,53 +40,61 @@ class MemoryPressureTest {
         val directCount: Long,
         val rssMB: Double,
     ) {
-        override fun toString() =
-            "heap=%.1fMB  direct=%.2fMB(%d bufs)  rss=%.1fMB".format(heapMB, directMB, directCount, rssMB)
+        override fun toString() = "heap=%.1fMB  direct=%.2fMB(%d bufs)  rss=%.1fMB".format(heapMB, directMB, directCount, rssMB)
     }
 
     private fun snapshot(): MemSnapshot {
-        repeat(3) { System.gc(); Thread.sleep(50) }
+        repeat(3) {
+            System.gc()
+            Thread.sleep(50)
+        }
         val runtime = Runtime.getRuntime()
         val heapMB = (runtime.totalMemory() - runtime.freeMemory()) / (1024.0 * 1024.0)
 
         // Direct ByteBuffer pool via JMX (the real metric, not NON_HEAP which includes metaspace/JIT)
-        val (directCount, directBytes) = try {
-            val mbs = ManagementFactory.getPlatformMBeanServer()
-            val name = ObjectName("java.nio:type=BufferPool,name=direct")
-            val count = mbs.getAttribute(name, "Count") as Long
-            val memUsed = mbs.getAttribute(name, "MemoryUsed") as Long
-            Pair(count, memUsed)
-        } catch (_: Exception) {
-            Pair(-1L, -1L)
-        }
+        val (directCount, directBytes) =
+            try {
+                val mbs = ManagementFactory.getPlatformMBeanServer()
+                val name = ObjectName("java.nio:type=BufferPool,name=direct")
+                val count = mbs.getAttribute(name, "Count") as Long
+                val memUsed = mbs.getAttribute(name, "MemoryUsed") as Long
+                Pair(count, memUsed)
+            } catch (_: Exception) {
+                Pair(-1L, -1L)
+            }
         val directMB = directBytes / (1024.0 * 1024.0)
 
         // OS-level RSS from /proc/self/status (Linux)
-        val rssMB = try {
-            val status = File("/proc/self/status").readText()
-            val vmRss = status.lines().firstOrNull { it.startsWith("VmRSS:") }
-            vmRss?.split("\\s+".toRegex())?.get(1)?.toLongOrNull()?.div(1024.0) ?: -1.0
-        } catch (_: Exception) {
-            -1.0
-        }
+        val rssMB =
+            try {
+                val status = File("/proc/self/status").readText()
+                val vmRss = status.lines().firstOrNull { it.startsWith("VmRSS:") }
+                vmRss
+                    ?.split("\\s+".toRegex())
+                    ?.get(1)
+                    ?.toLongOrNull()
+                    ?.div(1024.0) ?: -1.0
+            } catch (_: Exception) {
+                -1.0
+            }
 
         return MemSnapshot(heapMB, directMB, directCount, rssMB)
     }
 
     // --- V4 packet builders ---
 
-    private fun buildV4Connect(): ControlPacket =
-        ConnectV4(payload = ConnectV4.Payload(clientId = "pressure-test-client"))
+    private fun buildV4Connect(): ControlPacket = ConnectV4(payload = ConnectV4.Payload(clientId = "pressure-test-client"))
 
     private fun buildV4Publish(id: Int): ControlPacket {
         val payload = BufferFactory.Default.allocate(128)
         repeat(128) { payload.writeByte((it % 256).toByte()) }
         payload.resetForRead()
-        return PublishV4.buildPayload(
-            topicName = TopicName.fromOrThrow("pressure/test/topic"),
-            qos = QualityOfService.AT_LEAST_ONCE,
-            payload = payload,
-        ).maybeCopyWithNewPacketIdentifier(id)
+        return PublishV4
+            .buildPayload(
+                topicName = TopicName.fromOrThrow("pressure/test/topic"),
+                qos = QualityOfService.AT_LEAST_ONCE,
+                payload = payload,
+            ).maybeCopyWithNewPacketIdentifier(id)
     }
 
     private fun buildV4Subscribe(): ControlPacket =
@@ -99,8 +106,7 @@ class MemoryPressureTest {
 
     // --- V5 packet builders ---
 
-    private fun buildV5Connect(): ControlPacket =
-        ConnectV5(clientId = "pressure-test-v5-client")
+    private fun buildV5Connect(): ControlPacket = ConnectV5(clientId = "pressure-test-v5-client")
 
     private fun buildV5Publish(id: Int): ControlPacket =
         PublishV5(
@@ -177,17 +183,21 @@ class MemoryPressureTest {
         val rssGrowth = after.rssMB - before.rssMB
         println("[$label] before: $before")
         println("[$label] after:  $after")
-        println("[$label] delta:  heap=%+.1fMB  direct=%+.2fMB(%+d bufs)  rss=%+.1fMB".format(
-            after.heapMB - before.heapMB,
-            after.directMB - before.directMB,
-            after.directCount - before.directCount,
-            rssGrowth,
-        ))
+        println(
+            "[$label] delta:  heap=%+.1fMB  direct=%+.2fMB(%+d bufs)  rss=%+.1fMB".format(
+                after.heapMB - before.heapMB,
+                after.directMB - before.directMB,
+                after.directCount - before.directCount,
+                rssGrowth,
+            ),
+        )
         if (before.rssMB > 0 && after.rssMB > 0) {
             assertTrue(
                 rssGrowth < maxRssGrowthMB,
                 "[$label] RSS grew %.1fMB (%.1f → %.1f) — possible native memory leak".format(
-                    rssGrowth, before.rssMB, after.rssMB,
+                    rssGrowth,
+                    before.rssMB,
+                    after.rssMB,
                 ),
             )
         }
@@ -256,11 +266,13 @@ class MemoryPressureTest {
             val payload = BufferFactory.Default.allocate(4096)
             repeat(4096) { i -> payload.writeByte((i % 256).toByte()) }
             payload.resetForRead()
-            val pub = PublishV4.buildPayload(
-                topicName = TopicName.fromOrThrow("pressure/large"),
-                qos = QualityOfService.AT_LEAST_ONCE,
-                payload = payload,
-            ).maybeCopyWithNewPacketIdentifier(1)
+            val pub =
+                PublishV4
+                    .buildPayload(
+                        topicName = TopicName.fromOrThrow("pressure/large"),
+                        qos = QualityOfService.AT_LEAST_ONCE,
+                        payload = payload,
+                    ).maybeCopyWithNewPacketIdentifier(1)
             val buf = pub.serialize()
             buf.resetForRead()
             ControlPacketV4.from(buf)
@@ -272,11 +284,13 @@ class MemoryPressureTest {
             val payload = BufferFactory.Default.allocate(4096)
             repeat(4096) { j -> payload.writeByte((j % 256).toByte()) }
             payload.resetForRead()
-            val pub = PublishV4.buildPayload(
-                topicName = TopicName.fromOrThrow("pressure/large"),
-                qos = QualityOfService.AT_LEAST_ONCE,
-                payload = payload,
-            ).maybeCopyWithNewPacketIdentifier(i % 65535 + 1)
+            val pub =
+                PublishV4
+                    .buildPayload(
+                        topicName = TopicName.fromOrThrow("pressure/large"),
+                        qos = QualityOfService.AT_LEAST_ONCE,
+                        payload = payload,
+                    ).maybeCopyWithNewPacketIdentifier(i % 65535 + 1)
             val buf = pub.serialize()
             buf.resetForRead()
             ControlPacketV4.from(buf)
@@ -312,9 +326,13 @@ class MemoryPressureTest {
         val stats = pool.stats()
 
         assertNoLeak("pool-reuse $iterations cycles", before, after, maxRssGrowthMB = 20.0)
-        println("[pool-reuse] hitRate=%.1f%%  poolSize=%d  peak=%d".format(
-            stats.hitRate * 100, stats.currentPoolSize, stats.peakPoolSize,
-        ))
+        println(
+            "[pool-reuse] hitRate=%.1f%%  poolSize=%d  peak=%d".format(
+                stats.hitRate * 100,
+                stats.currentPoolSize,
+                stats.peakPoolSize,
+            ),
+        )
         assertTrue(stats.hitRate > 0.9, "Pool hit rate %.1f%% — buffers not reused".format(stats.hitRate * 100))
 
         pool.clear()
@@ -350,9 +368,13 @@ class MemoryPressureTest {
         val stats = pool.stats()
 
         assertNoLeak("pooled-factory-write ${iterations * packets.size} packets", before, after, maxRssGrowthMB = 20.0)
-        println("[pooled-factory-write] hitRate=%.1f%%  poolSize=%d  peak=%d".format(
-            stats.hitRate * 100, stats.currentPoolSize, stats.peakPoolSize,
-        ))
+        println(
+            "[pooled-factory-write] hitRate=%.1f%%  poolSize=%d  peak=%d".format(
+                stats.hitRate * 100,
+                stats.currentPoolSize,
+                stats.peakPoolSize,
+            ),
+        )
         assertTrue(stats.hitRate > 0.9, "Pool hit rate %.1f%% — buffers not reused".format(stats.hitRate * 100))
 
         pool.clear()

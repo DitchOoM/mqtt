@@ -1,11 +1,11 @@
 package com.ditchoom.mqtt.client
 
+import com.ditchoom.buffer.flow.Connection
 import com.ditchoom.mqtt.client.ipc.remoteMqttServiceWorkerClient
 import com.ditchoom.mqtt.connection.MqttBroker
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.IConnectionRequest
-import com.ditchoom.buffer.flow.Connection
 
 interface MqttService {
     suspend fun addBroker(

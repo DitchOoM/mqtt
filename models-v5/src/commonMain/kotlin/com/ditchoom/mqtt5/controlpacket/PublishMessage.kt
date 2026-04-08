@@ -2,7 +2,12 @@ package com.ditchoom.mqtt5.controlpacket
 
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
+import com.ditchoom.buffer.codec.annotations.LengthPrefixed
+import com.ditchoom.buffer.codec.annotations.Payload
+import com.ditchoom.buffer.codec.annotations.ProtocolMessage
+import com.ditchoom.buffer.codec.annotations.RemainingBytes
 import com.ditchoom.buffer.utf8Length
+import com.ditchoom.mqtt.codec.annotations.MqttProperties
 import com.ditchoom.mqtt.MalformedPacketException
 import com.ditchoom.mqtt.ProtocolError
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readMqttUtf8StringNotValidatedSized
@@ -29,10 +34,21 @@ import com.ditchoom.mqtt5.controlpacket.properties.TopicAlias
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
 import com.ditchoom.mqtt5.controlpacket.properties.mqttPropertiesSize
 import com.ditchoom.mqtt5.controlpacket.properties.readProperties
-import com.ditchoom.mqtt5.controlpacket.wire.PublishNoIdV5Wire
-import com.ditchoom.mqtt5.controlpacket.wire.PublishNoIdV5WireCodec
-import com.ditchoom.mqtt5.controlpacket.wire.PublishWithIdV5Wire
-import com.ditchoom.mqtt5.controlpacket.wire.PublishWithIdV5WireCodec
+
+@ProtocolMessage
+data class PublishWithIdV5Body<@Payload P>(
+    @LengthPrefixed val topicName: String,
+    val packetId: UShort,
+    @MqttProperties val properties: Collection<MqttProperty>?,
+    @RemainingBytes val payload: P,
+)
+
+@ProtocolMessage
+data class PublishNoIdV5Body<@Payload P>(
+    @LengthPrefixed val topicName: String,
+    @MqttProperties val properties: Collection<MqttProperty>?,
+    @RemainingBytes val payload: P,
+)
 
 /**
  * Creates an MQTT PUBLISH
@@ -98,14 +114,14 @@ data class PublishMessage(
     override fun encodeBody(writeBuffer: WriteBuffer) {
         val topicStr = variable.topicName.toString()
         if (fixed.qos == AT_MOST_ONCE) {
-            PublishNoIdV5WireCodec.encode(
+            PublishNoIdV5BodyCodec.encode(
                 writeBuffer,
-                PublishNoIdV5Wire<ReadBuffer?>(topicStr, variable.properties.props, payload),
+                PublishNoIdV5Body<ReadBuffer?>(topicStr, variable.properties.props, payload),
             ) { buf, p -> if (p != null) buf.write(p) }
         } else {
-            PublishWithIdV5WireCodec.encode(
+            PublishWithIdV5BodyCodec.encode(
                 writeBuffer,
-                PublishWithIdV5Wire<ReadBuffer?>(topicStr, variable.packetIdentifier.toUShort(), variable.properties.props, payload),
+                PublishWithIdV5Body<ReadBuffer?>(topicStr, variable.packetIdentifier.toUShort(), variable.properties.props, payload),
             ) { buf, p -> if (p != null) buf.write(p) }
         }
     }
@@ -694,7 +710,7 @@ data class PublishMessage(
         ): PublishMessage {
             val fixedHeader = FixedHeader.fromByte(byte1)
             if (fixedHeader.qos == AT_MOST_ONCE) {
-                val wire = PublishNoIdV5WireCodec.decode<ReadBuffer?>(buffer) { pr ->
+                val wire = PublishNoIdV5BodyCodec.decode<ReadBuffer?>(buffer) { pr ->
                     if (pr.remaining() > 0) pr.copyToBuffer() else null
                 }
                 val props = VariableHeader.Properties.from(wire.properties)
@@ -705,7 +721,7 @@ data class PublishMessage(
                 )
                 return PublishMessage(fixedHeader, variableHeader, wire.payload)
             } else {
-                val wire = PublishWithIdV5WireCodec.decode<ReadBuffer?>(buffer) { pr ->
+                val wire = PublishWithIdV5BodyCodec.decode<ReadBuffer?>(buffer) { pr ->
                     if (pr.remaining() > 0) pr.copyToBuffer() else null
                 }
                 val props = VariableHeader.Properties.from(wire.properties)

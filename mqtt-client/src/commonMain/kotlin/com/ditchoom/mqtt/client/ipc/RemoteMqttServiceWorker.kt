@@ -8,25 +8,6 @@ class RemoteMqttServiceWorker(
 ) {
     private val clients = HashMap<Byte, HashMap<Int, RemoteMqttClientWorker>>()
 
-    init {
-        service.incomingMessages = { broker, byte1, remaining, buffer ->
-            clients[broker.connectionRequest.protocolVersion.toByte()]
-                ?.get(broker.identifier)
-                ?.observers
-                ?.forEach {
-                    it(true, byte1, remaining, buffer)
-                }
-        }
-        service.sentMessages = { broker, buffer ->
-            clients[broker.connectionRequest.protocolVersion.toByte()]
-                ?.get(broker.identifier)
-                ?.observers
-                ?.forEach {
-                    it(false, 0u, 0, buffer)
-                }
-        }
-    }
-
     private suspend fun findBroker(
         brokerId: Int,
         protocolVersion: Byte,

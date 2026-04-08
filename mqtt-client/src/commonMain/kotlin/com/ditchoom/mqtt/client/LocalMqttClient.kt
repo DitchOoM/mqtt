@@ -1,5 +1,6 @@
 package com.ditchoom.mqtt.client
 
+import com.ditchoom.buffer.flow.Connection
 import com.ditchoom.mqtt.Persistence
 import com.ditchoom.mqtt.connection.MqttBroker
 import com.ditchoom.mqtt.controlpacket.ControlPacket
@@ -14,7 +15,6 @@ import com.ditchoom.mqtt.controlpacket.NO_PACKET_ID
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.TopicName
-import com.ditchoom.buffer.flow.Connection
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -184,12 +184,13 @@ class LocalMqttClient(
         retain: Boolean,
         encoder: PayloadEncoder<P>,
     ): PublishResult {
-        val pub = packetFactory.publish(
-            topicName = TopicName.fromOrThrow(topic),
-            qos = qos,
-            retain = retain,
-            payload = null, // payload encoded via backpatching in serializeToSlice
-        )
+        val pub =
+            packetFactory.publish(
+                topicName = TopicName.fromOrThrow(topic),
+                qos = qos,
+                retain = retain,
+                payload = null, // payload encoded via backpatching in serializeToSlice
+            )
         // TODO: integrate encoder into serializeToSlice path for zero-copy
         return publish(pub)
     }
@@ -217,22 +218,26 @@ class LocalMqttClient(
         val sub = packetFactory.subscribe(filter, maxQos)
         val flow = processor.publishDispatcher.subscribeTyped(filter, decoder, handler)
         val subOp = processor.subscribe(sub)
-        val subAck = scope.async {
-            processor.awaitIncomingPacketId<ISubscribeAcknowledgement>(
-                subOp.packetIdentifier,
-                ISubscribeAcknowledgement.CONTROL_PACKET_VALUE,
-            )
-        }
+        val subAck =
+            scope.async {
+                processor.awaitIncomingPacketId<ISubscribeAcknowledgement>(
+                    subOp.packetIdentifier,
+                    ISubscribeAcknowledgement.CONTROL_PACKET_VALUE,
+                )
+            }
         return object : MqttSubscription<P> {
             override val topicFilter: String = topicFilter
             override val suback = subAck
+
             override fun receive() = flow
-            override suspend fun unsubscribe() = scope.async {
-                val unsub = packetFactory.unsubscribe(filter)
-                val op = this@LocalMqttClient.unsubscribe(unsub)
-                processor.publishDispatcher.unsubscribe(filter)
-                op.unsubAck.await()
-            }
+
+            override suspend fun unsubscribe() =
+                scope.async {
+                    val unsub = packetFactory.unsubscribe(filter)
+                    val op = this@LocalMqttClient.unsubscribe(unsub)
+                    processor.publishDispatcher.unsubscribe(filter)
+                    op.unsubAck.await()
+                }
         }
     }
 

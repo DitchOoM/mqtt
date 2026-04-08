@@ -8,6 +8,7 @@ import com.ditchoom.buffer.withPooling
 import com.ditchoom.mqtt.InMemoryPersistence
 import com.ditchoom.mqtt.client.LocalMqttClient
 import com.ditchoom.mqtt.client.SubscriptionHandler
+import com.ditchoom.mqtt.connection.MqttBroker
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
@@ -43,31 +44,35 @@ import kotlin.time.TimeSource
  *
  */
 class EndToEndBenchmark {
-
     private val host = "localhost"
     private val port = 1883
     private val messageCount = 200
 
-    private fun connectionOptions() = MqttConnectionOptions.SocketConnection(
-        host, port, tlsEnabled = false, connectionTimeout = 10.seconds, readTimeout = 30.seconds,
-    )
+    private fun connectionOptions() =
+        MqttConnectionOptions.SocketConnection(
+            host,
+            port,
+            tlsEnabled = false,
+            connectionTimeout = 10.seconds,
+            readTimeout = 30.seconds,
+        )
 
-    private fun connectionRequest() = ConnectionRequest(
-        variableHeader = ConnectionRequest.VariableHeader(cleanSession = true, keepAliveSeconds = 60),
-        payload = ConnectionRequest.Payload(clientId = "bench-${Random.nextUInt()}"),
-    )
+    private fun connectionRequest() =
+        ConnectionRequest(
+            variableHeader = ConnectionRequest.VariableHeader(cleanSession = true, keepAliveSeconds = 60),
+            payload = ConnectionRequest.Payload(clientId = "bench-${Random.nextUInt()}"),
+        )
 
     private suspend fun connectWithRetry(
         scope: CoroutineScope,
-        broker: com.ditchoom.mqtt.connection.MqttBroker,
+        broker: MqttBroker,
         persistence: InMemoryPersistence,
-        factory: BufferFactory,
         maxAttempts: Int = 3,
     ): LocalMqttClient {
         var lastException: Exception? = null
         for (attempt in 1..maxAttempts) {
             try {
-                return LocalMqttClient.connectOnce(scope, broker, persistence, factory)
+                return LocalMqttClient.start(scope, broker, persistence, createConnectFactory(broker))
             } catch (e: Exception) {
                 lastException = e
                 if (attempt < maxAttempts) {
@@ -84,60 +89,64 @@ class EndToEndBenchmark {
         qos: QualityOfService,
         payloadSize: Int,
         count: Int = messageCount,
-    ): String = runBlocking(Dispatchers.Default) {
-        // Pause between tests to let the broker release prior connections
-        delay(1500)
-        val topicStr = "bench/${Random.nextUInt()}"
-        val topic = TopicName.fromOrThrow(topicStr)
-        val filter = TopicFilter.fromOrThrow(topicStr)
-        val persistence = InMemoryPersistence()
-        val connReq = connectionRequest()
-        val broker = persistence.addBroker(listOf(connectionOptions()), connReq)
-        val scope = CoroutineScope(Dispatchers.Default)
-        val client = connectWithRetry(scope, broker, persistence, factory)
+    ): String =
+        runBlocking(Dispatchers.Default) {
+            // Pause between tests to let the broker release prior connections
+            delay(1500)
+            val topicStr = "bench/${Random.nextUInt()}"
+            val topic = TopicName.fromOrThrow(topicStr)
+            val filter = TopicFilter.fromOrThrow(topicStr)
+            val persistence = InMemoryPersistence()
+            val connReq = connectionRequest()
+            val broker = persistence.addBroker(listOf(connectionOptions()), connReq)
+            val scope = CoroutineScope(Dispatchers.Default)
+            val client = connectWithRetry(scope, broker, persistence)
 
-        try {
-            val received = AtomicInteger(0)
-            val published = AtomicInteger(0)
-            val allReceived = CompletableDeferred<Unit>()
-            val handler = SubscriptionHandler.Blocking { _ ->
-                if (received.incrementAndGet() >= count) {
-                    allReceived.complete(Unit)
+            try {
+                val received = AtomicInteger(0)
+                val published = AtomicInteger(0)
+                val allReceived = CompletableDeferred<Unit>()
+                val handler =
+                    SubscriptionHandler.Blocking { _ ->
+                        if (received.incrementAndGet() >= count) {
+                            allReceived.complete(Unit)
+                        }
+                    }
+                val sub = connReq.controlPacketFactory.subscribe(filter, qos)
+                client.subscribe(sub, handler).subAck.await()
+
+                val payloadBytes = ByteArray(payloadSize) { (it % 256).toByte() }
+
+                val mark = TimeSource.Monotonic.markNow()
+                for (i in 0 until count) {
+                    try {
+                        client.publish(
+                            connReq.controlPacketFactory.publish(
+                                topicName = topic,
+                                qos = qos,
+                                payload = BufferFactory.Default.wrap(payloadBytes),
+                            ),
+                        )
+                        published.incrementAndGet()
+                    } catch (_: Exception) {
+                        // Connection lost — stop publishing
+                        break
+                    }
                 }
-            }
-            val sub = connReq.controlPacketFactory.subscribe(filter, qos)
-            client.subscribe(sub, handler).subAck.await()
-
-            val payloadBytes = ByteArray(payloadSize) { (it % 256).toByte() }
-
-            val mark = TimeSource.Monotonic.markNow()
-            for (i in 0 until count) {
-                try {
-                    client.publish(
-                        connReq.controlPacketFactory.publish(
-                            topicName = topic, qos = qos, payload = BufferFactory.Default.wrap(payloadBytes),
-                        ),
-                    )
-                    published.incrementAndGet()
-                } catch (_: Exception) {
-                    // Connection lost — stop publishing
-                    break
+                val actualCount = published.get()
+                if (actualCount < count) {
+                    System.err.println("$label: Only published $actualCount/$count before connection loss")
                 }
-            }
-            val actualCount = published.get()
-            if (actualCount < count) {
-                System.err.println("$label: Only published $actualCount/$count before connection loss")
-            }
-            withTimeout(60.seconds) { allReceived.await() }
-            val elapsedMs = mark.elapsedNow().inWholeMilliseconds
-            val opsPerSec = if (elapsedMs > 0) count.toLong() * 1000 / elapsedMs else count.toLong()
-            val mbPerSec = if (elapsedMs > 0) count.toLong() * payloadSize / 1024.0 / 1024.0 * 1000 / elapsedMs else 0.0
+                withTimeout(60.seconds) { allReceived.await() }
+                val elapsedMs = mark.elapsedNow().inWholeMilliseconds
+                val opsPerSec = if (elapsedMs > 0) count.toLong() * 1000 / elapsedMs else count.toLong()
+                val mbPerSec = if (elapsedMs > 0) count.toLong() * payloadSize / 1024.0 / 1024.0 * 1000 / elapsedMs else 0.0
 
-            "$label: $count msgs in ${elapsedMs}ms = $opsPerSec msgs/s (${"%.1f".format(mbPerSec)} MB/s)"
-        } finally {
-            client.shutdown()
+                "$label: $count msgs in ${elapsedMs}ms = $opsPerSec msgs/s (${"%.1f".format(mbPerSec)} MB/s)"
+            } finally {
+                client.shutdown()
+            }
         }
-    }
 
     @Test
     fun defaultQos0_64B() {
@@ -255,14 +264,30 @@ class EndToEndBenchmark {
     @Test
     fun pooledDirectQos1_1MB() {
         val pool = BufferPool()
-        println(runSingle("Pooled-direct-QoS1-1MB", BufferFactory.Default.withPooling(pool), QualityOfService.AT_LEAST_ONCE, 1_048_576, count = 50))
+        println(
+            runSingle(
+                "Pooled-direct-QoS1-1MB",
+                BufferFactory.Default.withPooling(pool),
+                QualityOfService.AT_LEAST_ONCE,
+                1_048_576,
+                count = 50,
+            ),
+        )
         pool.clear()
     }
 
     @Test
     fun pooledHeapQos1_1MB() {
         val pool = BufferPool(factory = BufferFactory.managed())
-        println(runSingle("Pooled-heap-QoS1-1MB", BufferFactory.managed().withPooling(pool), QualityOfService.AT_LEAST_ONCE, 1_048_576, count = 50))
+        println(
+            runSingle(
+                "Pooled-heap-QoS1-1MB",
+                BufferFactory.managed().withPooling(pool),
+                QualityOfService.AT_LEAST_ONCE,
+                1_048_576,
+                count = 50,
+            ),
+        )
         pool.clear()
     }
 }

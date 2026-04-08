@@ -32,13 +32,31 @@ sealed interface MqttConnectionOptions {
     ): MqttConnectionOptions =
         if (isWebsocket) {
             WebSocketConnectionOptions(
-                host, port, tlsEnabled, tlsVerifyCerts, tlsVerifyHostname, tlsAllowExpired, tlsAllowSelfSigned,
-                connectionTimeout, readTimeout, writeTimeout, websocketEndpoint, protocols,
+                host,
+                port,
+                tlsEnabled,
+                tlsVerifyCerts,
+                tlsVerifyHostname,
+                tlsAllowExpired,
+                tlsAllowSelfSigned,
+                connectionTimeout,
+                readTimeout,
+                writeTimeout,
+                websocketEndpoint,
+                protocols,
             )
         } else {
             SocketConnection(
-                host, port, tlsEnabled, tlsVerifyCerts, tlsVerifyHostname, tlsAllowExpired, tlsAllowSelfSigned,
-                connectionTimeout, readTimeout, writeTimeout,
+                host,
+                port,
+                tlsEnabled,
+                tlsVerifyCerts,
+                tlsVerifyHostname,
+                tlsAllowExpired,
+                tlsAllowSelfSigned,
+                connectionTimeout,
+                readTimeout,
+                writeTimeout,
             )
         }
 

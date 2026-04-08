@@ -6,6 +6,7 @@ import com.ditchoom.mqtt.ProtocolError
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.writeVariableByteInteger
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.PACKET_IDENTIFIER_NOT_FOUND
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.RECEIVE_MAXIMUM_EXCEEDED
+import com.ditchoom.mqtt.controlpacket.format.ReasonCode.SUCCESS
 import com.ditchoom.mqtt5.controlpacket.properties.ReasonString
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
 import com.ditchoom.mqtt5.controlpacket.properties.encodedSize
@@ -138,5 +139,35 @@ class PublishCompleteTests {
         assertEquals(key.toString(), "key")
         assertEquals(value.toString(), "value")
         assertEquals(request.toString(), requestRead.toString())
+    }
+
+    // ── Decode from raw bytes ───────────────────────────────────────────────
+
+    @Test
+    fun pubcompDecodeRemainingLength2FromRawBytes() {
+        // 70 02 00 0A → packetId=10, implicit SUCCESS
+        val buffer = BufferFactory.Default.allocate(4)
+        buffer.writeByte(0x70.toByte())
+        buffer.writeByte(0x02.toByte())
+        buffer.writeUShort(10u)
+        buffer.resetForRead()
+        val pubcomp = ControlPacketV5.from(buffer) as PublishComplete
+        assertEquals(10, pubcomp.variable.packetIdentifier)
+        assertEquals(SUCCESS, pubcomp.variable.reasonCode)
+    }
+
+    @Test
+    fun pubcompDecodeRemainingLength4FromRawBytes() {
+        // 70 04 00 0A 00 00 → packetId=10, SUCCESS, propLen=0
+        val buffer = BufferFactory.Default.allocate(6)
+        buffer.writeByte(0x70.toByte())
+        buffer.writeByte(0x04.toByte())
+        buffer.writeUShort(10u)
+        buffer.writeUByte(0x00u)
+        buffer.writeByte(0x00)
+        buffer.resetForRead()
+        val pubcomp = ControlPacketV5.from(buffer) as PublishComplete
+        assertEquals(10, pubcomp.variable.packetIdentifier)
+        assertEquals(SUCCESS, pubcomp.variable.reasonCode)
     }
 }

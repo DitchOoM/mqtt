@@ -169,4 +169,168 @@ class VariableByteIntegerTests {
             buffer.readVariableByteInteger()
         }
     }
+
+    // ── MQTT 5.0 Section 1.5.5: VBI raw byte verification ──────────────────
+
+    @Test
+    fun vbiEncodeRawBytes0() {
+        val buffer = BufferFactory.Default.allocate(1)
+        buffer.writeVariableByteInteger(0)
+        buffer.resetForRead()
+        assertEquals(0x00.toByte(), buffer.readByte())
+        assertEquals(0, buffer.remaining())
+    }
+
+    @Test
+    fun vbiEncodeRawBytes127() {
+        val buffer = BufferFactory.Default.allocate(1)
+        buffer.writeVariableByteInteger(127)
+        buffer.resetForRead()
+        assertEquals(0x7F.toByte(), buffer.readByte())
+        assertEquals(0, buffer.remaining())
+    }
+
+    @Test
+    fun vbiEncodeRawBytes128() {
+        val buffer = BufferFactory.Default.allocate(2)
+        buffer.writeVariableByteInteger(128)
+        buffer.resetForRead()
+        assertEquals(0x80.toByte(), buffer.readByte())
+        assertEquals(0x01.toByte(), buffer.readByte())
+        assertEquals(0, buffer.remaining())
+    }
+
+    @Test
+    fun vbiEncodeRawBytes16383() {
+        val buffer = BufferFactory.Default.allocate(2)
+        buffer.writeVariableByteInteger(16383)
+        buffer.resetForRead()
+        assertEquals(0xFF.toByte(), buffer.readByte())
+        assertEquals(0x7F.toByte(), buffer.readByte())
+        assertEquals(0, buffer.remaining())
+    }
+
+    @Test
+    fun vbiEncodeRawBytes16384() {
+        val buffer = BufferFactory.Default.allocate(3)
+        buffer.writeVariableByteInteger(16384)
+        buffer.resetForRead()
+        assertEquals(0x80.toByte(), buffer.readByte())
+        assertEquals(0x80.toByte(), buffer.readByte())
+        assertEquals(0x01.toByte(), buffer.readByte())
+        assertEquals(0, buffer.remaining())
+    }
+
+    @Test
+    fun vbiEncodeRawBytes2097151() {
+        val buffer = BufferFactory.Default.allocate(3)
+        buffer.writeVariableByteInteger(2097151)
+        buffer.resetForRead()
+        assertEquals(0xFF.toByte(), buffer.readByte())
+        assertEquals(0xFF.toByte(), buffer.readByte())
+        assertEquals(0x7F.toByte(), buffer.readByte())
+        assertEquals(0, buffer.remaining())
+    }
+
+    @Test
+    fun vbiEncodeRawBytes2097152() {
+        val buffer = BufferFactory.Default.allocate(4)
+        buffer.writeVariableByteInteger(2097152)
+        buffer.resetForRead()
+        assertEquals(0x80.toByte(), buffer.readByte())
+        assertEquals(0x80.toByte(), buffer.readByte())
+        assertEquals(0x80.toByte(), buffer.readByte())
+        assertEquals(0x01.toByte(), buffer.readByte())
+        assertEquals(0, buffer.remaining())
+    }
+
+    @Test
+    fun vbiEncodeRawBytes268435455() {
+        val buffer = BufferFactory.Default.allocate(4)
+        buffer.writeVariableByteInteger(268435455)
+        buffer.resetForRead()
+        assertEquals(0xFF.toByte(), buffer.readByte())
+        assertEquals(0xFF.toByte(), buffer.readByte())
+        assertEquals(0xFF.toByte(), buffer.readByte())
+        assertEquals(0x7F.toByte(), buffer.readByte())
+        assertEquals(0, buffer.remaining())
+    }
+
+    // ── VBI decode from raw bytes ───────────────────────────────────────────
+
+    @Test
+    fun vbiDecodeRawBytes0x00yields0() {
+        val buffer = BufferFactory.Default.allocate(1)
+        buffer.writeByte(0x00.toByte())
+        buffer.resetForRead()
+        assertEquals(0, buffer.readVariableByteInteger())
+    }
+
+    @Test
+    fun vbiDecodeRawBytes0x7Fyields127() {
+        val buffer = BufferFactory.Default.allocate(1)
+        buffer.writeByte(0x7F.toByte())
+        buffer.resetForRead()
+        assertEquals(127, buffer.readVariableByteInteger())
+    }
+
+    @Test
+    fun vbiDecodeRawBytes0x800x01yields128() {
+        val buffer = BufferFactory.Default.allocate(2)
+        buffer.writeByte(0x80.toByte())
+        buffer.writeByte(0x01.toByte())
+        buffer.resetForRead()
+        assertEquals(128, buffer.readVariableByteInteger())
+    }
+
+    @Test
+    fun vbiDecodeRawBytes0xFF0x7Fyields16383() {
+        val buffer = BufferFactory.Default.allocate(2)
+        buffer.writeByte(0xFF.toByte())
+        buffer.writeByte(0x7F.toByte())
+        buffer.resetForRead()
+        assertEquals(16383, buffer.readVariableByteInteger())
+    }
+
+    @Test
+    fun vbiDecodeRawBytes0x800x800x01yields16384() {
+        val buffer = BufferFactory.Default.allocate(3)
+        buffer.writeByte(0x80.toByte())
+        buffer.writeByte(0x80.toByte())
+        buffer.writeByte(0x01.toByte())
+        buffer.resetForRead()
+        assertEquals(16384, buffer.readVariableByteInteger())
+    }
+
+    @Test
+    fun vbiDecodeRawBytes0xFF0xFF0x7Fyields2097151() {
+        val buffer = BufferFactory.Default.allocate(3)
+        buffer.writeByte(0xFF.toByte())
+        buffer.writeByte(0xFF.toByte())
+        buffer.writeByte(0x7F.toByte())
+        buffer.resetForRead()
+        assertEquals(2097151, buffer.readVariableByteInteger())
+    }
+
+    @Test
+    fun vbiDecodeRawBytes0x800x800x800x01yields2097152() {
+        val buffer = BufferFactory.Default.allocate(4)
+        buffer.writeByte(0x80.toByte())
+        buffer.writeByte(0x80.toByte())
+        buffer.writeByte(0x80.toByte())
+        buffer.writeByte(0x01.toByte())
+        buffer.resetForRead()
+        assertEquals(2097152, buffer.readVariableByteInteger())
+    }
+
+    @Test
+    fun vbiDecodeRawBytes0xFF0xFF0xFF0x7Fyields268435455() {
+        val buffer = BufferFactory.Default.allocate(4)
+        buffer.writeByte(0xFF.toByte())
+        buffer.writeByte(0xFF.toByte())
+        buffer.writeByte(0xFF.toByte())
+        buffer.writeByte(0x7F.toByte())
+        buffer.resetForRead()
+        assertEquals(268435455, buffer.readVariableByteInteger())
+    }
 }

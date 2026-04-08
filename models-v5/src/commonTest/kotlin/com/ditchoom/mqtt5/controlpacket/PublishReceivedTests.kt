@@ -316,4 +316,34 @@ class PublishReceivedTests {
         assertEquals(key.toString(), "key")
         assertEquals(value.toString(), "value")
     }
+
+    // ── Decode from raw bytes ───────────────────────────────────────────────
+
+    @Test
+    fun pubrecDecodeRemainingLength2FromRawBytes() {
+        // 50 02 00 0A → packetId=10, implicit SUCCESS
+        val buffer = BufferFactory.Default.allocate(4)
+        buffer.writeByte(0x50.toByte())
+        buffer.writeByte(0x02.toByte())
+        buffer.writeUShort(10u)
+        buffer.resetForRead()
+        val pubrec = ControlPacketV5.from(buffer) as PublishReceived
+        assertEquals(10, pubrec.variable.packetIdentifier)
+        assertEquals(SUCCESS, pubrec.variable.reasonCode)
+    }
+
+    @Test
+    fun pubrecDecodeRemainingLength4FromRawBytes() {
+        // 50 04 00 0A 00 00 → packetId=10, SUCCESS, propLen=0
+        val buffer = BufferFactory.Default.allocate(6)
+        buffer.writeByte(0x50.toByte())
+        buffer.writeByte(0x04.toByte())
+        buffer.writeUShort(10u)
+        buffer.writeUByte(0x00u) // SUCCESS
+        buffer.writeByte(0x00)   // property length = 0
+        buffer.resetForRead()
+        val pubrec = ControlPacketV5.from(buffer) as PublishReceived
+        assertEquals(10, pubrec.variable.packetIdentifier)
+        assertEquals(SUCCESS, pubrec.variable.reasonCode)
+    }
 }

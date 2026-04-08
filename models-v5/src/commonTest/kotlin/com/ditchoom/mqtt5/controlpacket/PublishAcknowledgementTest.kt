@@ -11,6 +11,7 @@ import com.ditchoom.mqtt.controlpacket.format.ReasonCode.PACKET_IDENTIFIER_IN_US
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.PAYLOAD_FORMAT_INVALID
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.QUOTA_EXCEEDED
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.RECEIVE_MAXIMUM_EXCEEDED
+import com.ditchoom.mqtt.controlpacket.format.ReasonCode.SUCCESS
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.TOPIC_NAME_INVALID
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.UNSPECIFIED_ERROR
 import com.ditchoom.mqtt5.controlpacket.properties.ReasonString
@@ -226,5 +227,36 @@ class PublishAcknowledgementTest {
                 .first()
         assertEquals(key.toString(), "key")
         assertEquals(value.toString(), "value")
+    }
+
+    // ── Decode from raw bytes ───────────────────────────────────────────────
+
+    @Test
+    fun pubackDecodeRemainingLength2FromRawBytes() {
+        // 40 02 00 0A → packetId=10, implicit SUCCESS, no properties
+        val buffer = BufferFactory.Default.allocate(4)
+        buffer.writeByte(0x40.toByte())
+        buffer.writeByte(0x02.toByte())
+        buffer.writeUShort(10u)
+        buffer.resetForRead()
+        val puback = ControlPacketV5.from(buffer) as PublishAcknowledgment
+        assertEquals(10, puback.variable.packetIdentifier)
+        assertEquals(SUCCESS, puback.variable.reasonCode)
+        assertEquals(null, puback.variable.properties.reasonString)
+    }
+
+    @Test
+    fun pubackDecodeRemainingLength4FromRawBytes() {
+        // 40 04 00 0A 00 00 → packetId=10, reasonCode=SUCCESS, propLen=0
+        val buffer = BufferFactory.Default.allocate(6)
+        buffer.writeByte(0x40.toByte())
+        buffer.writeByte(0x04.toByte())
+        buffer.writeUShort(10u)
+        buffer.writeUByte(0x00u) // SUCCESS
+        buffer.writeByte(0x00) // property length = 0
+        buffer.resetForRead()
+        val puback = ControlPacketV5.from(buffer) as PublishAcknowledgment
+        assertEquals(10, puback.variable.packetIdentifier)
+        assertEquals(SUCCESS, puback.variable.reasonCode)
     }
 }

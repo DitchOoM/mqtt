@@ -147,4 +147,34 @@ class PublishReleaseTests {
         assertEquals(key.toString(), "key")
         assertEquals(value.toString(), "value")
     }
+
+    // ── Decode from raw bytes ───────────────────────────────────────────────
+
+    @Test
+    fun pubrelDecodeRemainingLength2FromRawBytes() {
+        // 62 02 00 0A → packetId=10, implicit SUCCESS (PUBREL flags=0010 → 0x62)
+        val buffer = BufferFactory.Default.allocate(4)
+        buffer.writeByte(0x62.toByte())
+        buffer.writeByte(0x02.toByte())
+        buffer.writeUShort(10u)
+        buffer.resetForRead()
+        val pubrel = ControlPacketV5.from(buffer) as PublishRelease
+        assertEquals(10, pubrel.variable.packetIdentifier)
+        assertEquals(ReasonCode.SUCCESS, pubrel.variable.reasonCode)
+    }
+
+    @Test
+    fun pubrelDecodeRemainingLength4FromRawBytes() {
+        // 62 04 00 0A 00 00 → packetId=10, SUCCESS, propLen=0
+        val buffer = BufferFactory.Default.allocate(6)
+        buffer.writeByte(0x62.toByte())
+        buffer.writeByte(0x04.toByte())
+        buffer.writeUShort(10u)
+        buffer.writeUByte(0x00u)
+        buffer.writeByte(0x00)
+        buffer.resetForRead()
+        val pubrel = ControlPacketV5.from(buffer) as PublishRelease
+        assertEquals(10, pubrel.variable.packetIdentifier)
+        assertEquals(ReasonCode.SUCCESS, pubrel.variable.reasonCode)
+    }
 }

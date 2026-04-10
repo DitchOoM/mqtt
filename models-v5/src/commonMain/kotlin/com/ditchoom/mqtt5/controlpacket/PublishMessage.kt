@@ -1,6 +1,7 @@
 package com.ditchoom.mqtt5.controlpacket
 
 import com.ditchoom.buffer.BufferFactory
+import com.ditchoom.buffer.BufferOverflowException
 import com.ditchoom.buffer.PlatformBuffer
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
@@ -144,11 +145,17 @@ data class PublishMessage<P>(
         if (payload == null || payload is ReadBuffer) {
             return super<ControlPacketV5>.serialize(factory)
         }
-        // Backpatch path: allocate based on payloadSize hint
+        // Backpatch path: allocate based on payloadSize hint, grow if needed
         val headerSize = variable.size() + MAX_FIXED_HEADER_SIZE
         val estimatedPayloadSize = payloadSize?.invoke(payload) ?: DEFAULT_PAYLOAD_HEADROOM
-        val buf = factory.allocate(headerSize + estimatedPayloadSize)
-        serialize(buf)
+        var buf = factory.allocate(headerSize + estimatedPayloadSize)
+        try {
+            serialize(buf)
+        } catch (_: BufferOverflowException) {
+            // payloadSize underestimated — grow and retry from the start
+            buf = factory.allocate((headerSize + estimatedPayloadSize) * 2)
+            serialize(buf)
+        }
         val endPos = buf.position()
         val bodySize = endPos - MAX_FIXED_HEADER_SIZE
         val vbiSize = variableByteSize(bodySize).toInt()

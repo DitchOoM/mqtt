@@ -806,6 +806,22 @@ class SpecByteTests {
     }
 
     @Test
+    fun publishTypedPayloadGrowsOnUnderEstimate() {
+        // payloadSize underestimates (1 byte), actual payload is 4 bytes → triggers grow
+        val buf = PublishMessage<Int>(
+            fixed = PublishMessage.FixedHeader(qos = AT_MOST_ONCE),
+            variable = PublishMessage.VariableHeader(TopicName.fromOrThrow("a")),
+            payload = 42,
+            encodePayload = { buf, v -> buf.writeInt(v) },
+            payloadSize = { 1 }, // intentionally too small
+        ).serialize(BufferFactory.Default)
+        // Should still produce correct bytes despite underestimate
+        assertEquals(9, buf.remaining())
+        assertEquals(0x30u, buf.readUnsignedByte()) // type=3, QoS 0
+        assertEquals(0x07u, buf.readUnsignedByte()) // RL=7
+    }
+
+    @Test
     fun publishTypedPayloadRemainingLengthUsesPayloadSize() {
         val pub = PublishMessage<Int>(
             fixed = PublishMessage.FixedHeader(qos = AT_MOST_ONCE),

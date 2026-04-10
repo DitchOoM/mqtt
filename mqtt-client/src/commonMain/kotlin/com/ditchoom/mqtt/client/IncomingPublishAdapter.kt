@@ -8,7 +8,7 @@ import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicName
 
 /**
- * Adapts an [IPublishMessage] to [IncomingPublish] or [IncomingPublishV5].
+ * Adapts an [IPublishMessage]<*> to [IncomingPublish] or [IncomingPublishV5].
  *
  * Uses [from] factory to produce the correct subtype based on the concrete
  * publish message class (v4 vs v5).
@@ -19,7 +19,7 @@ internal class IncomingPublishV4Adapter(
     override val dup: Boolean,
     override val retain: Boolean,
     override val payload: ReadBuffer?,
-) : IncomingPublish
+) : IncomingPublish<ReadBuffer?>
 
 internal class IncomingPublishV5Adapter(
     override val topic: TopicName,
@@ -35,7 +35,7 @@ internal class IncomingPublishV5Adapter(
     override val userProperty: List<Pair<String, String>>,
     override val subscriptionIdentifier: Set<Long>,
     override val contentType: String?,
-) : IncomingPublishV5
+) : IncomingPublishV5<ReadBuffer?>
 
 /**
  * Wraps an [IncomingPublish] with a [ScopedReadBuffer] payload.
@@ -43,18 +43,18 @@ internal class IncomingPublishV5Adapter(
  * the wrapper also implements [IncomingPublishV5].
  */
 internal fun ScopedIncomingPublish(
-    delegate: IncomingPublish,
+    delegate: IncomingPublish<ReadBuffer?>,
     scopedPayload: ScopedReadBuffer,
-): IncomingPublish =
+): IncomingPublish<ReadBuffer?> =
     when (delegate) {
         is IncomingPublishV5 -> ScopedIncomingPublishV5(delegate, scopedPayload)
         else -> ScopedIncomingPublishV4(delegate, scopedPayload)
     }
 
 private class ScopedIncomingPublishV4(
-    private val delegate: IncomingPublish,
+    private val delegate: IncomingPublish<ReadBuffer?>,
     override val payload: ReadBuffer?,
-) : IncomingPublish {
+) : IncomingPublish<ReadBuffer?> {
     override val topic: TopicName get() = delegate.topic
     override val qos: QualityOfService get() = delegate.qos
     override val dup: Boolean get() = delegate.dup
@@ -62,9 +62,9 @@ private class ScopedIncomingPublishV4(
 }
 
 private class ScopedIncomingPublishV5(
-    private val delegate: IncomingPublishV5,
+    private val delegate: IncomingPublishV5<ReadBuffer?>,
     override val payload: ReadBuffer?,
-) : IncomingPublishV5 {
+) : IncomingPublishV5<ReadBuffer?> {
     override val topic: TopicName get() = delegate.topic
     override val qos: QualityOfService get() = delegate.qos
     override val dup: Boolean get() = delegate.dup
@@ -80,14 +80,14 @@ private class ScopedIncomingPublishV5(
 }
 
 /**
- * Creates an [IncomingPublish] (or [IncomingPublishV5]) from an [IPublishMessage].
+ * Creates an [IncomingPublish] (or [IncomingPublishV5]) from an [IPublishMessage]<*>.
  *
  * Extracts dup/retain from the concrete V4 or V5 FixedHeader.
  * Returns [IncomingPublishV5] for V5 messages so callers can smart-cast.
  */
-internal fun IPublishMessage.toIncomingPublish(): IncomingPublish {
+internal fun IPublishMessage<*>.toIncomingPublish(): IncomingPublish<ReadBuffer?> {
     // Try V5 first (more specific)
-    val v5 = this as? com.ditchoom.mqtt5.controlpacket.PublishMessage
+    val v5 = this as? com.ditchoom.mqtt5.controlpacket.PublishMessage<*>
     if (v5 != null) {
         val props = v5.variable.properties
         return IncomingPublishV5Adapter(
@@ -95,7 +95,7 @@ internal fun IPublishMessage.toIncomingPublish(): IncomingPublish {
             qos = v5.qualityOfService,
             dup = v5.fixed.dup,
             retain = v5.fixed.retain,
-            payload = v5.payload,
+            payload = v5.payload as? ReadBuffer,
             payloadFormatIndicator = props.payloadFormatIndicator,
             messageExpiryInterval = props.messageExpiryInterval,
             topicAlias = props.topicAlias,
@@ -108,14 +108,14 @@ internal fun IPublishMessage.toIncomingPublish(): IncomingPublish {
     }
 
     // V4
-    val v4 = this as? com.ditchoom.mqtt3.controlpacket.PublishMessage
+    val v4 = this as? com.ditchoom.mqtt3.controlpacket.PublishMessage<*>
     if (v4 != null) {
         return IncomingPublishV4Adapter(
             topic = v4.topic,
             qos = v4.qualityOfService,
             dup = v4.fixed.dup,
             retain = v4.fixed.retain,
-            payload = v4.payload,
+            payload = v4.payload as? ReadBuffer,
         )
     }
 
@@ -125,6 +125,48 @@ internal fun IPublishMessage.toIncomingPublish(): IncomingPublish {
         qos = qualityOfService,
         dup = false,
         retain = false,
-        payload = payload,
+        payload = payload as? ReadBuffer,
     )
 }
+
+/**
+ * Wraps an [IncomingPublish]<[ReadBuffer]?> with a decoded payload of type [P],
+ * preserving all message metadata (topic, qos, dup, retain, v5 properties).
+ */
+internal class DecodedIncomingPublish<out P>(
+    private val delegate: IncomingPublish<ReadBuffer?>,
+    override val payload: P,
+) : IncomingPublish<P> {
+    override val topic: TopicName get() = delegate.topic
+    override val qos: QualityOfService get() = delegate.qos
+    override val dup: Boolean get() = delegate.dup
+    override val retain: Boolean get() = delegate.retain
+}
+
+internal class DecodedIncomingPublishV5<out P>(
+    private val delegate: IncomingPublishV5<ReadBuffer?>,
+    override val payload: P,
+) : IncomingPublishV5<P> {
+    override val topic: TopicName get() = delegate.topic
+    override val qos: QualityOfService get() = delegate.qos
+    override val dup: Boolean get() = delegate.dup
+    override val retain: Boolean get() = delegate.retain
+    override val payloadFormatIndicator: Boolean get() = delegate.payloadFormatIndicator
+    override val messageExpiryInterval: Long? get() = delegate.messageExpiryInterval
+    override val topicAlias: Int? get() = delegate.topicAlias
+    override val responseTopic: TopicName? get() = delegate.responseTopic
+    override val correlationData: ReadBuffer? get() = delegate.correlationData
+    override val userProperty: List<Pair<String, String>> get() = delegate.userProperty
+    override val subscriptionIdentifier: Set<Long> get() = delegate.subscriptionIdentifier
+    override val contentType: String? get() = delegate.contentType
+}
+
+/**
+ * Wraps a raw [IncomingPublish]<[ReadBuffer]?> with a decoded payload,
+ * preserving V5 smart-cast.
+ */
+internal fun <P> IncomingPublish<ReadBuffer?>.withDecodedPayload(decoded: P): IncomingPublish<P> =
+    when (this) {
+        is IncomingPublishV5 -> DecodedIncomingPublishV5(this, decoded)
+        else -> DecodedIncomingPublish(this, decoded)
+    }

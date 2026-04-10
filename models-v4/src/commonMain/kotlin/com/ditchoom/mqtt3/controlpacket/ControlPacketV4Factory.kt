@@ -1,6 +1,7 @@
 package com.ditchoom.mqtt3.controlpacket
 
 import com.ditchoom.buffer.ReadBuffer
+import com.ditchoom.buffer.WriteBuffer
 import com.ditchoom.mqtt.Persistence
 import com.ditchoom.mqtt.controlpacket.ControlPacketFactory
 import com.ditchoom.mqtt.controlpacket.IPublishMessage
@@ -47,10 +48,24 @@ object ControlPacketV4Factory : ControlPacketFactory {
         userProperty: List<Pair<String, String>>,
         subscriptionIdentifier: Set<Long>,
         contentType: String?,
-    ): IPublishMessage {
+    ): IPublishMessage<ReadBuffer?> {
         val fixedHeader = PublishMessage.FixedHeader(dup, qos, retain)
         val variableHeader = PublishMessage.VariableHeader(topicName, NO_PACKET_ID)
         return PublishMessage(fixedHeader, variableHeader, payload)
+    }
+
+    override fun <P> publish(
+        dup: Boolean,
+        qos: QualityOfService,
+        retain: Boolean,
+        topicName: TopicName,
+        payload: P,
+        encodePayload: (WriteBuffer, P) -> Unit,
+        payloadSize: (P) -> Int,
+    ): IPublishMessage<P> {
+        val fixedHeader = PublishMessage.FixedHeader(dup, qos, retain)
+        val variableHeader = PublishMessage.VariableHeader(topicName, NO_PACKET_ID)
+        return PublishMessage(fixedHeader, variableHeader, payload, encodePayload, payloadSize)
     }
 
     override fun subscribe(

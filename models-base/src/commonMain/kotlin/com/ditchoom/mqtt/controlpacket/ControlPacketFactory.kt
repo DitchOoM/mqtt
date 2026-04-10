@@ -1,6 +1,7 @@
 package com.ditchoom.mqtt.controlpacket
 
 import com.ditchoom.buffer.ReadBuffer
+import com.ditchoom.buffer.WriteBuffer
 import com.ditchoom.mqtt.Persistence
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readVariableByteInteger
 import com.ditchoom.mqtt.controlpacket.ISubscription.RetainHandling
@@ -56,7 +57,17 @@ interface ControlPacketFactory {
         userProperty: List<Pair<String, String>> = emptyList(),
         subscriptionIdentifier: Set<Long> = emptySet(),
         contentType: String? = null,
-    ): IPublishMessage
+    ): IPublishMessage<ReadBuffer?>
+
+    fun <P> publish(
+        dup: Boolean = false,
+        qos: QualityOfService = QualityOfService.AT_MOST_ONCE,
+        retain: Boolean = false,
+        topicName: TopicName,
+        payload: P,
+        encodePayload: (WriteBuffer, P) -> Unit,
+        payloadSize: (P) -> Int,
+    ): IPublishMessage<P>
 
     fun unsubscribe(
         topic: TopicFilter,

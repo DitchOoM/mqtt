@@ -6,28 +6,30 @@ import com.ditchoom.buffer.codec.payload.PayloadReader
 /**
  * Decodes MQTT payload bytes into a consumer type [P].
  *
- * The [PayloadReader] provides zero-copy access to the network buffer slice —
- * bytes are NOT copied into an intermediate ReadBuffer/ByteArray.
+ * The [PayloadReader] is the receiver (`this`), providing zero-copy access to the
+ * network buffer slice. The buffer is scoped — it cannot be captured or used after
+ * the decode function returns.
  *
  * Covariant: a `PayloadDecoder<ChatMessage>` can be used where `PayloadDecoder<Any>` is expected.
  */
 fun interface PayloadDecoder<out P> {
-    fun decode(reader: PayloadReader): P
+    fun PayloadReader.decode(): P
 }
 
 /**
  * Encodes a consumer type [P] into MQTT payload bytes.
  *
- * [encode] writes directly into the wire buffer via backpatching — no intermediate allocation.
- * [sizeOf] is used for max-packet-size validation before encoding (optional on hot path).
+ * The [WriteBuffer] is the receiver (`this`), so the encoder writes directly into
+ * the wire buffer. The buffer is scoped — it cannot be captured or used after
+ * the encode function returns.
+ *
+ * [size] returns the encoded byte count for a given value, used to allocate
+ * the serialization buffer. An exact value avoids reallocation; an upper-bound
+ * estimate is acceptable (the buffer will be sliced to actual size).
  *
  * Contravariant: a `PayloadEncoder<Any>` can be used where `PayloadEncoder<ChatMessage>` is expected.
  */
 interface PayloadEncoder<in P> {
-    fun encode(
-        buffer: WriteBuffer,
-        value: P,
-    )
-
-    fun sizeOf(value: P): Int
+    fun WriteBuffer.encode(value: P)
+    fun size(value: @UnsafeVariance P): Int
 }

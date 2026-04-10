@@ -37,7 +37,7 @@ class TypeTests {
         val variable = VariableHeader(TopicName.fromOrThrow("t"))
         assertEquals(
             3,
-            PublishMessage(variable = variable).controlPacketValue,
+            PublishMessage(variable = variable, payload = null).controlPacketValue,
             controlPacketSpectMatchError,
         )
     }
@@ -110,7 +110,7 @@ class TypeTests {
             11,
             UnsubscribeAcknowledgment(
                 UnsubscribeAcknowledgment.VariableHeader(packetIdentifier),
-                listOf(GRANTED_QOS_1),
+                listOf(SUCCESS),
             ).controlPacketValue,
             controlPacketSpectMatchError,
         )
@@ -165,7 +165,7 @@ class TypeTests {
         val variable = VariableHeader(TopicName.fromOrThrow("t"))
         assertEquals(
             BIDIRECTIONAL,
-            PublishMessage(variable = variable).direction,
+            PublishMessage(variable = variable, payload = null).direction,
             controlPacketSpectMatchError,
         )
     }
@@ -238,7 +238,7 @@ class TypeTests {
             SERVER_TO_CLIENT,
             UnsubscribeAcknowledgment(
                 UnsubscribeAcknowledgment.VariableHeader(packetIdentifier),
-                listOf(GRANTED_QOS_1),
+                listOf(SUCCESS),
             ).direction,
             controlPacketSpectMatchError,
         )

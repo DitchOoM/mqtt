@@ -8,15 +8,15 @@ import com.ditchoom.buffer.ReadBuffer
  * This is the user-facing view of a received publish — it exposes only the fields
  * relevant to message consumption, not internal wire-format details like packet identifiers.
  *
- * The [payload] buffer has a scoped lifetime: it is only valid during the subscription
- * callback invocation. Callers who need to retain the payload beyond the callback must
- * copy it (e.g., via [ReadBuffer.readBytes]).
+ * The type parameter [P] represents the payload type:
+ * - Wire-decoded messages have `IncomingPublish<ReadBuffer?>` (raw bytes)
+ * - Typed subscriptions decode to `IncomingPublish<P>` (e.g., `IncomingPublish<ChatMessage>`)
  *
  * For MQTT v5 messages, this can be smart-cast to [IncomingPublishV5] to access
  * v5-specific properties like [IncomingPublishV5.responseTopic] and
  * [IncomingPublishV5.correlationData].
  */
-interface IncomingPublish {
+interface IncomingPublish<out P> {
     /** The topic this message was published to. */
     val topic: TopicName
 
@@ -29,8 +29,8 @@ interface IncomingPublish {
     /** True if the broker retained this message. */
     val retain: Boolean
 
-    /** The message payload, or null if empty. Valid only during the callback scope. */
-    val payload: ReadBuffer?
+    /** The message payload. For raw messages this is [ReadBuffer]?; for typed subscriptions it is [P]. */
+    val payload: P
 }
 
 /**
@@ -40,7 +40,7 @@ interface IncomingPublish {
  * v5-specific fields are non-nullable where MQTT v5 guarantees a default,
  * and nullable only where the spec says the property is optional.
  */
-interface IncomingPublishV5 : IncomingPublish {
+interface IncomingPublishV5<out P> : IncomingPublish<P> {
     /**
      * True if the payload is UTF-8 encoded character data.
      * False (default) means unspecified bytes.

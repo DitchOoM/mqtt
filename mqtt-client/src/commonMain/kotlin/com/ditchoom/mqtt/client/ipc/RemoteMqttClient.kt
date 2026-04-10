@@ -2,12 +2,15 @@ package com.ditchoom.mqtt.client.ipc
 
 import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.PlatformBuffer
+import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.mqtt.Persistence
 import com.ditchoom.mqtt.client.ConnectionState
 import com.ditchoom.mqtt.client.MqttClient
 import com.ditchoom.mqtt.client.MqttSubscription
 import com.ditchoom.mqtt.client.PayloadDecoder
 import com.ditchoom.mqtt.client.PayloadEncoder
+import com.ditchoom.mqtt.client.toIncomingPublish
+import com.ditchoom.mqtt.client.withDecodedPayload
 import com.ditchoom.mqtt.client.PublishResult
 import com.ditchoom.mqtt.client.QoS1State
 import com.ditchoom.mqtt.client.QoS2State
@@ -16,6 +19,7 @@ import com.ditchoom.mqtt.client.SubscriptionHandler
 import com.ditchoom.mqtt.client.UnsubscribeOperation
 import com.ditchoom.mqtt.connection.MqttBroker
 import com.ditchoom.mqtt.controlpacket.ControlPacket
+import com.ditchoom.mqtt.controlpacket.IncomingPublish
 import com.ditchoom.mqtt.controlpacket.IPublishAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IPublishComplete
 import com.ditchoom.mqtt.controlpacket.IPublishMessage
@@ -79,10 +83,10 @@ abstract class RemoteMqttClient(
 
     protected open suspend fun sendPublish(
         packetId: Int,
-        pubBuffer: PlatformBuffer,
+        pubBuffer: ReadBuffer,
     ) {}
 
-    override suspend fun publish(pub: IPublishMessage): PublishResult {
+    override suspend fun publish(pub: IPublishMessage<*>): PublishResult {
         val publishPacketId =
             if (pub.qualityOfService == QualityOfService.AT_MOST_ONCE) {
                 NO_PACKET_ID
@@ -129,19 +133,14 @@ abstract class RemoteMqttClient(
         retain: Boolean,
         encoder: PayloadEncoder<P>,
     ): PublishResult {
-        // Encode P → bytes, then delegate to existing byte-level publish
-        val payloadSize = encoder.sizeOf(payload)
-        val payloadBuffer = bufferFactory.allocate(payloadSize)
-        encoder.encode(payloadBuffer, payload)
-        val pub =
-            packetFactory.publish(
-                topicName =
-                    com.ditchoom.mqtt.controlpacket.TopicName
-                        .fromOrThrow(topic),
-                qos = qos,
-                retain = retain,
-                payload = payloadBuffer,
-            )
+        val pub = packetFactory.publish(
+            topicName = com.ditchoom.mqtt.controlpacket.TopicName.fromOrThrow(topic),
+            qos = qos,
+            retain = retain,
+            payload = payload,
+            encodePayload = { buf, p -> with(encoder) { buf.encode(p) } },
+            payloadSize = { p -> encoder.size(p) },
+        )
         return publish(pub)
     }
 
@@ -155,36 +154,38 @@ abstract class RemoteMqttClient(
         topicFilter: String,
         maxQos: QualityOfService,
         decoder: PayloadDecoder<P>,
-        handler: suspend (P) -> Unit,
+        handler: suspend (IncomingPublish<P>) -> Unit,
     ): MqttSubscription<P> = subscribeTypedIpc(topicFilter, maxQos, decoder, handler)
 
     private suspend fun <P> subscribeTypedIpc(
         topicFilter: String,
         maxQos: QualityOfService,
         decoder: PayloadDecoder<P>,
-        handler: (suspend (P) -> Unit)?,
+        handler: (suspend (IncomingPublish<P>) -> Unit)?,
     ): MqttSubscription<P> {
         val filter =
             com.ditchoom.mqtt.controlpacket.TopicFilter
                 .fromOrThrow(topicFilter)
         val sub = packetFactory.subscribe(filter, maxQos)
         val subOp = subscribe(sub)
-        // Decode incoming IPublishMessage payload → P using the consumer's decoder
+        // Decode incoming IPublishMessage payload → IncomingPublish<P> using the consumer's decoder
         val typedFlow =
             subOp.subscriptions.values
                 .asSequence()
                 .reduce { a, b -> kotlinx.coroutines.flow.merge(a, b) }
                 .map { msg ->
-                    val payload = msg.payload ?: error("Expected payload in PUBLISH")
+                    val rawPublish = msg.toIncomingPublish()
+                    val payload = msg.payload as? ReadBuffer ?: error("Expected payload in PUBLISH")
                     val reader =
                         com.ditchoom.buffer.codec.payload
                             .ReadBufferPayloadReader(payload)
-                    try {
-                        decoder.decode(reader)
+                    val decoded = try {
+                        with(decoder) { reader.decode() }
                     } finally {
                         reader.release()
                     }
-                }.onEach { decoded -> handler?.invoke(decoded) }
+                    rawPublish.withDecodedPayload(decoded)
+                }.onEach { typedPublish -> handler?.invoke(typedPublish) }
         return object : MqttSubscription<P> {
             override val topicFilter: String = topicFilter
             override val suback = subOp.subAck

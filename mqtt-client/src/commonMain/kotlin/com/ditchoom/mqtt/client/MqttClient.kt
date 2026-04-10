@@ -8,6 +8,7 @@ import com.ditchoom.mqtt.controlpacket.IPublishMessage
 import com.ditchoom.mqtt.controlpacket.ISubscribeRequest
 import com.ditchoom.mqtt.controlpacket.ISubscription
 import com.ditchoom.mqtt.controlpacket.IUnsubscribeRequest
+import com.ditchoom.mqtt.controlpacket.IncomingPublish
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.TopicName
@@ -44,9 +45,9 @@ interface MqttClient {
             ),
         )
 
-    suspend fun publish(pub: IPublishMessage): PublishResult
+    suspend fun publish(pub: IPublishMessage<*>): PublishResult
 
-    fun observe(filter: TopicFilter): Flow<IPublishMessage>
+    fun observe(filter: TopicFilter): Flow<IPublishMessage<*>>
 
     suspend fun subscribe(
         topicFilter: String,
@@ -126,7 +127,7 @@ interface MqttClient {
         topicFilter: String,
         maxQos: QualityOfService = QualityOfService.AT_LEAST_ONCE,
         decoder: PayloadDecoder<P>,
-        handler: suspend (P) -> Unit,
+        handler: suspend (IncomingPublish<P>) -> Unit,
     ): MqttSubscription<P>
 
     // --- unsubscribe ---

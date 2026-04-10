@@ -1,5 +1,6 @@
 package com.ditchoom.mqtt.client
 
+import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.codec.payload.ReadBufferPayloadReader
 import com.ditchoom.mqtt.controlpacket.IPublishMessage
 import com.ditchoom.mqtt.controlpacket.IncomingPublish
@@ -41,7 +42,7 @@ internal class PublishDispatcher {
      * @param publish The incoming publish message (already adapted to [IncomingPublish])
      * @return true if at least one handler was invoked
      */
-    suspend fun dispatch(publish: IncomingPublish): Boolean {
+    suspend fun dispatch(publish: IncomingPublish<ReadBuffer?>): Boolean {
         val handlers = trie.matchAll(publish.topic)
         if (handlers.isEmpty()) return false
 
@@ -64,7 +65,7 @@ internal class PublishDispatcher {
     }
 
     /** Returns true if any handler would match the given [IPublishMessage]. */
-    fun hasMatch(publish: IPublishMessage): Boolean = trie.hasMatch(publish.topic)
+    fun hasMatch(publish: IPublishMessage<*>): Boolean = trie.hasMatch(publish.topic)
 
     /** Returns true if no handlers are registered. */
     fun isEmpty(): Boolean = trie.isEmpty()
@@ -73,23 +74,25 @@ internal class PublishDispatcher {
     fun clear() = trie.clear()
 
     /**
-     * Register a typed subscription that decodes the payload and emits to a flow.
+     * Register a typed subscription that decodes the payload and emits [IncomingPublish]<[P]>
+     * to a flow, preserving message metadata (topic, qos, dup, retain, v5 properties).
      * Optionally invokes [handler] for each decoded message (auto-ack on return).
      */
     fun <P> subscribeTyped(
         filter: TopicFilter,
         decoder: PayloadDecoder<P>,
-        handler: (suspend (P) -> Unit)? = null,
-    ): Flow<P> {
-        val flow = MutableSharedFlow<P>(extraBufferCapacity = 16)
+        handler: (suspend (IncomingPublish<P>) -> Unit)? = null,
+    ): Flow<IncomingPublish<P>> {
+        val flow = MutableSharedFlow<IncomingPublish<P>>(extraBufferCapacity = 16)
         val wrappedHandler =
             SubscriptionHandler.Async { publish ->
                 val payload = publish.payload ?: return@Async
                 val reader = ReadBufferPayloadReader(payload)
                 try {
-                    val decoded = decoder.decode(reader)
-                    handler?.invoke(decoded)
-                    flow.emit(decoded)
+                    val decoded = with(decoder) { reader.decode() }
+                    val typedPublish = publish.withDecodedPayload(decoded)
+                    handler?.invoke(typedPublish)
+                    flow.emit(typedPublish)
                 } finally {
                     reader.release()
                 }

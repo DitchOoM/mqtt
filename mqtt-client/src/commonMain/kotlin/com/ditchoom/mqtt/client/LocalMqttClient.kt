@@ -7,6 +7,7 @@ import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.ControlPacketFactory
 import com.ditchoom.mqtt.controlpacket.IConnectionAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IPublishMessage
+import com.ditchoom.mqtt.controlpacket.IncomingPublish
 import com.ditchoom.mqtt.controlpacket.ISubscribeAcknowledgement
 import com.ditchoom.mqtt.controlpacket.ISubscribeRequest
 import com.ditchoom.mqtt.controlpacket.IUnsubscribeAcknowledgment
@@ -61,7 +62,7 @@ class LocalMqttClient(
 
     suspend fun sendQueuedPublishMessage(
         packetId: Int,
-        pubQos0: IPublishMessage?,
+        pubQos0: IPublishMessage<*>?,
     ) {
         val pub =
             if (pubQos0 != null && pubQos0.qualityOfService == QualityOfService.AT_MOST_ONCE) {
@@ -75,14 +76,14 @@ class LocalMqttClient(
         processor.publish(pub, false)
     }
 
-    override suspend fun publish(pub: IPublishMessage): PublishResult {
+    override suspend fun publish(pub: IPublishMessage<*>): PublishResult {
         val prepared = processor.preparePublish(pub)
         val result = observePub(prepared)
         processor.sendPacket(prepared)
         return result
     }
 
-    private fun observePub(publishMessage: IPublishMessage): PublishResult {
+    private fun observePub(publishMessage: IPublishMessage<*>): PublishResult {
         val packetId = publishMessage.packetIdentifier
         return when (publishMessage.qualityOfService) {
             QualityOfService.AT_MOST_ONCE -> PublishResult.QoS0Sent
@@ -103,8 +104,8 @@ class LocalMqttClient(
         }
     }
 
-    override fun observe(filter: TopicFilter): Flow<IPublishMessage> =
-        processor.readChannel.filterIsInstance<IPublishMessage>().filter {
+    override fun observe(filter: TopicFilter): Flow<IPublishMessage<*>> =
+        processor.readChannel.filterIsInstance<IPublishMessage<*>>().filter {
             filter.matches(it.topic)
         }
 
@@ -184,14 +185,14 @@ class LocalMqttClient(
         retain: Boolean,
         encoder: PayloadEncoder<P>,
     ): PublishResult {
-        val pub =
-            packetFactory.publish(
-                topicName = TopicName.fromOrThrow(topic),
-                qos = qos,
-                retain = retain,
-                payload = null, // payload encoded via backpatching in serializeToSlice
-            )
-        // TODO: integrate encoder into serializeToSlice path for zero-copy
+        val pub = packetFactory.publish(
+            topicName = TopicName.fromOrThrow(topic),
+            qos = qos,
+            retain = retain,
+            payload = payload,
+            encodePayload = { buf, p -> with(encoder) { buf.encode(p) } },
+            payloadSize = { p -> encoder.size(p) },
+        )
         return publish(pub)
     }
 
@@ -205,14 +206,14 @@ class LocalMqttClient(
         topicFilter: String,
         maxQos: QualityOfService,
         decoder: PayloadDecoder<P>,
-        handler: suspend (P) -> Unit,
+        handler: suspend (IncomingPublish<P>) -> Unit,
     ): MqttSubscription<P> = subscribeTypedInternal(topicFilter, maxQos, decoder, handler)
 
     private suspend fun <P> subscribeTypedInternal(
         topicFilter: String,
         maxQos: QualityOfService,
         decoder: PayloadDecoder<P>,
-        handler: (suspend (P) -> Unit)?,
+        handler: (suspend (IncomingPublish<P>) -> Unit)?,
     ): MqttSubscription<P> {
         val filter = TopicFilter.fromOrThrow(topicFilter)
         val sub = packetFactory.subscribe(filter, maxQos)

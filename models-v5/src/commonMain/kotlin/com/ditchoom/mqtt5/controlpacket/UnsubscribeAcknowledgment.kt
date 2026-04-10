@@ -45,9 +45,12 @@ data class UnsubscribeAcknowledgment(
     override val controlPacketValue: Byte get() = 11
     override val direction: DirectionOfFlow get() = DirectionOfFlow.SERVER_TO_CLIENT
     init {
-        val invalidCodes = reasonCodes.map { it.byte } - validSubscribeCodes
-        if (invalidCodes.isEmpty()) {
-            throw ProtocolError("Invalid SUBACK reason code $invalidCodes")
+        if (reasonCodes.isEmpty()) {
+            throw ProtocolError("UNSUBACK must contain at least one reason code")
+        }
+        val invalidCodes = reasonCodes - validUnsubAckCodes
+        if (invalidCodes.isNotEmpty()) {
+            throw ProtocolError("Invalid UNSUBACK reason code $invalidCodes")
         }
     }
 
@@ -194,7 +197,7 @@ data class UnsubscribeAcknowledgment(
     }
 }
 
-private val validSubscribeCodes by lazy(LazyThreadSafetyMode.NONE) {
+private val validUnsubAckCodes by lazy(LazyThreadSafetyMode.NONE) {
     setOf(
         SUCCESS,
         NO_SUBSCRIPTIONS_EXISTED,

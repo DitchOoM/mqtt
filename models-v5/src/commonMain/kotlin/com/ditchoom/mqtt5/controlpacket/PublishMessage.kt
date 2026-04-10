@@ -1,5 +1,7 @@
 package com.ditchoom.mqtt5.controlpacket
 
+import com.ditchoom.buffer.BufferFactory
+import com.ditchoom.buffer.PlatformBuffer
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
 import com.ditchoom.buffer.codec.annotations.LengthPrefixed
@@ -10,9 +12,11 @@ import com.ditchoom.buffer.utf8Length
 import com.ditchoom.mqtt.codec.annotations.MqttProperties
 import com.ditchoom.mqtt.MalformedPacketException
 import com.ditchoom.mqtt.ProtocolError
+import com.ditchoom.mqtt.controlpacket.ControlPacket
+import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.MAX_FIXED_HEADER_SIZE
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readMqttUtf8StringNotValidatedSized
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.variableByteSize
-import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.writeMqttUtf8String
+import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.writeVariableByteInteger
 import com.ditchoom.mqtt.controlpacket.IPublishMessage
 import com.ditchoom.mqtt.controlpacket.NO_PACKET_ID
 import com.ditchoom.mqtt.controlpacket.QualityOfService
@@ -55,52 +59,21 @@ data class PublishNoIdV5Body<@Payload P>(
  *
  */
 
-data class PublishMessage(
+data class PublishMessage<P>(
     val fixed: FixedHeader = FixedHeader(),
     val variable: VariableHeader,
-    override val payload: ReadBuffer? = null,
+    override val payload: P,
+    val encodePayload: ((WriteBuffer, P) -> Unit)? = null,
+    val payloadSize: ((P) -> Int)? = null,
 ) : ControlPacketV5,
-    IPublishMessage {
+    IPublishMessage<P> {
     override val controlPacketValue: Byte get() = IPublishMessage.CONTROL_PACKET_VALUE
     override val direction: DirectionOfFlow get() = DirectionOfFlow.BIDIRECTIONAL
     override val flags: Byte get() = fixed.flags
-    constructor(
-        dup: Boolean = false,
-        qos: QualityOfService = AT_MOST_ONCE,
-        retain: Boolean = false,
-        topicName: String,
-        packetIdentifier: Int = NO_PACKET_ID,
-        payloadFormatIndicator: Boolean = false,
-        messageExpiryInterval: Long? = null,
-        topicAlias: Int? = null,
-        responseTopicName: String? = null,
-        correlationData: ReadBuffer? = null,
-        userProperty: List<Pair<String, String>> = emptyList(),
-        subscriptionIdentifier: Set<Long> = emptySet(),
-        contentType: String? = null,
-        payload: ReadBuffer? = null,
-    ) : this(
-        FixedHeader(dup, qos, retain),
-        VariableHeader(
-            TopicName.fromOrThrow(topicName),
-            packetIdentifier,
-            VariableHeader.Properties(
-                payloadFormatIndicator,
-                messageExpiryInterval,
-                topicAlias,
-                responseTopicName?.let { TopicName.fromOrThrow(it) },
-                correlationData,
-                userProperty,
-                subscriptionIdentifier,
-                contentType,
-            ),
-        ),
-        payload,
-    )
 
     override val packetIdentifier = variable.packetIdentifier
 
-    override fun setDupFlagNewPubMessage(): IPublishMessage =
+    override fun setDupFlagNewPubMessage(): IPublishMessage<P> =
         if (fixed.qos == AT_MOST_ONCE && fixed.dup) {
             copy(fixed = fixed.copy(dup = false), variable = variable, payload = payload)
         } else if (fixed.qos != AT_MOST_ONCE && !fixed.dup) {
@@ -113,25 +86,76 @@ data class PublishMessage(
 
     override fun encodeBody(writeBuffer: WriteBuffer) {
         val topicStr = variable.topicName.toString()
+        val writer: (WriteBuffer, P) -> Unit = encodePayload ?: { buf, p ->
+            if (p is ReadBuffer) buf.write(p)
+        }
         if (fixed.qos == AT_MOST_ONCE) {
             PublishNoIdV5BodyCodec.encode(
                 writeBuffer,
-                PublishNoIdV5Body<ReadBuffer?>(topicStr, variable.properties.props, payload),
-            ) { buf, p -> if (p != null) buf.write(p) }
+                PublishNoIdV5Body(topicStr, variable.properties.props, payload),
+                writer,
+            )
         } else {
             PublishWithIdV5BodyCodec.encode(
                 writeBuffer,
-                PublishWithIdV5Body<ReadBuffer?>(topicStr, variable.packetIdentifier.toUShort(), variable.properties.props, payload),
-            ) { buf, p -> if (p != null) buf.write(p) }
+                PublishWithIdV5Body(topicStr, variable.packetIdentifier.toUShort(), variable.properties.props, payload),
+                writer,
+            )
         }
     }
 
     override fun remainingLength(): Int {
-        var size = variable.size()
-        if (payload != null) {
-            size += payload.remaining()
+        val payloadBytes = when {
+            payload is ReadBuffer -> (payload as ReadBuffer).remaining()
+            payload == null -> 0
+            payloadSize != null -> payloadSize.invoke(payload)
+            else -> error("remainingLength() unavailable for typed payload without payloadSize")
         }
-        return size
+        return variable.size() + payloadBytes
+    }
+
+    override fun packetSize(): Int {
+        if (payload != null && payload !is ReadBuffer && payloadSize == null) {
+            error("packetSize() unavailable for typed payload without payloadSize")
+        }
+        return super<ControlPacketV5>.packetSize()
+    }
+
+    override fun serialize(writeBuffer: WriteBuffer) {
+        if (payload == null || payload is ReadBuffer) {
+            super<ControlPacketV5>.serialize(writeBuffer)
+            return
+        }
+        // Backpatch: reserve max fixed header, write body, patch byte1 + VBI
+        val start = writeBuffer.position()
+        writeBuffer.position(start + MAX_FIXED_HEADER_SIZE)
+        encodeBody(writeBuffer)
+        val end = writeBuffer.position()
+        val bodySize = end - start - MAX_FIXED_HEADER_SIZE
+        val vbiSize = variableByteSize(bodySize).toInt()
+        val actualStart = start + MAX_FIXED_HEADER_SIZE - 1 - vbiSize
+        writeBuffer.set(actualStart, byte1.toByte())
+        writeBuffer.position(actualStart + 1)
+        writeBuffer.writeVariableByteInteger(bodySize)
+        writeBuffer.position(end)
+    }
+
+    override fun serialize(factory: BufferFactory): ReadBuffer {
+        if (payload == null || payload is ReadBuffer) {
+            return super<ControlPacketV5>.serialize(factory)
+        }
+        // Backpatch path: allocate based on payloadSize hint
+        val headerSize = variable.size() + MAX_FIXED_HEADER_SIZE
+        val estimatedPayloadSize = payloadSize?.invoke(payload) ?: DEFAULT_PAYLOAD_HEADROOM
+        val buf = factory.allocate(headerSize + estimatedPayloadSize)
+        serialize(buf)
+        val endPos = buf.position()
+        val bodySize = endPos - MAX_FIXED_HEADER_SIZE
+        val vbiSize = variableByteSize(bodySize).toInt()
+        val actualStart = MAX_FIXED_HEADER_SIZE - 1 - vbiSize
+        buf.position(actualStart)
+        buf.setLimit(endPos)
+        return buf.slice()
     }
 
     override val topic = variable.topicName
@@ -164,7 +188,7 @@ data class PublishMessage(
         else -> null
     }
 
-    override fun maybeCopyWithNewPacketIdentifier(packetIdentifier: Int): IPublishMessage =
+    override fun maybeCopyWithNewPacketIdentifier(packetIdentifier: Int): IPublishMessage<P> =
         when (qualityOfService) {
             AT_MOST_ONCE -> this
             AT_LEAST_ONCE,
@@ -703,11 +727,48 @@ data class PublishMessage(
     }
 
     companion object {
+        /** Default headroom when no payloadSize function is provided. */
+        private const val DEFAULT_PAYLOAD_HEADROOM = 4096
+
+        operator fun invoke(
+            dup: Boolean = false,
+            qos: QualityOfService = AT_MOST_ONCE,
+            retain: Boolean = false,
+            topicName: String,
+            packetIdentifier: Int = NO_PACKET_ID,
+            payloadFormatIndicator: Boolean = false,
+            messageExpiryInterval: Long? = null,
+            topicAlias: Int? = null,
+            responseTopicName: String? = null,
+            correlationData: ReadBuffer? = null,
+            userProperty: List<Pair<String, String>> = emptyList(),
+            subscriptionIdentifier: Set<Long> = emptySet(),
+            contentType: String? = null,
+            payload: ReadBuffer? = null,
+        ): PublishMessage<ReadBuffer?> = PublishMessage(
+            FixedHeader(dup, qos, retain),
+            VariableHeader(
+                TopicName.fromOrThrow(topicName),
+                packetIdentifier,
+                VariableHeader.Properties(
+                    payloadFormatIndicator,
+                    messageExpiryInterval,
+                    topicAlias,
+                    responseTopicName?.let { TopicName.fromOrThrow(it) },
+                    correlationData,
+                    userProperty,
+                    subscriptionIdentifier,
+                    contentType,
+                ),
+            ),
+            payload,
+        )
+
         fun from(
             buffer: ReadBuffer,
             byte1: UByte,
             remainingLength: Int,
-        ): PublishMessage {
+        ): PublishMessage<ReadBuffer?> {
             val fixedHeader = FixedHeader.fromByte(byte1)
             if (fixedHeader.qos == AT_MOST_ONCE) {
                 val wire = PublishNoIdV5BodyCodec.decode<ReadBuffer?>(buffer) { pr ->

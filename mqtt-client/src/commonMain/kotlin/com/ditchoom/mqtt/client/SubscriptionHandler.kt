@@ -1,5 +1,6 @@
 package com.ditchoom.mqtt.client
 
+import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.mqtt.controlpacket.IncomingPublish
 
 /**
@@ -19,13 +20,13 @@ sealed interface SubscriptionHandler {
      * so it must be fast and non-blocking.
      */
     fun interface Blocking : SubscriptionHandler {
-        fun onPublish(publish: IncomingPublish)
+        fun onPublish(publish: IncomingPublish<ReadBuffer?>)
     }
 
     /**
      * Suspending handler. The callback can perform I/O or other suspend operations.
      */
     fun interface Async : SubscriptionHandler {
-        suspend fun onPublish(publish: IncomingPublish)
+        suspend fun onPublish(publish: IncomingPublish<ReadBuffer?>)
     }
 }

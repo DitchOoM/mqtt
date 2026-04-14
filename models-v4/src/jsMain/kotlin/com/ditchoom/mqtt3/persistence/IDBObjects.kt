@@ -6,11 +6,12 @@ import com.ditchoom.buffer.JsBuffer
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.ISubscription
+import com.ditchoom.mqtt.controlpacket.PublishMessage
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt3.controlpacket.ConnectionRequest
-import com.ditchoom.mqtt3.controlpacket.PublishMessage
+import com.ditchoom.mqtt3.controlpacket.PublishMessageV4
 import com.ditchoom.mqtt3.controlpacket.Subscription
 import com.ditchoom.mqtt3.controlpacket.UnsubscribeRequest
 import org.khronos.webgl.Int8Array
@@ -84,30 +85,36 @@ data class PersistablePublishMessage(
     val packetId: Int,
     @JsName("payload")
     val payload: Int8Array?,
+    @JsName("state")
+    val state: Int = 0,
 ) {
     constructor(brokerId: Int, incoming: Boolean, pub: PublishMessage) : this(
         brokerId,
         if (incoming) 1 else 0,
-        pub.fixed.dup,
-        pub.fixed.qos.integerValue,
-        pub.fixed.retain,
-        pub.variable.topicName.toString(),
-        pub.variable.packetIdentifier,
-        pub.payload?.let { (it as JsBuffer).buffer },
+        pub.dup,
+        pub.qualityOfService.integerValue,
+        pub.retain,
+        pub.topic.toString(),
+        pub.packetIdentifier,
+        (pub.payloadAsReadBufferOrNull() as? JsBuffer)?.buffer,
+        0,
     )
 }
 
-fun toPub(p: PersistablePublishMessage) =
-    PublishMessage(
-        PublishMessage.FixedHeader(p.dup, p.qos.toQos(), p.retain),
-        PublishMessage.VariableHeader(TopicName.fromOrThrow(p.topicName), p.packetId),
-        p.payload
-            ?.let {
+fun toPub(p: PersistablePublishMessage): PublishMessage =
+    PublishMessageV4.ofRaw(
+        topic = TopicName.fromOrThrow(p.topicName),
+        qos = p.qos.toQos(),
+        payload =
+            p.payload?.let {
                 JsBuffer(it).also { buf ->
                     buf.position(it.length)
                     buf.setLimit(it.length)
                 }
             }?.also { it.resetForRead() },
+        dup = p.dup,
+        retain = p.retain,
+        packetIdentifier = p.packetId,
     )
 
 data class PersistableBroker(

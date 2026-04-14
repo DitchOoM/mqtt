@@ -5,10 +5,10 @@ import com.ditchoom.buffer.WriteBuffer
 import com.ditchoom.mqtt.Persistence
 import com.ditchoom.mqtt.controlpacket.ControlPacketFactory
 import com.ditchoom.mqtt.controlpacket.IDisconnectNotification
-import com.ditchoom.mqtt.controlpacket.IPublishMessage
 import com.ditchoom.mqtt.controlpacket.ISubscribeRequest
 import com.ditchoom.mqtt.controlpacket.ISubscription
 import com.ditchoom.mqtt.controlpacket.NO_PACKET_ID
+import com.ditchoom.mqtt.controlpacket.PublishMessage
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.TopicName
@@ -42,22 +42,26 @@ object ControlPacketV5Factory : ControlPacketFactory {
         userProperty: List<Pair<String, String>>,
         subscriptionIdentifier: Set<Long>,
         contentType: String?,
-    ): IPublishMessage<ReadBuffer?> {
-        val fixedHeader = PublishMessage.FixedHeader(dup, qos, retain)
-        val properties =
-            PublishMessage.VariableHeader.Properties(
-                payloadFormatIndicator,
-                messageExpiryInterval,
-                topicAlias,
-                responseTopic,
-                correlationData,
-                userProperty,
-                subscriptionIdentifier,
-                contentType,
-            )
-        val variableHeader = PublishMessage.VariableHeader(topicName, NO_PACKET_ID, properties)
-        return PublishMessage(fixedHeader, variableHeader, payload)
-    }
+    ): PublishMessage =
+        PublishMessageV5.ofRaw(
+            topic = topicName,
+            qos = qos,
+            payload = payload,
+            dup = dup,
+            retain = retain,
+            packetIdentifier = NO_PACKET_ID,
+            properties =
+                PublishMessageV5.Properties(
+                    payloadFormatIndicator,
+                    messageExpiryInterval,
+                    topicAlias,
+                    responseTopic,
+                    correlationData,
+                    userProperty,
+                    subscriptionIdentifier,
+                    contentType,
+                ),
+        )
 
     override fun <P> publish(
         dup: Boolean,
@@ -67,11 +71,17 @@ object ControlPacketV5Factory : ControlPacketFactory {
         payload: P,
         encodePayload: (WriteBuffer, P) -> Unit,
         payloadSize: (P) -> Int,
-    ): IPublishMessage<P> {
-        val fixedHeader = PublishMessage.FixedHeader(dup, qos, retain)
-        val variableHeader = PublishMessage.VariableHeader(topicName, NO_PACKET_ID)
-        return PublishMessage(fixedHeader, variableHeader, payload, encodePayload, payloadSize)
-    }
+    ): PublishMessage =
+        PublishMessageV5.ofTyped(
+            topic = topicName,
+            qos = qos,
+            payload = payload,
+            encodePayload = encodePayload,
+            payloadSize = payloadSize,
+            dup = dup,
+            retain = retain,
+            packetIdentifier = NO_PACKET_ID,
+        )
 
     override fun subscribe(
         topicFilter: TopicFilter,

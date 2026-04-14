@@ -49,7 +49,7 @@ sealed interface ControlPacketV5 : ControlPacket {
                 0 -> throw MalformedPacketException("Reserved packet type 0 is not permitted")
                 1 -> ConnectionRequest.from(buffer)
                 2 -> ConnectionAcknowledgment.from(buffer, remainingLength)
-                3 -> PublishMessage.from(buffer, byte1, remainingLength)
+                3 -> PublishMessageV5.from(buffer, byte1, remainingLength)
                 4 -> PublishAcknowledgment.from(buffer, remainingLength)
                 5 -> PublishReceived.from(buffer, remainingLength)
                 6 -> PublishRelease.from(buffer, remainingLength)

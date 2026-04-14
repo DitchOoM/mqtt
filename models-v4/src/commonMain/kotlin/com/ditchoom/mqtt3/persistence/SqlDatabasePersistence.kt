@@ -2,9 +2,10 @@ package com.ditchoom.mqtt3.persistence
 
 import app.cash.sqldelight.db.SqlDriver
 import com.ditchoom.Mqtt4
-import com.ditchoom.buffer.ByteOrder
 import com.ditchoom.buffer.BufferFactory
+import com.ditchoom.buffer.ByteOrder
 import com.ditchoom.buffer.Default
+import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.mqtt.Persistence
 import com.ditchoom.mqtt.connection.MqttBroker
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
@@ -12,7 +13,6 @@ import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.IConnectionRequest
 import com.ditchoom.mqtt.controlpacket.IPublishAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IPublishComplete
-import com.ditchoom.mqtt.controlpacket.IPublishMessage
 import com.ditchoom.mqtt.controlpacket.IPublishReceived
 import com.ditchoom.mqtt.controlpacket.IPublishRelease
 import com.ditchoom.mqtt.controlpacket.ISubscribeAcknowledgement
@@ -21,13 +21,14 @@ import com.ditchoom.mqtt.controlpacket.ISubscription
 import com.ditchoom.mqtt.controlpacket.IUnsubscribeAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IUnsubscribeRequest
 import com.ditchoom.mqtt.controlpacket.NO_PACKET_ID
+import com.ditchoom.mqtt.controlpacket.PublishMessage
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt.controlpacket.WillConfig
 import com.ditchoom.mqtt3.controlpacket.ConnectionRequest
 import com.ditchoom.mqtt3.controlpacket.PublishComplete
-import com.ditchoom.mqtt3.controlpacket.PublishMessage
+import com.ditchoom.mqtt3.controlpacket.PublishMessageV4
 import com.ditchoom.mqtt3.controlpacket.PublishReceived
 import com.ditchoom.mqtt3.controlpacket.PublishRelease
 import com.ditchoom.mqtt3.controlpacket.SubscribeRequest
@@ -228,16 +229,17 @@ class SqlDatabasePersistence(
                 null
             }
         val willTopic = connectionRequestDatabaseRecord.will_topic
-        val willConfig = if (willTopic != null && willPayload != null) {
-            WillConfig.Enabled(
-                TopicName.fromOrThrow(willTopic),
-                willPayload,
-                connectionRequestDatabaseRecord.will_qos.toQos(),
-                connectionRequestDatabaseRecord.will_retain == 1L,
-            )
-        } else {
-            WillConfig.Disabled
-        }
+        val willConfig =
+            if (willTopic != null && willPayload != null) {
+                WillConfig.Enabled(
+                    TopicName.fromOrThrow(willTopic),
+                    willPayload,
+                    connectionRequestDatabaseRecord.will_qos.toQos(),
+                    connectionRequestDatabaseRecord.will_retain == 1L,
+                )
+            } else {
+                WillConfig.Disabled
+            }
         val connectionRequest =
             ConnectionRequest(
                 connectionRequestDatabaseRecord.client_id,
@@ -311,21 +313,75 @@ class SqlDatabasePersistence(
         }
     }
 
-    override suspend fun incomingPublish(
+    override suspend fun persistIncomingPublish(
         broker: MqttBroker,
-        packet: IPublishMessage,
-        replyMessage: ControlPacket,
+        packet: PublishMessage,
     ) = withContext(dispatcher) {
-        if (packet.qualityOfService != QualityOfService.EXACTLY_ONCE) {
+        if (packet.qualityOfService == QualityOfService.AT_MOST_ONCE) {
             return@withContext
         }
-        qos2Messages.insertQos2Message(
+        val rawPayload = packet.payloadAsReadBufferOrNull()
+        val payload = rawPayload?.readByteArray(rawPayload.remaining())
+        rawPayload?.resetForRead()
+        pubQueries.insertPublishMessage(
             broker.identifier.toLong(),
             1L,
+            if (packet.dup) 1L else 0L,
+            packet.qualityOfService.integerValue
+                .toLong(),
+            if (packet.retain) 1L else 0L,
+            packet.topic.toString(),
             packet.packetIdentifier.toLong(),
-            replyMessage.controlPacketValue.toLong(),
+            payload,
         )
     }
+
+    override suspend fun incomingHandlerComplete(
+        broker: MqttBroker,
+        packetId: Int,
+    ) = withContext(dispatcher) {
+        val row =
+            pubQueries
+                .messageWithId(broker.identifier.toLong(), 1L, packetId.toLong())
+                .executeAsOneOrNull() ?: return@withContext
+        when (row.qos.toQos()) {
+            QualityOfService.AT_LEAST_ONCE ->
+                pubQueries.deletePublishMessage(broker.identifier.toLong(), 1L, packetId.toLong())
+            QualityOfService.EXACTLY_ONCE ->
+                pubQueries.updateState(
+                    Persistence.INCOMING_STATE_QOS2_HANDLER_COMPLETE_PUBREC_SENT.toLong(),
+                    broker.identifier.toLong(),
+                    1L,
+                    packetId.toLong(),
+                )
+            QualityOfService.AT_MOST_ONCE -> Unit
+        }
+    }
+
+    override suspend fun incomingMessagesToRedispatch(broker: MqttBroker): Collection<com.ditchoom.mqtt.IncomingPublishRecord> =
+        withContext(dispatcher) {
+            pubQueries
+                .queuedIncomingPubMessages(broker.identifier.toLong())
+                .executeAsList()
+                .map { row ->
+                    val payload =
+                        if (row.payload != null) {
+                            BufferFactory.Default.wrap(row.payload, ByteOrder.BIG_ENDIAN)
+                        } else {
+                            null
+                        }
+                    val pub =
+                        PublishMessageV4.ofRaw(
+                            topic = TopicName.fromOrThrow(row.topic_name),
+                            qos = row.qos.toQos(),
+                            payload = payload,
+                            dup = row.dup == 1L,
+                            retain = row.retain == 1L,
+                            packetIdentifier = row.packet_id.toInt(),
+                        )
+                    com.ditchoom.mqtt.IncomingPublishRecord(pub, row.state.toInt())
+                }
+        }
 
     private fun Long.toQos(): QualityOfService =
         when (this) {
@@ -344,10 +400,13 @@ class SqlDatabasePersistence(
                     } else {
                         null
                     }
-                PublishMessage(
-                    PublishMessage.FixedHeader(true, it.qos.toQos(), it.retain == 1L),
-                    PublishMessage.VariableHeader(TopicName.fromOrThrow(it.topic_name), it.packet_id.toInt()),
-                    payload,
+                PublishMessageV4.ofRaw(
+                    topic = TopicName.fromOrThrow(it.topic_name),
+                    qos = it.qos.toQos(),
+                    payload = payload,
+                    dup = true,
+                    retain = it.retain == 1L,
+                    packetIdentifier = it.packet_id.toInt(),
                 )
             }
         map +=
@@ -397,6 +456,8 @@ class SqlDatabasePersistence(
         outPubComp: IPublishComplete,
     ) {
         withContext(dispatcher) {
+            // incoming QoS 2 row lives on PublishMessage (incoming=1); delete both tables for safety
+            pubQueries.deletePublishMessage(broker.identifier.toLong(), 1L, outPubComp.packetIdentifier.toLong())
             qos2Messages.deleteQos2Message(broker.identifier.toLong(), 1L, outPubComp.packetIdentifier.toLong())
         }
     }
@@ -409,15 +470,15 @@ class SqlDatabasePersistence(
 
     override suspend fun writePubGetPacketId(
         broker: MqttBroker,
-        pub: IPublishMessage,
+        pub: PublishMessage,
     ): Int {
         if (pub.qualityOfService == QualityOfService.AT_MOST_ONCE) {
             return NO_PACKET_ID
         }
         val brokerId = broker.identifier
-        val p = pub as PublishMessage
-        val payload = p.payload?.readByteArray(p.payload.remaining())
-        p.payload?.resetForRead()
+        val rawPayload = pub.payloadAsReadBufferOrNull()
+        val payload = rawPayload?.readByteArray(rawPayload.remaining())
+        rawPayload?.resetForRead()
         val packetId =
             withContext(dispatcher) {
                 packetIdMutex.withLock {
@@ -427,11 +488,11 @@ class SqlDatabasePersistence(
                         pubQueries.insertPublishMessage(
                             broker.identifier.toLong(),
                             0L,
-                            if (p.fixed.dup) 1L else 0L,
-                            p.fixed.qos.integerValue
+                            if (pub.dup) 1L else 0L,
+                            pub.qualityOfService.integerValue
                                 .toLong(),
-                            if (p.fixed.retain) 1L else 0L,
-                            p.topic.toString(),
+                            if (pub.retain) 1L else 0L,
+                            pub.topic.toString(),
                             packetId,
                             payload,
                         )
@@ -445,7 +506,7 @@ class SqlDatabasePersistence(
     override suspend fun getPubWithPacketId(
         broker: MqttBroker,
         packetId: Int,
-    ): IPublishMessage? {
+    ): PublishMessage? {
         val pub =
             pubQueries
                 .messageWithId(broker.identifier.toLong(), 0L, packetId.toLong())
@@ -456,10 +517,13 @@ class SqlDatabasePersistence(
             } else {
                 null
             }
-        return PublishMessage(
-            PublishMessage.FixedHeader(pub.dup == 1L, pub.qos.toQos(), pub.retain == 1L),
-            PublishMessage.VariableHeader(TopicName.fromOrThrow(pub.topic_name), pub.packet_id.toInt()),
-            payload,
+        return PublishMessageV4.ofRaw(
+            topic = TopicName.fromOrThrow(pub.topic_name),
+            qos = pub.qos.toQos(),
+            payload = payload,
+            dup = pub.dup == 1L,
+            retain = pub.retain == 1L,
+            packetIdentifier = pub.packet_id.toInt(),
         )
     }
 
@@ -574,7 +638,11 @@ class SqlDatabasePersistence(
         return msgCount == 0L && qos2Count == 0L && subscriptionCount == 0L && subCount == 0L && unsubCount == 0L
     }
 
-    override suspend fun updatePublishState(broker: MqttBroker, packetId: Int, state: Int) {
+    override suspend fun updatePublishState(
+        broker: MqttBroker,
+        packetId: Int,
+        state: Int,
+    ) {
         pubQueries.updateState(
             state = state.toLong(),
             brokerId = broker.identifier.toLong(),

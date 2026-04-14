@@ -42,6 +42,11 @@ interface ControlPacketFactory {
         userProperty: List<Pair<String, String>> = emptyList(),
     ): ISubscribeRequest
 
+    /**
+     * Create a PUBLISH message with a raw payload [ReadBuffer].
+     *
+     * The [payload], when non-null, is written directly to the wire during serialization (zero-copy).
+     */
     fun publish(
         dup: Boolean = false,
         qos: QualityOfService = QualityOfService.AT_MOST_ONCE,
@@ -57,8 +62,13 @@ interface ControlPacketFactory {
         userProperty: List<Pair<String, String>> = emptyList(),
         subscriptionIdentifier: Set<Long> = emptySet(),
         contentType: String? = null,
-    ): IPublishMessage<ReadBuffer?>
+    ): PublishMessage
 
+    /**
+     * Create a PUBLISH message with a typed payload. The [encodePayload] and [payloadSize] closures
+     * are captured and invoked during serialization, writing directly into the wire buffer
+     * (backpatch zero-copy outgoing path).
+     */
     fun <P> publish(
         dup: Boolean = false,
         qos: QualityOfService = QualityOfService.AT_MOST_ONCE,
@@ -67,7 +77,7 @@ interface ControlPacketFactory {
         payload: P,
         encodePayload: (WriteBuffer, P) -> Unit,
         payloadSize: (P) -> Int,
-    ): IPublishMessage<P>
+    ): PublishMessage
 
     fun unsubscribe(
         topic: TopicFilter,

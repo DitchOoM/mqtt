@@ -6,7 +6,6 @@ import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.IConnectionRequest
 import com.ditchoom.mqtt.controlpacket.IPublishAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IPublishComplete
-import com.ditchoom.mqtt.controlpacket.IPublishMessage
 import com.ditchoom.mqtt.controlpacket.IPublishReceived
 import com.ditchoom.mqtt.controlpacket.IPublishRelease
 import com.ditchoom.mqtt.controlpacket.ISubscribeAcknowledgement
@@ -14,6 +13,7 @@ import com.ditchoom.mqtt.controlpacket.ISubscribeRequest
 import com.ditchoom.mqtt.controlpacket.ISubscription
 import com.ditchoom.mqtt.controlpacket.IUnsubscribeAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IUnsubscribeRequest
+import com.ditchoom.mqtt.controlpacket.PublishMessage
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
 
@@ -28,7 +28,15 @@ class InMemoryPersistence : Persistence {
     // server messages
     private val serverMessages = HashMap<Int, MutableMap<Int, ControlPacket>>()
 
+    // persisted incoming QoS 1/2 PUBLISH payloads awaiting handler completion or redelivery
+    private val incomingPublishes = HashMap<Int, MutableMap<Int, IncomingPublishEntry>>()
+
     private val brokers = mutableMapOf<Int, MqttBroker>()
+
+    private data class IncomingPublishEntry(
+        val packet: PublishMessage,
+        var state: Int,
+    )
 
     override suspend fun activeSubscriptions(
         broker: MqttBroker,
@@ -37,24 +45,23 @@ class InMemoryPersistence : Persistence {
 
     override suspend fun clearMessages(broker: MqttBroker) {
         clientMessages.clear()
+        incomingPublishes[broker.identifier]?.clear()
     }
 
     override suspend fun writePubGetPacketId(
         broker: MqttBroker,
-        pub: IPublishMessage,
+        pub: PublishMessage,
     ): Int {
         val packetId = getPacketId()
         val clientMessagesForBroker = clientMessages.getOrPut(broker.identifier) { LinkedHashMap() }
-        clientMessagesForBroker[packetId] =
-            pub
-                .maybeCopyWithNewPacketIdentifier(packetId)
+        clientMessagesForBroker[packetId] = pub.maybeCopyWithNewPacketIdentifier(packetId)
         return packetId
     }
 
     override suspend fun getPubWithPacketId(
         broker: MqttBroker,
         packetId: Int,
-    ): IPublishMessage? = clientMessages[broker.identifier]?.get(packetId) as? IPublishMessage
+    ): PublishMessage? = clientMessages[broker.identifier]?.get(packetId) as? PublishMessage
 
     override suspend fun writeUnsubGetPacketId(
         broker: MqttBroker,
@@ -76,7 +83,7 @@ class InMemoryPersistence : Persistence {
         val clientMap = LinkedHashMap<Int, ControlPacket>()
         clientMessagesForBroker.forEach { (key, value) ->
             clientMap[key] =
-                if (value is IPublishMessage) {
+                if (value is PublishMessage) {
                     value.setDupFlagNewPubMessage()
                 } else {
                     value
@@ -86,16 +93,35 @@ class InMemoryPersistence : Persistence {
         return (clientMap.values + serverMessagesForBroker.values).sortedBy { it.packetIdentifier }
     }
 
-    override suspend fun incomingPublish(
+    override suspend fun persistIncomingPublish(
         broker: MqttBroker,
-        packet: IPublishMessage,
-        replyMessage: ControlPacket,
+        packet: PublishMessage,
     ) {
-        if (packet.qualityOfService == QualityOfService.EXACTLY_ONCE) {
-            val serverMessagesForBroker = serverMessages.getOrPut(broker.identifier) { LinkedHashMap() }
-            serverMessagesForBroker[packet.packetIdentifier] = replyMessage
+        if (packet.qualityOfService == QualityOfService.AT_MOST_ONCE) return
+        val map = incomingPublishes.getOrPut(broker.identifier) { LinkedHashMap() }
+        map[packet.packetIdentifier] =
+            IncomingPublishEntry(packet, Persistence.INCOMING_STATE_RECEIVED_PENDING_HANDLER)
+    }
+
+    override suspend fun incomingHandlerComplete(
+        broker: MqttBroker,
+        packetId: Int,
+    ) {
+        val map = incomingPublishes[broker.identifier] ?: return
+        val entry = map[packetId] ?: return
+        when (entry.packet.qualityOfService) {
+            QualityOfService.AT_LEAST_ONCE -> map.remove(packetId)
+            QualityOfService.EXACTLY_ONCE ->
+                entry.state = Persistence.INCOMING_STATE_QOS2_HANDLER_COMPLETE_PUBREC_SENT
+            QualityOfService.AT_MOST_ONCE -> Unit
         }
     }
+
+    override suspend fun incomingMessagesToRedispatch(broker: MqttBroker): Collection<IncomingPublishRecord> =
+        incomingPublishes[broker.identifier]
+            ?.values
+            ?.map { IncomingPublishRecord(it.packet, it.state) }
+            ?: emptyList()
 
     override suspend fun ackPub(
         broker: MqttBroker,
@@ -158,6 +184,7 @@ class InMemoryPersistence : Persistence {
         outPubComp: IPublishComplete,
     ) {
         serverMessages[broker.identifier]?.remove(outPubComp.packetIdentifier)
+        incomingPublishes[broker.identifier]?.remove(outPubComp.packetIdentifier)
     }
 
     override suspend fun ackSub(
@@ -205,6 +232,9 @@ class InMemoryPersistence : Persistence {
         clientMessages
             .filter { it.value.isEmpty() }
             .forEach { clientMessages.remove(it.key) }
+        incomingPublishes
+            .filter { it.value.isEmpty() }
+            .forEach { incomingPublishes.remove(it.key) }
         activeSubscriptions
             .filter { it.value.isEmpty() }
             .forEach { activeSubscriptions.remove(it.key) }
@@ -212,6 +242,7 @@ class InMemoryPersistence : Persistence {
         val isClear =
             serverMessages.isEmpty() &&
                 clientMessages.isEmpty() &&
+                incomingPublishes.isEmpty() &&
                 if (includeSubscriptions) {
                     activeSubscriptions.isEmpty()
                 } else {
@@ -223,6 +254,9 @@ class InMemoryPersistence : Persistence {
             }
             if (clientMessages.isNotEmpty()) {
                 println(clientMessages.values.joinToString(prefix = "Q client: "))
+            }
+            if (incomingPublishes.isNotEmpty()) {
+                println(incomingPublishes.values.joinToString(prefix = "Q incoming: "))
             }
             if (includeSubscriptions && activeSubscriptions.isNotEmpty()) {
                 println(activeSubscriptions.values.joinToString(prefix = "Q sub: "))

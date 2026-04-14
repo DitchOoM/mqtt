@@ -4,13 +4,15 @@
 package com.ditchoom.mqtt5.persistence
 
 import com.ditchoom.buffer.JsBuffer
+import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.ISubscription
+import com.ditchoom.mqtt.controlpacket.PublishMessage
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt5.controlpacket.ConnectionRequest
-import com.ditchoom.mqtt5.controlpacket.PublishMessage
+import com.ditchoom.mqtt5.controlpacket.PublishMessageV5
 import com.ditchoom.mqtt5.controlpacket.Subscription
 import com.ditchoom.mqtt5.controlpacket.UnsubscribeRequest
 import com.ditchoom.mqtt5.controlpacket.properties.Authentication
@@ -150,75 +152,72 @@ data class PersistablePublishMessage(
     val contentType: String?,
     @JsName("payload")
     val payload: Int8Array?,
+    @JsName("state")
+    val state: Int = 0,
 ) {
     @JsName("construct")
-    constructor(brokerId: Int, incoming: Boolean, pub: PublishMessage) : this(
+    constructor(brokerId: Int, incoming: Boolean, pub: PublishMessageV5) : this(
         brokerId,
         if (incoming) 1 else 0,
-        pub.fixed.dup,
-        pub.fixed.qos.integerValue,
-        pub.fixed.retain,
-        pub.variable.topicName.toString(),
-        pub.variable.packetIdentifier,
-        pub.variable.properties.payloadFormatIndicator
-            .toLong()
-            .toInt(),
-        pub.variable.properties.messageExpiryInterval
-            ?.toString(),
-        pub.variable.properties.topicAlias,
-        pub.variable.properties.responseTopic
-            ?.toString(),
-        pub.variable.properties.correlationData
-            ?.let { (it as JsBuffer).buffer },
-        if (pub.variable.properties.subscriptionIdentifier
-                .isNotEmpty()
-        ) {
-            pub.variable.properties.subscriptionIdentifier
-                .joinToString(", ")
+        pub.dup,
+        pub.qualityOfService.integerValue,
+        pub.retain,
+        pub.topic.toString(),
+        pub.packetIdentifier,
+        pub.properties.payloadFormatIndicator.toLong().toInt(),
+        pub.properties.messageExpiryInterval?.toString(),
+        pub.properties.topicAlias,
+        pub.properties.responseTopic?.toString(),
+        pub.properties.correlationData?.let { (it as JsBuffer).buffer },
+        if (pub.properties.subscriptionIdentifier.isNotEmpty()) {
+            pub.properties.subscriptionIdentifier.joinToString(", ")
         } else {
             null
         },
-        pub.variable.properties.contentType,
-        pub.payload?.let { (it as JsBuffer).buffer },
+        pub.properties.contentType,
+        (pub.payloadAsReadBufferOrNull() as? JsBuffer)?.buffer,
+        0,
     )
 }
 
 fun toPub(
     p: PersistablePublishMessage,
     userProperty: List<Pair<String, String>>,
-) = PublishMessage(
-    PublishMessage.FixedHeader(p.dup, p.qos.toQos(), p.retain),
-    PublishMessage.VariableHeader(
-        TopicName.fromOrThrow(p.topicName),
-        p.packetId,
-        PublishMessage.VariableHeader.Properties(
-            p.payloadFormatIndicator == 1,
-            p.messageExpiryInterval?.toLong(),
-            p.topicAlias,
-            p.responseTopic?.let { TopicName.fromOrThrow(it) },
-            p.correlationData
-                ?.let {
-                    JsBuffer(it).also { buf ->
-                        buf.position(it.length)
-                        buf.setLimit(it.length)
-                    }
-                }?.also { it.resetForRead() },
-            userProperty,
-            p.subscriptionIdentifier
-                ?.split(", ")
-                ?.map { it.toLong() }
-                ?.toSet() ?: emptySet(),
-            p.contentType,
-        ),
-    ),
-    p.payload
-        ?.let {
-            JsBuffer(it).also { buf ->
-                buf.position(it.length)
-                buf.setLimit(it.length)
-            }
-        }?.also { it.resetForRead() },
-)
+): PublishMessage =
+    PublishMessageV5.ofRaw(
+        topic = TopicName.fromOrThrow(p.topicName),
+        qos = p.qos.toQos(),
+        payload =
+            p.payload?.let {
+                JsBuffer(it).also { buf ->
+                    buf.position(it.length)
+                    buf.setLimit(it.length)
+                }
+            }?.also { it.resetForRead() },
+        dup = p.dup,
+        retain = p.retain,
+        packetIdentifier = p.packetId,
+        properties =
+            PublishMessageV5.Properties(
+                p.payloadFormatIndicator == 1,
+                p.messageExpiryInterval?.toLong(),
+                p.topicAlias,
+                p.responseTopic?.let { TopicName.fromOrThrow(it) },
+                p.correlationData
+                    ?.let {
+                        JsBuffer(it).also { buf ->
+                            buf.position(it.length)
+                            buf.setLimit(it.length)
+                        }
+                    }?.also { it.resetForRead() },
+                userProperty,
+                p.subscriptionIdentifier
+                    ?.split(", ")
+                    ?.map { it.toLong() }
+                    ?.toSet() ?: emptySet(),
+                p.contentType,
+            ),
+    )
 
 @JsExport
 data class PersistableBroker(

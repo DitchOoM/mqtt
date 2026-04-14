@@ -4,10 +4,10 @@ import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
 import com.ditchoom.mqtt.Persistence
 import com.ditchoom.mqtt.controlpacket.ControlPacketFactory
-import com.ditchoom.mqtt.controlpacket.IPublishMessage
 import com.ditchoom.mqtt.controlpacket.ISubscribeRequest
 import com.ditchoom.mqtt.controlpacket.ISubscription
 import com.ditchoom.mqtt.controlpacket.NO_PACKET_ID
+import com.ditchoom.mqtt.controlpacket.PublishMessage
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.TopicName
@@ -39,7 +39,7 @@ object ControlPacketV4Factory : ControlPacketFactory {
         retain: Boolean,
         topicName: TopicName,
         payload: ReadBuffer?,
-        // MQTT 5 Properties, Should be ignored in this version
+        // MQTT 5 Properties, ignored for v4
         payloadFormatIndicator: Boolean,
         messageExpiryInterval: Long?,
         topicAlias: Int?,
@@ -48,11 +48,7 @@ object ControlPacketV4Factory : ControlPacketFactory {
         userProperty: List<Pair<String, String>>,
         subscriptionIdentifier: Set<Long>,
         contentType: String?,
-    ): IPublishMessage<ReadBuffer?> {
-        val fixedHeader = PublishMessage.FixedHeader(dup, qos, retain)
-        val variableHeader = PublishMessage.VariableHeader(topicName, NO_PACKET_ID)
-        return PublishMessage(fixedHeader, variableHeader, payload)
-    }
+    ): PublishMessage = PublishMessageV4.ofRaw(topicName, qos, payload, dup, retain, NO_PACKET_ID)
 
     override fun <P> publish(
         dup: Boolean,
@@ -62,11 +58,8 @@ object ControlPacketV4Factory : ControlPacketFactory {
         payload: P,
         encodePayload: (WriteBuffer, P) -> Unit,
         payloadSize: (P) -> Int,
-    ): IPublishMessage<P> {
-        val fixedHeader = PublishMessage.FixedHeader(dup, qos, retain)
-        val variableHeader = PublishMessage.VariableHeader(topicName, NO_PACKET_ID)
-        return PublishMessage(fixedHeader, variableHeader, payload, encodePayload, payloadSize)
-    }
+    ): PublishMessage =
+        PublishMessageV4.ofTyped(topicName, qos, payload, encodePayload, payloadSize, dup, retain, NO_PACKET_ID)
 
     override fun subscribe(
         topicFilter: TopicFilter,

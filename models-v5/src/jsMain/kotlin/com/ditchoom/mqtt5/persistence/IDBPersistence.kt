@@ -7,7 +7,6 @@ import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.IConnectionRequest
 import com.ditchoom.mqtt.controlpacket.IPublishAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IPublishComplete
-import com.ditchoom.mqtt.controlpacket.IPublishMessage
 import com.ditchoom.mqtt.controlpacket.IPublishReceived
 import com.ditchoom.mqtt.controlpacket.IPublishRelease
 import com.ditchoom.mqtt.controlpacket.ISubscribeAcknowledgement
@@ -15,6 +14,7 @@ import com.ditchoom.mqtt.controlpacket.ISubscribeRequest
 import com.ditchoom.mqtt.controlpacket.ISubscription
 import com.ditchoom.mqtt.controlpacket.IUnsubscribeAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IUnsubscribeRequest
+import com.ditchoom.mqtt.controlpacket.PublishMessage
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
@@ -22,7 +22,7 @@ import com.ditchoom.mqtt5.controlpacket.AckProperties
 import com.ditchoom.mqtt5.controlpacket.AckVariableHeader
 import com.ditchoom.mqtt5.controlpacket.ConnectionRequest
 import com.ditchoom.mqtt5.controlpacket.PublishComplete
-import com.ditchoom.mqtt5.controlpacket.PublishMessage
+import com.ditchoom.mqtt5.controlpacket.PublishMessageV5
 import com.ditchoom.mqtt5.controlpacket.PublishReceived
 import com.ditchoom.mqtt5.controlpacket.PublishRelease
 import com.ditchoom.mqtt5.controlpacket.SubscribeRequest
@@ -458,34 +458,98 @@ class IDBPersistence(
         commitTransaction(tx, "clearMessages")
     }
 
-    override suspend fun incomingPublish(
+    override suspend fun persistIncomingPublish(
         broker: MqttBroker,
-        packet: IPublishMessage,
-        replyMessage: ControlPacket,
+        packet: PublishMessage,
     ) {
-        if (packet.qualityOfService != QualityOfService.EXACTLY_ONCE) {
-            return
-        }
-        val p = replyMessage as PublishReceived
-        val tx = db.transaction(arrayOf(QOS2MSG, USER_PROPERTIES), IDBTransactionMode.readwrite)
-        val qos2MsgStore = tx.objectStore(QOS2MSG)
-        qos2MsgStore.put(
-            PersistableQos2Message(
-                broker.identifier,
-                replyMessage.packetIdentifier,
-                replyMessage.controlPacketValue,
-                0,
-                p.variable.reasonCode.byte
-                    .toInt(),
-                p.variable.properties.reasonString,
-            ),
-        )
+        if (packet.qualityOfService == QualityOfService.AT_MOST_ONCE) return
+        val p = packet as PublishMessageV5
+        val tx = db.transaction(arrayOf(PUB_MSG, USER_PROPERTIES), IDBTransactionMode.readwrite)
+        val pubStore = tx.objectStore(PUB_MSG)
+        pubStore.put(PersistablePublishMessage(broker.identifier, true, p))
         val propStore = tx.objectStore(USER_PROPERTIES)
-        for ((key, value) in p.variable.properties.userProperty) {
-            propStore.put(PersistableUserProperty(broker.identifier, 0, p.packetIdentifier, key, value))
+        for ((key, value) in p.properties.userProperty) {
+            propStore.put(PersistableUserProperty(broker.identifier, 1, p.packetIdentifier, key, value))
         }
-        commitTransaction(tx, "incomingPublish")
-        isQueueClear(broker, true)
+        commitTransaction(tx, "persistIncomingPublish")
+    }
+
+    override suspend fun incomingHandlerComplete(
+        broker: MqttBroker,
+        packetId: Int,
+    ) {
+        val readTx = db.transaction(PUB_MSG, IDBTransactionMode.readonly)
+        val key =
+            IDBValidKey(
+                arrayOf(
+                    IDBValidKey(broker.identifier),
+                    IDBValidKey(packetId),
+                    IDBValidKey(1),
+                ),
+            )
+        val getReq = readTx.objectStore(PUB_MSG).get(key)
+        commitTransaction(readTx, "incomingHandlerComplete.read")
+        await(getReq)
+        val existing = getReq.result?.unsafeCast<PersistablePublishMessage>() ?: return
+        val writeTx = db.transaction(PUB_MSG, IDBTransactionMode.readwrite)
+        val writeStore = writeTx.objectStore(PUB_MSG)
+        when (existing.qos.toQos()) {
+            QualityOfService.AT_LEAST_ONCE -> writeStore.delete(key)
+            QualityOfService.EXACTLY_ONCE -> {
+                val updated =
+                    PersistablePublishMessage(
+                        existing.brokerId,
+                        existing.incoming,
+                        existing.dup,
+                        existing.qos,
+                        existing.retain,
+                        existing.topicName,
+                        existing.packetId,
+                        existing.payloadFormatIndicator,
+                        existing.messageExpiryInterval,
+                        existing.topicAlias,
+                        existing.responseTopic,
+                        existing.correlationData,
+                        existing.subscriptionIdentifier,
+                        existing.contentType,
+                        existing.payload,
+                        Persistence.INCOMING_STATE_QOS2_HANDLER_COMPLETE_PUBREC_SENT,
+                    )
+                writeStore.put(updated)
+            }
+            QualityOfService.AT_MOST_ONCE -> Unit
+        }
+        commitTransaction(writeTx, "incomingHandlerComplete.write")
+    }
+
+    override suspend fun incomingMessagesToRedispatch(
+        broker: MqttBroker,
+    ): Collection<com.ditchoom.mqtt.IncomingPublishRecord> {
+        val tx = db.transaction(arrayOf(PUB_MSG, USER_PROPERTIES), IDBTransactionMode.readonly)
+        val propStore = tx.objectStore(USER_PROPERTIES)
+        val allPropsReq = propStore.index(BROKER_INDEX).getAll(IDBValidKey(broker.identifier))
+        val pubReq =
+            tx
+                .objectStore(PUB_MSG)
+                .index(BROKER_INCOMING_INDEX)
+                .getAll(IDBValidKey(arrayOf(IDBValidKey(broker.identifier), IDBValidKey(1))))
+        commitTransaction(tx, "incomingMessagesToRedispatch")
+        await(pubReq)
+        await(allPropsReq)
+        val props =
+            allPropsReq.result
+                .map { it.unsafeCast<PersistableUserProperty>() }
+                .filter { it.incoming == 1 }
+        return pubReq.result.map {
+            val persistable = it.unsafeCast<PersistablePublishMessage>()
+            val pubProps =
+                props
+                    .filter { p -> p.packetId == persistable.packetId }
+                    .map { p -> Pair(p.key, p.value) }
+            val pub = toPub(persistable, pubProps)
+            val state = persistable.asDynamic().state as? Int ?: 0
+            com.ditchoom.mqtt.IncomingPublishRecord(pub, state)
+        }
     }
 
     override suspend fun messagesToSendOnReconnect(broker: MqttBroker): Collection<ControlPacket> {
@@ -688,9 +752,8 @@ class IDBPersistence(
         broker: MqttBroker,
         outPubComp: IPublishComplete,
     ) {
-        val tx = db.transaction(arrayOf(QOS2MSG, USER_PROPERTIES), IDBTransactionMode.readwrite)
-        val queuedMsgStore = tx.objectStore(QOS2MSG)
-        queuedMsgStore.delete(
+        val tx = db.transaction(arrayOf(QOS2MSG, PUB_MSG, USER_PROPERTIES), IDBTransactionMode.readwrite)
+        tx.objectStore(QOS2MSG).delete(
             IDBValidKey(
                 arrayOf(
                     IDBValidKey(broker.identifier),
@@ -699,7 +762,18 @@ class IDBPersistence(
                 ),
             ),
         )
+        // new incoming QoS 2 row lives on PUB_MSG with incoming=1
+        tx.objectStore(PUB_MSG).delete(
+            IDBValidKey(
+                arrayOf(
+                    IDBValidKey(broker.identifier),
+                    IDBValidKey(outPubComp.packetIdentifier),
+                    IDBValidKey(1),
+                ),
+            ),
+        )
         deleteUserProperties(tx, "onPubCompWritten", broker.identifier, outPubComp.packetIdentifier, 0)
+        deleteUserProperties(tx, "onPubCompWritten", broker.identifier, outPubComp.packetIdentifier, 1)
         commitTransaction(tx, "onPubCompWritten")
     }
 
@@ -730,16 +804,16 @@ class IDBPersistence(
 
     override suspend fun writePubGetPacketId(
         broker: MqttBroker,
-        pub: IPublishMessage,
+        pub: PublishMessage,
     ): Int {
         val newPacketId = getAndIncrementPacketId(broker)
         val tx = db.transaction(arrayOf(PACKET_ID, USER_PROPERTIES, PUB_MSG), IDBTransactionMode.readwrite)
         val queuedMsgStore = tx.objectStore(PUB_MSG)
-        val packetIdPub = pub.maybeCopyWithNewPacketIdentifier(newPacketId) as PublishMessage
+        val packetIdPub = pub.maybeCopyWithNewPacketIdentifier(newPacketId) as PublishMessageV5
         val persistablePub = PersistablePublishMessage(broker.identifier, false, packetIdPub)
         queuedMsgStore.put(persistablePub)
         val propStore = tx.objectStore(USER_PROPERTIES)
-        for ((key, value) in packetIdPub.variable.properties.userProperty) {
+        for ((key, value) in packetIdPub.properties.userProperty) {
             propStore.put(PersistableUserProperty(broker.identifier, 0, newPacketId, key, value))
         }
         commitTransaction(tx, "writePubGetPacketId")
@@ -749,7 +823,7 @@ class IDBPersistence(
     override suspend fun getPubWithPacketId(
         broker: MqttBroker,
         packetId: Int,
-    ): IPublishMessage? {
+    ): PublishMessage? {
         val tx = db.transaction(arrayOf(PUB_MSG, USER_PROPERTIES), IDBTransactionMode.readonly)
         try {
             val queuedMsgStore = tx.objectStore(PUB_MSG)

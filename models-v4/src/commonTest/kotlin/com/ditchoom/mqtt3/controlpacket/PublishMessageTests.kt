@@ -10,9 +10,7 @@ import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readVariableByteI
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt.controlpacket.format.fixed.get
-import com.ditchoom.mqtt.controlpacket.validControlPacketIdentifierRange
-import com.ditchoom.mqtt3.controlpacket.PublishMessage.FixedHeader
-import com.ditchoom.mqtt3.controlpacket.PublishMessage.VariableHeader
+import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
@@ -22,11 +20,11 @@ import kotlin.test.assertTrue
 import kotlin.test.fail
 
 class PublishMessageTests {
-    private val payload: PlatformBuffer = BufferFactory.Default.allocate(4)
-
-    init {
-        payload.writeString("yolo", Charset.UTF8)
-        payload.resetForRead()
+    private fun freshPayload(): PlatformBuffer {
+        val p = BufferFactory.Default.allocate(4)
+        p.writeString("yolo", Charset.UTF8)
+        p.resetForRead()
+        return p
     }
 
     @Test
@@ -40,68 +38,142 @@ class PublishMessageTests {
         try {
             ControlPacketV4.from(buffer)
             fail()
-        } catch (e: MalformedPacketException) {
+        } catch (_: MalformedPacketException) {
         }
     }
 
     @Test
     fun qos0AndPacketIdentifierThrowsIllegalArgumentException() {
-        val fixed = FixedHeader(qos = QualityOfService.AT_MOST_ONCE)
-        val variable = VariableHeader(checkNotNull(TopicName.fromOrThrow("t")), 2)
-        assertFailsWith(MqttException::class) { PublishMessage(fixed, variable).validateOrThrow() }
+        assertFailsWith(MqttException::class) {
+            PublishMessageV4
+                .ofRaw(
+                    topic = TopicName.fromOrThrow("t"),
+                    qos = QualityOfService.AT_MOST_ONCE,
+                    packetIdentifier = 2,
+                ).validateOrThrow()
+        }
     }
 
     @Test
     fun qos1WithoutPacketIdentifierThrowsIllegalArgumentException() {
-        val fixed = FixedHeader(qos = QualityOfService.AT_LEAST_ONCE)
-        val variable = VariableHeader(checkNotNull(TopicName.fromOrThrow("t")))
-        assertFailsWith(MqttException::class) { PublishMessage(fixed, variable).validateOrThrow() }
+        assertFailsWith(MqttException::class) {
+            PublishMessageV4
+                .ofRaw(
+                    topic = TopicName.fromOrThrow("t"),
+                    qos = QualityOfService.AT_LEAST_ONCE,
+                ).validateOrThrow()
+        }
     }
 
     @Test
     fun qos2WithoutPacketIdentifierThrowsIllegalArgumentException() {
-        val fixed = FixedHeader(qos = QualityOfService.EXACTLY_ONCE)
-        val variable = VariableHeader(checkNotNull(TopicName.fromOrThrow("t")))
-        assertFailsWith(MqttException::class) { PublishMessage(fixed, variable).validateOrThrow() }
+        assertFailsWith(MqttException::class) {
+            PublishMessageV4
+                .ofRaw(
+                    topic = TopicName.fromOrThrow("t"),
+                    qos = QualityOfService.EXACTLY_ONCE,
+                ).validateOrThrow()
+        }
     }
 
     @Test
-    fun genericSerialization() {
-        val publishMessage =
-            PublishMessage.buildPayload(
-                topicName = checkNotNull(TopicName.fromOrThrow("user/log")),
-                payload = payload,
-            )
-        val buffer = BufferFactory.Default.allocate(16)
-        publishMessage.serialize(buffer)
-        val publishPayload = publishMessage.payload
-        publishPayload?.position(0)
-        buffer.resetForRead()
-        val firstByte = buffer.readUnsignedByte()
-        assertEquals(firstByte.toInt().shr(4), 3, "fixed header control packet type")
-        assertFalse(firstByte.get(3), "fixed header publish dup flag")
-        assertFalse(firstByte.get(2), "fixed header qos bit 2")
-        assertFalse(firstByte.get(1), "fixed header qos bit 1")
-        assertFalse(firstByte.get(0), "fixed header retain flag")
-        assertEquals(buffer.readVariableByteInteger(), 14, "fixed header remaining length")
-        assertEquals(8u, buffer.readUnsignedShort(), "variable header topic name length")
-        assertEquals(
-            checkNotNull(TopicName.fromOrThrow("user/log")).toString(),
-            buffer.readString(8, Charset.UTF8),
-            "variable header topic name value",
+    fun genericSerialization() = roundtrip("user/log", expectedRemainingLength = 14)
+
+    @Test
+    fun genericSerializationPublishDupFlag() =
+        roundtrip("user/log", dup = true, expectedRemainingLength = 14)
+
+    @Test
+    fun genericSerializationPublishQos1() =
+        roundtrip(
+            "user/log",
+            qos = QualityOfService.AT_LEAST_ONCE,
+            packetId = 13,
+            expectedRemainingLength = 16,
         )
-        if (publishMessage.variable.packetIdentifier in validControlPacketIdentifierRange) {
-            assertEquals(
-                buffer.readUnsignedShort().toInt(),
-                publishMessage.variable.packetIdentifier,
+
+    @Test
+    fun genericSerializationPublishQos2() =
+        roundtrip(
+            "user/log",
+            qos = QualityOfService.EXACTLY_ONCE,
+            packetId = 13,
+            expectedRemainingLength = 16,
+        )
+
+    @Test
+    fun genericSerializationPublishRetainFlag() =
+        roundtrip("user/log", retain = true, expectedRemainingLength = 14)
+
+    @Test
+    fun nullGenericSerialization() =
+        runTest {
+            val publishMessage = PublishMessageV4.ofRaw(topic = TopicName.fromOrThrow("user/log"))
+            val buffer = BufferFactory.Default.allocate(12)
+            publishMessage.serialize(buffer)
+            buffer.resetForRead()
+            val firstByte = buffer.readUnsignedByte()
+            assertEquals(3, firstByte.toInt().shr(4), "fixed header control packet type")
+            assertFalse(firstByte.get(3), "publish dup flag")
+            assertFalse(firstByte.get(2), "qos bit 2")
+            assertFalse(firstByte.get(1), "qos bit 1")
+            assertFalse(firstByte.get(0), "retain flag")
+            assertEquals(10, buffer.readVariableByteInteger(), "remaining length")
+            assertEquals(8u, buffer.readUnsignedShort(), "topic name length")
+            assertEquals("user/log", buffer.readString(8, Charset.UTF8), "topic name value")
+            buffer.resetForRead()
+            val byte1 = buffer.readUnsignedByte()
+            val remainingLength = buffer.readVariableByteInteger()
+            val result = PublishMessageV4.from(buffer, byte1, remainingLength)
+            assertMessageIsSame(publishMessage, result)
+        }
+
+    private fun roundtrip(
+        topic: String,
+        qos: QualityOfService = QualityOfService.AT_MOST_ONCE,
+        packetId: Int = com.ditchoom.mqtt.controlpacket.NO_PACKET_ID,
+        dup: Boolean = false,
+        retain: Boolean = false,
+        expectedRemainingLength: Int,
+    ) = runTest {
+        val payload = freshPayload()
+        val publishMessage =
+            PublishMessageV4.ofRaw(
+                topic = TopicName.fromOrThrow(topic),
+                qos = qos,
+                payload = payload,
+                dup = dup,
+                retain = retain,
+                packetIdentifier = packetId,
             )
+        val buffer = BufferFactory.Default.allocate(expectedRemainingLength + 4)
+        publishMessage.serialize(buffer)
+        buffer.resetForRead()
+
+        val firstByte = buffer.readUnsignedByte()
+        assertEquals(3, firstByte.toInt().shr(4), "control packet type")
+        assertEquals(dup, firstByte.get(3), "dup flag")
+        assertEquals(qos == QualityOfService.EXACTLY_ONCE, firstByte.get(2), "qos bit 2")
+        assertEquals(qos == QualityOfService.AT_LEAST_ONCE, firstByte.get(1), "qos bit 1")
+        assertEquals(retain, firstByte.get(0), "retain flag")
+        assertEquals(expectedRemainingLength, buffer.readVariableByteInteger(), "remaining length")
+        assertEquals(topic.length.toUInt().toUShort(), buffer.readUnsignedShort(), "topic length")
+        assertEquals(topic, buffer.readString(topic.length, Charset.UTF8), "topic value")
+        if (qos != QualityOfService.AT_MOST_ONCE) {
+            assertEquals(packetId, buffer.readUnsignedShort().toInt(), "packet identifier")
         }
         assertEquals("yolo", buffer.readString(4, Charset.UTF8), "payload value")
         buffer.resetForRead()
         val byte1 = buffer.readUnsignedByte()
         val remainingLength = buffer.readVariableByteInteger()
-        val result = PublishMessage.from(buffer, byte1, remainingLength)
-        assertMessageIsSame(publishMessage, result)
+        val result = PublishMessageV4.from(buffer, byte1, remainingLength)
+        assertEquals(topic, result.topic.toString())
+        assertEquals(qos, result.qualityOfService)
+        assertEquals(dup, result.dup)
+        assertEquals(retain, result.retain)
+        if (qos != QualityOfService.AT_MOST_ONCE) assertEquals(packetId, result.packetIdentifier)
+        val bytes = result.usePayload { readByteArray(remaining()) }
+        assertContentEquals("yolo".encodeToByteArray(), bytes)
     }
 
     private fun assertMessageIsSame(
@@ -121,197 +193,5 @@ class PublishMessageTests {
         val leftByteArray = leftBuffer.readByteArray(leftSize)
         val rightByteArray = rightBuffer.readByteArray(rightSize)
         assertContentEquals(leftByteArray, rightByteArray)
-    }
-
-    @Test
-    fun genericSerializationPublishDupFlag() {
-        val publishMessage =
-            PublishMessage.buildPayload(
-                topicName = checkNotNull(TopicName.fromOrThrow("user/log")),
-                payload = payload,
-                dup = true,
-            )
-        val buffer = BufferFactory.Default.allocate(16)
-        publishMessage.serialize(buffer)
-        publishMessage.payload?.position(0)
-        buffer.resetForRead()
-        val firstByte = buffer.readUnsignedByte()
-        assertEquals(firstByte.toInt().shr(4), 3, "fixed header control packet type")
-        assertTrue(firstByte.get(3), "fixed header publish dup flag")
-        assertFalse(firstByte.get(2), "fixed header qos bit 2")
-        assertFalse(firstByte.get(1), "fixed header qos bit 1")
-        assertFalse(firstByte.get(0), "fixed header retain flag")
-        assertEquals(buffer.readVariableByteInteger(), 14, "fixed header remaining length")
-        assertEquals(8u, buffer.readUnsignedShort(), "variable header topic name length")
-        assertEquals(
-            checkNotNull(TopicName.fromOrThrow("user/log")).toString(),
-            buffer.readString(8, Charset.UTF8),
-            "variable header topic name value",
-        )
-        if (publishMessage.variable.packetIdentifier in validControlPacketIdentifierRange) {
-            assertEquals(
-                buffer.readUnsignedShort().toInt(),
-                publishMessage.variable.packetIdentifier,
-            )
-        }
-        assertEquals("yolo", buffer.readString(4, Charset.UTF8), "payload value")
-        buffer.resetForRead()
-        val byte1 = buffer.readUnsignedByte()
-        val remainingLength = buffer.readVariableByteInteger()
-        val result = PublishMessage.from(buffer, byte1, remainingLength)
-        assertMessageIsSame(publishMessage, result)
-    }
-
-    @Test
-    fun genericSerializationPublishQos1() {
-        val publishMessage =
-            PublishMessage.buildPayload(
-                topicName = checkNotNull(TopicName.fromOrThrow("user/log")),
-                payload = payload,
-                qos = QualityOfService.AT_LEAST_ONCE,
-                packetIdentifier = 13,
-            )
-        val buffer = BufferFactory.Default.allocate(18)
-        publishMessage.serialize(buffer)
-        publishMessage.payload?.position(0)
-        buffer.resetForRead()
-        val firstByte = buffer.readUnsignedByte()
-        assertEquals(firstByte.toInt().shr(4), 3, "fixed header control packet type")
-        assertFalse(firstByte.get(3), "fixed header publish dup flag")
-        assertFalse(firstByte.get(2), "fixed header qos bit 2")
-        assertTrue(firstByte.get(1), "fixed header qos bit 1")
-        assertFalse(firstByte.get(0), "fixed header retain flag")
-        assertEquals(buffer.readVariableByteInteger(), 16, "fixed header remaining length")
-        assertEquals(8u, buffer.readUnsignedShort(), "variable header topic name length")
-        assertEquals(
-            checkNotNull(TopicName.fromOrThrow("user/log")).toString(),
-            buffer.readString(8, Charset.UTF8),
-            "variable header topic name value",
-        )
-        if (publishMessage.variable.packetIdentifier in validControlPacketIdentifierRange) {
-            assertEquals(
-                buffer.readUnsignedShort().toInt(),
-                publishMessage.variable.packetIdentifier,
-            )
-        }
-        assertEquals("yolo", buffer.readString(4, Charset.UTF8), "payload value")
-        buffer.resetForRead()
-        val byte1 = buffer.readUnsignedByte()
-        val remainingLength = buffer.readVariableByteInteger()
-        val result = PublishMessage.from(buffer, byte1, remainingLength)
-        assertMessageIsSame(publishMessage, result)
-    }
-
-    @Test
-    fun genericSerializationPublishQos2() {
-        val publishMessage =
-            PublishMessage.buildPayload(
-                topicName = checkNotNull(TopicName.fromOrThrow("user/log")),
-                payload = payload,
-                qos = QualityOfService.EXACTLY_ONCE,
-                packetIdentifier = 13,
-            )
-        val buffer = BufferFactory.Default.allocate(18)
-        publishMessage.serialize(buffer)
-        publishMessage.payload?.position(0)
-        buffer.resetForRead()
-        val firstByte = buffer.readUnsignedByte()
-        assertEquals(firstByte.toInt().shr(4), 3, "fixed header control packet type")
-        assertFalse(firstByte.get(3), "fixed header publish dup flag")
-        assertTrue(firstByte.get(2), "fixed header qos bit 2")
-        assertFalse(firstByte.get(1), "fixed header qos bit 1")
-        assertFalse(firstByte.get(0), "fixed header retain flag")
-        assertEquals(buffer.readVariableByteInteger(), 16, "fixed header remaining length")
-        assertEquals(8u, buffer.readUnsignedShort(), "variable header topic name length")
-        assertEquals(
-            checkNotNull(TopicName.fromOrThrow("user/log")).toString(),
-            buffer.readString(8, Charset.UTF8),
-            "variable header topic name value",
-        )
-        if (publishMessage.variable.packetIdentifier in validControlPacketIdentifierRange) {
-            assertEquals(
-                buffer.readUnsignedShort().toInt(),
-                publishMessage.variable.packetIdentifier,
-            )
-        }
-        assertEquals("yolo", buffer.readString(4, Charset.UTF8), "payload value")
-        buffer.resetForRead()
-        val byte1 = buffer.readUnsignedByte()
-        val remainingLength = buffer.readVariableByteInteger()
-        val result = PublishMessage.from(buffer, byte1, remainingLength)
-        assertMessageIsSame(publishMessage, result)
-    }
-
-    @Test
-    fun genericSerializationPublishRetainFlag() {
-        val publishMessage =
-            PublishMessage.buildPayload(
-                topicName = checkNotNull(TopicName.fromOrThrow("user/log")),
-                payload = payload,
-                retain = true,
-            )
-        val buffer = BufferFactory.Default.allocate(16)
-        publishMessage.serialize(buffer)
-        publishMessage.payload?.position(0)
-        buffer.resetForRead()
-        val firstByte = buffer.readUnsignedByte()
-        assertEquals(firstByte.toInt().shr(4), 3, "fixed header control packet type")
-        assertFalse(firstByte.get(3), "fixed header publish dup flag")
-        assertFalse(firstByte.get(2), "fixed header qos bit 2")
-        assertFalse(firstByte.get(1), "fixed header qos bit 1")
-        assertTrue(firstByte.get(0), "fixed header retain flag")
-        assertEquals(buffer.readVariableByteInteger(), 14, "fixed header remaining length")
-        assertEquals(8u, buffer.readUnsignedShort(), "variable header topic name length")
-        assertEquals(
-            checkNotNull(TopicName.fromOrThrow("user/log")).toString(),
-            buffer.readString(8, Charset.UTF8),
-            "variable header topic name value",
-        )
-        if (publishMessage.variable.packetIdentifier in validControlPacketIdentifierRange) {
-            assertEquals(
-                buffer.readUnsignedShort().toInt(),
-                publishMessage.variable.packetIdentifier,
-            )
-        }
-        assertEquals("yolo", buffer.readString(4, Charset.UTF8), "payload value")
-        buffer.resetForRead()
-        val byte1 = buffer.readUnsignedByte()
-        val remainingLength = buffer.readVariableByteInteger()
-        val result = PublishMessage.from(buffer, byte1, remainingLength)
-        assertMessageIsSame(publishMessage, result)
-    }
-
-    @Test
-    fun nullGenericSerialization() {
-        val publishMessage =
-            PublishMessage.build(topicName = checkNotNull(TopicName.fromOrThrow("user/log")))
-        val buffer = BufferFactory.Default.allocate(12)
-        publishMessage.serialize(buffer)
-        buffer.resetForRead()
-        val firstByte = buffer.readUnsignedByte()
-        assertEquals(firstByte.toInt().shr(4), 3, "fixed header control packet type")
-        assertFalse(firstByte.get(3), "fixed header publish dup flag")
-        assertFalse(firstByte.get(2), "fixed header qos bit 2")
-        assertFalse(firstByte.get(1), "fixed header qos bit 1")
-        assertFalse(firstByte.get(0), "fixed header retain flag")
-        assertEquals(buffer.readVariableByteInteger(), 10, "fixed header remaining length")
-        assertEquals(8u, buffer.readUnsignedShort(), "variable header topic name length")
-        assertEquals(
-            checkNotNull(TopicName.fromOrThrow("user/log")).toString(),
-            buffer.readString(8, Charset.UTF8),
-            "variable header topic name value",
-        )
-        if (publishMessage.variable.packetIdentifier in validControlPacketIdentifierRange) {
-            assertEquals(
-                buffer.readUnsignedShort().toInt(),
-                publishMessage.variable.packetIdentifier,
-            )
-        }
-        buffer.resetForRead()
-        val byte1 = buffer.readUnsignedByte()
-        val remainingLength = buffer.readVariableByteInteger()
-        val result = PublishMessage.from(buffer, byte1, remainingLength)
-        publishMessage.payload?.resetForRead()
-        assertEquals(publishMessage, result)
     }
 }

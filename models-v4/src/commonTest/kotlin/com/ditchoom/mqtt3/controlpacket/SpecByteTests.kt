@@ -3,7 +3,6 @@ package com.ditchoom.mqtt3.controlpacket
 import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.ReadBuffer
-import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.QualityOfService.AT_LEAST_ONCE
 import com.ditchoom.mqtt.controlpacket.QualityOfService.AT_MOST_ONCE
 import com.ditchoom.mqtt.controlpacket.QualityOfService.EXACTLY_ONCE
@@ -26,7 +25,6 @@ import kotlin.test.assertTrue
  * References: http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html
  */
 class SpecByteTests {
-
     // ── Helper ──────────────────────────────────────────────────────────────
 
     private fun packetBuffer(block: () -> ControlPacketV4): ReadBuffer {
@@ -71,9 +69,10 @@ class SpecByteTests {
 
     @Test
     fun connackAcceptedExactBytes() {
-        val buf = packetBuffer {
-            ConnectionAcknowledgment(sessionPresent = false, connectReason = ReturnCode.CONNECTION_ACCEPTED)
-        }
+        val buf =
+            packetBuffer {
+                ConnectionAcknowledgment(sessionPresent = false, connectReason = ReturnCode.CONNECTION_ACCEPTED)
+            }
         assertEquals(4, buf.remaining())
         assertEquals(0x20u, buf.readUnsignedByte()) // type=2, flags=0000
         assertEquals(0x02u, buf.readUnsignedByte()) // remaining length = 2
@@ -83,9 +82,10 @@ class SpecByteTests {
 
     @Test
     fun connackRejectedSessionPresentExactBytes() {
-        val buf = packetBuffer {
-            ConnectionAcknowledgment(sessionPresent = true, connectReason = ReturnCode.CONNECTION_REFUSED_IDENTIFIER_REJECTED)
-        }
+        val buf =
+            packetBuffer {
+                ConnectionAcknowledgment(sessionPresent = true, connectReason = ReturnCode.CONNECTION_REFUSED_IDENTIFIER_REJECTED)
+            }
         assertEquals(4, buf.remaining())
         assertEquals(0x20u, buf.readUnsignedByte()) // type=2
         assertEquals(0x02u, buf.readUnsignedByte()) // RL=2
@@ -172,9 +172,10 @@ class SpecByteTests {
     @Test
     fun publishQos0TopicANoPayloadExactBytes() {
         // PUBLISH QoS 0, topic "a", no payload
-        val buf = packetBuffer {
-            PublishMessage(topicName = "a", qos = AT_MOST_ONCE)
-        }
+        val buf =
+            packetBuffer {
+                PublishMessageV4.ofRaw(topic = TopicName.fromOrThrow("a"), qos = AT_MOST_ONCE)
+            }
         assertEquals(5, buf.remaining())
         assertEquals(0x30u, buf.readUnsignedByte()) // type=3, flags=0000 (QoS 0)
         assertEquals(0x03u, buf.readUnsignedByte()) // RL=3
@@ -186,9 +187,14 @@ class SpecByteTests {
     @Test
     fun publishQos1TopicAPacketId1ExactBytes() {
         // PUBLISH QoS 1, topic "a", packet ID 1, no payload
-        val buf = packetBuffer {
-            PublishMessage(topicName = "a", qos = AT_LEAST_ONCE, packetIdentifier = 1)
-        }
+        val buf =
+            packetBuffer {
+                PublishMessageV4.ofRaw(
+                    topic = TopicName.fromOrThrow("a"),
+                    qos = AT_LEAST_ONCE,
+                    packetIdentifier = 1,
+                )
+            }
         assertEquals(7, buf.remaining())
         assertEquals(0x32u, buf.readUnsignedByte()) // type=3, flags=0010 (QoS 1)
         assertEquals(0x05u, buf.readUnsignedByte()) // RL=5
@@ -202,9 +208,14 @@ class SpecByteTests {
     @Test
     fun publishQos2TopicAPacketId1ExactBytes() {
         // PUBLISH QoS 2, topic "a", packet ID 1, no payload
-        val buf = packetBuffer {
-            PublishMessage(topicName = "a", qos = EXACTLY_ONCE, packetIdentifier = 1)
-        }
+        val buf =
+            packetBuffer {
+                PublishMessageV4.ofRaw(
+                    topic = TopicName.fromOrThrow("a"),
+                    qos = EXACTLY_ONCE,
+                    packetIdentifier = 1,
+                )
+            }
         assertEquals(7, buf.remaining())
         assertEquals(0x34u, buf.readUnsignedByte()) // type=3, flags=0100 (QoS 2)
         assertEquals(0x05u, buf.readUnsignedByte()) // RL=5
@@ -221,14 +232,15 @@ class SpecByteTests {
         val buf = BufferFactory.Default.allocate(5)
         buf.writeUByte(0x30u) // type=3, QoS 0
         buf.writeUByte(0x03u) // RL=3
-        buf.writeUByte(0x00u); buf.writeUByte(0x01u) // topic len=1
+        buf.writeUByte(0x00u)
+        buf.writeUByte(0x01u) // topic len=1
         buf.writeUByte(0x61u) // "a"
         buf.resetForRead()
         val packet = ControlPacketV4.from(buf)
-        assertIs<PublishMessage<*>>(packet)
+        assertIs<PublishMessageV4>(packet)
         assertEquals("a", packet.topic.toString())
         assertEquals(AT_MOST_ONCE, packet.qualityOfService)
-        assertNull(packet.payload)
+        assertEquals(0, packet.payloadSize())
     }
 
     @Test
@@ -237,12 +249,14 @@ class SpecByteTests {
         val buf = BufferFactory.Default.allocate(7)
         buf.writeUByte(0x32u) // type=3, QoS 1
         buf.writeUByte(0x05u) // RL=5
-        buf.writeUByte(0x00u); buf.writeUByte(0x01u) // topic len=1
+        buf.writeUByte(0x00u)
+        buf.writeUByte(0x01u) // topic len=1
         buf.writeUByte(0x61u) // "a"
-        buf.writeUByte(0x00u); buf.writeUByte(0x01u) // packet ID=1
+        buf.writeUByte(0x00u)
+        buf.writeUByte(0x01u) // packet ID=1
         buf.resetForRead()
         val packet = ControlPacketV4.from(buf)
-        assertIs<PublishMessage<*>>(packet)
+        assertIs<PublishMessageV4>(packet)
         assertEquals("a", packet.topic.toString())
         assertEquals(AT_LEAST_ONCE, packet.qualityOfService)
         assertEquals(1, packet.packetIdentifier)
@@ -253,9 +267,10 @@ class SpecByteTests {
     @Test
     fun subscribeTopicAbQos1ExactBytes() {
         // Packet ID 10, topic "a/b", QoS 1
-        val buf = packetBuffer {
-            SubscribeRequest(10u, listOf(SubscriptionEntry("a/b", AT_LEAST_ONCE.integerValue.toUByte())))
-        }
+        val buf =
+            packetBuffer {
+                SubscribeRequest(10u, listOf(SubscriptionEntry("a/b", AT_LEAST_ONCE.integerValue.toUByte())))
+            }
         assertEquals(10, buf.remaining())
         assertEquals(0x82u, buf.readUnsignedByte()) // type=8, flags=0010 (reserved)
         assertEquals(0x08u, buf.readUnsignedByte()) // RL=8
@@ -274,9 +289,13 @@ class SpecByteTests {
         val buf = BufferFactory.Default.allocate(10)
         buf.writeUByte(0x82u) // type=8, flags=0010
         buf.writeUByte(0x08u) // RL=8
-        buf.writeUByte(0x00u); buf.writeUByte(0x0Au) // packet ID=10
-        buf.writeUByte(0x00u); buf.writeUByte(0x03u) // topic filter len=3
-        buf.writeUByte(0x61u); buf.writeUByte(0x2Fu); buf.writeUByte(0x62u) // "a/b"
+        buf.writeUByte(0x00u)
+        buf.writeUByte(0x0Au) // packet ID=10
+        buf.writeUByte(0x00u)
+        buf.writeUByte(0x03u) // topic filter len=3
+        buf.writeUByte(0x61u)
+        buf.writeUByte(0x2Fu)
+        buf.writeUByte(0x62u) // "a/b"
         buf.writeUByte(0x01u) // QoS 1
         buf.resetForRead()
         val packet = ControlPacketV4.from(buf)
@@ -291,9 +310,10 @@ class SpecByteTests {
 
     @Test
     fun subackPacketId10GrantedQos1ExactBytes() {
-        val buf = packetBuffer {
-            SubscribeAcknowledgement(10, listOf(ReasonCode.GRANTED_QOS_1))
-        }
+        val buf =
+            packetBuffer {
+                SubscribeAcknowledgement(10, listOf(ReasonCode.GRANTED_QOS_1))
+            }
         assertEquals(5, buf.remaining())
         assertEquals(0x90u, buf.readUnsignedByte()) // type=9, flags=0000
         assertEquals(0x03u, buf.readUnsignedByte()) // RL=3
@@ -307,7 +327,8 @@ class SpecByteTests {
         val buf = BufferFactory.Default.allocate(5)
         buf.writeUByte(0x90u) // type=9
         buf.writeUByte(0x03u) // RL=3
-        buf.writeUByte(0x00u); buf.writeUByte(0x0Au) // packet ID=10
+        buf.writeUByte(0x00u)
+        buf.writeUByte(0x0Au) // packet ID=10
         buf.writeUByte(0x01u) // granted QoS 1
         buf.resetForRead()
         val packet = ControlPacketV4.from(buf)
@@ -321,9 +342,10 @@ class SpecByteTests {
     @Test
     fun unsubscribeTopicAbExactBytes() {
         // Packet ID 10, topic "a/b"
-        val buf = packetBuffer {
-            UnsubscribeRequest(10u, listOf(TopicFilterEntry("a/b")))
-        }
+        val buf =
+            packetBuffer {
+                UnsubscribeRequest(10u, listOf(TopicFilterEntry("a/b")))
+            }
         assertEquals(9, buf.remaining())
         assertEquals(0xA2u, buf.readUnsignedByte()) // type=10, flags=0010 (reserved)
         assertEquals(0x07u, buf.readUnsignedByte()) // RL=7
@@ -341,9 +363,13 @@ class SpecByteTests {
         val buf = BufferFactory.Default.allocate(9)
         buf.writeUByte(0xA2u) // type=10, flags=0010
         buf.writeUByte(0x07u) // RL=7
-        buf.writeUByte(0x00u); buf.writeUByte(0x0Au) // packet ID=10
-        buf.writeUByte(0x00u); buf.writeUByte(0x03u) // topic filter len=3
-        buf.writeUByte(0x61u); buf.writeUByte(0x2Fu); buf.writeUByte(0x62u) // "a/b"
+        buf.writeUByte(0x00u)
+        buf.writeUByte(0x0Au) // packet ID=10
+        buf.writeUByte(0x00u)
+        buf.writeUByte(0x03u) // topic filter len=3
+        buf.writeUByte(0x61u)
+        buf.writeUByte(0x2Fu)
+        buf.writeUByte(0x62u) // "a/b"
         buf.resetForRead()
         val packet = ControlPacketV4.from(buf)
         assertIs<UnsubscribeRequest>(packet)
@@ -357,9 +383,10 @@ class SpecByteTests {
     @Test
     fun connectMinimalExactBytes() {
         // Clean session, keep alive = 60, client ID "test"
-        val buf = packetBuffer {
-            ConnectionRequest(clientId = "test", keepAliveSeconds = 60, cleanSession = true)
-        }
+        val buf =
+            packetBuffer {
+                ConnectionRequest(clientId = "test", keepAliveSeconds = 60, cleanSession = true)
+            }
         assertEquals(18, buf.remaining())
         assertEquals(0x10u, buf.readUnsignedByte()) // type=1, flags=0000
         assertEquals(0x10u, buf.readUnsignedByte()) // RL=16
@@ -393,50 +420,61 @@ class SpecByteTests {
         val willPayload = BufferFactory.Default.allocate(1)
         willPayload.writeUByte(0x70u) // 'p'
         willPayload.resetForRead()
-        val buf = packetBuffer {
-            ConnectionRequest(
-                clientId = "c",
-                keepAliveSeconds = 60,
-                cleanSession = true,
-                userName = "u",
-                password = "x",
-                will = WillConfig.Enabled(
-                    TopicName.fromOrThrow("w"),
-                    willPayload,
-                    AT_LEAST_ONCE,
-                    retain = false,
-                ),
-            )
-        }
+        val buf =
+            packetBuffer {
+                ConnectionRequest(
+                    clientId = "c",
+                    keepAliveSeconds = 60,
+                    cleanSession = true,
+                    userName = "u",
+                    password = "x",
+                    will =
+                        WillConfig.Enabled(
+                            TopicName.fromOrThrow("w"),
+                            willPayload,
+                            AT_LEAST_ONCE,
+                            retain = false,
+                        ),
+                )
+            }
         // flags = username(1) password(1) willRetain(0) willQos(01) willFlag(1) cleanSession(1) reserved(0)
         //       = 1_1_0_01_1_1_0 = 0xCE
         assertEquals(27, buf.remaining())
         assertEquals(0x10u, buf.readUnsignedByte()) // type=1
         assertEquals(0x19u, buf.readUnsignedByte()) // RL=25
         // Protocol name "MQTT"
-        assertEquals(0x00u, buf.readUnsignedByte()); assertEquals(0x04u, buf.readUnsignedByte())
-        assertEquals(0x4Du, buf.readUnsignedByte()); assertEquals(0x51u, buf.readUnsignedByte())
-        assertEquals(0x54u, buf.readUnsignedByte()); assertEquals(0x54u, buf.readUnsignedByte())
+        assertEquals(0x00u, buf.readUnsignedByte())
+        assertEquals(0x04u, buf.readUnsignedByte())
+        assertEquals(0x4Du, buf.readUnsignedByte())
+        assertEquals(0x51u, buf.readUnsignedByte())
+        assertEquals(0x54u, buf.readUnsignedByte())
+        assertEquals(0x54u, buf.readUnsignedByte())
         // Protocol level
         assertEquals(0x04u, buf.readUnsignedByte())
         // Connect flags
         assertEquals(0xCEu, buf.readUnsignedByte()) // 1100_1110
         // Keep alive = 60
-        assertEquals(0x00u, buf.readUnsignedByte()); assertEquals(0x3Cu, buf.readUnsignedByte())
+        assertEquals(0x00u, buf.readUnsignedByte())
+        assertEquals(0x3Cu, buf.readUnsignedByte())
         // Client ID "c"
-        assertEquals(0x00u, buf.readUnsignedByte()); assertEquals(0x01u, buf.readUnsignedByte())
+        assertEquals(0x00u, buf.readUnsignedByte())
+        assertEquals(0x01u, buf.readUnsignedByte())
         assertEquals(0x63u, buf.readUnsignedByte()) // 'c'
         // Will topic "w"
-        assertEquals(0x00u, buf.readUnsignedByte()); assertEquals(0x01u, buf.readUnsignedByte())
+        assertEquals(0x00u, buf.readUnsignedByte())
+        assertEquals(0x01u, buf.readUnsignedByte())
         assertEquals(0x77u, buf.readUnsignedByte()) // 'w'
         // Will payload: length-prefixed 1 byte
-        assertEquals(0x00u, buf.readUnsignedByte()); assertEquals(0x01u, buf.readUnsignedByte())
+        assertEquals(0x00u, buf.readUnsignedByte())
+        assertEquals(0x01u, buf.readUnsignedByte())
         assertEquals(0x70u, buf.readUnsignedByte()) // 'p'
         // Username "u"
-        assertEquals(0x00u, buf.readUnsignedByte()); assertEquals(0x01u, buf.readUnsignedByte())
+        assertEquals(0x00u, buf.readUnsignedByte())
+        assertEquals(0x01u, buf.readUnsignedByte())
         assertEquals(0x75u, buf.readUnsignedByte()) // 'u'
         // Password "x"
-        assertEquals(0x00u, buf.readUnsignedByte()); assertEquals(0x01u, buf.readUnsignedByte())
+        assertEquals(0x00u, buf.readUnsignedByte())
+        assertEquals(0x01u, buf.readUnsignedByte())
         assertEquals(0x78u, buf.readUnsignedByte()) // 'x'
     }
 
@@ -446,13 +484,22 @@ class SpecByteTests {
         val buf = BufferFactory.Default.allocate(18)
         buf.writeUByte(0x10u) // type=1
         buf.writeUByte(0x10u) // RL=16
-        buf.writeUByte(0x00u); buf.writeUByte(0x04u) // protocol name len
-        buf.writeUByte(0x4Du); buf.writeUByte(0x51u); buf.writeUByte(0x54u); buf.writeUByte(0x54u) // "MQTT"
+        buf.writeUByte(0x00u)
+        buf.writeUByte(0x04u) // protocol name len
+        buf.writeUByte(0x4Du)
+        buf.writeUByte(0x51u)
+        buf.writeUByte(0x54u)
+        buf.writeUByte(0x54u) // "MQTT"
         buf.writeUByte(0x04u) // protocol level
         buf.writeUByte(0x02u) // flags: cleanSession
-        buf.writeUByte(0x00u); buf.writeUByte(0x3Cu) // keepAlive=60
-        buf.writeUByte(0x00u); buf.writeUByte(0x04u) // clientId len
-        buf.writeUByte(0x74u); buf.writeUByte(0x65u); buf.writeUByte(0x73u); buf.writeUByte(0x74u) // "test"
+        buf.writeUByte(0x00u)
+        buf.writeUByte(0x3Cu) // keepAlive=60
+        buf.writeUByte(0x00u)
+        buf.writeUByte(0x04u) // clientId len
+        buf.writeUByte(0x74u)
+        buf.writeUByte(0x65u)
+        buf.writeUByte(0x73u)
+        buf.writeUByte(0x74u) // "test"
         buf.resetForRead()
         val packet = ControlPacketV4.from(buf)
         assertIs<ConnectionRequest>(packet)
@@ -493,27 +540,42 @@ class SpecByteTests {
     @Test
     fun publishDupRetainFlagsExactBytes() {
         // DUP=1, QoS=1, RETAIN=1 → flags = 1011 = 0x0B
-        val buf = packetBuffer {
-            PublishMessage(topicName = "a", qos = AT_LEAST_ONCE, dup = true, retain = true, packetIdentifier = 1)
-        }
+        val buf =
+            packetBuffer {
+                PublishMessageV4.ofRaw(
+                    topic = TopicName.fromOrThrow("a"),
+                    qos = AT_LEAST_ONCE,
+                    dup = true,
+                    retain = true,
+                    packetIdentifier = 1,
+                )
+            }
         assertEquals(7, buf.remaining())
         assertEquals(0x3Bu, buf.readUnsignedByte()) // type=3, flags=1011 (DUP+QoS1+RETAIN)
         assertEquals(0x05u, buf.readUnsignedByte()) // RL=5
-        assertEquals(0x00u, buf.readUnsignedByte()); assertEquals(0x01u, buf.readUnsignedByte()) // topic "a"
+        assertEquals(0x00u, buf.readUnsignedByte())
+        assertEquals(0x01u, buf.readUnsignedByte()) // topic "a"
         assertEquals(0x61u, buf.readUnsignedByte())
-        assertEquals(0x00u, buf.readUnsignedByte()); assertEquals(0x01u, buf.readUnsignedByte()) // packet ID=1
+        assertEquals(0x00u, buf.readUnsignedByte())
+        assertEquals(0x01u, buf.readUnsignedByte()) // packet ID=1
     }
 
     @Test
     fun publishRetainOnlyQos0ExactBytes() {
         // DUP=0, QoS=0, RETAIN=1 → flags = 0001
-        val buf = packetBuffer {
-            PublishMessage(topicName = "a", qos = AT_MOST_ONCE, retain = true)
-        }
+        val buf =
+            packetBuffer {
+                PublishMessageV4.ofRaw(
+                    topic = TopicName.fromOrThrow("a"),
+                    qos = AT_MOST_ONCE,
+                    retain = true,
+                )
+            }
         assertEquals(5, buf.remaining())
         assertEquals(0x31u, buf.readUnsignedByte()) // type=3, flags=0001 (RETAIN only)
         assertEquals(0x03u, buf.readUnsignedByte()) // RL=3
-        assertEquals(0x00u, buf.readUnsignedByte()); assertEquals(0x01u, buf.readUnsignedByte())
+        assertEquals(0x00u, buf.readUnsignedByte())
+        assertEquals(0x01u, buf.readUnsignedByte())
         assertEquals(0x61u, buf.readUnsignedByte())
     }
 
@@ -524,17 +586,19 @@ class SpecByteTests {
         payload.writeUByte(0x68u) // 'h'
         payload.writeUByte(0x69u) // 'i'
         payload.resetForRead()
-        val buf = packetBuffer {
-            PublishMessage(
-                fixed = PublishMessage.FixedHeader(qos = AT_MOST_ONCE),
-                variable = PublishMessage.VariableHeader(TopicName.fromOrThrow("t")),
-                payload = payload,
-            )
-        }
+        val buf =
+            packetBuffer {
+                PublishMessageV4.ofRaw(
+                    topic = TopicName.fromOrThrow("t"),
+                    qos = AT_MOST_ONCE,
+                    payload = payload,
+                )
+            }
         assertEquals(7, buf.remaining())
         assertEquals(0x30u, buf.readUnsignedByte()) // type=3, QoS 0
         assertEquals(0x05u, buf.readUnsignedByte()) // RL=5
-        assertEquals(0x00u, buf.readUnsignedByte()); assertEquals(0x01u, buf.readUnsignedByte()) // topic "t"
+        assertEquals(0x00u, buf.readUnsignedByte())
+        assertEquals(0x01u, buf.readUnsignedByte()) // topic "t"
         assertEquals(0x74u, buf.readUnsignedByte())
         assertEquals(0x68u, buf.readUnsignedByte()) // 'h'
         assertEquals(0x69u, buf.readUnsignedByte()) // 'i'
@@ -545,25 +609,29 @@ class SpecByteTests {
     @Test
     fun subscribeMultipleTopicsExactBytes() {
         // Packet ID 1, topics "a" QoS 0, "b" QoS 2
-        val buf = packetBuffer {
-            SubscribeRequest(
-                1u,
-                listOf(
-                    SubscriptionEntry("a", AT_MOST_ONCE.integerValue.toUByte()),
-                    SubscriptionEntry("b", EXACTLY_ONCE.integerValue.toUByte()),
-                ),
-            )
-        }
+        val buf =
+            packetBuffer {
+                SubscribeRequest(
+                    1u,
+                    listOf(
+                        SubscriptionEntry("a", AT_MOST_ONCE.integerValue.toUByte()),
+                        SubscriptionEntry("b", EXACTLY_ONCE.integerValue.toUByte()),
+                    ),
+                )
+            }
         assertEquals(12, buf.remaining())
         assertEquals(0x82u, buf.readUnsignedByte()) // type=8, flags=0010
         assertEquals(0x0Au, buf.readUnsignedByte()) // RL=10
-        assertEquals(0x00u, buf.readUnsignedByte()); assertEquals(0x01u, buf.readUnsignedByte()) // packet ID=1
+        assertEquals(0x00u, buf.readUnsignedByte())
+        assertEquals(0x01u, buf.readUnsignedByte()) // packet ID=1
         // First topic "a" QoS 0
-        assertEquals(0x00u, buf.readUnsignedByte()); assertEquals(0x01u, buf.readUnsignedByte()) // len=1
+        assertEquals(0x00u, buf.readUnsignedByte())
+        assertEquals(0x01u, buf.readUnsignedByte()) // len=1
         assertEquals(0x61u, buf.readUnsignedByte()) // 'a'
         assertEquals(0x00u, buf.readUnsignedByte()) // QoS 0
         // Second topic "b" QoS 2
-        assertEquals(0x00u, buf.readUnsignedByte()); assertEquals(0x01u, buf.readUnsignedByte()) // len=1
+        assertEquals(0x00u, buf.readUnsignedByte())
+        assertEquals(0x01u, buf.readUnsignedByte()) // len=1
         assertEquals(0x62u, buf.readUnsignedByte()) // 'b'
         assertEquals(0x02u, buf.readUnsignedByte()) // QoS 2
     }
@@ -572,16 +640,18 @@ class SpecByteTests {
 
     @Test
     fun subackMultipleReturnCodesExactBytes() {
-        val buf = packetBuffer {
-            SubscribeAcknowledgement(
-                1,
-                listOf(ReasonCode.GRANTED_QOS_0, ReasonCode.GRANTED_QOS_2, ReasonCode.UNSPECIFIED_ERROR),
-            )
-        }
+        val buf =
+            packetBuffer {
+                SubscribeAcknowledgement(
+                    1,
+                    listOf(ReasonCode.GRANTED_QOS_0, ReasonCode.GRANTED_QOS_2, ReasonCode.UNSPECIFIED_ERROR),
+                )
+            }
         assertEquals(7, buf.remaining())
         assertEquals(0x90u, buf.readUnsignedByte()) // type=9
         assertEquals(0x05u, buf.readUnsignedByte()) // RL=5
-        assertEquals(0x00u, buf.readUnsignedByte()); assertEquals(0x01u, buf.readUnsignedByte()) // packet ID=1
+        assertEquals(0x00u, buf.readUnsignedByte())
+        assertEquals(0x01u, buf.readUnsignedByte()) // packet ID=1
         assertEquals(0x00u, buf.readUnsignedByte()) // granted QoS 0
         assertEquals(0x02u, buf.readUnsignedByte()) // granted QoS 2
         assertEquals(0x80u, buf.readUnsignedByte()) // failure = 0x80
@@ -591,18 +661,22 @@ class SpecByteTests {
 
     @Test
     fun unsubscribeMultipleTopicsExactBytes() {
-        val buf = packetBuffer {
-            UnsubscribeRequest(1u, listOf(TopicFilterEntry("a"), TopicFilterEntry("b")))
-        }
+        val buf =
+            packetBuffer {
+                UnsubscribeRequest(1u, listOf(TopicFilterEntry("a"), TopicFilterEntry("b")))
+            }
         assertEquals(10, buf.remaining())
         assertEquals(0xA2u, buf.readUnsignedByte()) // type=10, flags=0010
         assertEquals(0x08u, buf.readUnsignedByte()) // RL=8
-        assertEquals(0x00u, buf.readUnsignedByte()); assertEquals(0x01u, buf.readUnsignedByte()) // packet ID=1
+        assertEquals(0x00u, buf.readUnsignedByte())
+        assertEquals(0x01u, buf.readUnsignedByte()) // packet ID=1
         // "a"
-        assertEquals(0x00u, buf.readUnsignedByte()); assertEquals(0x01u, buf.readUnsignedByte())
+        assertEquals(0x00u, buf.readUnsignedByte())
+        assertEquals(0x01u, buf.readUnsignedByte())
         assertEquals(0x61u, buf.readUnsignedByte())
         // "b"
-        assertEquals(0x00u, buf.readUnsignedByte()); assertEquals(0x01u, buf.readUnsignedByte())
+        assertEquals(0x00u, buf.readUnsignedByte())
+        assertEquals(0x01u, buf.readUnsignedByte())
         assertEquals(0x62u, buf.readUnsignedByte())
     }
 
@@ -610,20 +684,26 @@ class SpecByteTests {
 
     @Test
     fun connectEmptyClientIdExactBytes() {
-        val buf = packetBuffer {
-            ConnectionRequest(clientId = "", keepAliveSeconds = 0, cleanSession = true)
-        }
+        val buf =
+            packetBuffer {
+                ConnectionRequest(clientId = "", keepAliveSeconds = 0, cleanSession = true)
+            }
         assertEquals(14, buf.remaining())
         assertEquals(0x10u, buf.readUnsignedByte()) // type=1
         assertEquals(0x0Cu, buf.readUnsignedByte()) // RL=12
         // "MQTT"
-        assertEquals(0x00u, buf.readUnsignedByte()); assertEquals(0x04u, buf.readUnsignedByte())
-        assertEquals(0x4Du, buf.readUnsignedByte()); assertEquals(0x51u, buf.readUnsignedByte())
-        assertEquals(0x54u, buf.readUnsignedByte()); assertEquals(0x54u, buf.readUnsignedByte())
+        assertEquals(0x00u, buf.readUnsignedByte())
+        assertEquals(0x04u, buf.readUnsignedByte())
+        assertEquals(0x4Du, buf.readUnsignedByte())
+        assertEquals(0x51u, buf.readUnsignedByte())
+        assertEquals(0x54u, buf.readUnsignedByte())
+        assertEquals(0x54u, buf.readUnsignedByte())
         assertEquals(0x04u, buf.readUnsignedByte()) // level=4
         assertEquals(0x02u, buf.readUnsignedByte()) // cleanSession
-        assertEquals(0x00u, buf.readUnsignedByte()); assertEquals(0x00u, buf.readUnsignedByte()) // keepAlive=0
-        assertEquals(0x00u, buf.readUnsignedByte()); assertEquals(0x00u, buf.readUnsignedByte()) // empty client ID
+        assertEquals(0x00u, buf.readUnsignedByte())
+        assertEquals(0x00u, buf.readUnsignedByte()) // keepAlive=0
+        assertEquals(0x00u, buf.readUnsignedByte())
+        assertEquals(0x00u, buf.readUnsignedByte()) // empty client ID
     }
 
     // ── Edge cases: CONNECT will QoS 2 + retain ────────────────────────────
@@ -633,37 +713,46 @@ class SpecByteTests {
         val willPayload = BufferFactory.Default.allocate(1)
         willPayload.writeUByte(0x00u)
         willPayload.resetForRead()
-        val buf = packetBuffer {
-            ConnectionRequest(
-                clientId = "",
-                keepAliveSeconds = 0,
-                cleanSession = true,
-                will = WillConfig.Enabled(
-                    TopicName.fromOrThrow("d"),
-                    willPayload,
-                    EXACTLY_ONCE,
-                    retain = true,
-                ),
-            )
-        }
+        val buf =
+            packetBuffer {
+                ConnectionRequest(
+                    clientId = "",
+                    keepAliveSeconds = 0,
+                    cleanSession = true,
+                    will =
+                        WillConfig.Enabled(
+                            TopicName.fromOrThrow("d"),
+                            willPayload,
+                            EXACTLY_ONCE,
+                            retain = true,
+                        ),
+                )
+            }
         // flags = username(0) password(0) willRetain(1) willQos(10) willFlag(1) cleanSession(1) reserved(0)
         //       = 0_0_1_10_1_1_0 = 0x36
         val total = buf.remaining()
         assertEquals(0x10u, buf.readUnsignedByte()) // type=1
         buf.readUnsignedByte() // RL (skip, verified by total size)
         // "MQTT"
-        assertEquals(0x00u, buf.readUnsignedByte()); assertEquals(0x04u, buf.readUnsignedByte())
-        assertEquals(0x4Du, buf.readUnsignedByte()); assertEquals(0x51u, buf.readUnsignedByte())
-        assertEquals(0x54u, buf.readUnsignedByte()); assertEquals(0x54u, buf.readUnsignedByte())
+        assertEquals(0x00u, buf.readUnsignedByte())
+        assertEquals(0x04u, buf.readUnsignedByte())
+        assertEquals(0x4Du, buf.readUnsignedByte())
+        assertEquals(0x51u, buf.readUnsignedByte())
+        assertEquals(0x54u, buf.readUnsignedByte())
+        assertEquals(0x54u, buf.readUnsignedByte())
         assertEquals(0x04u, buf.readUnsignedByte()) // level
         assertEquals(0x36u, buf.readUnsignedByte()) // flags: willRetain + willQos2 + willFlag + cleanSession
-        assertEquals(0x00u, buf.readUnsignedByte()); assertEquals(0x00u, buf.readUnsignedByte()) // keepAlive=0
-        assertEquals(0x00u, buf.readUnsignedByte()); assertEquals(0x00u, buf.readUnsignedByte()) // empty client ID
+        assertEquals(0x00u, buf.readUnsignedByte())
+        assertEquals(0x00u, buf.readUnsignedByte()) // keepAlive=0
+        assertEquals(0x00u, buf.readUnsignedByte())
+        assertEquals(0x00u, buf.readUnsignedByte()) // empty client ID
         // will topic "d"
-        assertEquals(0x00u, buf.readUnsignedByte()); assertEquals(0x01u, buf.readUnsignedByte())
+        assertEquals(0x00u, buf.readUnsignedByte())
+        assertEquals(0x01u, buf.readUnsignedByte())
         assertEquals(0x64u, buf.readUnsignedByte())
         // will payload: 1 byte
-        assertEquals(0x00u, buf.readUnsignedByte()); assertEquals(0x01u, buf.readUnsignedByte())
+        assertEquals(0x00u, buf.readUnsignedByte())
+        assertEquals(0x01u, buf.readUnsignedByte())
         assertEquals(0x00u, buf.readUnsignedByte())
     }
 
@@ -671,14 +760,17 @@ class SpecByteTests {
 
     @Test
     fun subscribeWildcardTopicExactBytes() {
-        val buf = packetBuffer {
-            SubscribeRequest(1u, listOf(SubscriptionEntry("sensor/+/temp", AT_MOST_ONCE.integerValue.toUByte())))
-        }
+        val buf =
+            packetBuffer {
+                SubscribeRequest(1u, listOf(SubscriptionEntry("sensor/+/temp", AT_MOST_ONCE.integerValue.toUByte())))
+            }
         assertEquals(20, buf.remaining())
         assertEquals(0x82u, buf.readUnsignedByte()) // type=8, flags=0010
         assertEquals(0x12u, buf.readUnsignedByte()) // RL=18
-        assertEquals(0x00u, buf.readUnsignedByte()); assertEquals(0x01u, buf.readUnsignedByte()) // packet ID=1
-        assertEquals(0x00u, buf.readUnsignedByte()); assertEquals(0x0Du, buf.readUnsignedByte()) // len=13
+        assertEquals(0x00u, buf.readUnsignedByte())
+        assertEquals(0x01u, buf.readUnsignedByte()) // packet ID=1
+        assertEquals(0x00u, buf.readUnsignedByte())
+        assertEquals(0x0Du, buf.readUnsignedByte()) // len=13
         // "sensor/+/temp"
         assertEquals(0x73u, buf.readUnsignedByte()) // 's'
         assertEquals(0x65u, buf.readUnsignedByte()) // 'e'
@@ -705,13 +797,14 @@ class SpecByteTests {
         val payload = BufferFactory.Default.allocate(126)
         for (i in 0 until 126) payload.writeUByte(0xAAu)
         payload.resetForRead()
-        val buf = packetBuffer {
-            PublishMessage(
-                fixed = PublishMessage.FixedHeader(qos = AT_MOST_ONCE),
-                variable = PublishMessage.VariableHeader(TopicName.fromOrThrow("t")),
-                payload = payload,
-            )
-        }
+        val buf =
+            packetBuffer {
+                PublishMessageV4.ofRaw(
+                    topic = TopicName.fromOrThrow("t"),
+                    qos = AT_MOST_ONCE,
+                    payload = payload,
+                )
+            }
         // Total = 1 (byte1) + 2 (VBI for 129) + 129 = 132
         assertEquals(132, buf.remaining())
         assertEquals(0x30u, buf.readUnsignedByte()) // type=3, QoS 0
@@ -719,7 +812,8 @@ class SpecByteTests {
         assertEquals(0x81u, buf.readUnsignedByte()) // VBI byte 1
         assertEquals(0x01u, buf.readUnsignedByte()) // VBI byte 2
         // topic "t"
-        assertEquals(0x00u, buf.readUnsignedByte()); assertEquals(0x01u, buf.readUnsignedByte())
+        assertEquals(0x00u, buf.readUnsignedByte())
+        assertEquals(0x01u, buf.readUnsignedByte())
         assertEquals(0x74u, buf.readUnsignedByte())
         // payload: 126 bytes of 0xAA
         for (i in 0 until 126) {
@@ -732,18 +826,21 @@ class SpecByteTests {
     @Test
     fun publishTypedPayloadQos0BackpatchExactBytes() {
         // Typed publish: payload is Int (4 bytes), encoded via backpatch
-        val buf = PublishMessage<Int>(
-            fixed = PublishMessage.FixedHeader(qos = AT_MOST_ONCE),
-            variable = PublishMessage.VariableHeader(TopicName.fromOrThrow("a")),
-            payload = 42,
-            encodePayload = { buf, v -> buf.writeInt(v) },
-            payloadSize = { Int.SIZE_BYTES },
-        ).serialize(BufferFactory.Default)
+        val buf =
+            PublishMessageV4
+                .ofTyped(
+                    topic = TopicName.fromOrThrow("a"),
+                    qos = AT_MOST_ONCE,
+                    payload = 42,
+                    encodePayload = { b, v -> b.writeInt(v) },
+                    payloadSize = { Int.SIZE_BYTES },
+                ).serialize(BufferFactory.Default)
         // topic "a" (3 bytes) + payload (4 bytes) = 7 bytes remaining
         assertEquals(9, buf.remaining())
         assertEquals(0x30u, buf.readUnsignedByte()) // type=3, QoS 0
         assertEquals(0x07u, buf.readUnsignedByte()) // RL=7
-        assertEquals(0x00u, buf.readUnsignedByte()); assertEquals(0x01u, buf.readUnsignedByte()) // topic "a"
+        assertEquals(0x00u, buf.readUnsignedByte())
+        assertEquals(0x01u, buf.readUnsignedByte()) // topic "a"
         assertEquals(0x61u, buf.readUnsignedByte())
         // payload: Int 42 = 0x0000002A
         assertEquals(0x00u, buf.readUnsignedByte())
@@ -754,20 +851,25 @@ class SpecByteTests {
 
     @Test
     fun publishTypedPayloadQos1BackpatchExactBytes() {
-        val buf = PublishMessage<Short>(
-            fixed = PublishMessage.FixedHeader(qos = AT_LEAST_ONCE),
-            variable = PublishMessage.VariableHeader(TopicName.fromOrThrow("a"), packetIdentifier = 5),
-            payload = 0x1234.toShort(),
-            encodePayload = { buf, v -> buf.writeShort(v) },
-            payloadSize = { Short.SIZE_BYTES },
-        ).serialize(BufferFactory.Default)
+        val buf =
+            PublishMessageV4
+                .ofTyped(
+                    topic = TopicName.fromOrThrow("a"),
+                    qos = AT_LEAST_ONCE,
+                    packetIdentifier = 5,
+                    payload = 0x1234.toShort(),
+                    encodePayload = { b, v -> b.writeShort(v) },
+                    payloadSize = { Short.SIZE_BYTES },
+                ).serialize(BufferFactory.Default)
         // topic "a" (3 bytes) + packetId (2 bytes) + payload (2 bytes) = 7 bytes remaining
         assertEquals(9, buf.remaining())
         assertEquals(0x32u, buf.readUnsignedByte()) // type=3, QoS 1
         assertEquals(0x07u, buf.readUnsignedByte()) // RL=7
-        assertEquals(0x00u, buf.readUnsignedByte()); assertEquals(0x01u, buf.readUnsignedByte()) // topic "a"
+        assertEquals(0x00u, buf.readUnsignedByte())
+        assertEquals(0x01u, buf.readUnsignedByte()) // topic "a"
         assertEquals(0x61u, buf.readUnsignedByte())
-        assertEquals(0x00u, buf.readUnsignedByte()); assertEquals(0x05u, buf.readUnsignedByte()) // packet ID=5
+        assertEquals(0x00u, buf.readUnsignedByte())
+        assertEquals(0x05u, buf.readUnsignedByte()) // packet ID=5
         // payload: Short 0x1234
         assertEquals(0x12u, buf.readUnsignedByte())
         assertEquals(0x34u, buf.readUnsignedByte())
@@ -780,22 +882,26 @@ class SpecByteTests {
         payloadBytes.writeInt(42)
         payloadBytes.resetForRead()
 
-        val readBufferPub = PublishMessage<ReadBuffer?>(
-            fixed = PublishMessage.FixedHeader(qos = AT_MOST_ONCE),
-            variable = PublishMessage.VariableHeader(TopicName.fromOrThrow("a")),
-            payload = payloadBytes,
-        ).serialize(BufferFactory.Default)
+        val readBufferPub =
+            PublishMessageV4
+                .ofRaw(
+                    topic = TopicName.fromOrThrow("a"),
+                    qos = AT_MOST_ONCE,
+                    payload = payloadBytes,
+                ).serialize(BufferFactory.Default)
         readBufferPub.resetForRead()
 
         payloadBytes.position(0)
 
-        val typedPub = PublishMessage<Int>(
-            fixed = PublishMessage.FixedHeader(qos = AT_MOST_ONCE),
-            variable = PublishMessage.VariableHeader(TopicName.fromOrThrow("a")),
-            payload = 42,
-            encodePayload = { buf, v -> buf.writeInt(v) },
-            payloadSize = { Int.SIZE_BYTES },
-        ).serialize(BufferFactory.Default)
+        val typedPub =
+            PublishMessageV4
+                .ofTyped(
+                    topic = TopicName.fromOrThrow("a"),
+                    qos = AT_MOST_ONCE,
+                    payload = 42,
+                    encodePayload = { b, v -> b.writeInt(v) },
+                    payloadSize = { Int.SIZE_BYTES },
+                ).serialize(BufferFactory.Default)
         // typedPub is already read-ready (backpatch returns a slice)
 
         // Both must produce identical wire bytes
@@ -808,13 +914,15 @@ class SpecByteTests {
     @Test
     fun publishTypedPayloadGrowsOnUnderEstimate() {
         // payloadSize underestimates (1 byte), actual payload is 4 bytes → triggers grow
-        val buf = PublishMessage<Int>(
-            fixed = PublishMessage.FixedHeader(qos = AT_MOST_ONCE),
-            variable = PublishMessage.VariableHeader(TopicName.fromOrThrow("a")),
-            payload = 42,
-            encodePayload = { buf, v -> buf.writeInt(v) },
-            payloadSize = { 1 }, // intentionally too small
-        ).serialize(BufferFactory.Default)
+        val buf =
+            PublishMessageV4
+                .ofTyped(
+                    topic = TopicName.fromOrThrow("a"),
+                    qos = AT_MOST_ONCE,
+                    payload = 42,
+                    encodePayload = { b, v -> b.writeInt(v) },
+                    payloadSize = { 1 }, // intentionally too small
+                ).serialize(BufferFactory.Default)
         // Should still produce correct bytes despite underestimate
         assertEquals(9, buf.remaining())
         assertEquals(0x30u, buf.readUnsignedByte()) // type=3, QoS 0
@@ -823,13 +931,14 @@ class SpecByteTests {
 
     @Test
     fun publishTypedPayloadRemainingLengthUsesPayloadSize() {
-        val pub = PublishMessage<Int>(
-            fixed = PublishMessage.FixedHeader(qos = AT_MOST_ONCE),
-            variable = PublishMessage.VariableHeader(TopicName.fromOrThrow("a")),
-            payload = 42,
-            encodePayload = { buf, v -> buf.writeInt(v) },
-            payloadSize = { Int.SIZE_BYTES },
-        )
+        val pub =
+            PublishMessageV4.ofTyped(
+                topic = TopicName.fromOrThrow("a"),
+                qos = AT_MOST_ONCE,
+                payload = 42,
+                encodePayload = { b, v -> b.writeInt(v) },
+                payloadSize = { Int.SIZE_BYTES },
+            )
         // remainingLength = variable header (3 bytes for topic "a") + payload (4 bytes) = 7
         assertEquals(7, pub.remainingLength())
     }

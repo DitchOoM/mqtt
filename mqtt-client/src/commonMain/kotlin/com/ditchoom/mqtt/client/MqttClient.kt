@@ -4,11 +4,10 @@ import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.mqtt.connection.MqttBroker
 import com.ditchoom.mqtt.controlpacket.ControlPacketFactory
 import com.ditchoom.mqtt.controlpacket.IConnectionAcknowledgment
-import com.ditchoom.mqtt.controlpacket.IPublishMessage
 import com.ditchoom.mqtt.controlpacket.ISubscribeRequest
 import com.ditchoom.mqtt.controlpacket.ISubscription
 import com.ditchoom.mqtt.controlpacket.IUnsubscribeRequest
-import com.ditchoom.mqtt.controlpacket.IncomingPublish
+import com.ditchoom.mqtt.controlpacket.PublishMessage
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.TopicName
@@ -45,9 +44,9 @@ interface MqttClient {
             ),
         )
 
-    suspend fun publish(pub: IPublishMessage<*>): PublishResult
+    suspend fun publish(pub: PublishMessage): PublishResult
 
-    fun observe(filter: TopicFilter): Flow<IPublishMessage<*>>
+    fun observe(filter: TopicFilter): Flow<PublishMessage>
 
     suspend fun subscribe(
         topicFilter: String,
@@ -64,16 +63,9 @@ interface MqttClient {
     /**
      * Subscribe with a callback handler for incoming publishes.
      *
-     * The handler receives [com.ditchoom.mqtt.controlpacket.IncomingPublish] which can be
-     * smart-cast to [com.ditchoom.mqtt.controlpacket.IncomingPublishV5] for v5 properties.
-     *
-     * The payload buffer is scoped — it is only valid during the handler invocation.
-     * Copy the bytes if you need them beyond the callback.
-     *
-     * @param topicFilter The topic filter to subscribe to
-     * @param maxQos Maximum QoS for the subscription
-     * @param handler Callback invoked for each matching incoming publish
-     * @return The subscribe operation with the SUBACK deferred
+     * The handler receives a [PublishMessage]; payload bytes are read inside
+     * [PublishMessage.usePayload]. The receiver buffer is valid only inside that
+     * block — copy the bytes if you need them later.
      */
     suspend fun subscribe(
         topicFilter: String,
@@ -110,25 +102,17 @@ interface MqttClient {
     ): PublishResult
 
     /**
-     * Subscribe and receive a typed [Flow] of decoded messages via [MqttSubscription].
-     * Each incoming PUBLISH payload is decoded by [decoder] — zero-copy from network buffer.
+     * Subscribe with a typed handler. The dispatcher decodes the payload via [decoder] and
+     * passes both the [PublishMessage] (for metadata) and the decoded value to [handler].
+     * Auto-ack on handler return — if the handler throws, the message is NOT acknowledged
+     * and will be redelivered on reconnect.
      */
     suspend fun <P> subscribe(
         topicFilter: String,
         maxQos: QualityOfService = QualityOfService.AT_LEAST_ONCE,
         decoder: PayloadDecoder<P>,
-    ): MqttSubscription<P>
-
-    /**
-     * Subscribe with a typed handler. Auto-ack on handler return — if the handler throws,
-     * the message is NOT acknowledged and will be redelivered.
-     */
-    suspend fun <P> subscribe(
-        topicFilter: String,
-        maxQos: QualityOfService = QualityOfService.AT_LEAST_ONCE,
-        decoder: PayloadDecoder<P>,
-        handler: suspend (IncomingPublish<P>) -> Unit,
-    ): MqttSubscription<P>
+        handler: suspend (PublishMessage, P) -> Unit,
+    ): SubscribeOperation
 
     // --- unsubscribe ---
 

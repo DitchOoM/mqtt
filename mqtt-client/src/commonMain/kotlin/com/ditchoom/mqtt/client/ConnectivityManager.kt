@@ -40,8 +40,6 @@ class ConnectivityManager(
     var connectionAttempts = 0L
         private set
 
-    var observer: Observer? = null
-
     private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
     val connectionState: StateFlow<ConnectionState> = _connectionState
 
@@ -66,7 +64,6 @@ class ConnectivityManager(
      */
     suspend fun run() {
         processor = ControlPacketProcessor(broker, readChannel, writeChannel, persistence)
-        processor.observer = observer
 
         val conn = connectAndHandshake()
         try {
@@ -75,14 +72,7 @@ class ConnectivityManager(
                 launch { processor.runPingTimer() }
                 launch { writeLoop(conn) }
 
-                conn.receive().collect { packet ->
-                    observer?.incomingPacket(
-                        broker.identifier,
-                        broker.connectionRequest.protocolVersion.toByte(),
-                        packet,
-                    )
-                    readChannel.emit(packet)
-                }
+                conn.receive().collect { packet -> readChannel.emit(packet) }
             }
         } finally {
             withContext(NonCancellable) {
@@ -139,11 +129,6 @@ class ConnectivityManager(
             for (packet in packets) {
                 conn.send(packet)
                 processor.onPacketSent(packet)
-                observer?.wrotePackets(
-                    broker.identifier,
-                    broker.connectionRequest.mqttVersion,
-                    listOf(packet),
-                )
             }
             processor.noteActivity()
             if (packets.any { it is IDisconnectNotification }) {
@@ -165,6 +150,7 @@ class ConnectivityManager(
             for (packet in messages) {
                 writeChannel.send(listOf(packet))
             }
+            processor.replayIncomingMessagesOnReconnect()
         } else {
             persistence.clearMessages(broker)
         }
@@ -193,7 +179,6 @@ class ConnectivityManager(
             sendDisconnect()
         }
         writeChannel.close()
-        observer?.shutdown(broker.identifier, broker.connectionRequest.protocolVersion.toByte())
     }
 
     suspend fun sendDisconnect() {

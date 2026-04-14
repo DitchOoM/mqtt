@@ -61,9 +61,75 @@ The generic `IPublishMessage<P>` interface is gone; user-facing payload access i
   separate SQLite columns; reads back and reconstructs `PublishMessageV5.Properties`.
 - `jsMain/persistence/IDBObjects.kt` + `IDBPersistence.kt` — migrated.
 
+## Session 2 (continuation) — mqtt-client commonMain + JS IPC
+
+The following compile cleanly: `:mqtt-client:compileKotlinJvm`,
+`:mqtt-client:compileKotlinJs`, `:mqtt-client:compileKotlinLinuxX64`.
+
+### mqtt-client (commonMain) — COMPLETE
+- `SubscriptionHandler.kt` — `Blocking.onPublish(PublishMessage)` /
+  `Async.onPublish(PublishMessage)`. Drops `IncomingPublish`/`ReadBuffer?` payload param;
+  the handler reads bytes via `pub.usePayload { … }`.
+- `PublishDispatcher.kt` — `dispatch(publish: PublishMessage)`. Calls
+  `publish.invalidateScope()` in a `finally` after every handler returns. The previous
+  `subscribeTyped(...)` typed-flow path was removed; typed dispatch now lives on
+  `LocalMqttClient.subscribe(filter, decoder, handler)` which wraps the user's
+  `(PublishMessage, P) -> Unit` in a `SubscriptionHandler.Async` that decodes inside
+  `pub.usePayload`.
+- `MqttClient.kt` — `publish(pub: PublishMessage)`, `observe(filter): Flow<PublishMessage>`,
+  `subscribe(filter, handler: SubscriptionHandler)`. Typed v2 surface is now
+  `subscribe<P>(filter, maxQos, decoder, handler: suspend (PublishMessage, P) -> Unit): SubscribeOperation`.
+  The no-handler typed flow overload (`subscribe<P>(...): MqttSubscription<P>`) was dropped
+  — see "Design decisions" below.
+- `LocalMqttClient.kt` — observe + publish + typed subscribe migrated.
+- `ControlPacketProcessor.kt` — `publish(PublishMessage)`, dispatcher receives
+  the wire-decoded `PublishMessage` directly (no `toIncomingPublish()` adapter).
+- `ControlPacketOperation.kt` — `SubscribeOperation` now carries
+  `Map<ISubscription, Flow<PublishMessage>>` and `Flow<PublishMessage>` collect.
+- `MqttSubscription.kt` — **deleted**. The interface depended on `IncomingPublish<P>` and
+  the no-handler typed-flow path is no longer in scope.
+- `IncomingPublishAdapter.kt` — **deleted**.
+- `ScopedReadBuffer.kt` — **deleted**. Scope guarding lives on
+  `PublishMessage.invalidateScope()` itself.
+- `Observer.kt` — **deleted**. Packet RX/TX logging, last-heard-from, ping timestamps,
+  and RTT measurement belong on the `Connection<ControlPacket>` the caller composes.
+  Reconnection events belong to the socket library's reconnecting wrapper.
+  `MqttClient.connectionState` exposes MQTT handshake state. Handler-failure visibility
+  is reachable via user try/catch inside the handler body. The `observer` field on
+  `LocalMqttClient` / `LocalMqttService` and the `observer` param on `LocalMqttClient.start`
+  are gone. `runPingTimer` now runs silently.
+
+### IPC — JS done, Android partially blocked
+- `jsMain/.../JsRemoteMqttClient.kt`, `JsRemoteMqttClientWorker.kt` — migrated.
+  `sendPublish(packetId, pubBuffer: ReadBuffer)` (was `PlatformBuffer`; the base abstract
+  is `ReadBuffer`).
+- `androidMain/.../AndroidRemoteMqttClient.kt` — migrated for `IPublishMessage`/
+  `IncomingPublish` references. **Pre-existing drift** in `MqttServiceInitializer.kt`,
+  `MqttServiceHelper.kt` (signature mismatches against `start()` / `MqttService`), and
+  `AndroidRemoteMqttServiceWorker.kt` (`serviceServer.service.factory =` — no such field)
+  is unrelated to this refactor and still blocks `:mqtt-client:compileDebugKotlinAndroid`.
+
+### Design decision — typed flow API removed
+The plan's Consumer API showed only handler-based typed subscribe
+(`subscribe<P>(..., handler): Job`). The previous v2 surface had two typed overloads:
+flow-based `MqttSubscription<P>` and handler-based. The flow-based path conflicted with
+auto-ack semantics: the dispatcher can't know when a flow collector has finished
+consuming a message before invalidating scope, so a flow could emit a `PublishMessage`
+whose payload is already invalidated. Handler-based typed subscribe doesn't have this
+problem — the dispatcher awaits the handler suspend before invalidating. Choice: drop
+the flow form entirely and keep handler-only.
+
+### Runtime correctness still TODO
+`observe(filter): Flow<PublishMessage>` and the dispatcher both pull from the same
+`readChannel`. If a publish matches both an observe collector AND a registered handler,
+the dispatcher will invalidate the message scope after handlers run — the observer's
+`pub.usePayload { }` then throws. Plan calls for `observe()` to materialize an
+owned-bytes copy before emit. Not yet implemented; only matters when a topic has both an
+observe collector and a registered subscribe handler simultaneously, which is unusual.
+
 ## What remains (in priority order)
 
-### 1. mqtt-client (commonMain) — DOES NOT COMPILE
+### 1. (removed — was mqtt-client commonMain; complete)
 
 Required edits (error messages from `./gradlew :mqtt-client:compileKotlinJvm` are specific
 and actionable):
@@ -168,16 +234,20 @@ Not yet written. Plan calls for these:
 ## How to verify what's done
 
 ```bash
-./gradlew :models-base:compileKotlinJvm   # green
-./gradlew :models-v4:compileKotlinJvm     # green (warnings only)
-./gradlew :models-v4:compileKotlinJs      # green (warnings only)
-./gradlew :models-v5:compileKotlinJvm     # green (warnings only)
-./gradlew :models-v5:compileKotlinJs      # green (warnings only)
-./gradlew :mqtt-client:compileKotlinJvm   # FAILS — next work
+./gradlew :models-base:compileKotlinJvm    # green
+./gradlew :models-v4:compileKotlinJvm      # green (warnings only)
+./gradlew :models-v4:compileKotlinJs       # green (warnings only)
+./gradlew :models-v5:compileKotlinJvm      # green (warnings only)
+./gradlew :models-v5:compileKotlinJs       # green (warnings only)
+./gradlew :mqtt-client:compileKotlinJvm    # green (Session 2)
+./gradlew :mqtt-client:compileKotlinJs     # green (Session 2)
+./gradlew :mqtt-client:compileKotlinLinuxX64  # green (Session 2)
+./gradlew :mqtt-client:compileDebugKotlinAndroid  # FAILS — pre-existing drift
 ```
 
-Tests in v4/v5 also fail to compile (they reference old generic constructors). Work the
-test migration in the same pass as whichever module you're editing.
+Tests in v4/v5 and mqtt-client still fail to compile (they reference old generic
+constructors / `IncomingPublish` / `MqttSubscription`). Work the test migration in the
+same pass as whichever module you're editing.
 
 ## Branch state
 

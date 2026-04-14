@@ -1,12 +1,7 @@
 package com.ditchoom.mqtt.client
 
-import com.ditchoom.buffer.ReadBuffer
-import com.ditchoom.buffer.codec.payload.ReadBufferPayloadReader
-import com.ditchoom.mqtt.controlpacket.IPublishMessage
-import com.ditchoom.mqtt.controlpacket.IncomingPublish
+import com.ditchoom.mqtt.controlpacket.PublishMessage
 import com.ditchoom.mqtt.controlpacket.TopicFilter
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableSharedFlow
 
 /**
  * Dispatches incoming publish messages to registered [SubscriptionHandler]s
@@ -15,7 +10,8 @@ import kotlinx.coroutines.flow.MutableSharedFlow
  * Lifecycle:
  * 1. User calls `subscribe(filter, handler)` — handler is registered in the trie
  * 2. Incoming publishes are dispatched via [dispatch] — all matching handlers are invoked
- * 3. User calls `unsubscribe(filter)` — handler is removed
+ * 3. After all handlers return, [PublishMessage.invalidateScope] fires so any stashed
+ *    payload buffer reference becomes unreadable.
  *
  * Returns whether any handler matched, so the caller can fall through to the
  * legacy `observe()` flow for unmatched messages.
@@ -33,71 +29,34 @@ internal class PublishDispatcher {
     fun unsubscribe(filter: TopicFilter): SubscriptionHandler? = trie.remove(filter)
 
     /**
-     * Dispatch an incoming publish to all matching handlers.
+     * Dispatch an incoming publish to all matching handlers. Invalidates the
+     * payload scope after every handler completes so that stashed references
+     * fail loudly on use-after-scope.
      *
-     * The payload buffer is wrapped in a [ScopedReadBuffer] that is invalidated
-     * after all handlers complete. Any attempt to access the payload after the
-     * handler returns throws [IllegalStateException].
-     *
-     * @param publish The incoming publish message (already adapted to [IncomingPublish])
      * @return true if at least one handler was invoked
      */
-    suspend fun dispatch(publish: IncomingPublish<ReadBuffer?>): Boolean {
+    suspend fun dispatch(publish: PublishMessage): Boolean {
         val handlers = trie.matchAll(publish.topic)
         if (handlers.isEmpty()) return false
-
-        // Wrap payload in a scoped guard
-        val scopedPayload = publish.payload?.let { ScopedReadBuffer(it) }
-        val scoped = if (scopedPayload != null) ScopedIncomingPublish(publish, scopedPayload) else publish
-
         try {
             for (handler in handlers) {
                 when (handler) {
-                    is SubscriptionHandler.Blocking -> handler.onPublish(scoped)
-                    is SubscriptionHandler.Async -> handler.onPublish(scoped)
+                    is SubscriptionHandler.Blocking -> handler.onPublish(publish)
+                    is SubscriptionHandler.Async -> handler.onPublish(publish)
                 }
             }
         } finally {
-            // Invalidate the payload — any captured references will throw on access
-            scopedPayload?.invalidate()
+            publish.invalidateScope()
         }
         return true
     }
 
-    /** Returns true if any handler would match the given [IPublishMessage]. */
-    fun hasMatch(publish: IPublishMessage<*>): Boolean = trie.hasMatch(publish.topic)
+    /** Returns true if any handler would match the given [PublishMessage]. */
+    fun hasMatch(publish: PublishMessage): Boolean = trie.hasMatch(publish.topic)
 
     /** Returns true if no handlers are registered. */
     fun isEmpty(): Boolean = trie.isEmpty()
 
     /** Remove all handlers. */
     fun clear() = trie.clear()
-
-    /**
-     * Register a typed subscription that decodes the payload and emits [IncomingPublish]<[P]>
-     * to a flow, preserving message metadata (topic, qos, dup, retain, v5 properties).
-     * Optionally invokes [handler] for each decoded message (auto-ack on return).
-     */
-    fun <P> subscribeTyped(
-        filter: TopicFilter,
-        decoder: PayloadDecoder<P>,
-        handler: (suspend (IncomingPublish<P>) -> Unit)? = null,
-    ): Flow<IncomingPublish<P>> {
-        val flow = MutableSharedFlow<IncomingPublish<P>>(extraBufferCapacity = 16)
-        val wrappedHandler =
-            SubscriptionHandler.Async { publish ->
-                val payload = publish.payload ?: return@Async
-                val reader = ReadBufferPayloadReader(payload)
-                try {
-                    val decoded = with(decoder) { reader.decode() }
-                    val typedPublish = publish.withDecodedPayload(decoded)
-                    handler?.invoke(typedPublish)
-                    flow.emit(typedPublish)
-                } finally {
-                    reader.release()
-                }
-            }
-        trie.insert(filter, wrappedHandler)
-        return flow
-    }
 }

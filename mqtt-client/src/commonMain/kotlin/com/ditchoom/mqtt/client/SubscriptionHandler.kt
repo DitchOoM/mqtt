@@ -1,7 +1,6 @@
 package com.ditchoom.mqtt.client
 
-import com.ditchoom.buffer.ReadBuffer
-import com.ditchoom.mqtt.controlpacket.IncomingPublish
+import com.ditchoom.mqtt.controlpacket.PublishMessage
 
 /**
  * Handler for incoming publish messages on a subscribed topic.
@@ -10,9 +9,9 @@ import com.ditchoom.mqtt.controlpacket.IncomingPublish
  * - [Blocking]: Non-suspending callback, suitable for fast synchronous processing.
  * - [Async]: Suspending callback, for I/O or coroutine-based processing.
  *
- * The [IncomingPublish] payload buffer is scoped to the callback invocation.
- * Do NOT capture or store the buffer reference beyond the callback.
- * Copy the payload bytes if you need them later.
+ * The [PublishMessage] payload is read inside [PublishMessage.usePayload]; the
+ * receiver buffer is valid only inside that block. To retain payload bytes past
+ * the callback, allocate your own buffer inside `usePayload` and copy into it.
  */
 sealed interface SubscriptionHandler {
     /**
@@ -20,13 +19,13 @@ sealed interface SubscriptionHandler {
      * so it must be fast and non-blocking.
      */
     fun interface Blocking : SubscriptionHandler {
-        fun onPublish(publish: IncomingPublish<ReadBuffer?>)
+        fun onPublish(publish: PublishMessage)
     }
 
     /**
      * Suspending handler. The callback can perform I/O or other suspend operations.
      */
     fun interface Async : SubscriptionHandler {
-        suspend fun onPublish(publish: IncomingPublish<ReadBuffer?>)
+        suspend fun onPublish(publish: PublishMessage)
     }
 }

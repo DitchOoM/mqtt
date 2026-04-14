@@ -2,10 +2,10 @@ package com.ditchoom.mqtt.client
 
 import com.ditchoom.mqtt.controlpacket.IPublishAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IPublishComplete
-import com.ditchoom.mqtt.controlpacket.IPublishMessage
 import com.ditchoom.mqtt.controlpacket.ISubscribeAcknowledgement
 import com.ditchoom.mqtt.controlpacket.ISubscription
 import com.ditchoom.mqtt.controlpacket.IUnsubscribeAcknowledgment
+import com.ditchoom.mqtt.controlpacket.PublishMessage
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
@@ -73,10 +73,10 @@ sealed interface PublishResult {
 
 data class SubscribeOperation(
     val packetId: Int,
-    val subscriptions: Map<ISubscription, Flow<IPublishMessage>>,
+    val subscriptions: Map<ISubscription, Flow<PublishMessage>>,
     val subAck: Deferred<ISubscribeAcknowledgement>,
-) : Flow<IPublishMessage> {
-    override suspend fun collect(collector: FlowCollector<IPublishMessage>) {
+) : Flow<PublishMessage> {
+    override suspend fun collect(collector: FlowCollector<PublishMessage>) {
         combine(subscriptions.values.asIterable()) { array ->
             array.forEach { collector.emit(it) }
         }

@@ -4,7 +4,7 @@ import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.mqtt.client.LocalMqttClient
 import com.ditchoom.mqtt.client.MqttService
 import com.ditchoom.mqtt.controlpacket.IConnectionAcknowledgment
-import com.ditchoom.mqtt.controlpacket.IPublishMessage
+import com.ditchoom.mqtt.controlpacket.PublishMessage
 
 class RemoteMqttClientWorker(
     private val service: MqttService,
@@ -32,7 +32,7 @@ class RemoteMqttClientWorker(
             val pub0 =
                 buffer?.let {
                     it.resetForRead()
-                    factory.from(it) as? IPublishMessage
+                    factory.from(it) as? PublishMessage
                 }
             client.sendQueuedPublishMessage(packetId, pub0)
         } catch (e: Exception) {
@@ -42,7 +42,7 @@ class RemoteMqttClientWorker(
 
     suspend fun onPublishQueued(
         packetId: Int,
-        pub0: IPublishMessage?,
+        pub0: PublishMessage?,
     ) {
         client.sendQueuedPublishMessage(packetId, pub0)
     }

@@ -3,13 +3,13 @@ package com.ditchoom.mqtt.client.ipc
 import android.util.Log
 import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.JvmBuffer
-import com.ditchoom.buffer.PlatformBuffer
+import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.shared
 import com.ditchoom.mqtt.Persistence
 import com.ditchoom.mqtt.connection.MqttBroker
 import com.ditchoom.mqtt.controlpacket.ControlPacketFactory
 import com.ditchoom.mqtt.controlpacket.IConnectionAcknowledgment
-import com.ditchoom.mqtt.controlpacket.IPublishMessage
+import com.ditchoom.mqtt.controlpacket.PublishMessage
 import com.ditchoom.mqtt.controlpacket.TopicFilter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -79,7 +79,7 @@ class AndroidRemoteMqttClient(
 
     override suspend fun sendPublish(
         packetId: Int,
-        pubBuffer: PlatformBuffer,
+        pubBuffer: ReadBuffer,
     ) = suspendCoroutine {
         aidl.publishQueued(
             packetId,
@@ -116,8 +116,8 @@ class AndroidRemoteMqttClient(
 
     override suspend fun pingResponseCount(): Long = aidl.pingResponseCount()
 
-    override fun observe(filter: TopicFilter): Flow<IPublishMessage> =
-        incomingPackets.filterIsInstance<IPublishMessage>().filter { filter.matches(it.topic) }
+    override fun observe(filter: TopicFilter): Flow<PublishMessage> =
+        incomingPackets.filterIsInstance<PublishMessage>().filter { filter.matches(it.topic) }
 
     override suspend fun sendDisconnect() {
         suspendCoroutine { aidl.sendDisconnect(SuspendingMqttCompletionCallback("sendDisconnect", it)) }

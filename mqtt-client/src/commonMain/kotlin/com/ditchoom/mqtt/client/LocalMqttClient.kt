@@ -6,13 +6,12 @@ import com.ditchoom.mqtt.connection.MqttBroker
 import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.ControlPacketFactory
 import com.ditchoom.mqtt.controlpacket.IConnectionAcknowledgment
-import com.ditchoom.mqtt.controlpacket.IPublishMessage
-import com.ditchoom.mqtt.controlpacket.IncomingPublish
 import com.ditchoom.mqtt.controlpacket.ISubscribeAcknowledgement
 import com.ditchoom.mqtt.controlpacket.ISubscribeRequest
 import com.ditchoom.mqtt.controlpacket.IUnsubscribeAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IUnsubscribeRequest
 import com.ditchoom.mqtt.controlpacket.NO_PACKET_ID
+import com.ditchoom.mqtt.controlpacket.PublishMessage
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.TopicName
@@ -37,11 +36,6 @@ class LocalMqttClient(
     internal val processor: ControlPacketProcessor get() = connectivityManager.processor
     override val broker: MqttBroker = connectivityManager.broker
     override val connectionState: StateFlow<ConnectionState> get() = connectivityManager.connectionState
-    var observer: Observer? = null
-        set(value) {
-            connectivityManager.observer = value
-            field = value
-        }
     override val packetFactory: ControlPacketFactory = connectivityManager.broker.connectionRequest.controlPacketFactory
 
     private var connectionJob: Job? = null
@@ -62,7 +56,7 @@ class LocalMqttClient(
 
     suspend fun sendQueuedPublishMessage(
         packetId: Int,
-        pubQos0: IPublishMessage<*>?,
+        pubQos0: PublishMessage?,
     ) {
         val pub =
             if (pubQos0 != null && pubQos0.qualityOfService == QualityOfService.AT_MOST_ONCE) {
@@ -76,14 +70,14 @@ class LocalMqttClient(
         processor.publish(pub, false)
     }
 
-    override suspend fun publish(pub: IPublishMessage<*>): PublishResult {
+    override suspend fun publish(pub: PublishMessage): PublishResult {
         val prepared = processor.preparePublish(pub)
         val result = observePub(prepared)
         processor.sendPacket(prepared)
         return result
     }
 
-    private fun observePub(publishMessage: IPublishMessage<*>): PublishResult {
+    private fun observePub(publishMessage: PublishMessage): PublishResult {
         val packetId = publishMessage.packetIdentifier
         return when (publishMessage.qualityOfService) {
             QualityOfService.AT_MOST_ONCE -> PublishResult.QoS0Sent
@@ -104,8 +98,8 @@ class LocalMqttClient(
         }
     }
 
-    override fun observe(filter: TopicFilter): Flow<IPublishMessage<*>> =
-        processor.readChannel.filterIsInstance<IPublishMessage<*>>().filter {
+    override fun observe(filter: TopicFilter): Flow<PublishMessage> =
+        processor.readChannel.filterIsInstance<PublishMessage>().filter {
             filter.matches(it.topic)
         }
 
@@ -185,14 +179,15 @@ class LocalMqttClient(
         retain: Boolean,
         encoder: PayloadEncoder<P>,
     ): PublishResult {
-        val pub = packetFactory.publish(
-            topicName = TopicName.fromOrThrow(topic),
-            qos = qos,
-            retain = retain,
-            payload = payload,
-            encodePayload = { buf, p -> with(encoder) { buf.encode(p) } },
-            payloadSize = { p -> encoder.size(p) },
-        )
+        val pub =
+            packetFactory.publish(
+                topicName = TopicName.fromOrThrow(topic),
+                qos = qos,
+                retain = retain,
+                payload = payload,
+                encodePayload = { buf, p -> with(encoder) { buf.encode(p) } },
+                payloadSize = { p -> encoder.size(p) },
+            )
         return publish(pub)
     }
 
@@ -200,46 +195,25 @@ class LocalMqttClient(
         topicFilter: String,
         maxQos: QualityOfService,
         decoder: PayloadDecoder<P>,
-    ): MqttSubscription<P> = subscribeTypedInternal(topicFilter, maxQos, decoder, handler = null)
-
-    override suspend fun <P> subscribe(
-        topicFilter: String,
-        maxQos: QualityOfService,
-        decoder: PayloadDecoder<P>,
-        handler: suspend (IncomingPublish<P>) -> Unit,
-    ): MqttSubscription<P> = subscribeTypedInternal(topicFilter, maxQos, decoder, handler)
-
-    private suspend fun <P> subscribeTypedInternal(
-        topicFilter: String,
-        maxQos: QualityOfService,
-        decoder: PayloadDecoder<P>,
-        handler: (suspend (IncomingPublish<P>) -> Unit)?,
-    ): MqttSubscription<P> {
+        handler: suspend (PublishMessage, P) -> Unit,
+    ): SubscribeOperation {
         val filter = TopicFilter.fromOrThrow(topicFilter)
         val sub = packetFactory.subscribe(filter, maxQos)
-        val flow = processor.publishDispatcher.subscribeTyped(filter, decoder, handler)
-        val subOp = processor.subscribe(sub)
-        val subAck =
-            scope.async {
-                processor.awaitIncomingPacketId<ISubscribeAcknowledgement>(
-                    subOp.packetIdentifier,
-                    ISubscribeAcknowledgement.CONTROL_PACKET_VALUE,
-                )
+        val wrapped =
+            SubscriptionHandler.Async { pub ->
+                val decoded =
+                    pub.usePayload {
+                        val reader = com.ditchoom.buffer.codec.payload.ReadBufferPayloadReader(this)
+                        try {
+                            with(decoder) { reader.decode() }
+                        } finally {
+                            reader.release()
+                        }
+                    }
+                handler(pub, decoded)
             }
-        return object : MqttSubscription<P> {
-            override val topicFilter: String = topicFilter
-            override val suback = subAck
-
-            override fun receive() = flow
-
-            override suspend fun unsubscribe() =
-                scope.async {
-                    val unsub = packetFactory.unsubscribe(filter)
-                    val op = this@LocalMqttClient.unsubscribe(unsub)
-                    processor.publishDispatcher.unsubscribe(filter)
-                    op.unsubAck.await()
-                }
-        }
+        processor.publishDispatcher.subscribe(filter, wrapped)
+        return observeSub(processor.subscribe(sub))
     }
 
     override suspend fun pendingPublishes(): List<PublishResult> {
@@ -269,11 +243,9 @@ class LocalMqttClient(
             broker: MqttBroker,
             persistence: Persistence,
             connect: suspend () -> Connection<ControlPacket>,
-            observer: Observer? = null,
         ): LocalMqttClient {
             val cm = ConnectivityManager(persistence, broker, connect)
             val client = LocalMqttClient(cm, scope)
-            client.observer = observer
             client.connectionJob = scope.launch { cm.run() }
             return client
         }

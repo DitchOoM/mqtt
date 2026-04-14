@@ -1,16 +1,12 @@
 package com.ditchoom.mqtt.client.ipc
 
 import com.ditchoom.buffer.BufferFactory
-import com.ditchoom.buffer.PlatformBuffer
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.mqtt.Persistence
 import com.ditchoom.mqtt.client.ConnectionState
 import com.ditchoom.mqtt.client.MqttClient
-import com.ditchoom.mqtt.client.MqttSubscription
 import com.ditchoom.mqtt.client.PayloadDecoder
 import com.ditchoom.mqtt.client.PayloadEncoder
-import com.ditchoom.mqtt.client.toIncomingPublish
-import com.ditchoom.mqtt.client.withDecodedPayload
 import com.ditchoom.mqtt.client.PublishResult
 import com.ditchoom.mqtt.client.QoS1State
 import com.ditchoom.mqtt.client.QoS2State
@@ -19,16 +15,15 @@ import com.ditchoom.mqtt.client.SubscriptionHandler
 import com.ditchoom.mqtt.client.UnsubscribeOperation
 import com.ditchoom.mqtt.connection.MqttBroker
 import com.ditchoom.mqtt.controlpacket.ControlPacket
-import com.ditchoom.mqtt.controlpacket.IncomingPublish
 import com.ditchoom.mqtt.controlpacket.IPublishAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IPublishComplete
-import com.ditchoom.mqtt.controlpacket.IPublishMessage
 import com.ditchoom.mqtt.controlpacket.IPublishReceived
 import com.ditchoom.mqtt.controlpacket.ISubscribeAcknowledgement
 import com.ditchoom.mqtt.controlpacket.ISubscribeRequest
 import com.ditchoom.mqtt.controlpacket.IUnsubscribeAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IUnsubscribeRequest
 import com.ditchoom.mqtt.controlpacket.NO_PACKET_ID
+import com.ditchoom.mqtt.controlpacket.PublishMessage
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
@@ -38,9 +33,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.merge
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 
 abstract class RemoteMqttClient(
@@ -86,7 +78,7 @@ abstract class RemoteMqttClient(
         pubBuffer: ReadBuffer,
     ) {}
 
-    override suspend fun publish(pub: IPublishMessage<*>): PublishResult {
+    override suspend fun publish(pub: PublishMessage): PublishResult {
         val publishPacketId =
             if (pub.qualityOfService == QualityOfService.AT_MOST_ONCE) {
                 NO_PACKET_ID
@@ -133,14 +125,17 @@ abstract class RemoteMqttClient(
         retain: Boolean,
         encoder: PayloadEncoder<P>,
     ): PublishResult {
-        val pub = packetFactory.publish(
-            topicName = com.ditchoom.mqtt.controlpacket.TopicName.fromOrThrow(topic),
-            qos = qos,
-            retain = retain,
-            payload = payload,
-            encodePayload = { buf, p -> with(encoder) { buf.encode(p) } },
-            payloadSize = { p -> encoder.size(p) },
-        )
+        val pub =
+            packetFactory.publish(
+                topicName =
+                    com.ditchoom.mqtt.controlpacket.TopicName
+                        .fromOrThrow(topic),
+                qos = qos,
+                retain = retain,
+                payload = payload,
+                encodePayload = { buf, p -> with(encoder) { buf.encode(p) } },
+                payloadSize = { p -> encoder.size(p) },
+            )
         return publish(pub)
     }
 
@@ -148,57 +143,13 @@ abstract class RemoteMqttClient(
         topicFilter: String,
         maxQos: QualityOfService,
         decoder: PayloadDecoder<P>,
-    ): MqttSubscription<P> = subscribeTypedIpc(topicFilter, maxQos, decoder, handler = null)
-
-    override suspend fun <P> subscribe(
-        topicFilter: String,
-        maxQos: QualityOfService,
-        decoder: PayloadDecoder<P>,
-        handler: suspend (IncomingPublish<P>) -> Unit,
-    ): MqttSubscription<P> = subscribeTypedIpc(topicFilter, maxQos, decoder, handler)
-
-    private suspend fun <P> subscribeTypedIpc(
-        topicFilter: String,
-        maxQos: QualityOfService,
-        decoder: PayloadDecoder<P>,
-        handler: (suspend (IncomingPublish<P>) -> Unit)?,
-    ): MqttSubscription<P> {
-        val filter =
-            com.ditchoom.mqtt.controlpacket.TopicFilter
-                .fromOrThrow(topicFilter)
-        val sub = packetFactory.subscribe(filter, maxQos)
-        val subOp = subscribe(sub)
-        // Decode incoming IPublishMessage payload → IncomingPublish<P> using the consumer's decoder
-        val typedFlow =
-            subOp.subscriptions.values
-                .asSequence()
-                .reduce { a, b -> kotlinx.coroutines.flow.merge(a, b) }
-                .map { msg ->
-                    val rawPublish = msg.toIncomingPublish()
-                    val payload = msg.payload as? ReadBuffer ?: error("Expected payload in PUBLISH")
-                    val reader =
-                        com.ditchoom.buffer.codec.payload
-                            .ReadBufferPayloadReader(payload)
-                    val decoded = try {
-                        with(decoder) { reader.decode() }
-                    } finally {
-                        reader.release()
-                    }
-                    rawPublish.withDecodedPayload(decoded)
-                }.onEach { typedPublish -> handler?.invoke(typedPublish) }
-        return object : MqttSubscription<P> {
-            override val topicFilter: String = topicFilter
-            override val suback = subOp.subAck
-
-            override fun receive() = typedFlow
-
-            override suspend fun unsubscribe() =
-                scope.async {
-                    val unsub = packetFactory.unsubscribe(filter)
-                    val op = this@RemoteMqttClient.unsubscribe(unsub)
-                    op.unsubAck.await()
-                }
-        }
+        handler: suspend (PublishMessage, P) -> Unit,
+    ): SubscribeOperation {
+        // Typed subscribe across IPC: SubscriptionHandler-based dispatch is not supported across
+        // the IPC boundary (handler lives in the client process; the worker performs ack). For
+        // now, fall back to the raw subscribe — the caller can collect the SubscribeOperation
+        // flows and decode each message via [decoder] themselves until IPC handler dispatch lands.
+        return subscribe(packetFactory.subscribe(com.ditchoom.mqtt.controlpacket.TopicFilter.fromOrThrow(topicFilter), maxQos))
     }
 
     override suspend fun unsubscribe(unsub: IUnsubscribeRequest): UnsubscribeOperation {

@@ -26,11 +26,6 @@ class LocalMqttService private constructor(
     private val connectionFactory: (MqttBroker) -> suspend () -> Connection<ControlPacket>,
 ) : MqttService {
     private val brokerClientMap = mutableMapOf<Byte, HashMap<Int, LocalMqttClient>>()
-    private var observer: Observer? = null
-
-    fun assignObservers(observer: Observer?) {
-        this.observer = observer
-    }
 
     fun getPersistence(broker: MqttBroker): Persistence = getPersistence(broker.connectionRequest)
 
@@ -49,12 +44,12 @@ class LocalMqttService private constructor(
         val client = brokerClientMap[broker.protocolVersion]?.get(broker.identifier)
 
         if (client == null) {
-            val c = LocalMqttClient.start(scope, broker, getPersistence(broker), connectionFactory(broker), observer)
+            val c = LocalMqttClient.start(scope, broker, getPersistence(broker), connectionFactory(broker))
             brokerClientMap
                 .getOrPut(broker.protocolVersion) { HashMap() }
                 .getOrPut(broker.identifier) { c }
         } else if (client.isStopped()) {
-            val c = LocalMqttClient.start(scope, broker, getPersistence(broker), connectionFactory(broker), observer)
+            val c = LocalMqttClient.start(scope, broker, getPersistence(broker), connectionFactory(broker))
             brokerClientMap
                 .getOrPut(broker.protocolVersion) { HashMap() }[broker.identifier] = c
         }
@@ -72,7 +67,7 @@ class LocalMqttService private constructor(
         newBrokers.forEach { pair ->
             val (protocolVersion, brokerId) = pair
             val broker = allBrokers[pair]!!
-            val c = LocalMqttClient.start(scope, broker, getPersistence(broker), connectionFactory(broker), observer)
+            val c = LocalMqttClient.start(scope, broker, getPersistence(broker), connectionFactory(broker))
             brokerClientMap.getOrPut(protocolVersion) { HashMap() }[brokerId] = c
         }
     }

@@ -8,13 +8,13 @@ import com.ditchoom.mqtt.controlpacket.IPingRequest
 import com.ditchoom.mqtt.controlpacket.IPingResponse
 import com.ditchoom.mqtt.controlpacket.IPublishAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IPublishComplete
-import com.ditchoom.mqtt.controlpacket.IPublishMessage
 import com.ditchoom.mqtt.controlpacket.IPublishReceived
 import com.ditchoom.mqtt.controlpacket.IPublishRelease
 import com.ditchoom.mqtt.controlpacket.ISubscribeAcknowledgement
 import com.ditchoom.mqtt.controlpacket.ISubscribeRequest
 import com.ditchoom.mqtt.controlpacket.IUnsubscribeAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IUnsubscribeRequest
+import com.ditchoom.mqtt.controlpacket.PublishMessage
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.currentCoroutineContext
@@ -33,7 +33,6 @@ class ControlPacketProcessor(
     private val writeChannel: Channel<Collection<ControlPacket>>,
     internal val persistence: Persistence,
 ) {
-    var observer: Observer? = null
     internal val publishDispatcher = PublishDispatcher()
     var pingCount = 0L
         private set
@@ -61,9 +60,9 @@ class ControlPacketProcessor(
     }
 
     suspend fun publish(
-        pub: IPublishMessage,
+        pub: PublishMessage,
         persist: Boolean = true,
-    ): IPublishMessage {
+    ): PublishMessage {
         val publishMessageOnWire =
             if (persist && pub.qualityOfService.isGreaterThan(QualityOfService.AT_MOST_ONCE)) {
                 val packetId = persistence.writePubGetPacketId(broker, pub)
@@ -76,9 +75,9 @@ class ControlPacketProcessor(
     }
 
     suspend fun preparePublish(
-        pub: IPublishMessage,
+        pub: PublishMessage,
         persist: Boolean = true,
-    ): IPublishMessage =
+    ): PublishMessage =
         if (persist && pub.qualityOfService.isGreaterThan(QualityOfService.AT_MOST_ONCE)) {
             val packetId = persistence.writePubGetPacketId(broker, pub)
             pub.maybeCopyWithNewPacketIdentifier(packetId)
@@ -135,8 +134,42 @@ class ControlPacketProcessor(
 
     suspend fun queueMessagesOnReconnect() =
         persistence.messagesToSendOnReconnect(broker).map {
-            (it as? IPublishMessage)?.setDupFlagNewPubMessage() ?: it
+            (it as? PublishMessage)?.setDupFlagNewPubMessage() ?: it
         }
+
+    /**
+     * Replays incoming QoS 1/2 publishes that were persisted but not yet fully acknowledged.
+     * Call once after the MQTT session is established.
+     *
+     * - RECEIVED_PENDING_HANDLER rows: redispatch to the subscriber handler; on success
+     *   mark handler complete and write PUBACK (QoS 1) or PUBREC (QoS 2).
+     * - QOS2_HANDLER_COMPLETE_PUBREC_SENT rows: do NOT redispatch (handler already ran);
+     *   resend PUBREC to nudge the broker to send PUBREL.
+     */
+    suspend fun replayIncomingMessagesOnReconnect() {
+        val records = persistence.incomingMessagesToRedispatch(broker)
+        for (record in records) {
+            when (record.state) {
+                Persistence.INCOMING_STATE_RECEIVED_PENDING_HANDLER -> {
+                    try {
+                        if (!publishDispatcher.isEmpty()) {
+                            publishDispatcher.dispatch(record.packet)
+                        }
+                        persistence.incomingHandlerComplete(broker, record.packet.packetIdentifier)
+                        record.packet.expectedResponse()?.let { write(it) }
+                    } catch (
+                        @Suppress("TooGenericExceptionCaught") _: Throwable,
+                    ) {
+                        // Handler threw — leave row for the next reconnect.
+                    }
+                }
+                Persistence.INCOMING_STATE_QOS2_HANDLER_COMPLETE_PUBREC_SENT -> {
+                    // Handler already ran — resend PUBREC to nudge broker.
+                    record.packet.expectedResponse()?.let { write(it) }
+                }
+            }
+        }
+    }
 
     suspend fun processIncomingMessages() {
         readChannel.collect { packet ->
@@ -148,14 +181,28 @@ class ControlPacketProcessor(
                     persistence.ackPub(broker, packet)
                     qos1States.remove(packet.packetIdentifier)?.value = QoS1State.Acknowledged(packet)
                 }
-                is IPublishMessage -> {
+                is PublishMessage -> {
                     val replyMessage = packet.expectedResponse()
-                    if (replyMessage != null) {
-                        persistence.incomingPublish(broker, packet, replyMessage)
-                        write(replyMessage)
-                    }
-                    if (!publishDispatcher.isEmpty()) {
-                        publishDispatcher.dispatch(packet.toIncomingPublish())
+                    if (replyMessage == null) {
+                        // QoS 0: no persistence, no ack — just dispatch.
+                        if (!publishDispatcher.isEmpty()) {
+                            publishDispatcher.dispatch(packet)
+                        }
+                    } else {
+                        // QoS 1 / QoS 2: persist payload BEFORE dispatch; ack only on handler success.
+                        persistence.persistIncomingPublish(broker, packet)
+                        try {
+                            if (!publishDispatcher.isEmpty()) {
+                                publishDispatcher.dispatch(packet)
+                            }
+                            persistence.incomingHandlerComplete(broker, packet.packetIdentifier)
+                            write(replyMessage)
+                        } catch (
+                            @Suppress("TooGenericExceptionCaught") _: Throwable,
+                        ) {
+                            // Handler threw — row stays on disk for redispatch on next reconnect.
+                            // Do NOT write PUBACK/PUBREC.
+                        }
                     }
                 }
                 is IPublishReceived -> {
@@ -193,12 +240,9 @@ class ControlPacketProcessor(
                 .toInt()
                 .seconds
         if (interval == 0.seconds) return
-        observer?.resetPingTimer(broker.identifier, broker.connectionRequest.protocolVersion.toByte())
         while (currentCoroutineContext().isActive) {
-            observer?.delayPing(broker.identifier, broker.connectionRequest.protocolVersion.toByte(), interval)
             delay(interval)
             if ((TimeSource.Monotonic.markNow() - lastActivityMark) >= interval) {
-                observer?.sendingPing(broker.identifier, broker.connectionRequest.protocolVersion.toByte())
                 writeChannel.send(listOf(broker.connectionRequest.controlPacketFactory.pingRequest()))
                 pingCount++
                 noteActivity()

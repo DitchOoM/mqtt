@@ -1,7 +1,7 @@
 package com.ditchoom.mqtt.client.ipc
 
 import com.ditchoom.buffer.JsBuffer
-import com.ditchoom.mqtt.controlpacket.IPublishMessage
+import com.ditchoom.mqtt.controlpacket.PublishMessage
 import kotlinx.coroutines.launch
 import org.w3c.dom.MessagePort
 
@@ -21,7 +21,7 @@ class JsRemoteMqttClientWorker(
                     MESSAGE_TYPE_CLIENT_PUBLISH -> {
                         val (packetId, packet) = checkNotNull(msg)
                         delegate.scope.launch {
-                            delegate.onPublishQueued(packetId, packet as? IPublishMessage)
+                            delegate.onPublishQueued(packetId, packet as? PublishMessage)
                             val msg2 =
                                 buildSimpleMessage(
                                     MESSAGE_TYPE_CLIENT_PUBLISH_COMPLETION,

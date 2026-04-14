@@ -3,12 +3,13 @@ package com.ditchoom.mqtt.client.ipc
 import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.JsBuffer
 import com.ditchoom.buffer.PlatformBuffer
+import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.deterministic
 import com.ditchoom.mqtt.Persistence
 import com.ditchoom.mqtt.connection.MqttBroker
 import com.ditchoom.mqtt.controlpacket.ControlPacketFactory
 import com.ditchoom.mqtt.controlpacket.IConnectionAcknowledgment
-import com.ditchoom.mqtt.controlpacket.IPublishMessage
+import com.ditchoom.mqtt.controlpacket.PublishMessage
 import com.ditchoom.mqtt.controlpacket.TopicFilter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -47,7 +48,7 @@ class JsRemoteMqttClient(
 
     override suspend fun sendPublish(
         packetId: Int,
-        pubBuffer: PlatformBuffer,
+        pubBuffer: ReadBuffer,
     ) {
         val messageId = nextMessageId++
         val msg = buildPacketIdMessage(MESSAGE_TYPE_CLIENT_PUBLISH, packetId, pubBuffer as? JsBuffer, messageId)
@@ -111,8 +112,8 @@ class JsRemoteMqttClient(
         return readLongDataFromMessage(messageEvent.data.asDynamic())
     }
 
-    override fun observe(filter: TopicFilter): Flow<IPublishMessage> =
-        incomingPackets.filterIsInstance<IPublishMessage>().filter { filter.matches(it.topic) }
+    override fun observe(filter: TopicFilter): Flow<PublishMessage> =
+        incomingPackets.filterIsInstance<PublishMessage>().filter { filter.matches(it.topic) }
 
     override suspend fun sendDisconnect() {
         val messageId = nextMessageId++

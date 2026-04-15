@@ -2,13 +2,12 @@ package com.ditchoom.mqtt5.controlpacket
 
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
+import com.ditchoom.buffer.codec.annotations.ProtocolMessage
 import com.ditchoom.mqtt.MalformedPacketException
-import com.ditchoom.mqtt.ProtocolError
+import com.ditchoom.mqtt.codec.annotations.MqttProperties
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.variableByteSize
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.SUCCESS
-import com.ditchoom.buffer.codec.annotations.ProtocolMessage
-import com.ditchoom.mqtt.codec.annotations.MqttProperties
 import com.ditchoom.mqtt5.controlpacket.properties.MqttProperty
 import com.ditchoom.mqtt5.controlpacket.properties.PropertyExtractor
 import com.ditchoom.mqtt5.controlpacket.properties.ReasonString
@@ -32,9 +31,10 @@ data class AckVariableHeader(
     val properties: AckProperties = AckProperties(),
 ) {
     fun size(): Int {
-        val canOmit = reasonCode == SUCCESS &&
-            properties.userProperty.isEmpty() &&
-            properties.reasonString == null
+        val canOmit =
+            reasonCode == SUCCESS &&
+                properties.userProperty.isEmpty() &&
+                properties.reasonString == null
         var size = UShort.SIZE_BYTES
         if (!canOmit) {
             val propsSize = properties.size()
@@ -53,15 +53,17 @@ data class AckVariableHeader(
             if (remainingLength == 2) {
                 return AckVariableHeader(buffer.readUnsignedShort().toInt())
             }
-            val wire = if (remainingLength == 3) {
-                AckV5Body(buffer.readUnsignedShort(), buffer.readUnsignedByte(), null)
-            } else {
-                AckV5BodyCodec.decode(buffer)
-            }
-            val reasonCode = validReasonCodes[wire.reasonCode]
-                ?: throw MalformedPacketException(
-                    "Invalid $packetName reason code ${wire.reasonCode}",
-                )
+            val wire =
+                if (remainingLength == 3) {
+                    AckV5Body(buffer.readUnsignedShort(), buffer.readUnsignedByte(), null)
+                } else {
+                    AckV5BodyCodec.decode(buffer)
+                }
+            val reasonCode =
+                validReasonCodes[wire.reasonCode]
+                    ?: throw MalformedPacketException(
+                        "Invalid $packetName reason code ${wire.reasonCode}",
+                    )
             val props = AckProperties.from(wire.properties, packetName)
             return AckVariableHeader(wire.packetId.toInt(), reasonCode, props)
         }
@@ -75,19 +77,23 @@ data class AckProperties(
     val reasonString: String? = null,
     val userProperty: List<Pair<String, String>> = emptyList(),
 ) {
-    val props: List<MqttProperty> = buildList {
-        if (reasonString != null) {
-            add(ReasonString(reasonString))
+    val props: List<MqttProperty> =
+        buildList {
+            if (reasonString != null) {
+                add(ReasonString(reasonString))
+            }
+            for ((key, value) in userProperty) {
+                add(UserProperty(key, value))
+            }
         }
-        for ((key, value) in userProperty) {
-            add(UserProperty(key, value))
-        }
-    }
 
     fun size(): Int = mqttPropertiesSize(props)
 
     companion object {
-        fun from(keyValuePairs: Collection<MqttProperty>?, packetName: String): AckProperties {
+        fun from(
+            keyValuePairs: Collection<MqttProperty>?,
+            packetName: String,
+        ): AckProperties {
             val p = PropertyExtractor(keyValuePairs, packetName)
             val reasonString = p.single<ReasonString>()?.value
             val userProperty = p.list<UserProperty>().map { it.key to it.value }
@@ -100,10 +106,14 @@ data class AckProperties(
 /**
  * Shared encodeBody logic for ACK packets.
  */
-fun encodeAckBody(writeBuffer: WriteBuffer, variable: AckVariableHeader) {
-    val canOmit = variable.reasonCode == SUCCESS &&
-        variable.properties.userProperty.isEmpty() &&
-        variable.properties.reasonString == null
+fun encodeAckBody(
+    writeBuffer: WriteBuffer,
+    variable: AckVariableHeader,
+) {
+    val canOmit =
+        variable.reasonCode == SUCCESS &&
+            variable.properties.userProperty.isEmpty() &&
+            variable.properties.reasonString == null
     if (canOmit) {
         writeBuffer.writeUShort(variable.packetIdentifier.toUShort())
     } else {

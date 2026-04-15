@@ -18,7 +18,9 @@ CREATE TABLE IF NOT EXISTS PublishMessage (
     content_type TEXT,
 -- 	payload
 	payload BLOB,
---  publish state: 0=QUEUED, 1=SENT, 2=PUBREC_RECEIVED, 3=PUBREL_SENT
+--  state column — meaning depends on `incoming`:
+--    outgoing (incoming=0): 0=QUEUED, 1=SENT, 2=PUBREC_RECEIVED, 3=PUBREL_SENT
+--    incoming (incoming=1): 0=RECEIVED_PENDING_HANDLER, 1=QOS2_HANDLER_COMPLETE_PUBREC_SENT
 	state INTEGER NOT NULL DEFAULT 0 CHECK(state BETWEEN 0 AND 3),
 	FOREIGN KEY(broker_id) REFERENCES Broker(id) ON DELETE CASCADE,
 	PRIMARY KEY (broker_id, incoming, packet_id)
@@ -39,6 +41,9 @@ DELETE FROM PublishMessage WHERE broker_id = :brokerId;
 
 queuedPubMessages:
 SELECT * FROM PublishMessage WHERE broker_id = :brokerId AND incoming = 0;
+
+queuedIncomingPubMessages:
+SELECT * FROM PublishMessage WHERE broker_id = :brokerId AND incoming = 1;
 
 publishMessageCount:
 SELECT COUNT(broker_id) FROM PublishMessage WHERE broker_id = :brokerId;

@@ -2,7 +2,6 @@ package com.ditchoom.mqtt3.controlpacket
 
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
-
 import com.ditchoom.buffer.codec.annotations.ProtocolMessage
 import com.ditchoom.mqtt.controlpacket.IPublishRelease
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode

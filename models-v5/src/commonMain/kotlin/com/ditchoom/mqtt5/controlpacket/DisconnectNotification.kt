@@ -49,19 +49,21 @@ data class DisconnectNotification(
     override val direction: DirectionOfFlow get() = DirectionOfFlow.BIDIRECTIONAL
 
     override fun encodeBody(writeBuffer: WriteBuffer) {
-        val canOmit = variable.reasonCode == ReasonCode.NORMAL_DISCONNECTION &&
-            variable.properties.props.isEmpty()
+        val canOmit =
+            variable.reasonCode == ReasonCode.NORMAL_DISCONNECTION &&
+                variable.properties.props.isEmpty()
         if (!canOmit) {
             DisconnectV5BodyCodec.encode(
                 writeBuffer,
-                DisconnectV5Body(variable.reasonCode.byte, variable.properties.props.ifEmpty { null }),
+                DisconnectV5Body(variable.reasonCode.byte, variable.properties.props),
             )
         }
     }
 
     override fun remainingLength(): Int {
-        val canOmit = variable.reasonCode == ReasonCode.NORMAL_DISCONNECTION &&
-            variable.properties.props.isEmpty()
+        val canOmit =
+            variable.reasonCode == ReasonCode.NORMAL_DISCONNECTION &&
+                variable.properties.props.isEmpty()
         if (canOmit) return 0
         val propsSize = mqttPropertiesSize(variable.properties.props)
         return 1 + variableByteSize(propsSize) + propsSize
@@ -75,7 +77,6 @@ data class DisconnectNotification(
             // throw if the reason code is not valid for the disconnect notification
             getDisconnectCode(reasonCode.byte)
         }
-
 
         data class Properties(
             /**
@@ -137,25 +138,25 @@ data class DisconnectNotification(
              */
             val serverReference: String? = null,
         ) {
-            val props: List<MqttProperty> = buildList {
-                if (sessionExpiryIntervalSeconds != null) {
-                    add(SessionExpiryInterval(sessionExpiryIntervalSeconds.toUInt()))
-                }
-                if (reasonString != null) {
-                    add(ReasonString(reasonString))
-                }
-                if (userProperty.isNotEmpty()) {
-                    for (keyValueProperty in userProperty) {
-                        val key = keyValueProperty.first
-                        val value = keyValueProperty.second
-                        add(UserProperty(key, value))
+            val props: List<MqttProperty> =
+                buildList {
+                    if (sessionExpiryIntervalSeconds != null) {
+                        add(SessionExpiryInterval(sessionExpiryIntervalSeconds.toUInt()))
+                    }
+                    if (reasonString != null) {
+                        add(ReasonString(reasonString))
+                    }
+                    if (userProperty.isNotEmpty()) {
+                        for (keyValueProperty in userProperty) {
+                            val key = keyValueProperty.first
+                            val value = keyValueProperty.second
+                            add(UserProperty(key, value))
+                        }
+                    }
+                    if (serverReference != null) {
+                        add(ServerReference(serverReference))
                     }
                 }
-                if (serverReference != null) {
-                    add(ServerReference(serverReference))
-                }
-            }
-
 
             companion object {
                 fun from(keyValuePairs: Collection<MqttProperty>?): Properties {
@@ -176,15 +177,19 @@ data class DisconnectNotification(
         }
 
         companion object {
-            fun from(buffer: ReadBuffer, remainingLength: Int): VariableHeader {
+            fun from(
+                buffer: ReadBuffer,
+                remainingLength: Int,
+            ): VariableHeader {
                 if (remainingLength == 0) {
                     return VariableHeader(ReasonCode.NORMAL_DISCONNECTION)
                 }
-                val body = if (remainingLength == 1) {
-                    DisconnectV5Body(buffer.readUnsignedByte(), null)
-                } else {
-                    DisconnectV5BodyCodec.decode(buffer)
-                }
+                val body =
+                    if (remainingLength == 1) {
+                        DisconnectV5Body(buffer.readUnsignedByte(), null)
+                    } else {
+                        DisconnectV5BodyCodec.decode(buffer)
+                    }
                 val reasonCode = getDisconnectCode(body.reasonCode ?: ReasonCode.NORMAL_DISCONNECTION.byte)
                 val props = Properties.from(body.properties)
                 return VariableHeader(reasonCode, props)
@@ -193,7 +198,10 @@ data class DisconnectNotification(
     }
 
     companion object {
-        fun from(buffer: ReadBuffer, remainingLength: Int): DisconnectNotification {
+        fun from(
+            buffer: ReadBuffer,
+            remainingLength: Int,
+        ): DisconnectNotification {
             val variableHeader = VariableHeader.from(buffer, remainingLength)
             return DisconnectNotification(variableHeader)
         }

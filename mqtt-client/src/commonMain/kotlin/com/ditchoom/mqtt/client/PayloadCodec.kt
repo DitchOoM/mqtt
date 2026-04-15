@@ -31,5 +31,6 @@ fun interface PayloadDecoder<out P> {
  */
 interface PayloadEncoder<in P> {
     fun WriteBuffer.encode(value: P)
+
     fun size(value: @UnsafeVariance P): Int
 }

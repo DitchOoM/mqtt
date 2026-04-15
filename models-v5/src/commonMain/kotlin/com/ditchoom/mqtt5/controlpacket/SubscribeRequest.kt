@@ -6,9 +6,8 @@ import com.ditchoom.buffer.codec.annotations.LengthPrefixed
 import com.ditchoom.buffer.codec.annotations.ProtocolMessage
 import com.ditchoom.buffer.codec.annotations.RemainingBytes
 import com.ditchoom.buffer.utf8Length
-import com.ditchoom.mqtt.codec.annotations.MqttProperties
 import com.ditchoom.mqtt.ProtocolError
-import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readMqttUtf8StringNotValidatedSized
+import com.ditchoom.mqtt.codec.annotations.MqttProperties
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.variableByteSize
 import com.ditchoom.mqtt.controlpacket.ISubscribeRequest
 import com.ditchoom.mqtt.controlpacket.ISubscription
@@ -110,7 +109,10 @@ data class SubscribeRequest(
                     val qosInt = sub.maximumQos.integerValue
                     val nlShifted = (if (sub.noLocal) 1 else 0).shl(2)
                     val rapShifted = (if (sub.retainAsPublished) 1 else 0).shl(3)
-                    val rH = sub.retainHandling.value.toInt().shl(4)
+                    val rH =
+                        sub.retainHandling.value
+                            .toInt()
+                            .shl(4)
                     val combinedByte = (qosInt + nlShifted + rapShifted + rH).toUByte()
                     SubscriptionV5Entry(sub.topicFilter.toString(), combinedByte)
                 },
@@ -183,18 +185,19 @@ data class SubscribeRequest(
              */
             val userProperty: List<Pair<String, String>> = emptyList(),
         ) {
-            val props: List<MqttProperty> = buildList {
-                if (reasonString?.isNotBlank() == true) {
-                    add(ReasonString(reasonString))
-                }
-                if (userProperty.isNotEmpty()) {
-                    for (keyValueProperty in userProperty) {
-                        val key = keyValueProperty.first
-                        val value = keyValueProperty.second
-                        add(UserProperty(key, value))
+            val props: List<MqttProperty> =
+                buildList {
+                    if (reasonString?.isNotBlank() == true) {
+                        add(ReasonString(reasonString))
+                    }
+                    if (userProperty.isNotEmpty()) {
+                        for (keyValueProperty in userProperty) {
+                            val key = keyValueProperty.first
+                            val value = keyValueProperty.second
+                            add(UserProperty(key, value))
+                        }
                     }
                 }
-            }
 
             fun size(): Int = mqttPropertiesSize(props)
 
@@ -239,41 +242,42 @@ data class SubscribeRequest(
             val props = Properties.from(wire.properties)
             val header = VariableHeader(wire.packetIdentifier.toInt(), props)
             val subscriptions =
-                wire.subscriptions.map { sub ->
-                    val opts = sub.subscriptionOptions.toInt()
-                    val reservedBit7 = opts.shr(7) == 1
-                    if (reservedBit7) {
-                        throw ProtocolError("Bit 7 in Subscribe payload is set to an invalid value (it is reserved)")
-                    }
-                    val reservedBit6 = opts.shl(1).shr(7) == 1
-                    if (reservedBit6) {
-                        throw ProtocolError("Bit 7 in Subscribe payload is set to an invalid value (it is reserved)")
-                    }
-                    val retainHandlingBit5 = opts.shl(2).shr(7) == 1
-                    val retainHandlingBit4 = opts.shl(3).shr(7) == 1
-                    val retainHandling =
-                        if (retainHandlingBit5 && retainHandlingBit4) {
-                            throw ProtocolError("Retain Handling Value cannot be set to 3")
-                        } else if (retainHandlingBit5 && !retainHandlingBit4) {
-                            DO_NOT_SEND_RETAINED_MESSAGES
-                        } else if (!retainHandlingBit5 && retainHandlingBit4) {
-                            SEND_RETAINED_MESSAGES_AT_SUBSCRIBE_ONLY_IF_SUBSCRIBE_DOESNT_EXISTS
-                        } else {
-                            SEND_RETAINED_MESSAGES_AT_TIME_OF_SUBSCRIBE
+                wire.subscriptions
+                    .map { sub ->
+                        val opts = sub.subscriptionOptions.toInt()
+                        val reservedBit7 = opts.shr(7) == 1
+                        if (reservedBit7) {
+                            throw ProtocolError("Bit 7 in Subscribe payload is set to an invalid value (it is reserved)")
                         }
-                    val rapBit3 = opts.shl(4).shr(7) == 1
-                    val nlBit2 = opts.shl(5).shr(7) == 1
-                    val qosBit1 = opts.shl(6).shr(7) == 1
-                    val qosBit0 = opts.shl(7).shr(7) == 1
-                    val qos = QualityOfService.fromBooleans(qosBit1, qosBit0)
-                    Subscription(
-                        TopicFilter.fromOrThrow(sub.topicFilter),
-                        qos,
-                        nlBit2,
-                        rapBit3,
-                        retainHandling,
-                    )
-                }.toSet()
+                        val reservedBit6 = opts.shl(1).shr(7) == 1
+                        if (reservedBit6) {
+                            throw ProtocolError("Bit 7 in Subscribe payload is set to an invalid value (it is reserved)")
+                        }
+                        val retainHandlingBit5 = opts.shl(2).shr(7) == 1
+                        val retainHandlingBit4 = opts.shl(3).shr(7) == 1
+                        val retainHandling =
+                            if (retainHandlingBit5 && retainHandlingBit4) {
+                                throw ProtocolError("Retain Handling Value cannot be set to 3")
+                            } else if (retainHandlingBit5 && !retainHandlingBit4) {
+                                DO_NOT_SEND_RETAINED_MESSAGES
+                            } else if (!retainHandlingBit5 && retainHandlingBit4) {
+                                SEND_RETAINED_MESSAGES_AT_SUBSCRIBE_ONLY_IF_SUBSCRIBE_DOESNT_EXISTS
+                            } else {
+                                SEND_RETAINED_MESSAGES_AT_TIME_OF_SUBSCRIBE
+                            }
+                        val rapBit3 = opts.shl(4).shr(7) == 1
+                        val nlBit2 = opts.shl(5).shr(7) == 1
+                        val qosBit1 = opts.shl(6).shr(7) == 1
+                        val qosBit0 = opts.shl(7).shr(7) == 1
+                        val qos = QualityOfService.fromBooleans(qosBit1, qosBit0)
+                        Subscription(
+                            TopicFilter.fromOrThrow(sub.topicFilter),
+                            qos,
+                            nlBit2,
+                            rapBit3,
+                            retainHandling,
+                        )
+                    }.toSet()
             return SubscribeRequest(header, subscriptions)
         }
     }
@@ -322,7 +326,6 @@ data class Subscription(
     fun size() = topicFilter.toString().utf8Length() + UShort.SIZE_BYTES + Byte.SIZE_BYTES
 
     companion object {
-
         fun from(
             topic: String,
             qos: QualityOfService,

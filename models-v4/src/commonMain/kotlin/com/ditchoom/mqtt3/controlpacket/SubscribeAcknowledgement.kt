@@ -19,7 +19,9 @@ import kotlin.jvm.JvmInline
  */
 @ProtocolMessage
 @JvmInline
-value class SubAckReturnCode(val raw: UByte)
+value class SubAckReturnCode(
+    val raw: UByte,
+)
 
 /**
  * 3.9 SUBACK – Subscribe acknowledgement
@@ -38,6 +40,7 @@ data class SubscribeAcknowledgement(
     override val packetIdentifier: Int get() = packetId.toInt()
     override val controlPacketValue: Byte get() = ISubscribeAcknowledgement.CONTROL_PACKET_VALUE
     override val direction: DirectionOfFlow get() = DirectionOfFlow.SERVER_TO_CLIENT
+
     override fun remainingLength() = UShort.SIZE_BYTES + returnCodes.size
 
     /**
@@ -47,15 +50,16 @@ data class SubscribeAcknowledgement(
         this(packetIdentifier.toUShort(), payload.map { SubAckReturnCode(it.byte) })
 
     val payload: List<ReasonCode>
-        get() = returnCodes.map { rc ->
-            when (rc.raw) {
-                GRANTED_QOS_0.byte -> GRANTED_QOS_0
-                GRANTED_QOS_1.byte -> GRANTED_QOS_1
-                GRANTED_QOS_2.byte -> GRANTED_QOS_2
-                UNSPECIFIED_ERROR.byte -> UNSPECIFIED_ERROR
-                else -> throw MalformedPacketException("Invalid return code ${rc.raw}")
+        get() =
+            returnCodes.map { rc ->
+                when (rc.raw) {
+                    GRANTED_QOS_0.byte -> GRANTED_QOS_0
+                    GRANTED_QOS_1.byte -> GRANTED_QOS_1
+                    GRANTED_QOS_2.byte -> GRANTED_QOS_2
+                    UNSPECIFIED_ERROR.byte -> UNSPECIFIED_ERROR
+                    else -> throw MalformedPacketException("Invalid return code ${rc.raw}")
+                }
             }
-        }
 
     override fun encodeBody(writeBuffer: WriteBuffer) = SubscribeAcknowledgementCodec.encode(writeBuffer, this)
 

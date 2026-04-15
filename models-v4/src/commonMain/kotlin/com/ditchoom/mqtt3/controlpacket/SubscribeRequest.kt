@@ -27,10 +27,11 @@ data class SubscriptionEntry(
 ) : ISubscription {
     override val topicFilter: TopicFilter get() = TopicFilter.fromOrThrow(filter)
     override val maximumQos: QualityOfService
-        get() = QualityOfService.fromBooleans(
-            qos.toInt().shr(1) and 1 == 1,
-            qos.toInt() and 1 == 1,
-        )
+        get() =
+            QualityOfService.fromBooleans(
+                qos.toInt().shr(1) and 1 == 1,
+                qos.toInt() and 1 == 1,
+            )
 }
 
 /**
@@ -88,8 +89,7 @@ data class SubscribeRequest(
             subscriptions = Subscription.from(topicsQosMap.keys.toList(), topicsQosMap.values.toList()),
         )
 
-    override fun copyWithNewPacketIdentifier(packetIdentifier: Int): ISubscribeRequest =
-        copy(packetId = packetIdentifier.toUShort())
+    override fun copyWithNewPacketIdentifier(packetIdentifier: Int): ISubscribeRequest = copy(packetId = packetIdentifier.toUShort())
 
     override fun encodeBody(writeBuffer: WriteBuffer) = SubscribeRequestCodec.encode(writeBuffer, this)
 

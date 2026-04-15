@@ -1,6 +1,5 @@
 package com.ditchoom.mqtt5.controlpacket
 
-import com.ditchoom.buffer.PlatformBuffer
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
 import com.ditchoom.buffer.codec.annotations.LengthPrefixed
@@ -8,10 +7,10 @@ import com.ditchoom.buffer.codec.annotations.Payload
 import com.ditchoom.buffer.codec.annotations.ProtocolMessage
 import com.ditchoom.buffer.codec.annotations.WhenTrue
 import com.ditchoom.buffer.utf8Length
-import com.ditchoom.mqtt.codec.annotations.MqttProperties
 import com.ditchoom.mqtt.MalformedPacketException
 import com.ditchoom.mqtt.MqttWarning
 import com.ditchoom.mqtt.ProtocolError
+import com.ditchoom.mqtt.codec.annotations.MqttProperties
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readMqttUtf8StringNotValidatedSized
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.variableByteSize
 import com.ditchoom.mqtt.controlpacket.IConnectionRequest
@@ -43,7 +42,9 @@ import com.ditchoom.mqtt5.controlpacket.properties.readProperties
 import kotlin.jvm.JvmInline
 
 @JvmInline
-value class ConnectV5FlagsValue(val raw: UByte) {
+value class ConnectV5FlagsValue(
+    val raw: UByte,
+) {
     val reserved: Boolean get() = raw.toInt() and 1 == 1
     val cleanStart: Boolean get() = (raw.toInt() shr 1) and 1 == 1
     val willFlag: Boolean get() = (raw.toInt() shr 2) and 1 == 1
@@ -175,24 +176,28 @@ data class ConnectionRequest(
         val usernameFlag = if (vh.hasUserName) 0b10000000 else 0
         val passwordFlag = if (vh.hasPassword) 0b1000000 else 0
         val wRetain = if (vh.willRetain) 0b100000 else 0
-        val qos = vh.willQos.integerValue.toInt().shl(3)
+        val qos =
+            vh.willQos.integerValue
+                .toInt()
+                .shl(3)
         val wFlag = if (vh.willFlag) 0b100 else 0
         val cleanStart = if (vh.cleanStart) 0b10 else 0
         val flagsByte = (usernameFlag or passwordFlag or wRetain or qos or wFlag or cleanStart).toUByte()
         val connectFlags = ConnectV5FlagsValue(flagsByte)
-        val wire = ConnectV5Body<ReadBuffer?>(
-            protocolName = vh.protocolName,
-            protocolLevel = vh.protocolVersion,
-            connectFlags = connectFlags,
-            keepAlive = vh.keepAliveSeconds.toUShort(),
-            properties = vh.properties.props,
-            clientId = payload.clientId,
-            willProperties = payload.willProperties?.props,
-            willTopic = payload.willTopic?.toString(),
-            willPayload = payload.willPayload,
-            username = payload.userName,
-            password = payload.password,
-        )
+        val wire =
+            ConnectV5Body<ReadBuffer?>(
+                protocolName = vh.protocolName,
+                protocolLevel = vh.protocolVersion,
+                connectFlags = connectFlags,
+                keepAlive = vh.keepAliveSeconds.toUShort(),
+                properties = vh.properties.props,
+                clientId = payload.clientId,
+                willProperties = payload.willProperties?.props,
+                willTopic = payload.willTopic?.toString(),
+                willPayload = payload.willPayload,
+                username = payload.userName,
+                password = payload.password,
+            )
         ConnectV5BodyCodec.encode(writeBuffer, wire) { buf, wp ->
             if (wp != null) buf.write(wp)
         }
@@ -716,38 +721,39 @@ data class ConnectionRequest(
                 }
             }
 
-            val props: List<MqttProperty> = buildList {
-                if (sessionExpiryIntervalSeconds != null) {
-                    add(SessionExpiryInterval(sessionExpiryIntervalSeconds.toUInt()))
-                }
-                if (receiveMaximum != null) {
-                    add(ReceiveMaximum(receiveMaximum.toUShort()))
-                }
-                if (maximumPacketSize != null) {
-                    add(MaximumPacketSize(maximumPacketSize.toUInt()))
-                }
-                if (topicAliasMaximum != null) {
-                    add(TopicAliasMaximum(topicAliasMaximum.toUShort()))
-                }
-                if (requestResponseInformation != null) {
-                    add(RequestResponseInformation(requestResponseInformation))
-                }
-                if (requestProblemInformation != null) {
-                    add(RequestProblemInformation(requestProblemInformation))
-                }
-                if (userProperty.isNotEmpty()) {
-                    for (keyValueProperty in userProperty) {
-                        val key = keyValueProperty.first
-                        val value = keyValueProperty.second
-                        add(UserProperty(key, value))
+            val props: List<MqttProperty> =
+                buildList {
+                    if (sessionExpiryIntervalSeconds != null) {
+                        add(SessionExpiryInterval(sessionExpiryIntervalSeconds.toUInt()))
+                    }
+                    if (receiveMaximum != null) {
+                        add(ReceiveMaximum(receiveMaximum.toUShort()))
+                    }
+                    if (maximumPacketSize != null) {
+                        add(MaximumPacketSize(maximumPacketSize.toUInt()))
+                    }
+                    if (topicAliasMaximum != null) {
+                        add(TopicAliasMaximum(topicAliasMaximum.toUShort()))
+                    }
+                    if (requestResponseInformation != null) {
+                        add(RequestResponseInformation(requestResponseInformation))
+                    }
+                    if (requestProblemInformation != null) {
+                        add(RequestProblemInformation(requestProblemInformation))
+                    }
+                    if (userProperty.isNotEmpty()) {
+                        for (keyValueProperty in userProperty) {
+                            val key = keyValueProperty.first
+                            val value = keyValueProperty.second
+                            add(UserProperty(key, value))
+                        }
+                    }
+                    if (authentication != null) {
+                        add(AuthenticationMethod(authentication.method))
+                        authentication.data.position(0)
+                        add(AuthenticationData(authentication.data.remaining().toUShort(), authentication.data))
                     }
                 }
-                if (authentication != null) {
-                    add(AuthenticationMethod(authentication.method))
-                    authentication.data.position(0)
-                    add(AuthenticationData(authentication.data.remaining().toUShort(), authentication.data))
-                }
-            }
 
             fun size(): Int = mqttPropertiesSize(props)
 
@@ -755,22 +761,30 @@ data class ConnectionRequest(
                 fun from(keyValuePairs: Collection<MqttProperty>?): Properties {
                     val p = PropertyExtractor(keyValuePairs, "CONNECT")
                     val sessionExpiryIntervalSeconds = p.single<SessionExpiryInterval>()?.seconds?.toULong()
-                    val receiveMaximum = p.single<ReceiveMaximum>()?.also {
-                        if (it.max == 0.toUShort()) {
-                            throw ProtocolError(
-                                "Receive Maximum cannot be set to 0 see: " +
-                                    "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477349",
-                            )
-                        }
-                    }?.max?.toInt()
-                    val maximumPacketSize = p.single<MaximumPacketSize>()?.also {
-                        if (it.bytes == 0u) {
-                            throw ProtocolError(
-                                "Maximum Packet Size cannot be set to 0 see: " +
-                                    "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477350",
-                            )
-                        }
-                    }?.bytes?.toULong()
+                    val receiveMaximum =
+                        p
+                            .single<ReceiveMaximum>()
+                            ?.also {
+                                if (it.max == 0.toUShort()) {
+                                    throw ProtocolError(
+                                        "Receive Maximum cannot be set to 0 see: " +
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477349",
+                                    )
+                                }
+                            }?.max
+                            ?.toInt()
+                    val maximumPacketSize =
+                        p
+                            .single<MaximumPacketSize>()
+                            ?.also {
+                                if (it.bytes == 0u) {
+                                    throw ProtocolError(
+                                        "Maximum Packet Size cannot be set to 0 see: " +
+                                            "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477350",
+                                    )
+                                }
+                            }?.bytes
+                            ?.toULong()
                     val topicAliasMaximum = p.single<TopicAliasMaximum>()?.max?.toInt()
                     val requestResponseInformation = p.single<RequestResponseInformation>()?.enabled
                     val requestProblemInformation = p.single<RequestProblemInformation>()?.enabled
@@ -778,11 +792,12 @@ data class ConnectionRequest(
                     val authMethod = p.single<AuthenticationMethod>()?.value
                     val authData = p.single<AuthenticationData<*>>()?.data as? ReadBuffer
                     p.rejectUnknown()
-                    val auth = if (authMethod != null && authData != null) {
-                        Authentication(authMethod, authData)
-                    } else {
-                        null
-                    }
+                    val auth =
+                        if (authMethod != null && authData != null) {
+                            Authentication(authMethod, authData)
+                        } else {
+                            null
+                        }
                     return Properties(
                         sessionExpiryIntervalSeconds,
                         receiveMaximum,
@@ -1080,34 +1095,35 @@ data class ConnectionRequest(
              */
             val userProperty: List<Pair<String, String>> = emptyList(),
         ) {
-            val props: List<MqttProperty> = buildList {
-                if (willDelayIntervalSeconds != 0L) {
-                    add(WillDelayInterval(willDelayIntervalSeconds.toUInt()))
-                }
-                if (payloadFormatIndicator) {
-                    add(PayloadFormatIndicator(payloadFormatIndicator))
-                }
-                if (messageExpiryIntervalSeconds != null) {
-                    add(MessageExpiryInterval(messageExpiryIntervalSeconds.toUInt()))
-                }
-                if (contentType != null) {
-                    add(ContentType(contentType))
-                }
-                if (responseTopic != null) {
-                    add(ResponseTopic(responseTopic.toString()))
-                }
-                if (correlationData != null) {
-                    correlationData.position(0)
-                    add(CorrelationData(correlationData.remaining().toUShort(), correlationData))
-                }
-                if (userProperty.isNotEmpty()) {
-                    for (keyValueProperty in userProperty) {
-                        val key = keyValueProperty.first
-                        val value = keyValueProperty.second
-                        add(UserProperty(key, value))
+            val props: List<MqttProperty> =
+                buildList {
+                    if (willDelayIntervalSeconds != 0L) {
+                        add(WillDelayInterval(willDelayIntervalSeconds.toUInt()))
+                    }
+                    if (payloadFormatIndicator) {
+                        add(PayloadFormatIndicator(payloadFormatIndicator))
+                    }
+                    if (messageExpiryIntervalSeconds != null) {
+                        add(MessageExpiryInterval(messageExpiryIntervalSeconds.toUInt()))
+                    }
+                    if (contentType != null) {
+                        add(ContentType(contentType))
+                    }
+                    if (responseTopic != null) {
+                        add(ResponseTopic(responseTopic.toString()))
+                    }
+                    if (correlationData != null) {
+                        correlationData.position(0)
+                        add(CorrelationData(correlationData.remaining().toUShort(), correlationData))
+                    }
+                    if (userProperty.isNotEmpty()) {
+                        for (keyValueProperty in userProperty) {
+                            val key = keyValueProperty.first
+                            val value = keyValueProperty.second
+                            add(UserProperty(key, value))
+                        }
                     }
                 }
-            }
 
             fun size(): Int = mqttPropertiesSize(props)
 
@@ -1203,9 +1219,10 @@ data class ConnectionRequest(
 
     companion object {
         fun from(buffer: ReadBuffer): ConnectionRequest {
-            val wire = ConnectV5BodyCodec.decode<ReadBuffer?>(buffer) { pr ->
-                if (pr.remaining() > 0) pr.copyToBuffer() else null
-            }
+            val wire =
+                ConnectV5BodyCodec.decode<ReadBuffer?>(buffer) { pr ->
+                    if (pr.remaining() > 0) pr.copyToBuffer() else null
+                }
             if (wire.connectFlags.reserved) {
                 throw MalformedPacketException(
                     "Reserved flag in Connect Variable Header packet is set incorrectly to 1",
@@ -1218,36 +1235,40 @@ data class ConnectionRequest(
                 )
             }
             val properties = VariableHeader.Properties.from(wire.properties)
-            val variableHeader = VariableHeader(
-                wire.protocolName,
-                wire.protocolLevel,
-                wire.connectFlags.usernameFlag,
-                wire.connectFlags.passwordFlag,
-                wire.connectFlags.willRetain,
-                willQos,
-                wire.connectFlags.willFlag,
-                wire.connectFlags.cleanStart,
-                wire.keepAlive.toInt(),
-                properties,
-            )
-            val willProperties = if (wire.willProperties != null) {
-                Payload.WillProperties.from(wire.willProperties)
-            } else {
-                null
-            }
-            val willTopic = if (wire.willTopic != null) {
-                TopicName.fromOrThrow(wire.willTopic)
-            } else {
-                null
-            }
-            val payload = Payload(
-                wire.clientId,
-                willProperties,
-                willTopic,
-                wire.willPayload,
-                wire.username,
-                wire.password,
-            )
+            val variableHeader =
+                VariableHeader(
+                    wire.protocolName,
+                    wire.protocolLevel,
+                    wire.connectFlags.usernameFlag,
+                    wire.connectFlags.passwordFlag,
+                    wire.connectFlags.willRetain,
+                    willQos,
+                    wire.connectFlags.willFlag,
+                    wire.connectFlags.cleanStart,
+                    wire.keepAlive.toInt(),
+                    properties,
+                )
+            val willProperties =
+                if (wire.willProperties != null) {
+                    Payload.WillProperties.from(wire.willProperties)
+                } else {
+                    null
+                }
+            val willTopic =
+                if (wire.willTopic != null) {
+                    TopicName.fromOrThrow(wire.willTopic)
+                } else {
+                    null
+                }
+            val payload =
+                Payload(
+                    wire.clientId,
+                    willProperties,
+                    willTopic,
+                    wire.willPayload,
+                    wire.username,
+                    wire.password,
+                )
             return ConnectionRequest(variableHeader, payload)
         }
     }

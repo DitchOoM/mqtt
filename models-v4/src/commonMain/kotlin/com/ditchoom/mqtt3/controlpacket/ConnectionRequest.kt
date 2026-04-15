@@ -1,19 +1,46 @@
 package com.ditchoom.mqtt3.controlpacket
 
-import com.ditchoom.buffer.PlatformBuffer
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
+import com.ditchoom.buffer.codec.annotations.LengthPrefixed
+import com.ditchoom.buffer.codec.annotations.Payload
+import com.ditchoom.buffer.codec.annotations.ProtocolMessage
+import com.ditchoom.buffer.codec.annotations.WhenTrue
 import com.ditchoom.buffer.utf8Length
 import com.ditchoom.mqtt.MalformedPacketException
 import com.ditchoom.mqtt.MqttWarning
-import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readMqttUtf8StringNotValidatedSized
-import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.writeMqttUtf8String
 import com.ditchoom.mqtt.controlpacket.IConnectionRequest
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt.controlpacket.WillConfig
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
-import com.ditchoom.mqtt.controlpacket.format.fixed.get
+import kotlin.jvm.JvmInline
+
+@JvmInline
+value class ConnectV4Flags(
+    val raw: UByte,
+) {
+    val reserved: Boolean get() = raw.toInt() and 1 == 1
+    val cleanSession: Boolean get() = (raw.toInt() shr 1) and 1 == 1
+    val willFlag: Boolean get() = (raw.toInt() shr 2) and 1 == 1
+    val willQos: Int get() = (raw.toInt() shr 3) and 3
+    val willRetain: Boolean get() = (raw.toInt() shr 5) and 1 == 1
+    val passwordFlag: Boolean get() = (raw.toInt() shr 6) and 1 == 1
+    val usernameFlag: Boolean get() = (raw.toInt() shr 7) and 1 == 1
+}
+
+@ProtocolMessage
+data class ConnectV4Body<@Payload WP>(
+    @LengthPrefixed val protocolName: String,
+    val protocolLevel: UByte,
+    val connectFlags: ConnectV4Flags,
+    val keepAlive: UShort,
+    @LengthPrefixed val clientId: String,
+    @WhenTrue("connectFlags.willFlag") @LengthPrefixed val willTopic: String? = null,
+    @WhenTrue("connectFlags.willFlag") @LengthPrefixed val willPayload: WP? = null,
+    @WhenTrue("connectFlags.usernameFlag") @LengthPrefixed val username: String? = null,
+    @WhenTrue("connectFlags.passwordFlag") @LengthPrefixed val password: String? = null,
+)
 
 /**
  * 3.1 CONNECT – Client requests a connection to a Server
@@ -86,32 +113,30 @@ data class ConnectionRequest(
 
     override fun encodeBody(writeBuffer: WriteBuffer) {
         val vh = variableHeader
-        // Variable header
-        writeBuffer.writeMqttUtf8String(vh.protocolName)
-        writeBuffer.writeUByte(vh.protocolLevel)
         val usernameFlag = if (vh.hasUserName) 0b10000000 else 0
         val passwordFlag = if (vh.hasPassword) 0b1000000 else 0
         val wRetain = if (vh.willRetain) 0b100000 else 0
-        val qos = vh.willQos.integerValue.toInt().shl(3)
+        val qos =
+            vh.willQos.integerValue
+                .toInt()
+                .shl(3)
         val wFlag = if (vh.willFlag) 0b100 else 0
         val cleanStart = if (vh.cleanSession) 0b10 else 0
-        writeBuffer.writeUByte((usernameFlag or passwordFlag or wRetain or qos or wFlag or cleanStart).toUByte())
-        writeBuffer.writeUShort(vh.keepAliveSeconds.toUShort())
-        // Payload
-        writeBuffer.writeMqttUtf8String(payload.clientId)
-        if (vh.willFlag && payload.willTopic != null) {
-            writeBuffer.writeMqttUtf8String(payload.willTopic.toString())
-        }
-        if (vh.willFlag && payload.willPayload != null) {
-            writeBuffer.writeUShort(payload.willPayload.remaining().toUShort())
-            writeBuffer.write(payload.willPayload)
-        }
-        if (vh.hasUserName && payload.userName != null) {
-            writeBuffer.writeMqttUtf8String(payload.userName)
-        }
-        if (vh.hasPassword && payload.password != null) {
-            writeBuffer.writeMqttUtf8String(payload.password)
-        }
+        val flags = ConnectV4Flags((usernameFlag or passwordFlag or wRetain or qos or wFlag or cleanStart).toUByte())
+        ConnectV4BodyCodec.encode(
+            writeBuffer,
+            ConnectV4Body<ReadBuffer>(
+                vh.protocolName,
+                vh.protocolLevel,
+                flags,
+                vh.keepAliveSeconds.toUShort(),
+                payload.clientId,
+                payload.willTopic?.toString(),
+                payload.willPayload,
+                payload.userName,
+                payload.password,
+            ),
+        ) { buf, wp -> buf.write(wp) }
     }
 
     override fun remainingLength() = variableHeader.size() + payload.size()
@@ -403,40 +428,6 @@ data class ConnectionRequest(
         }
 
         fun size() = protocolName.utf8Length() + 6
-
-        companion object {
-            fun from(buffer: ReadBuffer): VariableHeader {
-                val protocolName = buffer.readMqttUtf8StringNotValidatedSized().second
-                val protocolVersion = buffer.readUnsignedByte()
-                val connectFlags = buffer.readUnsignedByte()
-                val reserved = connectFlags.get(0)
-                val cleanStart = connectFlags.get(1)
-                val willFlag = connectFlags.get(2)
-                val willQosBit1 = connectFlags.get(3)
-                val willQosBit2 = connectFlags.get(4)
-                val willQos = QualityOfService.fromBooleans(willQosBit2, willQosBit1)
-                val willRetain = connectFlags.get(5)
-                val hasPassword = connectFlags.get(6)
-                val hasUsername = connectFlags.get(7)
-                if (reserved) {
-                    throw MalformedPacketException(
-                        "Reserved flag in Connect Variable Header packet is set incorrectly to 1",
-                    )
-                }
-                val keepAliveSeconds = buffer.readUnsignedShort()
-                return VariableHeader(
-                    protocolName,
-                    protocolVersion,
-                    hasUsername,
-                    hasPassword,
-                    willRetain,
-                    willQos,
-                    willFlag,
-                    cleanStart,
-                    keepAliveSeconds.toInt(),
-                )
-            }
-        }
     }
 
     /**
@@ -538,54 +529,40 @@ data class ConnectionRequest(
             }
             return size
         }
-
-        companion object {
-            fun from(
-                buffer: ReadBuffer,
-                variableHeader: VariableHeader,
-            ): Payload {
-                val clientId = buffer.readMqttUtf8StringNotValidatedSized().second
-                val willTopic =
-                    if (variableHeader.willFlag) {
-                        buffer.readMqttUtf8StringNotValidatedSized().second
-                    } else {
-                        null
-                    }
-                val willPayload =
-                    if (variableHeader.willFlag) {
-                        val willPayloadSize = buffer.readUnsignedShort().toInt()
-                        buffer.readBytes(willPayloadSize)
-                    } else {
-                        null
-                    }
-                val username =
-                    if (variableHeader.hasUserName) {
-                        buffer.readMqttUtf8StringNotValidatedSized().second
-                    } else {
-                        null
-                    }
-                val password =
-                    if (variableHeader.hasPassword) {
-                        buffer.readMqttUtf8StringNotValidatedSized().second
-                    } else {
-                        null
-                    }
-                val topic =
-                    if (willTopic != null) {
-                        TopicName.fromOrThrow(willTopic)
-                    } else {
-                        null
-                    }
-                return Payload(clientId, topic, willPayload, username, password)
-            }
-        }
     }
 
     companion object {
         fun from(buffer: ReadBuffer): ConnectionRequest {
-            val variableHeader = VariableHeader.from(buffer)
-            val payload = Payload.from(buffer, variableHeader)
-            return ConnectionRequest(variableHeader, payload)
+            val wire =
+                ConnectV4BodyCodec.decode<ReadBuffer>(buffer) { pr ->
+                    pr.copyToBuffer()
+                }
+            val flags = wire.connectFlags
+            if (flags.reserved) {
+                throw MalformedPacketException(
+                    "Reserved flag in Connect Variable Header packet is set incorrectly to 1",
+                )
+            }
+            val willQos =
+                QualityOfService.fromBooleans(
+                    (flags.willQos shr 1) and 1 == 1,
+                    flags.willQos and 1 == 1,
+                )
+            val vh =
+                VariableHeader(
+                    wire.protocolName,
+                    wire.protocolLevel,
+                    flags.usernameFlag,
+                    flags.passwordFlag,
+                    flags.willRetain,
+                    willQos,
+                    flags.willFlag,
+                    flags.cleanSession,
+                    wire.keepAlive.toInt(),
+                )
+            val topic = wire.willTopic?.let { TopicName.fromOrThrow(it) }
+            val pl = Payload(wire.clientId, topic, wire.willPayload, wire.username, wire.password)
+            return ConnectionRequest(vh, pl)
         }
     }
 }

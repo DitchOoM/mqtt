@@ -35,7 +35,9 @@ import kotlin.jvm.JvmInline
 
 @ProtocolMessage
 @JvmInline
-value class SubAckReasonCodeV5(val raw: UByte)
+value class SubAckReasonCodeV5(
+    val raw: UByte,
+)
 
 @ProtocolMessage
 data class SubAckV5Body(
@@ -151,18 +153,19 @@ data class SubscribeAcknowledgement(
              */
             val userProperty: List<Pair<String, String>> = emptyList(),
         ) {
-            val props: List<MqttProperty> = buildList {
-                if (reasonString != null) {
-                    add(ReasonString(reasonString))
-                }
-                if (userProperty.isNotEmpty()) {
-                    for (keyValueProperty in userProperty) {
-                        val key = keyValueProperty.first
-                        val value = keyValueProperty.second
-                        add(UserProperty(key, value))
+            val props: List<MqttProperty> =
+                buildList {
+                    if (reasonString != null) {
+                        add(ReasonString(reasonString))
+                    }
+                    if (userProperty.isNotEmpty()) {
+                        for (keyValueProperty in userProperty) {
+                            val key = keyValueProperty.first
+                            val value = keyValueProperty.second
+                            add(UserProperty(key, value))
+                        }
                     }
                 }
-            }
 
             fun size(): Int = mqttPropertiesSize(props)
 

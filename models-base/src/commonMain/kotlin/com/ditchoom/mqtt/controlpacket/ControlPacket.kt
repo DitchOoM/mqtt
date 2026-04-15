@@ -1,11 +1,8 @@
 package com.ditchoom.mqtt.controlpacket
 
 import com.ditchoom.buffer.BufferFactory
-import com.ditchoom.buffer.PlatformBuffer
 import com.ditchoom.buffer.ReadBuffer
-import com.ditchoom.buffer.ReadWriteBuffer
 import com.ditchoom.buffer.WriteBuffer
-import com.ditchoom.buffer.codec.Codec
 import com.ditchoom.buffer.managed
 import com.ditchoom.mqtt.MalformedInvalidVariableByteInteger
 import com.ditchoom.mqtt.controlpacket.encoding.readLengthPrefixedUtf8String
@@ -14,16 +11,6 @@ import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
 import com.ditchoom.mqtt.controlpacket.encoding.readVariableByteInteger as encodingReadVariableByteInteger
 import com.ditchoom.mqtt.controlpacket.encoding.variableByteSize as encodingVariableByteSize
 import com.ditchoom.mqtt.controlpacket.encoding.writeVariableByteInteger as encodingWriteVariableByteInteger
-
-/**
- * Marker interface for v5 packets whose serialization delegates to a wire codec.
- * Will be removed when v5 models are refactored.
- */
-interface WireEncoded<W : Any> {
-    val wireCodec: Codec<W>
-
-    fun toWire(): W
-}
 
 interface ControlPacket {
     val controlPacketValue: Byte
@@ -76,16 +63,10 @@ interface ControlPacket {
 
     /**
      * Encodes the variable header + payload (everything after the fixed header).
-     * If this implements [WireEncoded], delegates to the wire codec automatically.
      */
     fun encodeBody(writeBuffer: WriteBuffer) {
-        if (this is WireEncoded<*>) {
-            @Suppress("UNCHECKED_CAST")
-            (wireCodec as Codec<Any>).encode(writeBuffer, toWire())
-        } else {
-            variableHeader(writeBuffer)
-            payload(writeBuffer)
-        }
+        variableHeader(writeBuffer)
+        payload(writeBuffer)
     }
 
     fun packetSize() = 1 + encodingVariableByteSize(remainingLength()) + remainingLength()
@@ -96,7 +77,7 @@ interface ControlPacket {
      */
     fun remainingLength(): Int = 0
 
-    fun serialize(factory: BufferFactory = BufferFactory.managed()): PlatformBuffer {
+    fun serialize(factory: BufferFactory = BufferFactory.managed()): ReadBuffer {
         val size = packetSize()
         val buffer = factory.allocate(size)
         serialize(buffer)
@@ -106,42 +87,6 @@ interface ControlPacket {
     fun serialize(writeBuffer: WriteBuffer) {
         fixedHeader(writeBuffer)
         encodeBody(writeBuffer)
-    }
-
-    /**
-     * Single-pass serialization using backpatch: reserves space for the fixed header,
-     * writes the body via [encodeBody], then backpatches byte1 + VBI at the correct offset.
-     * Returns a zero-copy slice over the valid region of [buffer].
-     *
-     * The caller must ensure [buffer] has at least [MAX_FIXED_HEADER_SIZE] + body size bytes
-     * remaining. The returned slice shares underlying memory with [buffer] and must be consumed
-     * before [buffer] is recycled.
-     */
-    fun serializeToSlice(buffer: ReadWriteBuffer): ReadBuffer {
-        val reserveStart = buffer.position()
-        buffer.position(reserveStart + MAX_FIXED_HEADER_SIZE)
-
-        encodeBody(buffer)
-
-        val bodySize = buffer.position() - reserveStart - MAX_FIXED_HEADER_SIZE
-        val vbiSize = encodingVariableByteSize(bodySize).toInt()
-        val actualStart = reserveStart + MAX_FIXED_HEADER_SIZE - 1 - vbiSize
-
-        // Backpatch fixed header: byte1 + VBI
-        buffer[actualStart] = byte1.toByte()
-        val savedPos = buffer.position()
-        buffer.position(actualStart + 1)
-        buffer.encodingWriteVariableByteInteger(bodySize)
-        buffer.position(savedPos)
-
-        // Zero-copy slice over the valid region
-        val savedLimit = buffer.limit()
-        buffer.position(actualStart)
-        buffer.setLimit(savedPos)
-        val result = buffer.slice()
-        buffer.position(savedPos)
-        buffer.setLimit(savedLimit)
-        return result
     }
 
     companion object {

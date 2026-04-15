@@ -57,13 +57,14 @@ data class PublishRelease(
     override fun remainingLength() = variable.size()
 
     companion object {
-        private val validReasonCodes = mapOf(
-            SUCCESS.byte to SUCCESS,
-            PACKET_IDENTIFIER_NOT_FOUND.byte to PACKET_IDENTIFIER_NOT_FOUND,
-            UNSPECIFIED_ERROR.byte to UNSPECIFIED_ERROR,
-            IMPLEMENTATION_SPECIFIC_ERROR.byte to IMPLEMENTATION_SPECIFIC_ERROR,
-            NOT_AUTHORIZED.byte to NOT_AUTHORIZED,
-        )
+        private val validReasonCodes =
+            mapOf(
+                SUCCESS.byte to SUCCESS,
+                PACKET_IDENTIFIER_NOT_FOUND.byte to PACKET_IDENTIFIER_NOT_FOUND,
+                UNSPECIFIED_ERROR.byte to UNSPECIFIED_ERROR,
+                IMPLEMENTATION_SPECIFIC_ERROR.byte to IMPLEMENTATION_SPECIFIC_ERROR,
+                NOT_AUTHORIZED.byte to NOT_AUTHORIZED,
+            )
 
         fun from(
             buffer: ReadBuffer,

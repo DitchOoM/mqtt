@@ -20,7 +20,10 @@ typealias CONNACK = ConnectionAcknowledgment
  * Wire model for CONNACK: 1 byte acknowledge flags + 1 byte return code.
  */
 @ProtocolMessage
-data class ConnAckBody(val acknowledgeFlags: UByte, val returnCode: UByte)
+data class ConnAckBody(
+    val acknowledgeFlags: UByte,
+    val returnCode: UByte,
+)
 
 /**
  * The CONNACK packet is the packet sent by the Server in response to a CONNECT packet received from a Client.
@@ -56,7 +59,9 @@ data class ConnectionAcknowledgment(
         val sessionPresent: Boolean = false,
         val connectReason: ReturnCode = CONNECTION_ACCEPTED,
     ) {
-        enum class ReturnCode(val value: UByte) {
+        enum class ReturnCode(
+            val value: UByte,
+        ) {
             CONNECTION_ACCEPTED(0.toUByte()),
             CONNECTION_REFUSED_UNACCEPTABLE_PROTOCOL_VERSION(1.toUByte()),
             CONNECTION_REFUSED_IDENTIFIER_REJECTED(2.toUByte()),
@@ -72,10 +77,11 @@ data class ConnectionAcknowledgment(
                 val sessionPresent = wire.acknowledgeFlags.toInt() and 1 == 1
                 val returnCodeByte = wire.returnCode
                 val returnCodeNormalized = if (returnCodeByte > 5.toUByte()) RESERVED else returnCodeByte
-                val connectReason = connackReturnCode[returnCodeNormalized]
-                    ?: throw com.ditchoom.mqtt.MalformedPacketException(
-                        "Invalid property type found in MQTT payload $returnCodeNormalized",
-                    )
+                val connectReason =
+                    connackReturnCode[returnCodeNormalized]
+                        ?: throw com.ditchoom.mqtt.MalformedPacketException(
+                            "Invalid property type found in MQTT payload $returnCodeNormalized",
+                        )
                 return VariableHeader(sessionPresent, connectReason)
             }
         }

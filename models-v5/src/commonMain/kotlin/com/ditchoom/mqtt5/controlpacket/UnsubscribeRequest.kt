@@ -6,8 +6,8 @@ import com.ditchoom.buffer.codec.annotations.LengthPrefixed
 import com.ditchoom.buffer.codec.annotations.ProtocolMessage
 import com.ditchoom.buffer.codec.annotations.RemainingBytes
 import com.ditchoom.buffer.utf8Length
-import com.ditchoom.mqtt.codec.annotations.MqttProperties
 import com.ditchoom.mqtt.ProtocolError
+import com.ditchoom.mqtt.codec.annotations.MqttProperties
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.variableByteSize
 import com.ditchoom.mqtt.controlpacket.IUnsubscribeRequest
 import com.ditchoom.mqtt.controlpacket.NO_PACKET_ID
@@ -120,15 +120,16 @@ data class UnsubscribeRequest(
              */
             val userProperty: List<Pair<String, String>> = emptyList(),
         ) {
-            val props: List<MqttProperty> = buildList {
-                if (userProperty.isNotEmpty()) {
-                    for (keyValueProperty in userProperty) {
-                        val key = keyValueProperty.first
-                        val value = keyValueProperty.second
-                        add(UserProperty(key, value))
+            val props: List<MqttProperty> =
+                buildList {
+                    if (userProperty.isNotEmpty()) {
+                        for (keyValueProperty in userProperty) {
+                            val key = keyValueProperty.first
+                            val value = keyValueProperty.second
+                            add(UserProperty(key, value))
+                        }
                     }
                 }
-            }
 
             fun size(): Int = mqttPropertiesSize(props)
 

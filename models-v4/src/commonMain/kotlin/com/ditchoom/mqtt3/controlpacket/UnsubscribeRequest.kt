@@ -51,8 +51,7 @@ data class UnsubscribeRequest(
 
     override fun encodeBody(writeBuffer: WriteBuffer) = UnsubscribeRequestCodec.encode(writeBuffer, this)
 
-    override fun copyWithNewPacketIdentifier(packetIdentifier: Int): IUnsubscribeRequest =
-        copy(packetId = packetIdentifier.toUShort())
+    override fun copyWithNewPacketIdentifier(packetIdentifier: Int): IUnsubscribeRequest = copy(packetId = packetIdentifier.toUShort())
 
     companion object {
         fun from(

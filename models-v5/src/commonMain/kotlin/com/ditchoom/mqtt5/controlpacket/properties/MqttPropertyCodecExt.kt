@@ -39,9 +39,7 @@ data class BinaryPropertyDecoders<CD, AD>(
  * generated sub-codec. Binary data properties use consumer-provided callbacks
  * to control the memory representation.
  */
-fun <CD, AD> ReadBuffer.decodeMqttProperty(
-    decoders: BinaryPropertyDecoders<CD, AD>,
-): MqttProperty {
+fun <CD, AD> ReadBuffer.decodeMqttProperty(decoders: BinaryPropertyDecoders<CD, AD>): MqttProperty {
     val id = readByte().toInt() and 0xFF
     return when (id) {
         // Boolean properties — validated per MQTT 5.0 spec (value must be 0 or 1)
@@ -122,9 +120,7 @@ fun <CD, AD> WriteBuffer.encodeMqttProperty(
 /**
  * Decodes a VBI-prefixed MQTT v5 property section into a list of typed properties.
  */
-fun <CD, AD> ReadBuffer.decodeMqttProperties(
-    decoders: BinaryPropertyDecoders<CD, AD>,
-): List<MqttProperty> {
+fun <CD, AD> ReadBuffer.decodeMqttProperties(decoders: BinaryPropertyDecoders<CD, AD>): List<MqttProperty> {
     val propertyLength = readVariableByteInteger()
     if (propertyLength < 1) return emptyList()
     val endPosition = position() + propertyLength
@@ -155,42 +151,43 @@ fun <CD, AD> WriteBuffer.encodeMqttProperties(
  */
 fun mqttPropertySize(property: MqttProperty): Int {
     // 1 byte for the identifier + payload size
-    val payloadSize = when (property) {
-        // Boolean: 1 byte
-        is PayloadFormatIndicator -> 1
-        is RequestProblemInformation -> 1
-        is RequestResponseInformation -> 1
-        is MaximumQos -> 1
-        is RetainAvailable -> 1
-        is WildcardSubscriptionAvailable -> 1
-        is SubscriptionIdentifierAvailable -> 1
-        is SharedSubscriptionAvailable -> 1
-        // UShort: 2 bytes
-        is ReceiveMaximum -> 2
-        is TopicAlias -> 2
-        is TopicAliasMaximum -> 2
-        is ServerKeepAlive -> 2
-        // UInt: 4 bytes
-        is MessageExpiryInterval -> 4
-        is SessionExpiryInterval -> 4
-        is WillDelayInterval -> 4
-        is MaximumPacketSize -> 4
-        // Length-prefixed strings: 2 (length prefix) + utf8 bytes
-        is ContentType -> 2 + property.value.utf8Length()
-        is ResponseTopic -> 2 + property.value.utf8Length()
-        is AssignedClientIdentifier -> 2 + property.value.utf8Length()
-        is AuthenticationMethod -> 2 + property.value.utf8Length()
-        is ResponseInformation -> 2 + property.value.utf8Length()
-        is ServerReference -> 2 + property.value.utf8Length()
-        is ReasonString -> 2 + property.value.utf8Length()
-        // String pair: 2+key + 2+value
-        is UserProperty -> 2 + property.key.utf8Length() + 2 + property.value.utf8Length()
-        // Variable byte integer
-        is SubscriptionIdentifier -> variableByteSize(property.value).toInt()
-        // Binary data: 2 (length prefix) + data length
-        is CorrelationData<*> -> 2 + property.length.toInt()
-        is AuthenticationData<*> -> 2 + property.length.toInt()
-    }
+    val payloadSize =
+        when (property) {
+            // Boolean: 1 byte
+            is PayloadFormatIndicator -> 1
+            is RequestProblemInformation -> 1
+            is RequestResponseInformation -> 1
+            is MaximumQos -> 1
+            is RetainAvailable -> 1
+            is WildcardSubscriptionAvailable -> 1
+            is SubscriptionIdentifierAvailable -> 1
+            is SharedSubscriptionAvailable -> 1
+            // UShort: 2 bytes
+            is ReceiveMaximum -> 2
+            is TopicAlias -> 2
+            is TopicAliasMaximum -> 2
+            is ServerKeepAlive -> 2
+            // UInt: 4 bytes
+            is MessageExpiryInterval -> 4
+            is SessionExpiryInterval -> 4
+            is WillDelayInterval -> 4
+            is MaximumPacketSize -> 4
+            // Length-prefixed strings: 2 (length prefix) + utf8 bytes
+            is ContentType -> 2 + property.value.utf8Length()
+            is ResponseTopic -> 2 + property.value.utf8Length()
+            is AssignedClientIdentifier -> 2 + property.value.utf8Length()
+            is AuthenticationMethod -> 2 + property.value.utf8Length()
+            is ResponseInformation -> 2 + property.value.utf8Length()
+            is ServerReference -> 2 + property.value.utf8Length()
+            is ReasonString -> 2 + property.value.utf8Length()
+            // String pair: 2+key + 2+value
+            is UserProperty -> 2 + property.key.utf8Length() + 2 + property.value.utf8Length()
+            // Variable byte integer
+            is SubscriptionIdentifier -> variableByteSize(property.value).toInt()
+            // Binary data: 2 (length prefix) + data length
+            is CorrelationData<*> -> 2 + property.length.toInt()
+            is AuthenticationData<*> -> 2 + property.length.toInt()
+        }
     return 1 + payloadSize
 }
 
@@ -218,10 +215,11 @@ fun mqttPropertiesSectionSize(properties: List<MqttProperty>): Int {
 // They default binary data payloads to ReadBuffer (zero-copy from the wire).
 
 /** Default binary decoders: copy payload bytes into a ReadBuffer. */
-private val defaultDecoders = BinaryPropertyDecoders<ReadBuffer, ReadBuffer>(
-    decodeCorrelationData = { reader -> reader.copyToBuffer() },
-    decodeAuthenticationData = { reader -> reader.copyToBuffer() },
-)
+private val defaultDecoders =
+    BinaryPropertyDecoders<ReadBuffer, ReadBuffer>(
+        decodeCorrelationData = { reader -> reader.copyToBuffer() },
+        decodeAuthenticationData = { reader -> reader.copyToBuffer() },
+    )
 
 /**
  * Decodes a VBI-prefixed MQTT v5 property section.

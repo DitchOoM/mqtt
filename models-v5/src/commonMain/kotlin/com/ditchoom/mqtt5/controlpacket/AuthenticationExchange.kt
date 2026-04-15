@@ -48,44 +48,46 @@ data class AuthenticationExchange(
     override val direction: DirectionOfFlow get() = DirectionOfFlow.BIDIRECTIONAL
 
     override fun encodeBody(writeBuffer: WriteBuffer) {
-        val propsList = buildList<MqttProperty> {
-            val auth = variable.properties.authentication
-            if (auth != null) {
-                add(AuthenticationMethod(auth.method))
-                auth.data.position(0)
-                add(AuthenticationData(auth.data.remaining().toUShort(), auth.data))
+        val propsList =
+            buildList<MqttProperty> {
+                val auth = variable.properties.authentication
+                if (auth != null) {
+                    add(AuthenticationMethod(auth.method))
+                    auth.data.position(0)
+                    add(AuthenticationData(auth.data.remaining().toUShort(), auth.data))
+                }
+                if (variable.properties.reasonString != null) {
+                    add(ReasonString(variable.properties.reasonString))
+                }
+                for (kv in variable.properties.userProperty) {
+                    add(UserProperty(kv.first, kv.second))
+                }
             }
-            if (variable.properties.reasonString != null) {
-                add(ReasonString(variable.properties.reasonString))
-            }
-            for (kv in variable.properties.userProperty) {
-                add(UserProperty(kv.first, kv.second))
-            }
-        }
         val canOmit = variable.reasonCode == SUCCESS && propsList.isEmpty()
         if (!canOmit) {
             AuthV5BodyCodec.encode(
                 writeBuffer,
-                AuthV5Body(variable.reasonCode.byte, propsList.ifEmpty { null }),
+                AuthV5Body(variable.reasonCode.byte, propsList),
             )
         }
     }
 
     override fun remainingLength(): Int {
-        val propsList = buildList<MqttProperty> {
-            val auth = variable.properties.authentication
-            if (auth != null) {
-                add(AuthenticationMethod(auth.method))
-                auth.data.position(0)
-                add(AuthenticationData(auth.data.remaining().toUShort(), auth.data))
+        val propsList =
+            buildList<MqttProperty> {
+                val auth = variable.properties.authentication
+                if (auth != null) {
+                    add(AuthenticationMethod(auth.method))
+                    auth.data.position(0)
+                    add(AuthenticationData(auth.data.remaining().toUShort(), auth.data))
+                }
+                if (variable.properties.reasonString != null) {
+                    add(ReasonString(variable.properties.reasonString))
+                }
+                for (kv in variable.properties.userProperty) {
+                    add(UserProperty(kv.first, kv.second))
+                }
             }
-            if (variable.properties.reasonString != null) {
-                add(ReasonString(variable.properties.reasonString))
-            }
-            for (kv in variable.properties.userProperty) {
-                add(UserProperty(kv.first, kv.second))
-            }
-        }
         val canOmit = variable.reasonCode == SUCCESS && propsList.isEmpty()
         if (canOmit) return 0
         val propsSize = mqttPropertiesSize(propsList)
@@ -139,11 +141,12 @@ data class AuthenticationExchange(
                     val reasonString = p.single<ReasonString>()?.value
                     val userProperty = p.list<UserProperty>().map { it.key to it.value }
                     p.rejectUnknown()
-                    val auth = if (method != null && data != null) {
-                        Authentication(method, data)
-                    } else {
-                        null
-                    }
+                    val auth =
+                        if (method != null && data != null) {
+                            Authentication(method, data)
+                        } else {
+                            null
+                        }
                     return Properties(auth, reasonString, userProperty)
                 }
             }

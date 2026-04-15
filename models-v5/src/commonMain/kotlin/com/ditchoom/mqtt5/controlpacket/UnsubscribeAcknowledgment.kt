@@ -28,7 +28,9 @@ import kotlin.jvm.JvmInline
 
 @ProtocolMessage
 @JvmInline
-value class UnsubAckReasonCodeV5(val raw: UByte)
+value class UnsubAckReasonCodeV5(
+    val raw: UByte,
+)
 
 @ProtocolMessage
 data class UnsubAckV5Body(
@@ -44,6 +46,7 @@ data class UnsubscribeAcknowledgment(
     IUnsubscribeAcknowledgment {
     override val controlPacketValue: Byte get() = 11
     override val direction: DirectionOfFlow get() = DirectionOfFlow.SERVER_TO_CLIENT
+
     init {
         if (reasonCodes.isEmpty()) {
             throw ProtocolError("UNSUBACK must contain at least one reason code")
@@ -127,18 +130,19 @@ data class UnsubscribeAcknowledgment(
              */
             val userProperty: List<Pair<String, String>> = emptyList(),
         ) {
-            val props: List<MqttProperty> = buildList {
-                if (reasonString != null) {
-                    add(ReasonString(reasonString))
-                }
-                if (userProperty.isNotEmpty()) {
-                    for (keyValueProperty in userProperty) {
-                        val key = keyValueProperty.first
-                        val value = keyValueProperty.second
-                        add(UserProperty(key, value))
+            val props: List<MqttProperty> =
+                buildList {
+                    if (reasonString != null) {
+                        add(ReasonString(reasonString))
+                    }
+                    if (userProperty.isNotEmpty()) {
+                        for (keyValueProperty in userProperty) {
+                            val key = keyValueProperty.first
+                            val value = keyValueProperty.second
+                            add(UserProperty(key, value))
+                        }
                     }
                 }
-            }
 
             fun size(): Int = mqttPropertiesSize(props)
 

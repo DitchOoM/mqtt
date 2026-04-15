@@ -49,17 +49,18 @@ data class PublishAcknowledgment(
     override fun remainingLength() = variable.size()
 
     companion object {
-        private val validReasonCodes = mapOf(
-            SUCCESS.byte to SUCCESS,
-            NO_MATCHING_SUBSCRIBERS.byte to NO_MATCHING_SUBSCRIBERS,
-            UNSPECIFIED_ERROR.byte to UNSPECIFIED_ERROR,
-            IMPLEMENTATION_SPECIFIC_ERROR.byte to IMPLEMENTATION_SPECIFIC_ERROR,
-            NOT_AUTHORIZED.byte to NOT_AUTHORIZED,
-            TOPIC_NAME_INVALID.byte to TOPIC_NAME_INVALID,
-            PACKET_IDENTIFIER_IN_USE.byte to PACKET_IDENTIFIER_IN_USE,
-            QUOTA_EXCEEDED.byte to QUOTA_EXCEEDED,
-            PAYLOAD_FORMAT_INVALID.byte to PAYLOAD_FORMAT_INVALID,
-        )
+        private val validReasonCodes =
+            mapOf(
+                SUCCESS.byte to SUCCESS,
+                NO_MATCHING_SUBSCRIBERS.byte to NO_MATCHING_SUBSCRIBERS,
+                UNSPECIFIED_ERROR.byte to UNSPECIFIED_ERROR,
+                IMPLEMENTATION_SPECIFIC_ERROR.byte to IMPLEMENTATION_SPECIFIC_ERROR,
+                NOT_AUTHORIZED.byte to NOT_AUTHORIZED,
+                TOPIC_NAME_INVALID.byte to TOPIC_NAME_INVALID,
+                PACKET_IDENTIFIER_IN_USE.byte to PACKET_IDENTIFIER_IN_USE,
+                QUOTA_EXCEEDED.byte to QUOTA_EXCEEDED,
+                PAYLOAD_FORMAT_INVALID.byte to PAYLOAD_FORMAT_INVALID,
+            )
 
         fun from(
             buffer: ReadBuffer,

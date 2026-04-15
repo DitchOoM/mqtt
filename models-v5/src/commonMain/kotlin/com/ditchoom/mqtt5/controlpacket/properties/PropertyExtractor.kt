@@ -28,6 +28,7 @@ class PropertyExtractor(
     @PublishedApi
     internal val byType: Map<Any, List<MqttProperty>> =
         properties?.groupBy { it::class } ?: emptyMap()
+
     @PublishedApi
     internal val consumed: MutableSet<Any> = mutableSetOf()
 

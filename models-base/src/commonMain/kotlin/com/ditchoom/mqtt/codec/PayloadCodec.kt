@@ -16,6 +16,11 @@ interface PayloadCodec<P> {
     /**
      * Decode a value from [buffer]. The buffer's current position and limit bound the
      * payload region — read up to [ReadBuffer.remaining] bytes.
+     *
+     * Implementations must handle `buffer.remaining() == 0` gracefully — MQTT permits
+     * zero-length PUBLISH payloads and the dispatcher delivers them as empty buffers.
+     * Typed codecs that can't represent an empty value should throw a descriptive
+     * exception; they must not hang or produce corrupt output.
      */
     fun decode(buffer: ReadBuffer): P
 

@@ -11,20 +11,20 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class SubscribeRequestTests {
-
     /**
      * Validates subscription payload bytes match MQTT 3.1.1 §3.8.3:
      * Each subscription is [2-byte topic length][UTF-8 topic][1-byte QoS].
      */
     @Test
     fun subscriptionPayloadBytesMatchSpec() {
-        val request = SubscribeRequest(
-            1.toUShort(),
-            listOf(
-                SubscriptionEntry("a/b", AT_LEAST_ONCE.integerValue.toUByte()),
-                SubscriptionEntry("c/d", EXACTLY_ONCE.integerValue.toUByte()),
-            ),
-        )
+        val request =
+            SubscribeRequest(
+                1.toUShort(),
+                listOf(
+                    SubscriptionEntry("a/b", AT_LEAST_ONCE.integerValue.toUByte()),
+                    SubscriptionEntry("c/d", EXACTLY_ONCE.integerValue.toUByte()),
+                ),
+            )
         val buffer = BufferFactory.Default.allocate(20)
         request.serialize(buffer)
         buffer.resetForRead()
@@ -61,13 +61,14 @@ class SubscribeRequestTests {
      */
     @Test
     fun subscribeRoundtrip() {
-        val request = SubscribeRequest(
-            42.toUShort(),
-            listOf(
-                SubscriptionEntry("sensor/temp", AT_LEAST_ONCE.integerValue.toUByte()),
-                SubscriptionEntry("sensor/humidity", EXACTLY_ONCE.integerValue.toUByte()),
-            ),
-        )
+        val request =
+            SubscribeRequest(
+                42.toUShort(),
+                listOf(
+                    SubscriptionEntry("sensor/temp", AT_LEAST_ONCE.integerValue.toUByte()),
+                    SubscriptionEntry("sensor/humidity", EXACTLY_ONCE.integerValue.toUByte()),
+                ),
+            )
         val buffer = BufferFactory.Default.allocate(64)
         request.serialize(buffer)
         buffer.resetForRead()

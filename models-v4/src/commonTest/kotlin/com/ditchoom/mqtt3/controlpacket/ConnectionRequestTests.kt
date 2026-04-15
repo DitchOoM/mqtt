@@ -568,10 +568,11 @@ class ConnectionRequestTests {
         val willPayload = BufferFactory.Default.allocate(1)
         willPayload.writeByte(0x00)
         willPayload.resetForRead()
-        val connectionRequest = ConnectionRequest(
-            clientId = "",
-            will = WillConfig.Enabled(TopicName.fromOrThrow("t"), willPayload, AT_MOST_ONCE),
-        )
+        val connectionRequest =
+            ConnectionRequest(
+                clientId = "",
+                will = WillConfig.Enabled(TopicName.fromOrThrow("t"), willPayload, AT_MOST_ONCE),
+            )
         val buffer = BufferFactory.Default.allocate(connectionRequest.packetSize())
         connectionRequest.serialize(buffer)
         buffer.resetForRead()
@@ -841,21 +842,23 @@ class ConnectionRequestTests {
 
     @Test
     fun willFlagTrueNullWillTopicValidationWarning() {
-        val request = ConnectionRequest(
-            VariableHeader(willFlag = true),
-            ConnectionRequest.Payload(clientId = "test"),
-        )
+        val request =
+            ConnectionRequest(
+                VariableHeader(willFlag = true),
+                ConnectionRequest.Payload(clientId = "test"),
+            )
         val warning = request.validate()
         assertNotNull(warning, "willFlag=true with null willTopic should produce a warning")
     }
 
     @Test
     fun willFlagFalseIgnoresWillFieldsInEncoding() {
-        val request = ConnectionRequest(
-            clientId = "test-client",
-            keepAliveSeconds = 60,
-            cleanSession = true,
-        )
+        val request =
+            ConnectionRequest(
+                clientId = "test-client",
+                keepAliveSeconds = 60,
+                cleanSession = true,
+            )
         val buffer = BufferFactory.Default.allocate(request.packetSize())
         request.serialize(buffer)
         buffer.resetForRead()
@@ -871,17 +874,19 @@ class ConnectionRequestTests {
         val willBuf = BufferFactory.Default.allocate(willPayload.size)
         willPayload.forEach { willBuf.writeByte(it) }
         willBuf.resetForRead()
-        val request = ConnectionRequest(
-            clientId = "test-client",
-            keepAliveSeconds = 60,
-            cleanSession = false,
-            will = WillConfig.Enabled(
-                TopicName.fromOrThrow("will/topic"),
-                willBuf,
-                QualityOfService.AT_LEAST_ONCE,
-                retain = true,
-            ),
-        )
+        val request =
+            ConnectionRequest(
+                clientId = "test-client",
+                keepAliveSeconds = 60,
+                cleanSession = false,
+                will =
+                    WillConfig.Enabled(
+                        TopicName.fromOrThrow("will/topic"),
+                        willBuf,
+                        QualityOfService.AT_LEAST_ONCE,
+                        retain = true,
+                    ),
+            )
         assertNotNull(request.validateOrNull(), "valid will message should pass validation")
         val buffer = BufferFactory.Default.allocate(request.packetSize())
         request.serialize(buffer)

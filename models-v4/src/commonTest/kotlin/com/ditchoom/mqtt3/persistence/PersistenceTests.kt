@@ -28,7 +28,13 @@ import kotlin.test.assertEquals
 import kotlin.time.Duration.Companion.seconds
 
 class PersistenceTests {
-    private val buffer = BufferFactory.Default.wrap(byteArrayOf(1, 2, 3, 4))
+    /**
+     * Fresh buffer per call — `PublishMessageV4.equals` compares payloads via `bufferEquals`,
+     * which inspects `remaining()`. Reusing a single buffer across assertions would leave its
+     * position advanced (0 remaining) after the first serialize, breaking later equality checks
+     * against freshly-decoded payloads.
+     */
+    private fun buffer() = BufferFactory.Default.wrap(byteArrayOf(1, 2, 3, 4))
 
     private suspend fun setupPersistence(): Pair<Persistence, MqttBroker> {
         val p = newDefaultPersistence(name = "test" + Random.nextUInt(), inMemory = true)
@@ -46,13 +52,17 @@ class PersistenceTests {
     fun pubQos1() =
         runTest {
             val (persistence, broker) = setupPersistence()
+            val payloadBuf = buffer()
             val pub =
                 PublishMessageV4.ofRaw(
                     topic = TopicName.fromOrThrow("test"),
                     qos = QualityOfService.AT_LEAST_ONCE,
-                    payload = buffer,
+                    payload = payloadBuf,
                 )
             val packetId = persistence.writePubGetPacketId(broker, pub)
+            // IdentityBufferCodec.encode advances the source buffer's position during write;
+            // rewind so the payload equality check compares identical remaining-byte windows.
+            payloadBuf.resetForRead()
             assertEquals(
                 pub.maybeCopyWithNewPacketIdentifier(packetId),
                 persistence.getPubWithPacketId(broker, packetId),
@@ -71,13 +81,16 @@ class PersistenceTests {
     fun pubQos2() =
         runTest {
             val (persistence, broker) = setupPersistence()
+            val payloadBuf = buffer()
             val pub =
                 PublishMessageV4.ofRaw(
                     topic = TopicName.fromOrThrow("test"),
                     qos = QualityOfService.EXACTLY_ONCE,
-                    payload = buffer,
+                    payload = payloadBuf,
                 )
             val packetId = persistence.writePubGetPacketId(broker, pub)
+            // See pubQos1 — rewind source buffer that write consumed.
+            payloadBuf.resetForRead()
             assertEquals(
                 pub.maybeCopyWithNewPacketIdentifier(packetId),
                 persistence.getPubWithPacketId(broker, packetId),
@@ -110,7 +123,7 @@ class PersistenceTests {
                 PublishMessageV4.ofRaw(
                     topic = TopicName.fromOrThrow("test"),
                     qos = QualityOfService.AT_LEAST_ONCE,
-                    payload = buffer,
+                    payload = buffer(),
                     packetIdentifier = packetId,
                 )
 
@@ -133,7 +146,7 @@ class PersistenceTests {
                 PublishMessageV4.ofRaw(
                     topic = TopicName.fromOrThrow("test"),
                     qos = QualityOfService.EXACTLY_ONCE,
-                    payload = buffer,
+                    payload = buffer(),
                     packetIdentifier = packetId,
                 )
 

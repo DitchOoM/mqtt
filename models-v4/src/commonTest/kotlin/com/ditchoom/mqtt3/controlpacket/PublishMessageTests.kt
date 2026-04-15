@@ -16,7 +16,6 @@ import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
-import kotlin.test.assertTrue
 import kotlin.test.fail
 
 class PublishMessageTests {
@@ -80,8 +79,7 @@ class PublishMessageTests {
     fun genericSerialization() = roundtrip("user/log", expectedRemainingLength = 14)
 
     @Test
-    fun genericSerializationPublishDupFlag() =
-        roundtrip("user/log", dup = true, expectedRemainingLength = 14)
+    fun genericSerializationPublishDupFlag() = roundtrip("user/log", dup = true, expectedRemainingLength = 14)
 
     @Test
     fun genericSerializationPublishQos1() =
@@ -102,8 +100,7 @@ class PublishMessageTests {
         )
 
     @Test
-    fun genericSerializationPublishRetainFlag() =
-        roundtrip("user/log", retain = true, expectedRemainingLength = 14)
+    fun genericSerializationPublishRetainFlag() = roundtrip("user/log", retain = true, expectedRemainingLength = 14)
 
     @Test
     fun nullGenericSerialization() =
@@ -172,7 +169,7 @@ class PublishMessageTests {
         assertEquals(dup, result.dup)
         assertEquals(retain, result.retain)
         if (qos != QualityOfService.AT_MOST_ONCE) assertEquals(packetId, result.packetIdentifier)
-        val bytes = result.usePayload { readByteArray(remaining()) }
+        val bytes = result.payload.readByteArray(result.payload.remaining())
         assertContentEquals("yolo".encodeToByteArray(), bytes)
     }
 

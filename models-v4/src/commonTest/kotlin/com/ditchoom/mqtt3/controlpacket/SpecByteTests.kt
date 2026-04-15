@@ -3,6 +3,8 @@ package com.ditchoom.mqtt3.controlpacket
 import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.ReadBuffer
+import com.ditchoom.buffer.WriteBuffer
+import com.ditchoom.mqtt.codec.PayloadCodec
 import com.ditchoom.mqtt.controlpacket.QualityOfService.AT_LEAST_ONCE
 import com.ditchoom.mqtt.controlpacket.QualityOfService.AT_MOST_ONCE
 import com.ditchoom.mqtt.controlpacket.QualityOfService.EXACTLY_ONCE
@@ -14,7 +16,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -25,7 +26,7 @@ import kotlin.test.assertTrue
  * References: http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html
  */
 class SpecByteTests {
-    // ── Helper ──────────────────────────────────────────────────────────────
+    // ── Helpers ─────────────────────────────────────────────────────────────
 
     private fun packetBuffer(block: () -> ControlPacketV4): ReadBuffer {
         val packet = block()
@@ -33,6 +34,34 @@ class SpecByteTests {
         packet.serialize(buffer)
         buffer.resetForRead()
         return buffer
+    }
+
+    /** Fixed-size test codec for an [Int] payload (4-byte big-endian). */
+    private object IntPayloadCodec : PayloadCodec<Int> {
+        override fun decode(buffer: ReadBuffer): Int = buffer.readInt()
+
+        override fun encode(
+            buffer: WriteBuffer,
+            value: Int,
+        ) {
+            buffer.writeInt(value)
+        }
+
+        override fun encodedSize(value: Int): Int = Int.SIZE_BYTES
+    }
+
+    /** Fixed-size test codec for a [Short] payload (2-byte big-endian). */
+    private object ShortPayloadCodec : PayloadCodec<Short> {
+        override fun decode(buffer: ReadBuffer): Short = buffer.readShort()
+
+        override fun encode(
+            buffer: WriteBuffer,
+            value: Short,
+        ) {
+            buffer.writeShort(value)
+        }
+
+        override fun encodedSize(value: Short): Int = Short.SIZE_BYTES
     }
 
     // ── PINGREQ (§3.12) ────────────────────────────────────────────────────
@@ -236,11 +265,13 @@ class SpecByteTests {
         buf.writeUByte(0x01u) // topic len=1
         buf.writeUByte(0x61u) // "a"
         buf.resetForRead()
-        val packet = ControlPacketV4.from(buf)
-        assertIs<PublishMessageV4>(packet)
+        val decoded = ControlPacketV4.from(buf)
+        assertIs<PublishMessageV4<*>>(decoded)
+        @Suppress("UNCHECKED_CAST")
+        val packet = decoded as PublishMessageV4<ReadBuffer>
         assertEquals("a", packet.topic.toString())
         assertEquals(AT_MOST_ONCE, packet.qualityOfService)
-        assertEquals(0, packet.payloadSize())
+        assertEquals(0, packet.payload.remaining())
     }
 
     @Test
@@ -255,8 +286,10 @@ class SpecByteTests {
         buf.writeUByte(0x00u)
         buf.writeUByte(0x01u) // packet ID=1
         buf.resetForRead()
-        val packet = ControlPacketV4.from(buf)
-        assertIs<PublishMessageV4>(packet)
+        val decoded = ControlPacketV4.from(buf)
+        assertIs<PublishMessageV4<*>>(decoded)
+        @Suppress("UNCHECKED_CAST")
+        val packet = decoded as PublishMessageV4<ReadBuffer>
         assertEquals("a", packet.topic.toString())
         assertEquals(AT_LEAST_ONCE, packet.qualityOfService)
         assertEquals(1, packet.packetIdentifier)
@@ -825,16 +858,16 @@ class SpecByteTests {
 
     @Test
     fun publishTypedPayloadQos0BackpatchExactBytes() {
-        // Typed publish: payload is Int (4 bytes), encoded via backpatch
+        // Typed publish: payload is Int (4 bytes), encoded via the supplied codec
         val buf =
             PublishMessageV4
                 .ofTyped(
                     topic = TopicName.fromOrThrow("a"),
                     qos = AT_MOST_ONCE,
                     payload = 42,
-                    encodePayload = { b, v -> b.writeInt(v) },
-                    payloadSize = { Int.SIZE_BYTES },
+                    codec = IntPayloadCodec,
                 ).serialize(BufferFactory.Default)
+        buf.resetForRead()
         // topic "a" (3 bytes) + payload (4 bytes) = 7 bytes remaining
         assertEquals(9, buf.remaining())
         assertEquals(0x30u, buf.readUnsignedByte()) // type=3, QoS 0
@@ -858,9 +891,9 @@ class SpecByteTests {
                     qos = AT_LEAST_ONCE,
                     packetIdentifier = 5,
                     payload = 0x1234.toShort(),
-                    encodePayload = { b, v -> b.writeShort(v) },
-                    payloadSize = { Short.SIZE_BYTES },
+                    codec = ShortPayloadCodec,
                 ).serialize(BufferFactory.Default)
+        buf.resetForRead()
         // topic "a" (3 bytes) + packetId (2 bytes) + payload (2 bytes) = 7 bytes remaining
         assertEquals(9, buf.remaining())
         assertEquals(0x32u, buf.readUnsignedByte()) // type=3, QoS 1
@@ -899,10 +932,9 @@ class SpecByteTests {
                     topic = TopicName.fromOrThrow("a"),
                     qos = AT_MOST_ONCE,
                     payload = 42,
-                    encodePayload = { b, v -> b.writeInt(v) },
-                    payloadSize = { Int.SIZE_BYTES },
+                    codec = IntPayloadCodec,
                 ).serialize(BufferFactory.Default)
-        // typedPub is already read-ready (backpatch returns a slice)
+        typedPub.resetForRead()
 
         // Both must produce identical wire bytes
         assertEquals(readBufferPub.remaining(), typedPub.remaining())
@@ -911,23 +943,10 @@ class SpecByteTests {
         }
     }
 
-    @Test
-    fun publishTypedPayloadGrowsOnUnderEstimate() {
-        // payloadSize underestimates (1 byte), actual payload is 4 bytes → triggers grow
-        val buf =
-            PublishMessageV4
-                .ofTyped(
-                    topic = TopicName.fromOrThrow("a"),
-                    qos = AT_MOST_ONCE,
-                    payload = 42,
-                    encodePayload = { b, v -> b.writeInt(v) },
-                    payloadSize = { 1 }, // intentionally too small
-                ).serialize(BufferFactory.Default)
-        // Should still produce correct bytes despite underestimate
-        assertEquals(9, buf.remaining())
-        assertEquals(0x30u, buf.readUnsignedByte()) // type=3, QoS 0
-        assertEquals(0x07u, buf.readUnsignedByte()) // RL=7
-    }
+    // publishTypedPayloadGrowsOnUnderEstimate removed: the new PublishMessageV4<P>/PayloadCodec
+    // contract requires `encodedSize(value)` to accurately report the byte size of the encoded
+    // payload (used to compute the remaining-length VBI before encode). The legacy backpatch
+    // path that transparently grew on overflow no longer exists.
 
     @Test
     fun publishTypedPayloadRemainingLengthUsesPayloadSize() {
@@ -936,8 +955,7 @@ class SpecByteTests {
                 topic = TopicName.fromOrThrow("a"),
                 qos = AT_MOST_ONCE,
                 payload = 42,
-                encodePayload = { b, v -> b.writeInt(v) },
-                payloadSize = { Int.SIZE_BYTES },
+                codec = IntPayloadCodec,
             )
         // remainingLength = variable header (3 bytes for topic "a") + payload (4 bytes) = 7
         assertEquals(7, pub.remainingLength())

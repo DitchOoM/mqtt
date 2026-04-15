@@ -10,13 +10,12 @@ import com.ditchoom.mqtt.controlpacket.format.ReasonCode
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.RECEIVE_MAXIMUM_EXCEEDED
 import com.ditchoom.mqtt5.controlpacket.properties.ReasonString
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
-import com.ditchoom.mqtt5.controlpacket.properties.encodedSize
 import com.ditchoom.mqtt5.controlpacket.properties.encodeProperty
+import com.ditchoom.mqtt5.controlpacket.properties.encodedSize
 import com.ditchoom.mqtt5.controlpacket.properties.readProperties
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.fail
 
 class PublishReleaseTests {
     private val packetIdentifier = 2

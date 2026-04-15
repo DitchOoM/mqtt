@@ -13,9 +13,8 @@ import com.ditchoom.mqtt.controlpacket.validateMqttUTF8StringOrThrow
 import com.ditchoom.mqtt5.controlpacket.SubscribeRequest.VariableHeader
 import com.ditchoom.mqtt5.controlpacket.properties.ReasonString
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
-import com.ditchoom.mqtt5.controlpacket.properties.encodedSize
 import com.ditchoom.mqtt5.controlpacket.properties.encodeProperty
-import com.ditchoom.mqtt5.controlpacket.properties.MqttPropertyCodec
+import com.ditchoom.mqtt5.controlpacket.properties.encodedSize
 import com.ditchoom.mqtt5.controlpacket.properties.readProperties
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -142,10 +141,11 @@ class SubscribeRequestTest {
     @Test
     fun subscriptionPayloadOptions() {
         val subscription = Subscription.from("a/b", AT_LEAST_ONCE)
-        val packet = SubscribeRequest(
-            VariableHeader(packetIdentifier.toInt()),
-            setOf(subscription),
-        )
+        val packet =
+            SubscribeRequest(
+                VariableHeader(packetIdentifier.toInt()),
+                setOf(subscription),
+            )
         val buffer = BufferFactory.Default.allocate(packet.packetSize())
         packet.serialize(buffer)
         buffer.resetForRead()

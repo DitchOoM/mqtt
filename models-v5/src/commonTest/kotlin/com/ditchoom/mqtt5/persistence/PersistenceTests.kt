@@ -14,7 +14,7 @@ import com.ditchoom.mqtt.controlpacket.format.ReasonCode
 import com.ditchoom.mqtt5.controlpacket.ConnectionRequest
 import com.ditchoom.mqtt5.controlpacket.PublishAcknowledgment
 import com.ditchoom.mqtt5.controlpacket.PublishComplete
-import com.ditchoom.mqtt5.controlpacket.PublishMessage
+import com.ditchoom.mqtt5.controlpacket.PublishMessageV5
 import com.ditchoom.mqtt5.controlpacket.PublishReceived
 import com.ditchoom.mqtt5.controlpacket.PublishRelease
 import com.ditchoom.mqtt5.controlpacket.SubscribeAcknowledgement
@@ -48,23 +48,31 @@ class PersistenceTests {
     fun pubQos1() =
         runTest {
             val (persistence, broker) = setupPersistence()
+            buffer.position(0)
             val pub =
-                PublishMessage(
-                    topicName = "test",
+                PublishMessageV5.ofRaw(
+                    topic = TopicName.fromOrThrow("test"),
                     qos = QualityOfService.AT_LEAST_ONCE,
                     payload = buffer,
-                    messageExpiryInterval = 5L,
-                    topicAlias = 1,
-                    userProperty = listOf(Pair("Rahul", "Behera")),
-                    subscriptionIdentifier = setOf(5L, 2L),
+                    properties =
+                        PublishMessageV5.Properties(
+                            messageExpiryInterval = 5L,
+                            topicAlias = 1,
+                            userProperty = listOf(Pair("Rahul", "Behera")),
+                            subscriptionIdentifier = setOf(5L, 2L),
+                        ),
                 )
             val packetId = persistence.writePubGetPacketId(broker, pub)
+            // Encoding the payload through IdentityBufferCodec advances pub.payload's position
+            // to the end; reset so the equality check compares all 4 bytes on both sides.
+            buffer.position(0)
             assertEquals(
                 pub.maybeCopyWithNewPacketIdentifier(packetId),
                 persistence.getPubWithPacketId(broker, packetId),
                 "get packet",
             )
-            val expectedPub = pub.copy(fixed = pub.fixed.copy(dup = true)).maybeCopyWithNewPacketIdentifier(packetId)
+            buffer.position(0)
+            val expectedPub = pub.setDupFlagNewPubMessage().maybeCopyWithNewPacketIdentifier(packetId)
             val queuedPackets = persistence.messagesToSendOnReconnect(broker)
             assertEquals(1, queuedPackets.size)
             val queuedPacket = queuedPackets.first()
@@ -77,16 +85,21 @@ class PersistenceTests {
     fun pubQos2() =
         runTest {
             val (persistence, broker) = setupPersistence()
+            buffer.position(0)
             val pub =
-                PublishMessage(
-                    topicName = "test",
+                PublishMessageV5.ofRaw(
+                    topic = TopicName.fromOrThrow("test"),
                     qos = QualityOfService.EXACTLY_ONCE,
                     payload = buffer,
-                    userProperty = listOf(Pair("Rahul", "Behera")),
+                    properties =
+                        PublishMessageV5.Properties(
+                            userProperty = listOf(Pair("Rahul", "Behera")),
+                        ),
                 )
 
             val packetId = persistence.writePubGetPacketId(broker, pub)
-            val expectedPub = pub.copy(fixed = pub.fixed.copy(dup = true)).maybeCopyWithNewPacketIdentifier(packetId)
+            buffer.position(0)
+            val expectedPub = pub.setDupFlagNewPubMessage().maybeCopyWithNewPacketIdentifier(packetId)
             assertEquals(
                 pub.maybeCopyWithNewPacketIdentifier(packetId),
                 persistence.getPubWithPacketId(broker, packetId),
@@ -110,37 +123,64 @@ class PersistenceTests {
         }
 
     @Test
+    fun incomingQos1() =
+        runTest {
+            val (persistence, broker) = setupPersistence()
+            buffer.position(0)
+            val packetId = 2
+            val pub =
+                PublishMessageV5.ofRaw(
+                    topic = TopicName.fromOrThrow("test"),
+                    qos = QualityOfService.AT_LEAST_ONCE,
+                    payload = buffer,
+                    packetIdentifier = packetId,
+                    properties =
+                        PublishMessageV5.Properties(
+                            userProperty = listOf(Pair("Rahul", "Behera")),
+                        ),
+                )
+
+            persistence.persistIncomingPublish(broker, pub)
+            val pending = persistence.incomingMessagesToRedispatch(broker)
+            assertEquals(1, pending.size, "persisted incoming QoS 1")
+            assertEquals(Persistence.INCOMING_STATE_RECEIVED_PENDING_HANDLER, pending.first().state)
+            assertEquals(packetId, pending.first().packet.packetIdentifier)
+
+            persistence.incomingHandlerComplete(broker, packetId)
+            assertEquals(0, persistence.incomingMessagesToRedispatch(broker).size, "QoS 1 deleted on handler complete")
+        }
+
+    @Test
     fun incomingQos2() =
         runTest {
             val (persistence, broker) = setupPersistence()
+            buffer.position(0)
             val packetId = 3
             val pub =
-                PublishMessage(
-                    topicName = "test",
+                PublishMessageV5.ofRaw(
+                    topic = TopicName.fromOrThrow("test"),
                     qos = QualityOfService.EXACTLY_ONCE,
                     payload = buffer,
                     packetIdentifier = packetId,
-                    userProperty = listOf(Pair("Rahul", "Behera")),
+                    properties =
+                        PublishMessageV5.Properties(
+                            userProperty = listOf(Pair("Rahul", "Behera")),
+                        ),
                 )
-            val pubRecv = pub.expectedResponse() as PublishReceived
 
-            persistence.incomingPublish(broker, pub, pubRecv)
-            var queuedPackets = persistence.messagesToSendOnReconnect(broker)
-            assertEquals(1, queuedPackets.size, "incoming publish")
-            var queuedPacket = queuedPackets.first()
-            assertEquals(pubRecv, queuedPacket)
+            persistence.persistIncomingPublish(broker, pub)
+            var pending = persistence.incomingMessagesToRedispatch(broker)
+            assertEquals(1, pending.size, "persisted incoming QoS 2")
+            assertEquals(Persistence.INCOMING_STATE_RECEIVED_PENDING_HANDLER, pending.first().state)
 
-            val pubRel = PublishRelease(packetId, userProperty = listOf(Pair("Incoming", "PubRel")))
-            val pubComp = PublishComplete(packetId, userProperty = listOf(Pair("Incoming2", "PubComp")))
-            persistence.ackPubRelease(broker, pubRel, pubComp)
-            queuedPackets = persistence.messagesToSendOnReconnect(broker)
-            assertEquals(1, queuedPackets.size, "ack publish release")
-            queuedPacket = queuedPackets.first()
-            assertEquals(pubComp, queuedPacket)
+            persistence.incomingHandlerComplete(broker, packetId)
+            pending = persistence.incomingMessagesToRedispatch(broker)
+            assertEquals(1, pending.size, "QoS 2 stays on disk after handler, state transitions")
+            assertEquals(Persistence.INCOMING_STATE_QOS2_HANDLER_COMPLETE_PUBREC_SENT, pending.first().state)
 
+            val pubComp = PublishComplete(packetId)
             persistence.onPubCompWritten(broker, pubComp)
-            queuedPackets = persistence.messagesToSendOnReconnect(broker)
-            assertEquals(0, queuedPackets.size, "pub comp written")
+            assertEquals(0, persistence.incomingMessagesToRedispatch(broker).size, "row deleted after pub comp written")
         }
 
     @Test

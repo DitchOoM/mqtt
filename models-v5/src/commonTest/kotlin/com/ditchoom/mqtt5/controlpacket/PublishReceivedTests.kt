@@ -18,13 +18,12 @@ import com.ditchoom.mqtt.controlpacket.format.ReasonCode.TOPIC_NAME_INVALID
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.UNSPECIFIED_ERROR
 import com.ditchoom.mqtt5.controlpacket.properties.ReasonString
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
-import com.ditchoom.mqtt5.controlpacket.properties.encodedSize
 import com.ditchoom.mqtt5.controlpacket.properties.encodeProperty
+import com.ditchoom.mqtt5.controlpacket.properties.encodedSize
 import com.ditchoom.mqtt5.controlpacket.properties.readProperties
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.fail
 
 class PublishReceivedTests {
     private val packetIdentifier = 2
@@ -340,7 +339,7 @@ class PublishReceivedTests {
         buffer.writeByte(0x04.toByte())
         buffer.writeUShort(10u)
         buffer.writeUByte(0x00u) // SUCCESS
-        buffer.writeByte(0x00)   // property length = 0
+        buffer.writeByte(0x00) // property length = 0
         buffer.resetForRead()
         val pubrec = ControlPacketV5.from(buffer) as PublishReceived
         assertEquals(10, pubrec.variable.packetIdentifier)

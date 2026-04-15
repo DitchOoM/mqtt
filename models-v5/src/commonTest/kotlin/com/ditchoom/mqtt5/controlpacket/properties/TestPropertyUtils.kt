@@ -32,7 +32,10 @@ fun encodedSize(prop: MqttProperty): Int {
 /**
  * Encodes an [MqttProperty] to the given buffer, handling binary data properties.
  */
-fun encodeProperty(buf: com.ditchoom.buffer.WriteBuffer, prop: MqttProperty) {
+fun encodeProperty(
+    buf: com.ditchoom.buffer.WriteBuffer,
+    prop: MqttProperty,
+) {
     buf.encodeMqttProperty<ReadBuffer, ReadBuffer>(
         prop,
         encodeCorrelationData = { wb, data ->

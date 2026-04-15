@@ -3,7 +3,6 @@ package com.ditchoom.mqtt5.controlpacket
 import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Charset
 import com.ditchoom.buffer.Default
-import com.ditchoom.buffer.PlatformBuffer
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.toReadBuffer
 import com.ditchoom.mqtt.MalformedPacketException
@@ -37,9 +36,8 @@ import com.ditchoom.mqtt5.controlpacket.properties.TopicAliasMaximum
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
 import com.ditchoom.mqtt5.controlpacket.properties.WildcardSubscriptionAvailable
 import com.ditchoom.mqtt5.controlpacket.properties.WillDelayInterval
-import com.ditchoom.mqtt5.controlpacket.properties.encodedSize
 import com.ditchoom.mqtt5.controlpacket.properties.encodeProperty
-import com.ditchoom.mqtt5.controlpacket.properties.MqttPropertyCodec
+import com.ditchoom.mqtt5.controlpacket.properties.encodedSize
 import com.ditchoom.mqtt5.controlpacket.properties.readProperties
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -733,7 +731,9 @@ class ConnectionAcknowledgmentTests {
                 ?.toString(),
             "yolo",
         )
-        val decodedData = expected.header.properties.authentication?.data as? ReadBuffer
+        val decodedData =
+            expected.header.properties.authentication
+                ?.data as? ReadBuffer
         assertNotNull(decodedData)
         decodedData.position(0)
         buffer1234.position(0)

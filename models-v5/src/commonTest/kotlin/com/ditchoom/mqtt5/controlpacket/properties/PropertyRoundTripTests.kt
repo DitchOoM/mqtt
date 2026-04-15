@@ -479,35 +479,36 @@ class PropertyRoundTripTests {
         binaryData2.writeByte(0x03)
         binaryData2.writeByte(0x04)
         binaryData2.resetForRead()
-        val properties = listOf<MqttProperty>(
-            PayloadFormatIndicator(true),
-            MessageExpiryInterval(300u),
-            ContentType("text/plain"),
-            ResponseTopic("t"),
-            CorrelationData(2.toUShort(), binaryData),
-            SessionExpiryInterval(3600u),
-            ReceiveMaximum(100.toUShort()),
-            MaximumPacketSize(65536u),
-            TopicAliasMaximum(10.toUShort()),
-            RequestResponseInformation(true),
-            RequestProblemInformation(false),
-            UserProperty("a", "b"),
-            AuthenticationMethod("plain"),
-            AuthenticationData(2.toUShort(), binaryData2),
-            ReasonString("ok"),
-            ServerKeepAlive(60.toUShort()),
-            ResponseInformation("info"),
-            ServerReference("server"),
-            AssignedClientIdentifier("cid"),
-            TopicAlias(1.toUShort()),
-            MaximumQos(true),
-            RetainAvailable(true),
-            WildcardSubscriptionAvailable(true),
-            SubscriptionIdentifierAvailable(true),
-            SharedSubscriptionAvailable(true),
-            SubscriptionIdentifier(42),
-            WillDelayInterval(120u),
-        )
+        val properties =
+            listOf<MqttProperty>(
+                PayloadFormatIndicator(true),
+                MessageExpiryInterval(300u),
+                ContentType("text/plain"),
+                ResponseTopic("t"),
+                CorrelationData(2.toUShort(), binaryData),
+                SessionExpiryInterval(3600u),
+                ReceiveMaximum(100.toUShort()),
+                MaximumPacketSize(65536u),
+                TopicAliasMaximum(10.toUShort()),
+                RequestResponseInformation(true),
+                RequestProblemInformation(false),
+                UserProperty("a", "b"),
+                AuthenticationMethod("plain"),
+                AuthenticationData(2.toUShort(), binaryData2),
+                ReasonString("ok"),
+                ServerKeepAlive(60.toUShort()),
+                ResponseInformation("info"),
+                ServerReference("server"),
+                AssignedClientIdentifier("cid"),
+                TopicAlias(1.toUShort()),
+                MaximumQos(true),
+                RetainAvailable(true),
+                WildcardSubscriptionAvailable(true),
+                SubscriptionIdentifierAvailable(true),
+                SharedSubscriptionAvailable(true),
+                SubscriptionIdentifier(42),
+                WillDelayInterval(120u),
+            )
         for (prop in properties) {
             val size = propSize(prop)
             val buf = BufferFactory.Default.allocate(size + 1)
@@ -536,10 +537,11 @@ class PropertyRoundTripTests {
      * Writes a property to a buffer via codec, reads back the raw bytes and decodes
      * via MqttPropertyCodec.decode(). Returns both the raw bytes and the decoded property.
      */
-    private val defaultDecoders = BinaryPropertyDecoders<ReadBuffer, ReadBuffer>(
-        decodeCorrelationData = { reader -> reader.copyToBuffer() },
-        decodeAuthenticationData = { reader -> reader.copyToBuffer() },
-    )
+    private val defaultDecoders =
+        BinaryPropertyDecoders<ReadBuffer, ReadBuffer>(
+            decodeCorrelationData = { reader -> reader.copyToBuffer() },
+            decodeAuthenticationData = { reader -> reader.copyToBuffer() },
+        )
 
     private fun roundTrip(prop: MqttProperty): Pair<ByteArray, MqttProperty> {
         val size = propSize(prop)

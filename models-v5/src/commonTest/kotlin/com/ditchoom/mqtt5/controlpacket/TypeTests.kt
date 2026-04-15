@@ -5,13 +5,11 @@ import com.ditchoom.buffer.Default
 import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.GRANTED_QOS_0
-import com.ditchoom.mqtt.controlpacket.format.ReasonCode.GRANTED_QOS_1
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.NORMAL_DISCONNECTION
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.SUCCESS
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow.BIDIRECTIONAL
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow.CLIENT_TO_SERVER
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow.SERVER_TO_CLIENT
-import com.ditchoom.mqtt5.controlpacket.PublishMessage.VariableHeader
 import com.ditchoom.mqtt5.controlpacket.properties.Authentication
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -34,10 +32,9 @@ class TypeTests {
 
     @Test
     fun controlPacketTypeValueMatchesSpecForPUBLISH() {
-        val variable = VariableHeader(TopicName.fromOrThrow("t"))
         assertEquals(
             3,
-            PublishMessage(variable = variable, payload = null).controlPacketValue,
+            PublishMessageV5.ofRaw(topic = TopicName.fromOrThrow("t")).controlPacketValue,
             controlPacketSpectMatchError,
         )
     }
@@ -162,10 +159,9 @@ class TypeTests {
 
     @Test
     fun controlPacketTypeDirectionOfFlowPUBLISH() {
-        val variable = VariableHeader(TopicName.fromOrThrow("t"))
         assertEquals(
             BIDIRECTIONAL,
-            PublishMessage(variable = variable, payload = null).direction,
+            PublishMessageV5.ofRaw(topic = TopicName.fromOrThrow("t")).direction,
             controlPacketSpectMatchError,
         )
     }

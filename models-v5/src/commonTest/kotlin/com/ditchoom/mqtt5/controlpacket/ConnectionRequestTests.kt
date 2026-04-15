@@ -628,11 +628,12 @@ class ConnectionRequestTests {
         val willPayload = BufferFactory.Default.allocate(1)
         willPayload.writeByte(0x00)
         willPayload.resetForRead()
-        val connectionRequest = ConnectionRequest(
-            clientId = "",
-            will = WillConfig.Enabled(TopicName.fromOrThrow("t"), willPayload, AT_MOST_ONCE),
-            willProperties = ConnectionRequest.Payload.WillProperties(),
-        )
+        val connectionRequest =
+            ConnectionRequest(
+                clientId = "",
+                will = WillConfig.Enabled(TopicName.fromOrThrow("t"), willPayload, AT_MOST_ONCE),
+                willProperties = ConnectionRequest.Payload.WillProperties(),
+            )
         val buffer = BufferFactory.Default.allocate(connectionRequest.packetSize())
         connectionRequest.serialize(buffer)
         buffer.resetForRead()

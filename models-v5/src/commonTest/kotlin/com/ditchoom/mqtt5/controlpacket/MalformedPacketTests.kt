@@ -13,7 +13,6 @@ import kotlin.test.assertFailsWith
  * References: MQTT 5.0 §4.13 Handling errors
  */
 class MalformedPacketTests {
-
     private fun rawBuffer(vararg bytes: Int) =
         BufferFactory.Default.allocate(bytes.size).also { buf ->
             bytes.forEach { buf.writeByte(it.toByte()) }
@@ -122,15 +121,24 @@ class MalformedPacketTests {
     @Test
     fun connectReservedFlagSetThrows() {
         // Construct a CONNECT where the reserved bit (bit 0) in connect flags is set
-        val buffer = rawBuffer(
-            0x10, 0x0D, // CONNECT, RL=13
-            0x00, 0x04, 0x4D, 0x51, 0x54, 0x54, // "MQTT"
-            0x05, // protocol level 5
-            0x01, // connect flags: reserved bit set (bit 0 = 1) — INVALID
-            0x00, 0x00, // keep alive
-            0x00, // props length
-            0x00, 0x00, // client ID
-        )
+        val buffer =
+            rawBuffer(
+                0x10,
+                0x0D, // CONNECT, RL=13
+                0x00,
+                0x04,
+                0x4D,
+                0x51,
+                0x54,
+                0x54, // "MQTT"
+                0x05, // protocol level 5
+                0x01, // connect flags: reserved bit set (bit 0 = 1) — INVALID
+                0x00,
+                0x00, // keep alive
+                0x00, // props length
+                0x00,
+                0x00, // client ID
+            )
         assertFailsWith<MalformedPacketException> {
             ControlPacketV5.from(buffer)
         }
@@ -142,15 +150,24 @@ class MalformedPacketTests {
     fun connectWillQosNonZeroWithoutWillFlagThrows() {
         // Connect flags: willFlag=0 but willQos=1 (bits 4-3 = 01)
         // Flags byte: 0b0000_1000 = 0x08
-        val buffer = rawBuffer(
-            0x10, 0x0D,
-            0x00, 0x04, 0x4D, 0x51, 0x54, 0x54,
-            0x05,
-            0x08, // willQos=1 but willFlag=0 — violates MQTT-3.1.2-11
-            0x00, 0x00,
-            0x00,
-            0x00, 0x00,
-        )
+        val buffer =
+            rawBuffer(
+                0x10,
+                0x0D,
+                0x00,
+                0x04,
+                0x4D,
+                0x51,
+                0x54,
+                0x54,
+                0x05,
+                0x08, // willQos=1 but willFlag=0 — violates MQTT-3.1.2-11
+                0x00,
+                0x00,
+                0x00,
+                0x00,
+                0x00,
+            )
         assertFailsWith<MalformedPacketException> {
             ControlPacketV5.from(buffer)
         }

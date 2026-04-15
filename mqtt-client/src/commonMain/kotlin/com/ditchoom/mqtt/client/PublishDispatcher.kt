@@ -4,49 +4,51 @@ import com.ditchoom.mqtt.controlpacket.PublishMessage
 import com.ditchoom.mqtt.controlpacket.TopicFilter
 
 /**
- * Dispatches incoming publish messages to registered [SubscriptionHandler]s
+ * Dispatches incoming publish messages to registered [SubscriberEntry] instances
  * using a [TopicTrie] for O(segments) wildcard matching.
  *
- * Lifecycle:
- * 1. User calls `subscribe(filter, handler)` — handler is registered in the trie
- * 2. Incoming publishes are dispatched via [dispatch] — all matching handlers are invoked
- * 3. After all handlers return, [PublishMessage.invalidateScope] fires so any stashed
- *    payload buffer reference becomes unreadable.
- *
- * Returns whether any handler matched, so the caller can fall through to the
- * legacy `observe()` flow for unmatched messages.
+ * Each entry captures its own payload decoding rule (typed subscribers bundle a
+ * [com.ditchoom.mqtt.codec.PayloadCodec] plus handler; untyped subscribers accept the raw
+ * [PublishMessage]). Since payloads are owned by the decoder call site (no scope
+ * invalidation), multi-subscriber dispatch simply runs each entry's dispatch in sequence.
  */
 internal class PublishDispatcher {
-    private val trie = TopicTrie<SubscriptionHandler>()
+    private val trie = TopicTrie<SubscriberEntry>()
 
-    /** Register a handler for the given topic filter. Returns any previous handler. */
+    /** Register an untyped handler for the given topic filter. */
     fun subscribe(
         filter: TopicFilter,
         handler: SubscriptionHandler,
-    ): SubscriptionHandler? = trie.insert(filter, handler)
+    ): SubscriberEntry? =
+        trie.insert(
+            filter,
+            when (handler) {
+                is SubscriptionHandler.Blocking ->
+                    SubscriberEntry.Untyped { pub -> handler.onPublish(pub) }
+                is SubscriptionHandler.Async ->
+                    SubscriberEntry.Untyped { pub -> handler.onPublish(pub) }
+            },
+        )
+
+    /** Register a typed subscriber with its own payload codec + handler. */
+    fun <P> subscribeTyped(
+        filter: TopicFilter,
+        entry: SubscriberEntry.Typed<P>,
+    ): SubscriberEntry? = trie.insert(filter, entry)
 
     /** Remove the handler for the given topic filter. */
-    fun unsubscribe(filter: TopicFilter): SubscriptionHandler? = trie.remove(filter)
+    fun unsubscribe(filter: TopicFilter): SubscriberEntry? = trie.remove(filter)
 
     /**
-     * Dispatch an incoming publish to all matching handlers. Invalidates the
-     * payload scope after every handler completes so that stashed references
-     * fail loudly on use-after-scope.
+     * Dispatch an incoming publish to all matching subscribers.
      *
      * @return true if at least one handler was invoked
      */
     suspend fun dispatch(publish: PublishMessage): Boolean {
-        val handlers = trie.matchAll(publish.topic)
-        if (handlers.isEmpty()) return false
-        try {
-            for (handler in handlers) {
-                when (handler) {
-                    is SubscriptionHandler.Blocking -> handler.onPublish(publish)
-                    is SubscriptionHandler.Async -> handler.onPublish(publish)
-                }
-            }
-        } finally {
-            publish.invalidateScope()
+        val entries = trie.matchAll(publish.topic)
+        if (entries.isEmpty()) return false
+        for (entry in entries) {
+            entry.dispatch(publish)
         }
         return true
     }

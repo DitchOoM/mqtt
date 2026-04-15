@@ -9,9 +9,10 @@ import com.ditchoom.mqtt.controlpacket.PublishMessage
  * - [Blocking]: Non-suspending callback, suitable for fast synchronous processing.
  * - [Async]: Suspending callback, for I/O or coroutine-based processing.
  *
- * The [PublishMessage] payload is read inside [PublishMessage.usePayload]; the
- * receiver buffer is valid only inside that block. To retain payload bytes past
- * the callback, allocate your own buffer inside `usePayload` and copy into it.
+ * The [PublishMessage] owns its decoded payload — callers can retain the message without
+ * worrying about buffer-lifecycle contracts. For typed payloads, prefer the typed subscribe
+ * overload on [MqttClient] which invokes a [com.ditchoom.mqtt.codec.PayloadCodec] and passes
+ * the decoded value alongside the [PublishMessage].
  */
 sealed interface SubscriptionHandler {
     /**

@@ -26,8 +26,13 @@ fun PublishMessage.payloadAsReadBufferOrNull(): ReadBuffer? {
  *
  * Not intended for direct use by application code — prefer [payloadAsReadBufferOrNull] or
  * [encodePayloadTo].
+ *
+ * This is the generic typed form of [PublishMessage]. Client code that cares about the
+ * decoded payload type `P` can depend on this interface directly (via typed subscribe /
+ * observe APIs), while untyped machinery (dispatchers, persistence, wire encoding) depends
+ * on the non-generic [PublishMessage] marker.
  */
-interface PublishMessagePayloadMaterializer<P> {
+interface PublishMessagePayloadMaterializer<P> : PublishMessage {
     val payload: P
     val codec: PayloadCodec<P>
 

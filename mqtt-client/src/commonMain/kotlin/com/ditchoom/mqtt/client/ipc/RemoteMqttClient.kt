@@ -1,18 +1,18 @@
 package com.ditchoom.mqtt.client.ipc
 
 import com.ditchoom.buffer.BufferFactory
+import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.mqtt.Persistence
 import com.ditchoom.mqtt.client.ConnectionState
 import com.ditchoom.mqtt.client.MqttClient
-import com.ditchoom.mqtt.client.PayloadDecoder
-import com.ditchoom.mqtt.client.PayloadEncoder
 import com.ditchoom.mqtt.client.PublishResult
 import com.ditchoom.mqtt.client.QoS1State
 import com.ditchoom.mqtt.client.QoS2State
 import com.ditchoom.mqtt.client.SubscribeOperation
 import com.ditchoom.mqtt.client.SubscriptionHandler
 import com.ditchoom.mqtt.client.UnsubscribeOperation
+import com.ditchoom.mqtt.codec.PayloadCodec
 import com.ditchoom.mqtt.connection.MqttBroker
 import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.IPublishAcknowledgment
@@ -25,6 +25,7 @@ import com.ditchoom.mqtt.controlpacket.IUnsubscribeRequest
 import com.ditchoom.mqtt.controlpacket.NO_PACKET_ID
 import com.ditchoom.mqtt.controlpacket.PublishMessage
 import com.ditchoom.mqtt.controlpacket.QualityOfService
+import com.ditchoom.mqtt.controlpacket.payloadAsReadBufferOrNull
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.BufferOverflow
@@ -121,9 +122,9 @@ abstract class RemoteMqttClient(
     override suspend fun <P> publish(
         topic: String,
         payload: P,
+        codec: PayloadCodec<P>,
         qos: QualityOfService,
         retain: Boolean,
-        encoder: PayloadEncoder<P>,
     ): PublishResult {
         val pub =
             packetFactory.publish(
@@ -133,24 +134,49 @@ abstract class RemoteMqttClient(
                 qos = qos,
                 retain = retain,
                 payload = payload,
-                encodePayload = { buf, p -> with(encoder) { buf.encode(p) } },
-                payloadSize = { p -> encoder.size(p) },
+                encodePayload = { buf, p -> codec.encode(buf, p) },
+                payloadSize = { p -> codec.encodedSize(p) },
             )
         return publish(pub)
     }
 
     override suspend fun <P> subscribe(
         topicFilter: String,
+        codec: PayloadCodec<P>,
         maxQos: QualityOfService,
-        decoder: PayloadDecoder<P>,
         handler: suspend (PublishMessage, P) -> Unit,
     ): SubscribeOperation {
-        // Typed subscribe across IPC: SubscriptionHandler-based dispatch is not supported across
-        // the IPC boundary (handler lives in the client process; the worker performs ack). For
-        // now, fall back to the raw subscribe — the caller can collect the SubscribeOperation
-        // flows and decode each message via [decoder] themselves until IPC handler dispatch lands.
-        return subscribe(packetFactory.subscribe(com.ditchoom.mqtt.controlpacket.TopicFilter.fromOrThrow(topicFilter), maxQos))
+        // Typed subscribe across IPC: the IPC boundary operates on ReadBuffer-typed publishes;
+        // typed decode happens on the collector side. Since the untyped subscribe returns a
+        // SubscribeOperation with per-subscription Flow<PublishMessage>, callers can map each
+        // incoming message through [codec] themselves. Until worker-side handler dispatch
+        // lands (Phase 5), this is a thin wrapper over the raw subscribe path.
+        return subscribe(
+            packetFactory.subscribe(
+                com.ditchoom.mqtt.controlpacket.TopicFilter
+                    .fromOrThrow(topicFilter),
+                maxQos,
+            ),
+        )
     }
+
+    override fun <P> observe(
+        filter: com.ditchoom.mqtt.controlpacket.TopicFilter,
+        codec: PayloadCodec<P>,
+    ): kotlinx.coroutines.flow.Flow<Pair<PublishMessage, P>> =
+        kotlinx.coroutines.flow.flow {
+            observe(filter).collect { pub ->
+                val raw = pub.payloadAsReadBufferOrNull()
+                val decoded =
+                    if (raw == null) {
+                        codec.decode(BufferFactory.Default.allocate(0))
+                    } else {
+                        raw.position(0)
+                        codec.decode(raw)
+                    }
+                emit(pub to decoded)
+            }
+        }
 
     override suspend fun unsubscribe(unsub: IUnsubscribeRequest): UnsubscribeOperation {
         val packetId = persistence.writeUnsubGetPacketId(broker, unsub)

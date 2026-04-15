@@ -1,7 +1,11 @@
 package com.ditchoom.mqtt.client
 
+import com.ditchoom.buffer.BufferFactory
+import com.ditchoom.buffer.Default
+import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.flow.Connection
 import com.ditchoom.mqtt.Persistence
+import com.ditchoom.mqtt.codec.PayloadCodec
 import com.ditchoom.mqtt.connection.MqttBroker
 import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.ControlPacketFactory
@@ -15,6 +19,7 @@ import com.ditchoom.mqtt.controlpacket.PublishMessage
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.TopicName
+import com.ditchoom.mqtt.controlpacket.payloadAsReadBufferOrNull
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -26,6 +31,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.launch
 
@@ -103,6 +109,22 @@ class LocalMqttClient(
             filter.matches(it.topic)
         }
 
+    override fun <P> observe(
+        filter: TopicFilter,
+        codec: PayloadCodec<P>,
+    ): Flow<Pair<PublishMessage, P>> =
+        observe(filter).map { pub ->
+            val raw: ReadBuffer? = pub.payloadAsReadBufferOrNull()
+            val decoded =
+                if (raw == null) {
+                    codec.decode(BufferFactory.Default.allocate(0))
+                } else {
+                    raw.position(0)
+                    codec.decode(raw)
+                }
+            pub to decoded
+        }
+
     suspend fun sendQueuedSubscribeMessage(packetId: Int) {
         val sub =
             connectivityManager.persistence.getSubWithPacketId(connectivityManager.broker, packetId) ?: return
@@ -175,9 +197,9 @@ class LocalMqttClient(
     override suspend fun <P> publish(
         topic: String,
         payload: P,
+        codec: PayloadCodec<P>,
         qos: QualityOfService,
         retain: Boolean,
-        encoder: PayloadEncoder<P>,
     ): PublishResult {
         val pub =
             packetFactory.publish(
@@ -185,34 +207,21 @@ class LocalMqttClient(
                 qos = qos,
                 retain = retain,
                 payload = payload,
-                encodePayload = { buf, p -> with(encoder) { buf.encode(p) } },
-                payloadSize = { p -> encoder.size(p) },
+                encodePayload = { buf, p -> codec.encode(buf, p) },
+                payloadSize = { p -> codec.encodedSize(p) },
             )
         return publish(pub)
     }
 
     override suspend fun <P> subscribe(
         topicFilter: String,
+        codec: PayloadCodec<P>,
         maxQos: QualityOfService,
-        decoder: PayloadDecoder<P>,
         handler: suspend (PublishMessage, P) -> Unit,
     ): SubscribeOperation {
         val filter = TopicFilter.fromOrThrow(topicFilter)
         val sub = packetFactory.subscribe(filter, maxQos)
-        val wrapped =
-            SubscriptionHandler.Async { pub ->
-                val decoded =
-                    pub.usePayload {
-                        val reader = com.ditchoom.buffer.codec.payload.ReadBufferPayloadReader(this)
-                        try {
-                            with(decoder) { reader.decode() }
-                        } finally {
-                            reader.release()
-                        }
-                    }
-                handler(pub, decoded)
-            }
-        processor.publishDispatcher.subscribe(filter, wrapped)
+        processor.publishDispatcher.subscribeTyped(filter, SubscriberEntry.Typed(codec, handler))
         return observeSub(processor.subscribe(sub))
     }
 

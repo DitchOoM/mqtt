@@ -14,6 +14,7 @@ import com.ditchoom.mqtt.controlpacket.IConnectionRequest
 import com.ditchoom.mqtt.controlpacket.IPublishAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IPublishComplete
 import com.ditchoom.mqtt.controlpacket.PublishMessage
+import com.ditchoom.mqtt.controlpacket.payloadAsReadBufferOrNull
 import com.ditchoom.mqtt.controlpacket.IPublishReceived
 import com.ditchoom.mqtt.controlpacket.IPublishRelease
 import com.ditchoom.mqtt.controlpacket.ISubscribeAcknowledgement
@@ -444,7 +445,7 @@ class SqlDatabasePersistence(
         if (packet.qualityOfService == QualityOfService.AT_MOST_ONCE) return
         val brokerId = broker.identifier.toLong()
         val incoming = 1L
-        val p = packet as PublishMessageV5
+        val p = packet as PublishMessageV5<*>
         val readPayload = p.payloadAsReadBufferOrNull()
         val payload = readPayload?.readByteArray(readPayload.remaining())
         readPayload?.resetForRead()
@@ -745,8 +746,8 @@ class SqlDatabasePersistence(
         }
         val brokerId = broker.identifier.toLong()
         val incoming = 0L
-        val p = pub as PublishMessageV5
-        val readPayload = pub.payloadAsReadBufferOrNull()
+        val p = pub as PublishMessageV5<*>
+        val readPayload = p.payloadAsReadBufferOrNull()
         val payload = readPayload?.readByteArray(readPayload.remaining())
         readPayload?.resetForRead()
         val packetId =

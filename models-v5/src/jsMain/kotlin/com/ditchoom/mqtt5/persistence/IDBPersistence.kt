@@ -463,7 +463,7 @@ class IDBPersistence(
         packet: PublishMessage,
     ) {
         if (packet.qualityOfService == QualityOfService.AT_MOST_ONCE) return
-        val p = packet as PublishMessageV5
+        val p = packet as PublishMessageV5<*>
         val tx = db.transaction(arrayOf(PUB_MSG, USER_PROPERTIES), IDBTransactionMode.readwrite)
         val pubStore = tx.objectStore(PUB_MSG)
         pubStore.put(PersistablePublishMessage(broker.identifier, true, p))
@@ -809,7 +809,7 @@ class IDBPersistence(
         val newPacketId = getAndIncrementPacketId(broker)
         val tx = db.transaction(arrayOf(PACKET_ID, USER_PROPERTIES, PUB_MSG), IDBTransactionMode.readwrite)
         val queuedMsgStore = tx.objectStore(PUB_MSG)
-        val packetIdPub = pub.maybeCopyWithNewPacketIdentifier(newPacketId) as PublishMessageV5
+        val packetIdPub = pub.maybeCopyWithNewPacketIdentifier(newPacketId) as PublishMessageV5<*>
         val persistablePub = PersistablePublishMessage(broker.identifier, false, packetIdPub)
         queuedMsgStore.put(persistablePub)
         val propStore = tx.objectStore(USER_PROPERTIES)

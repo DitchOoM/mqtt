@@ -1,22 +1,20 @@
 package com.ditchoom.mqtt5.controlpacket
 
 import com.ditchoom.buffer.BufferFactory
-import com.ditchoom.buffer.BufferOverflowException
 import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
+import com.ditchoom.buffer.codec.payload.PayloadReader
 import com.ditchoom.buffer.utf8Length
 import com.ditchoom.mqtt.MalformedPacketException
 import com.ditchoom.mqtt.ProtocolError
+import com.ditchoom.mqtt.codec.IdentityBufferCodec
+import com.ditchoom.mqtt.codec.PayloadCodec
 import com.ditchoom.mqtt.controlpacket.ControlPacket
-import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.MAX_FIXED_HEADER_SIZE
-import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readMqttUtf8StringNotValidatedSized
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.variableByteSize
-import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.writeMqttUtf8String
-import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.writeVariableByteInteger
 import com.ditchoom.mqtt.controlpacket.NO_PACKET_ID
-import com.ditchoom.mqtt.controlpacket.PayloadStorage
 import com.ditchoom.mqtt.controlpacket.PublishMessage
+import com.ditchoom.mqtt.controlpacket.PublishMessagePayloadMaterializer
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.QualityOfService.AT_LEAST_ONCE
 import com.ditchoom.mqtt.controlpacket.QualityOfService.AT_MOST_ONCE
@@ -33,101 +31,66 @@ import com.ditchoom.mqtt5.controlpacket.properties.ResponseTopic
 import com.ditchoom.mqtt5.controlpacket.properties.SubscriptionIdentifier
 import com.ditchoom.mqtt5.controlpacket.properties.TopicAlias
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
-import com.ditchoom.mqtt5.controlpacket.properties.encodeMqttProperty
 import com.ditchoom.mqtt5.controlpacket.properties.mqttPropertiesSize
-import com.ditchoom.mqtt5.controlpacket.properties.readProperties
 
 /**
- * MQTT 5.0 PUBLISH packet.
+ * MQTT 5.0 PUBLISH packet, parameterized on the payload type [P].
  *
- * The user-facing payload API lives on the base [PublishMessage] class ([PublishMessage.usePayload]);
- * this subclass adds v5 [properties] and handles v5-specific wire encoding.
+ * See [com.ditchoom.mqtt3.controlpacket.PublishMessageV4] for a description of the generic
+ * approach. V5 adds variable-header properties and delegates the properties section to the
+ * generated body codec via the `@MqttProperties` SPI binding.
  */
-class PublishMessageV5 internal constructor(
-    topic: TopicName,
-    qualityOfService: QualityOfService,
-    dup: Boolean,
-    retain: Boolean,
+class PublishMessageV5<P> internal constructor(
+    override val topic: TopicName,
+    override val qualityOfService: QualityOfService,
+    override val dup: Boolean,
+    override val retain: Boolean,
     packetIdentifier: Int,
     val properties: Properties,
-    storage: PayloadStorage,
-) : PublishMessage(topic, qualityOfService, dup, retain, packetIdentifier, storage), ControlPacketV5 {
-    private fun variableHeaderSize(): Int {
-        var size = UShort.SIZE_BYTES + topic.toString().utf8Length()
+    override val payload: P,
+    override val codec: PayloadCodec<P>,
+) : PublishMessage, ControlPacketV5, PublishMessagePayloadMaterializer<P> {
+    override val controlPacketValue: Byte get() = PublishMessage.CONTROL_PACKET_VALUE
+    override val flags: Byte
+        get() {
+            val dupInt = if (dup) 0b1000 else 0b0
+            val qosInt = qualityOfService.integerValue.toInt().shl(1)
+            val retainInt = if (retain) 0b1 else 0b0
+            return (dupInt or qosInt or retainInt).toByte()
+        }
+    override val packetIdentifier: Int = packetIdentifier
+
+    private fun topicEncodedSize(): Int = UShort.SIZE_BYTES + topic.toString().utf8Length()
+
+    private fun payloadSize(): Int = codec.encodedSize(payload)
+
+    private fun propertiesSectionSize(): Int {
+        val props = properties.props
+        val bodySize = mqttPropertiesSize(props)
+        return variableByteSize(bodySize) + bodySize
+    }
+
+    override fun remainingLength(): Int {
+        var size = topicEncodedSize()
         if (packetIdentifier in validControlPacketIdentifierRange) size += UShort.SIZE_BYTES
-        val propsSize = mqttPropertiesSize(properties.props)
-        size += variableByteSize(propsSize) + propsSize
+        size += propertiesSectionSize()
+        size += payloadSize()
         return size
     }
 
-    private fun payloadSizeBytes(): Int = payloadSize()
-
-    override fun remainingLength(): Int = variableHeaderSize() + payloadSizeBytes()
-
     override fun encodeBody(writeBuffer: WriteBuffer) {
-        writeBuffer.writeMqttUtf8String(topic.toString())
-        if (packetIdentifier in validControlPacketIdentifierRange) {
-            writeBuffer.writeUShort(packetIdentifier.toUShort())
+        val props: Collection<MqttProperty>? = properties.props.ifEmpty { null }
+        if (qualityOfService == AT_MOST_ONCE) {
+            PublishBodyV5Qos0Codec.encode(
+                writeBuffer,
+                PublishBodyV5Qos0(topic.toString(), props, payload),
+            ) { buf, v -> codec.encode(buf, v) }
+        } else {
+            PublishBodyV5QosNonZeroCodec.encode(
+                writeBuffer,
+                PublishBodyV5QosNonZero(topic.toString(), packetIdentifier.toUShort(), props, payload),
+            ) { buf, v -> codec.encode(buf, v) }
         }
-        // Properties section: VBI length + each encoded property
-        val props = properties.props
-        val propsSize = mqttPropertiesSize(props)
-        writeBuffer.writeVariableByteInteger(propsSize)
-        for (p in props) {
-            writeBuffer.encodeMqttProperty<ReadBuffer, ReadBuffer>(
-                p,
-                encodeCorrelationData = { buf, data -> buf.write(data); data.resetForRead() },
-                encodeAuthenticationData = { buf, data -> buf.write(data); data.resetForRead() },
-            )
-        }
-        when (val s = storageBytesOrEncode()) {
-            is PayloadStorage.Bytes -> s.buffer?.let { writeBuffer.write(it) }
-            is PayloadStorage.Encode -> s.write(writeBuffer)
-        }
-    }
-
-    private fun storageBytesOrEncode(): PayloadStorage = storage
-
-    override fun serialize(writeBuffer: WriteBuffer) {
-        if (storage is PayloadStorage.Bytes) {
-            super<ControlPacketV5>.serialize(writeBuffer)
-            return
-        }
-        // Backpatch path for typed payloads: reserve max fixed header, write body, patch byte1 + VBI.
-        val start = writeBuffer.position()
-        writeBuffer.position(start + MAX_FIXED_HEADER_SIZE)
-        encodeBody(writeBuffer)
-        val end = writeBuffer.position()
-        val bodySize = end - start - MAX_FIXED_HEADER_SIZE
-        val vbiSize = variableByteSize(bodySize).toInt()
-        val actualStart = start + MAX_FIXED_HEADER_SIZE - 1 - vbiSize
-        writeBuffer.set(actualStart, byte1.toByte())
-        writeBuffer.position(actualStart + 1)
-        writeBuffer.writeVariableByteInteger(bodySize)
-        writeBuffer.position(end)
-    }
-
-    override fun serialize(factory: BufferFactory): ReadBuffer {
-        if (storage is PayloadStorage.Bytes) {
-            return super<ControlPacketV5>.serialize(factory)
-        }
-        val headerSize = variableHeaderSize() + MAX_FIXED_HEADER_SIZE
-        val enc = storage as PayloadStorage.Encode
-        val estimated = enc.size()
-        var buf = factory.allocate(headerSize + estimated)
-        try {
-            serialize(buf)
-        } catch (_: BufferOverflowException) {
-            buf = factory.allocate((headerSize + estimated) * 2)
-            serialize(buf)
-        }
-        val endPos = buf.position()
-        val bodySize = endPos - MAX_FIXED_HEADER_SIZE
-        val vbiSize = variableByteSize(bodySize).toInt()
-        val actualStart = MAX_FIXED_HEADER_SIZE - 1 - vbiSize
-        buf.position(actualStart)
-        buf.setLimit(endPos)
-        return buf.slice()
     }
 
     override fun expectedResponse(
@@ -149,9 +112,9 @@ class PublishMessageV5 internal constructor(
 
     override fun setDupFlagNewPubMessage(): PublishMessage =
         if (qualityOfService == AT_MOST_ONCE && dup) {
-            PublishMessageV5(topic, qualityOfService, false, retain, packetIdentifier, properties, storage)
+            PublishMessageV5(topic, qualityOfService, false, retain, packetIdentifier, properties, payload, codec)
         } else if (qualityOfService != AT_MOST_ONCE && !dup) {
-            PublishMessageV5(topic, qualityOfService, true, retain, packetIdentifier, properties, storage)
+            PublishMessageV5(topic, qualityOfService, true, retain, packetIdentifier, properties, payload, codec)
         } else {
             this
         }
@@ -160,7 +123,7 @@ class PublishMessageV5 internal constructor(
         when (qualityOfService) {
             AT_MOST_ONCE -> this
             AT_LEAST_ONCE, QualityOfService.EXACTLY_ONCE ->
-                PublishMessageV5(topic, qualityOfService, dup, retain, packetIdentifier, properties, storage)
+                PublishMessageV5(topic, qualityOfService, dup, retain, packetIdentifier, properties, payload, codec)
         }
 
     override fun validate(): MalformedPacketException? {
@@ -181,13 +144,14 @@ class PublishMessageV5 internal constructor(
     }
 
     override fun equals(other: Any?): Boolean {
-        if (other !is PublishMessageV5) return false
+        if (other !is PublishMessageV5<*>) return false
         return topic == other.topic &&
             qualityOfService == other.qualityOfService &&
             dup == other.dup &&
             retain == other.retain &&
             packetIdentifier == other.packetIdentifier &&
-            properties == other.properties
+            properties == other.properties &&
+            payload == other.payload
     }
 
     override fun hashCode(): Int {
@@ -197,12 +161,13 @@ class PublishMessageV5 internal constructor(
         r = 31 * r + retain.hashCode()
         r = 31 * r + packetIdentifier
         r = 31 * r + properties.hashCode()
+        r = 31 * r + (payload?.hashCode() ?: 0)
         return r
     }
 
     override fun toString(): String =
         "PublishMessageV5(topic=$topic, qos=$qualityOfService, dup=$dup, retain=$retain, " +
-            "packetId=$packetIdentifier, properties=$properties, payloadSize=${payloadSizeBytes()})"
+            "packetId=$packetIdentifier, properties=$properties)"
 
     /**
      * MQTT 5 PUBLISH variable-header properties (3.3.2.3).
@@ -311,32 +276,41 @@ class PublishMessageV5 internal constructor(
 
     companion object {
         /**
-         * Wire decode for incoming v5 PUBLISH. Uses zero-copy buffer slicing for the payload.
+         * Decode an incoming v5 PUBLISH. Returns `PublishMessageV5<ReadBuffer>` with a
+         * zero-copy payload slice.
          */
         fun from(
             buffer: ReadBuffer,
             byte1: UByte,
             remainingLength: Int,
-        ): PublishMessageV5 {
+        ): PublishMessageV5<ReadBuffer> {
             val fixed = FixedHeader.fromByte(byte1)
             val sliced = buffer.readBytes(remainingLength)
-            val (_, topicStr) = sliced.readMqttUtf8StringNotValidatedSized()
-            val packetId =
-                if (fixed.qos == AT_MOST_ONCE) NO_PACKET_ID
-                else sliced.readUnsignedShort().toInt()
-            val propsRaw = sliced.readProperties()
-            val props = Properties.from(propsRaw)
-            val payload =
-                if (sliced.remaining() > 0) sliced.readBytes(sliced.remaining()) else null
-            return PublishMessageV5(
-                topic = TopicName.fromOrThrow(topicStr),
-                qualityOfService = fixed.qos,
-                dup = fixed.dup,
-                retain = fixed.retain,
-                packetIdentifier = packetId,
-                properties = props,
-                storage = PayloadStorage.Bytes(payload),
-            )
+            return if (fixed.qos == AT_MOST_ONCE) {
+                val body = PublishBodyV5Qos0Codec.decode(sliced) { pr -> readFullPayload(pr) }
+                PublishMessageV5(
+                    topic = TopicName.fromOrThrow(body.topic),
+                    qualityOfService = fixed.qos,
+                    dup = fixed.dup,
+                    retain = fixed.retain,
+                    packetIdentifier = NO_PACKET_ID,
+                    properties = Properties.from(body.properties),
+                    payload = body.payload,
+                    codec = IdentityBufferCodec,
+                )
+            } else {
+                val body = PublishBodyV5QosNonZeroCodec.decode(sliced) { pr -> readFullPayload(pr) }
+                PublishMessageV5(
+                    topic = TopicName.fromOrThrow(body.topic),
+                    qualityOfService = fixed.qos,
+                    dup = fixed.dup,
+                    retain = fixed.retain,
+                    packetIdentifier = body.packetIdentifier.toInt(),
+                    properties = Properties.from(body.properties),
+                    payload = body.payload,
+                    codec = IdentityBufferCodec,
+                )
+            }
         }
 
         fun ofRaw(
@@ -347,26 +321,25 @@ class PublishMessageV5 internal constructor(
             retain: Boolean = false,
             packetIdentifier: Int = NO_PACKET_ID,
             properties: Properties = Properties(),
-        ): PublishMessageV5 =
-            PublishMessageV5(topic, qos, dup, retain, packetIdentifier, properties, PayloadStorage.Bytes(payload))
+        ): PublishMessageV5<ReadBuffer> =
+            PublishMessageV5(
+                topic, qos, dup, retain, packetIdentifier, properties,
+                payload ?: BufferFactory.Default.allocate(0),
+                IdentityBufferCodec,
+            )
 
         fun <P> ofTyped(
             topic: TopicName,
             qos: QualityOfService,
             payload: P,
-            encodePayload: (WriteBuffer, P) -> Unit,
-            payloadSize: (P) -> Int,
+            codec: PayloadCodec<P>,
             dup: Boolean = false,
             retain: Boolean = false,
             packetIdentifier: Int = NO_PACKET_ID,
             properties: Properties = Properties(),
-        ): PublishMessageV5 =
-            PublishMessageV5(
-                topic, qos, dup, retain, packetIdentifier, properties,
-                PayloadStorage.Encode(
-                    write = { buf -> encodePayload(buf, payload) },
-                    size = { payloadSize(payload) },
-                ),
-            )
+        ): PublishMessageV5<P> =
+            PublishMessageV5(topic, qos, dup, retain, packetIdentifier, properties, payload, codec)
+
+        private fun readFullPayload(pr: PayloadReader): ReadBuffer = pr.copyToBuffer()
     }
 }

@@ -278,8 +278,14 @@ class PublishMessageV5<P> internal constructor(
         /**
          * Decode an incoming v5 PUBLISH. Returns `PublishMessageV5<ReadBuffer>` with a
          * zero-copy payload slice.
+         *
+         * `internal` because typed subscribers must go through `SubscriberEntry.Typed` for
+         * decoding — this factory can only produce the raw-bytes variant. `@PublishedApi`
+         * lets the inline `ControlPacketV5.fromTyped` dispatch reach it without widening
+         * the source-level API.
          */
-        fun from(
+        @PublishedApi
+        internal fun from(
             buffer: ReadBuffer,
             byte1: UByte,
             remainingLength: Int,

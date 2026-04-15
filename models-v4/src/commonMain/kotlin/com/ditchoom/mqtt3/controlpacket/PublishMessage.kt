@@ -150,8 +150,14 @@ class PublishMessageV4<P> internal constructor(
         /**
          * Decode an incoming v4 PUBLISH from its fixed-header byte1 and VBI remaining-length.
          * Returns `PublishMessageV4<ReadBuffer>` — the payload is a zero-copy slice of [buffer].
+         *
+         * `internal` because typed subscribers must go through `SubscriberEntry.Typed` for
+         * decoding — this factory can only produce the raw-bytes variant. `@PublishedApi`
+         * lets the inline `ControlPacketV4.fromTyped` dispatch reach it without widening
+         * the source-level API.
          */
-        fun from(
+        @PublishedApi
+        internal fun from(
             buffer: ReadBuffer,
             byte1: UByte,
             remainingLength: Int,

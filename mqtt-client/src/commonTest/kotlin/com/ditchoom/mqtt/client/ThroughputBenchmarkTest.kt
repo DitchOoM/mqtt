@@ -95,7 +95,6 @@ class ThroughputBenchmarkTest {
         repeat(warmup) {
             for (p in packets) {
                 val buf = listOf(p).toBuffer(factory) as PlatformBuffer
-                buf.resetForRead()
                 ControlPacketV4.from(buf)
                 buf.freeNativeMemory()
             }
@@ -105,7 +104,6 @@ class ThroughputBenchmarkTest {
         repeat(iterations) {
             for (p in packets) {
                 val buf = listOf(p).toBuffer(factory) as PlatformBuffer
-                buf.resetForRead()
                 ControlPacketV4.from(buf)
                 buf.freeNativeMemory()
             }

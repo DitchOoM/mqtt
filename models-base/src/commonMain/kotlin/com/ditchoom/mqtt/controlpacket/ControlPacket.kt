@@ -81,6 +81,7 @@ interface ControlPacket {
         val size = packetSize()
         val buffer = factory.allocate(size)
         serialize(buffer)
+        buffer.resetForRead()
         return buffer
     }
 

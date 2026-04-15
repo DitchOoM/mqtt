@@ -73,7 +73,6 @@ class DirectMemoryTraceTest {
         // 5. 1000 serialize/deserialize cycles
         repeat(1000) {
             val s = pub.serialize()
-            s.resetForRead()
             com.ditchoom.mqtt3.controlpacket.ControlPacketV4
                 .from(s)
         }
@@ -85,7 +84,6 @@ class DirectMemoryTraceTest {
         // 6. 10000 round-trips
         repeat(10_000) {
             val s = pub.serialize()
-            s.resetForRead()
             com.ditchoom.mqtt3.controlpacket.ControlPacketV4
                 .from(s)
         }
@@ -97,7 +95,6 @@ class DirectMemoryTraceTest {
         // 7. 50000 round-trips
         repeat(50_000) {
             val s = pub.serialize()
-            s.resetForRead()
             com.ditchoom.mqtt3.controlpacket.ControlPacketV4
                 .from(s)
         }

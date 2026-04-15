@@ -42,11 +42,9 @@ class ControlPacketParsingBenchmark {
         // CONNACK
         val connack = ConnectionAcknowledgment()
         connackBytes = connack.serialize()
-        connackBytes.resetForRead()
 
         // PINGREQ
         pingReqBytes = PingRequest.serialize()
-        pingReqBytes.resetForRead()
 
         // PUBLISH with 64-byte payload
         val smallPayload = BufferFactory.Default.allocate(64)
@@ -54,7 +52,6 @@ class ControlPacketParsingBenchmark {
         smallPayload.resetForRead()
         publishSmall = PublishMessage.buildPayload(topicName = topic, payload = smallPayload)
         publishSmallBytes = publishSmall.serialize()
-        publishSmallBytes.resetForRead()
 
         // PUBLISH with 1KB payload
         val mediumPayload = BufferFactory.Default.allocate(1024)
@@ -62,7 +59,6 @@ class ControlPacketParsingBenchmark {
         mediumPayload.resetForRead()
         publishMedium = PublishMessage.buildPayload(topicName = topic, payload = mediumPayload)
         publishMediumBytes = publishMedium.serialize()
-        publishMediumBytes.resetForRead()
 
         // PUBLISH with 64KB payload
         val largePayload = BufferFactory.Default.allocate(65536)
@@ -70,7 +66,6 @@ class ControlPacketParsingBenchmark {
         largePayload.resetForRead()
         publishLarge = PublishMessage.buildPayload(topicName = topic, payload = largePayload)
         publishLargeBytes = publishLarge.serialize()
-        publishLargeBytes.resetForRead()
     }
 
     @Benchmark

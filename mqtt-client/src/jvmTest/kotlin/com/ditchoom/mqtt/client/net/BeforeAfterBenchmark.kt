@@ -111,7 +111,6 @@ class BeforeAfterBenchmark {
         repeat(warmupIters) {
             for (p in packets) {
                 val buf = p.serialize()
-                buf.resetForRead()
                 ControlPacketV4.from(buf)
             }
         }
@@ -122,7 +121,6 @@ class BeforeAfterBenchmark {
                 repeat(benchIters) {
                     for (p in packets) {
                         val buf = p.serialize()
-                        buf.resetForRead()
                         ControlPacketV4.from(buf)
                     }
                 }
@@ -152,7 +150,6 @@ class BeforeAfterBenchmark {
         repeat(warmupIters) {
             for (p in packets) {
                 val buf = p.serialize()
-                buf.resetForRead()
                 ControlPacketV5.from(buf)
             }
         }
@@ -163,7 +160,6 @@ class BeforeAfterBenchmark {
                 repeat(benchIters) {
                     for (p in packets) {
                         val buf = p.serialize()
-                        buf.resetForRead()
                         ControlPacketV5.from(buf)
                     }
                 }
@@ -195,7 +191,6 @@ class BeforeAfterBenchmark {
             repeat(iterations) {
                 for (p in packets) {
                     val serialized = p.serialize()
-                    serialized.resetForRead()
                     stream.append(serialized)
                     val byte1 = stream.readUnsignedByte().toUByte()
                     val remainingLength = readVarInt(stream)
@@ -237,7 +232,6 @@ class BeforeAfterBenchmark {
             repeat(iterations) {
                 for (p in packets) {
                     val serialized = p.serialize()
-                    serialized.resetForRead()
                     stream.append(serialized)
                     val byte1 = stream.readUnsignedByte().toUByte()
                     val remainingLength = readVarInt(stream)

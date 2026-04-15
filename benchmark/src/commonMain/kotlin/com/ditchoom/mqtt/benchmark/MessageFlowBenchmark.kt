@@ -37,7 +37,6 @@ class MessageFlowBenchmark {
         payload.resetForRead()
         publishSmall = PublishMessage.buildPayload(topicName = topic, payload = payload)
         publishSmallBytes = publishSmall.serialize()
-        publishSmallBytes.resetForRead()
     }
 
     /**

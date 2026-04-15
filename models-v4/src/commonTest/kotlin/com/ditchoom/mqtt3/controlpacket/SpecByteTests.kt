@@ -867,7 +867,6 @@ class SpecByteTests {
                     payload = 42,
                     codec = IntPayloadCodec,
                 ).serialize(BufferFactory.Default)
-        buf.resetForRead()
         // topic "a" (3 bytes) + payload (4 bytes) = 7 bytes remaining
         assertEquals(9, buf.remaining())
         assertEquals(0x30u, buf.readUnsignedByte()) // type=3, QoS 0
@@ -893,7 +892,6 @@ class SpecByteTests {
                     payload = 0x1234.toShort(),
                     codec = ShortPayloadCodec,
                 ).serialize(BufferFactory.Default)
-        buf.resetForRead()
         // topic "a" (3 bytes) + packetId (2 bytes) + payload (2 bytes) = 7 bytes remaining
         assertEquals(9, buf.remaining())
         assertEquals(0x32u, buf.readUnsignedByte()) // type=3, QoS 1
@@ -922,9 +920,6 @@ class SpecByteTests {
                     qos = AT_MOST_ONCE,
                     payload = payloadBytes,
                 ).serialize(BufferFactory.Default)
-        readBufferPub.resetForRead()
-
-        payloadBytes.position(0)
 
         val typedPub =
             PublishMessageV4
@@ -934,7 +929,6 @@ class SpecByteTests {
                     payload = 42,
                     codec = IntPayloadCodec,
                 ).serialize(BufferFactory.Default)
-        typedPub.resetForRead()
 
         // Both must produce identical wire bytes
         assertEquals(readBufferPub.remaining(), typedPub.remaining())

@@ -219,7 +219,6 @@ class FactoryComparisonBenchmark {
         repeat(2_000) {
             for (p in packets) {
                 val buf = listOf(p).toBuffer(factory) as PlatformBuffer
-                buf.resetForRead()
                 ControlPacketV4.from(buf)
                 buf.freeNativeMemory()
             }
@@ -234,7 +233,6 @@ class FactoryComparisonBenchmark {
                 repeat(iterations) {
                     for (p in packets) {
                         val buf = listOf(p).toBuffer(factory) as PlatformBuffer
-                        buf.resetForRead()
                         ControlPacketV4.from(buf)
                         buf.freeNativeMemory()
                     }

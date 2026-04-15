@@ -133,7 +133,6 @@ class MemoryPressureTest {
         repeat(iterations) {
             for (packet in packets) {
                 val buf = packet.serialize()
-                buf.resetForRead()
                 decode(buf)
             }
         }
@@ -150,7 +149,6 @@ class MemoryPressureTest {
         repeat(iterations) {
             for (packet in packets) {
                 val serialized = packet.serialize()
-                serialized.resetForRead()
                 stream.append(serialized)
 
                 val byte1 = stream.readUnsignedByte().toUByte()
@@ -276,7 +274,6 @@ class MemoryPressureTest {
                     packetIdentifier = 1,
                 )
             val buf = pub.serialize()
-            buf.resetForRead()
             ControlPacketV4.from(buf)
         }
 
@@ -294,7 +291,6 @@ class MemoryPressureTest {
                     packetIdentifier = i % 65535 + 1,
                 )
             val buf = pub.serialize()
-            buf.resetForRead()
             ControlPacketV4.from(buf)
         }
 
@@ -418,7 +414,6 @@ class MemoryPressureTest {
         repeat(1000) {
             for (packet in packets) {
                 val buf = listOf(packet).toBuffer(factory) as PlatformBuffer
-                buf.resetForRead()
                 ControlPacketV4.from(buf)
                 buf.freeNativeMemory()
             }
@@ -429,7 +424,6 @@ class MemoryPressureTest {
         repeat(iterations) {
             for (packet in packets) {
                 val buf = listOf(packet).toBuffer(factory) as PlatformBuffer
-                buf.resetForRead()
                 ControlPacketV4.from(buf)
                 buf.freeNativeMemory()
             }

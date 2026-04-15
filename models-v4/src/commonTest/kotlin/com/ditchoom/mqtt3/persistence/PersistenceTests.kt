@@ -60,9 +60,6 @@ class PersistenceTests {
                     payload = payloadBuf,
                 )
             val packetId = persistence.writePubGetPacketId(broker, pub)
-            // IdentityBufferCodec.encode advances the source buffer's position during write;
-            // rewind so the payload equality check compares identical remaining-byte windows.
-            payloadBuf.resetForRead()
             assertEquals(
                 pub.maybeCopyWithNewPacketIdentifier(packetId),
                 persistence.getPubWithPacketId(broker, packetId),
@@ -89,8 +86,6 @@ class PersistenceTests {
                     payload = payloadBuf,
                 )
             val packetId = persistence.writePubGetPacketId(broker, pub)
-            // See pubQos1 — rewind source buffer that write consumed.
-            payloadBuf.resetForRead()
             assertEquals(
                 pub.maybeCopyWithNewPacketIdentifier(packetId),
                 persistence.getPubWithPacketId(broker, packetId),

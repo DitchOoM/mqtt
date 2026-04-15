@@ -21,6 +21,10 @@ interface PayloadCodec<P> {
 
     /**
      * Write [value] into [buffer] at its current position.
+     *
+     * Implementations must not mutate [value]'s observable state (e.g. a `ReadBuffer`
+     * value's position/limit). Callers may re-use the same [value] across multiple
+     * encodes.
      */
     fun encode(
         buffer: WriteBuffer,
@@ -45,7 +49,7 @@ object IdentityBufferCodec : PayloadCodec<ReadBuffer> {
         buffer: WriteBuffer,
         value: ReadBuffer,
     ) {
-        buffer.write(value)
+        buffer.write(value.slice())
     }
 
     override fun encodedSize(value: ReadBuffer): Int = value.remaining()

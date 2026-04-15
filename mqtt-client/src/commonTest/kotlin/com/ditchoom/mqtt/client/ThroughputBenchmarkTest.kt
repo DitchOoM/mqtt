@@ -2,6 +2,7 @@ package com.ditchoom.mqtt.client
 
 import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Default
+import com.ditchoom.buffer.PlatformBuffer
 import com.ditchoom.buffer.managed
 import com.ditchoom.buffer.pool.BufferPool
 import com.ditchoom.buffer.withPooling
@@ -12,7 +13,7 @@ import com.ditchoom.mqtt3.controlpacket.ControlPacketV4
 import kotlin.test.Test
 import kotlin.time.TimeSource
 import com.ditchoom.mqtt3.controlpacket.ConnectionRequest as ConnectV4
-import com.ditchoom.mqtt3.controlpacket.PublishMessage as PublishV4
+import com.ditchoom.mqtt3.controlpacket.PublishMessageV4 as PublishV4
 import com.ditchoom.mqtt3.controlpacket.SubscribeRequest as SubscribeV4
 
 /**
@@ -27,12 +28,12 @@ class ThroughputBenchmarkTest {
         payload.resetForRead()
         return listOf(
             ConnectV4(payload = ConnectV4.Payload(clientId = "xplat")),
-            PublishV4
-                .buildPayload(
-                    topicName = TopicName.fromOrThrow("bench/topic"),
-                    qos = QualityOfService.AT_LEAST_ONCE,
-                    payload = payload,
-                ).maybeCopyWithNewPacketIdentifier(1),
+            PublishV4.ofRaw(
+                topic = TopicName.fromOrThrow("bench/topic"),
+                qos = QualityOfService.AT_LEAST_ONCE,
+                payload = payload,
+                packetIdentifier = 1,
+            ),
             SubscribeV4(packetIdentifier = 1.toUShort(), topic = "bench/+", qos = QualityOfService.AT_LEAST_ONCE),
         )
     }
@@ -41,12 +42,12 @@ class ThroughputBenchmarkTest {
         val payload = BufferFactory.Default.allocate(4096)
         repeat(4096) { payload.writeByte((it % 256).toByte()) }
         payload.resetForRead()
-        return PublishV4
-            .buildPayload(
-                topicName = TopicName.fromOrThrow("bench/large"),
-                qos = QualityOfService.EXACTLY_ONCE,
-                payload = payload,
-            ).maybeCopyWithNewPacketIdentifier(1)
+        return PublishV4.ofRaw(
+            topic = TopicName.fromOrThrow("bench/large"),
+            qos = QualityOfService.EXACTLY_ONCE,
+            payload = payload,
+            packetIdentifier = 1,
+        )
     }
 
     data class RunResult(
@@ -66,7 +67,7 @@ class ThroughputBenchmarkTest {
     ): RunResult {
         repeat(warmup) {
             for (p in packets) {
-                val buf = listOf(p).toBuffer(factory)
+                val buf = listOf(p).toBuffer(factory) as PlatformBuffer
                 buf.resetForWrite()
                 buf.freeNativeMemory()
             }
@@ -75,7 +76,7 @@ class ThroughputBenchmarkTest {
         val mark = TimeSource.Monotonic.markNow()
         repeat(iterations) {
             for (p in packets) {
-                val buf = listOf(p).toBuffer(factory)
+                val buf = listOf(p).toBuffer(factory) as PlatformBuffer
                 buf.resetForWrite()
                 buf.freeNativeMemory()
             }
@@ -93,7 +94,7 @@ class ThroughputBenchmarkTest {
     ): RunResult {
         repeat(warmup) {
             for (p in packets) {
-                val buf = listOf(p).toBuffer(factory)
+                val buf = listOf(p).toBuffer(factory) as PlatformBuffer
                 buf.resetForRead()
                 ControlPacketV4.from(buf)
                 buf.freeNativeMemory()
@@ -103,7 +104,7 @@ class ThroughputBenchmarkTest {
         val mark = TimeSource.Monotonic.markNow()
         repeat(iterations) {
             for (p in packets) {
-                val buf = listOf(p).toBuffer(factory)
+                val buf = listOf(p).toBuffer(factory) as PlatformBuffer
                 buf.resetForRead()
                 ControlPacketV4.from(buf)
                 buf.freeNativeMemory()

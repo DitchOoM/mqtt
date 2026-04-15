@@ -33,11 +33,12 @@ class PublishDispatcherTest {
             topic = TopicName.fromOrThrow(topic),
             qos = qos,
             payload = payload,
-            packetIdentifier = if (qos == QualityOfService.AT_MOST_ONCE) {
-                com.ditchoom.mqtt.controlpacket.NO_PACKET_ID
-            } else {
-                packetId
-            },
+            packetIdentifier =
+                if (qos == QualityOfService.AT_MOST_ONCE) {
+                    com.ditchoom.mqtt.controlpacket.NO_PACKET_ID
+                } else {
+                    packetId
+                },
         )
 
     // ── Untyped subscribe ──────────────────────────────────────────────

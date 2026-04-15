@@ -7,8 +7,8 @@ import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.IConnectionAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IConnectionRequest
 import com.ditchoom.mqtt.controlpacket.IPublishAcknowledgment
-import com.ditchoom.mqtt.controlpacket.IPublishMessage
 import com.ditchoom.mqtt.controlpacket.ISubscribeAcknowledgement
+import com.ditchoom.mqtt.controlpacket.PublishMessage
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.TopicName
@@ -472,7 +472,7 @@ class PublicBrokerValidationTest {
         val packet2 = connection.receive().first()
         val packets = listOf(packet1, packet2)
         assertTrue(packets.any { it is IPublishAcknowledgment }, "Expected PUBACK in response, got ${packets.map { it::class.simpleName }}")
-        val received = packets.filterIsInstance<IPublishMessage>().firstOrNull()
+        val received = packets.filterIsInstance<PublishMessage>().firstOrNull()
         assertTrue(received != null, "Expected incoming PUBLISH, got ${packets.map { it::class.simpleName }}")
         assertEquals(uniqueTopic, received.topic.toString(), "Received message should be on subscribed topic")
 

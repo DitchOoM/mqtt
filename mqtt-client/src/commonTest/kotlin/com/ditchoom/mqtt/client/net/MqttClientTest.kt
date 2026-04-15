@@ -13,10 +13,11 @@ import com.ditchoom.mqtt.client.QoS1State
 import com.ditchoom.mqtt.client.QoS2State
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.IConnectionRequest
-import com.ditchoom.mqtt.controlpacket.IPublishMessage
+import com.ditchoom.mqtt.controlpacket.PublishMessage
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.TopicName
+import com.ditchoom.mqtt.controlpacket.payloadAsReadBufferOrNull
 import com.ditchoom.mqtt3.controlpacket.ConnectionRequest
 import com.ditchoom.socket.NetworkCapabilities
 import com.ditchoom.socket.getNetworkCapabilities
@@ -346,7 +347,7 @@ class MqttClientTest {
         clientLwt.shutdown(sendDisconnect = false)
         val message = receivedLwt.await()
         assertEquals(message.topic.toString(), willTopic.toString())
-        val payload = checkNotNull(message.payload)
+        val payload = checkNotNull(message.payloadAsReadBufferOrNull())
         assertEquals("yolo", payload.readString(payload.remaining(), Charset.UTF8))
     }
 
@@ -379,8 +380,8 @@ class MqttClientTest {
         val flow = client.observe(TopicFilter.fromOrThrow(topic.toString()))
         val collectJob =
             scope.launch {
-                flow.filterIsInstance<IPublishMessage>().take(3).collect {
-                    val payload = it.payload ?: EMPTY_BUFFER
+                flow.filterIsInstance<PublishMessage>().take(3).collect {
+                    val payload = it.payloadAsReadBufferOrNull() ?: EMPTY_BUFFER
                     val qosValue = it.qualityOfService.integerValue.toString()
                     assertEquals(payloadString + qosValue, payload.readString(payload.limit()))
                 }

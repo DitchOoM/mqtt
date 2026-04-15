@@ -17,10 +17,10 @@ import javax.management.ObjectName
 import kotlin.test.Test
 import kotlin.time.measureTime
 import com.ditchoom.mqtt3.controlpacket.ConnectionRequest as ConnectV4
-import com.ditchoom.mqtt3.controlpacket.PublishMessage as PublishV4
+import com.ditchoom.mqtt3.controlpacket.PublishMessageV4 as PublishV4
 import com.ditchoom.mqtt3.controlpacket.SubscribeRequest as SubscribeV4
 import com.ditchoom.mqtt5.controlpacket.ConnectionRequest as ConnectV5
-import com.ditchoom.mqtt5.controlpacket.PublishMessage as PublishV5
+import com.ditchoom.mqtt5.controlpacket.PublishMessageV5 as PublishV5
 import com.ditchoom.mqtt5.controlpacket.SubscribeRequest as SubscribeV5
 
 /**
@@ -78,12 +78,12 @@ class BeforeAfterBenchmark {
         payload.resetForRead()
         return listOf(
             ConnectV4(payload = ConnectV4.Payload(clientId = "bench-v4")),
-            PublishV4
-                .buildPayload(
-                    topicName = TopicName.fromOrThrow("bench/topic"),
-                    qos = QualityOfService.AT_LEAST_ONCE,
-                    payload = payload,
-                ).maybeCopyWithNewPacketIdentifier(1),
+            PublishV4.ofRaw(
+                topic = TopicName.fromOrThrow("bench/topic"),
+                qos = QualityOfService.AT_LEAST_ONCE,
+                payload = payload,
+                packetIdentifier = 1,
+            ),
             SubscribeV4(packetIdentifier = 1.toUShort(), topic = "bench/+", qos = QualityOfService.AT_LEAST_ONCE),
         )
     }
@@ -91,7 +91,11 @@ class BeforeAfterBenchmark {
     private fun v5Packets(): List<ControlPacket> =
         listOf(
             ConnectV5(clientId = "bench-v5"),
-            PublishV5(topicName = "bench/topic", qos = QualityOfService.AT_LEAST_ONCE).maybeCopyWithNewPacketIdentifier(1),
+            PublishV5.ofRaw(
+                topic = TopicName.fromOrThrow("bench/topic"),
+                qos = QualityOfService.AT_LEAST_ONCE,
+                packetIdentifier = 1,
+            ),
             SubscribeV5(packetIdentifier = 1.toUShort(), topic = "bench/+", qos = QualityOfService.AT_LEAST_ONCE),
         )
 

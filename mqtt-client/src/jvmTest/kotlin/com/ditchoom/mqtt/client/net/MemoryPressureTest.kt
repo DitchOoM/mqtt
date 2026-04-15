@@ -2,6 +2,7 @@ package com.ditchoom.mqtt.client.net
 
 import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Default
+import com.ditchoom.buffer.PlatformBuffer
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.deterministic
 import com.ditchoom.buffer.pool.BufferPool
@@ -20,10 +21,10 @@ import javax.management.ObjectName
 import kotlin.test.Test
 import kotlin.test.assertTrue
 import com.ditchoom.mqtt3.controlpacket.ConnectionRequest as ConnectV4
-import com.ditchoom.mqtt3.controlpacket.PublishMessage as PublishV4
+import com.ditchoom.mqtt3.controlpacket.PublishMessageV4 as PublishV4
 import com.ditchoom.mqtt3.controlpacket.SubscribeRequest as SubscribeV4
 import com.ditchoom.mqtt5.controlpacket.ConnectionRequest as ConnectV5
-import com.ditchoom.mqtt5.controlpacket.PublishMessage as PublishV5
+import com.ditchoom.mqtt5.controlpacket.PublishMessageV5 as PublishV5
 import com.ditchoom.mqtt5.controlpacket.SubscribeRequest as SubscribeV5
 
 /**
@@ -89,12 +90,12 @@ class MemoryPressureTest {
         val payload = BufferFactory.Default.allocate(128)
         repeat(128) { payload.writeByte((it % 256).toByte()) }
         payload.resetForRead()
-        return PublishV4
-            .buildPayload(
-                topicName = TopicName.fromOrThrow("pressure/test/topic"),
-                qos = QualityOfService.AT_LEAST_ONCE,
-                payload = payload,
-            ).maybeCopyWithNewPacketIdentifier(id)
+        return PublishV4.ofRaw(
+            topic = TopicName.fromOrThrow("pressure/test/topic"),
+            qos = QualityOfService.AT_LEAST_ONCE,
+            payload = payload,
+            packetIdentifier = id,
+        )
     }
 
     private fun buildV4Subscribe(): ControlPacket =
@@ -109,10 +110,11 @@ class MemoryPressureTest {
     private fun buildV5Connect(): ControlPacket = ConnectV5(clientId = "pressure-test-v5-client")
 
     private fun buildV5Publish(id: Int): ControlPacket =
-        PublishV5(
-            topicName = "pressure/test/topic",
+        PublishV5.ofRaw(
+            topic = TopicName.fromOrThrow("pressure/test/topic"),
             qos = QualityOfService.AT_LEAST_ONCE,
-        ).maybeCopyWithNewPacketIdentifier(id)
+            packetIdentifier = id,
+        )
 
     private fun buildV5Subscribe(): ControlPacket =
         SubscribeV5(
@@ -267,12 +269,12 @@ class MemoryPressureTest {
             repeat(4096) { i -> payload.writeByte((i % 256).toByte()) }
             payload.resetForRead()
             val pub =
-                PublishV4
-                    .buildPayload(
-                        topicName = TopicName.fromOrThrow("pressure/large"),
-                        qos = QualityOfService.AT_LEAST_ONCE,
-                        payload = payload,
-                    ).maybeCopyWithNewPacketIdentifier(1)
+                PublishV4.ofRaw(
+                    topic = TopicName.fromOrThrow("pressure/large"),
+                    qos = QualityOfService.AT_LEAST_ONCE,
+                    payload = payload,
+                    packetIdentifier = 1,
+                )
             val buf = pub.serialize()
             buf.resetForRead()
             ControlPacketV4.from(buf)
@@ -285,12 +287,12 @@ class MemoryPressureTest {
             repeat(4096) { j -> payload.writeByte((j % 256).toByte()) }
             payload.resetForRead()
             val pub =
-                PublishV4
-                    .buildPayload(
-                        topicName = TopicName.fromOrThrow("pressure/large"),
-                        qos = QualityOfService.AT_LEAST_ONCE,
-                        payload = payload,
-                    ).maybeCopyWithNewPacketIdentifier(i % 65535 + 1)
+                PublishV4.ofRaw(
+                    topic = TopicName.fromOrThrow("pressure/large"),
+                    qos = QualityOfService.AT_LEAST_ONCE,
+                    payload = payload,
+                    packetIdentifier = i % 65535 + 1,
+                )
             val buf = pub.serialize()
             buf.resetForRead()
             ControlPacketV4.from(buf)
@@ -348,7 +350,7 @@ class MemoryPressureTest {
         // Warmup
         repeat(1000) {
             for (packet in packets) {
-                val buf = listOf(packet).toBuffer(factory)
+                val buf = listOf(packet).toBuffer(factory) as PlatformBuffer
                 buf.resetForWrite()
                 buf.freeNativeMemory()
             }
@@ -358,7 +360,7 @@ class MemoryPressureTest {
 
         repeat(iterations) {
             for (packet in packets) {
-                val buf = listOf(packet).toBuffer(factory)
+                val buf = listOf(packet).toBuffer(factory) as PlatformBuffer
                 buf.resetForWrite()
                 buf.freeNativeMemory()
             }
@@ -388,7 +390,7 @@ class MemoryPressureTest {
         // Warmup
         repeat(1000) {
             for (packet in packets) {
-                val buf = packet.serialize()
+                val buf = packet.serialize() as PlatformBuffer
                 buf.freeNativeMemory()
             }
         }
@@ -397,7 +399,7 @@ class MemoryPressureTest {
 
         repeat(iterations) {
             for (packet in packets) {
-                val buf = packet.serialize()
+                val buf = packet.serialize() as PlatformBuffer
                 buf.freeNativeMemory()
             }
         }
@@ -415,7 +417,7 @@ class MemoryPressureTest {
         // Warmup
         repeat(1000) {
             for (packet in packets) {
-                val buf = listOf(packet).toBuffer(factory)
+                val buf = listOf(packet).toBuffer(factory) as PlatformBuffer
                 buf.resetForRead()
                 ControlPacketV4.from(buf)
                 buf.freeNativeMemory()
@@ -426,7 +428,7 @@ class MemoryPressureTest {
 
         repeat(iterations) {
             for (packet in packets) {
-                val buf = listOf(packet).toBuffer(factory)
+                val buf = listOf(packet).toBuffer(factory) as PlatformBuffer
                 buf.resetForRead()
                 ControlPacketV4.from(buf)
                 buf.freeNativeMemory()

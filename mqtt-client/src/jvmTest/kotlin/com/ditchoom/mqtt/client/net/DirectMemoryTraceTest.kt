@@ -8,7 +8,7 @@ import java.lang.management.ManagementFactory
 import javax.management.ObjectName
 import kotlin.test.Test
 import com.ditchoom.mqtt3.controlpacket.ConnectionRequest as ConnectV4
-import com.ditchoom.mqtt3.controlpacket.PublishMessage as PublishV4
+import com.ditchoom.mqtt3.controlpacket.PublishMessageV4 as PublishV4
 
 /**
  * Trace where direct memory allocations come from.
@@ -60,12 +60,12 @@ class DirectMemoryTraceTest {
         repeat(128) { payload.writeByte(it.toByte()) }
         payload.resetForRead()
         val pub =
-            PublishV4
-                .buildPayload(
-                    topicName = TopicName.fromOrThrow("test/trace"),
-                    qos = QualityOfService.AT_LEAST_ONCE,
-                    payload = payload,
-                ).maybeCopyWithNewPacketIdentifier(1)
+            PublishV4.ofRaw(
+                topic = TopicName.fromOrThrow("test/trace"),
+                qos = QualityOfService.AT_LEAST_ONCE,
+                payload = payload,
+                packetIdentifier = 1,
+            )
         println("  publish packetSize = ${pub.packetSize()} bytes")
         val pubSerialized = pub.serialize()
         printDirect("after 1 PUBLISH serialize (${pub.packetSize()}B)")

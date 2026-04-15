@@ -2,6 +2,7 @@ package com.ditchoom.mqtt.client.net
 
 import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Default
+import com.ditchoom.buffer.PlatformBuffer
 import com.ditchoom.buffer.deterministic
 import com.ditchoom.buffer.managed
 import com.ditchoom.buffer.pool.BufferPool
@@ -18,7 +19,7 @@ import javax.management.ObjectName
 import kotlin.test.Test
 import kotlin.time.measureTime
 import com.ditchoom.mqtt3.controlpacket.ConnectionRequest as ConnectV4
-import com.ditchoom.mqtt3.controlpacket.PublishMessage as PublishV4
+import com.ditchoom.mqtt3.controlpacket.PublishMessageV4 as PublishV4
 import com.ditchoom.mqtt3.controlpacket.SubscribeRequest as SubscribeV4
 
 /**
@@ -121,12 +122,12 @@ class FactoryComparisonBenchmark {
         payload.resetForRead()
         return listOf(
             ConnectV4(payload = ConnectV4.Payload(clientId = "bench")),
-            PublishV4
-                .buildPayload(
-                    topicName = TopicName.fromOrThrow("bench/topic"),
-                    qos = QualityOfService.AT_LEAST_ONCE,
-                    payload = payload,
-                ).maybeCopyWithNewPacketIdentifier(1),
+            PublishV4.ofRaw(
+                topic = TopicName.fromOrThrow("bench/topic"),
+                qos = QualityOfService.AT_LEAST_ONCE,
+                payload = payload,
+                packetIdentifier = 1,
+            ),
             SubscribeV4(packetIdentifier = 1.toUShort(), topic = "bench/+", qos = QualityOfService.AT_LEAST_ONCE),
         )
     }
@@ -136,12 +137,12 @@ class FactoryComparisonBenchmark {
         repeat(4096) { payload.writeByte((it % 256).toByte()) }
         payload.resetForRead()
         return listOf(
-            PublishV4
-                .buildPayload(
-                    topicName = TopicName.fromOrThrow("bench/large"),
-                    qos = QualityOfService.EXACTLY_ONCE,
-                    payload = payload,
-                ).maybeCopyWithNewPacketIdentifier(1),
+            PublishV4.ofRaw(
+                topic = TopicName.fromOrThrow("bench/large"),
+                qos = QualityOfService.EXACTLY_ONCE,
+                payload = payload,
+                packetIdentifier = 1,
+            ),
         )
     }
 
@@ -157,7 +158,7 @@ class FactoryComparisonBenchmark {
         // Warmup
         repeat(2_000) {
             for (p in packets) {
-                val buf = listOf(p).toBuffer(factory)
+                val buf = listOf(p).toBuffer(factory) as PlatformBuffer
                 buf.resetForWrite()
                 buf.freeNativeMemory()
             }
@@ -171,7 +172,7 @@ class FactoryComparisonBenchmark {
             measureTime {
                 repeat(iterations) {
                     for (p in packets) {
-                        val buf = listOf(p).toBuffer(factory)
+                        val buf = listOf(p).toBuffer(factory) as PlatformBuffer
                         buf.resetForWrite()
                         buf.freeNativeMemory()
                     }
@@ -217,7 +218,7 @@ class FactoryComparisonBenchmark {
         // Warmup
         repeat(2_000) {
             for (p in packets) {
-                val buf = listOf(p).toBuffer(factory)
+                val buf = listOf(p).toBuffer(factory) as PlatformBuffer
                 buf.resetForRead()
                 ControlPacketV4.from(buf)
                 buf.freeNativeMemory()
@@ -232,7 +233,7 @@ class FactoryComparisonBenchmark {
             measureTime {
                 repeat(iterations) {
                     for (p in packets) {
-                        val buf = listOf(p).toBuffer(factory)
+                        val buf = listOf(p).toBuffer(factory) as PlatformBuffer
                         buf.resetForRead()
                         ControlPacketV4.from(buf)
                         buf.freeNativeMemory()
@@ -449,9 +450,9 @@ class FactoryComparisonBenchmark {
         // Warmup both
         repeat(5_000) {
             for (p in packets) {
-                val b1 = listOf(p).toBuffer(BufferFactory.Default)
+                val b1 = listOf(p).toBuffer(BufferFactory.Default) as PlatformBuffer
                 b1.freeNativeMemory()
-                val b2 = listOf(p).toBuffer(pooledFactory)
+                val b2 = listOf(p).toBuffer(pooledFactory) as PlatformBuffer
                 b2.freeNativeMemory()
             }
         }
@@ -479,7 +480,7 @@ class FactoryComparisonBenchmark {
             // Default
             repeat(iters) {
                 for (p in packets) {
-                    val buf = listOf(p).toBuffer(BufferFactory.Default)
+                    val buf = listOf(p).toBuffer(BufferFactory.Default) as PlatformBuffer
                     buf.resetForWrite()
                     buf.freeNativeMemory()
                 }
@@ -489,7 +490,7 @@ class FactoryComparisonBenchmark {
             // Pooled
             repeat(iters) {
                 for (p in packets) {
-                    val buf = listOf(p).toBuffer(pooledFactory)
+                    val buf = listOf(p).toBuffer(pooledFactory) as PlatformBuffer
                     buf.resetForWrite()
                     buf.freeNativeMemory()
                 }

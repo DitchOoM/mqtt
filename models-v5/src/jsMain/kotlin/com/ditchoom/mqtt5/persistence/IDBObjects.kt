@@ -8,7 +8,7 @@ import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.ISubscription
 import com.ditchoom.mqtt.controlpacket.PublishMessage
-import com.ditchoom.mqtt.controlpacket.payloadAsReadBufferOrNull
+import com.ditchoom.mqtt.controlpacket.payloadAsByteArrayOrNull
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.TopicName
@@ -176,7 +176,7 @@ data class PersistablePublishMessage(
             null
         },
         pub.properties.contentType,
-        (pub.payloadAsReadBufferOrNull() as? JsBuffer)?.buffer,
+        pub.payloadAsByteArrayOrNull()?.unsafeCast<Int8Array>(),
         0,
     )
 }

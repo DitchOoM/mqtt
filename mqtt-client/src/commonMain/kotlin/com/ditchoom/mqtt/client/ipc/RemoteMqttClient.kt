@@ -3,6 +3,7 @@ package com.ditchoom.mqtt.client.ipc
 import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.ReadBuffer
+import com.ditchoom.buffer.freeIfNeeded
 import com.ditchoom.mqtt.Persistence
 import com.ditchoom.mqtt.client.ConnectionState
 import com.ditchoom.mqtt.client.MqttClient
@@ -25,7 +26,7 @@ import com.ditchoom.mqtt.controlpacket.IUnsubscribeRequest
 import com.ditchoom.mqtt.controlpacket.NO_PACKET_ID
 import com.ditchoom.mqtt.controlpacket.PublishMessage
 import com.ditchoom.mqtt.controlpacket.QualityOfService
-import com.ditchoom.mqtt.controlpacket.payloadAsReadBufferOrNull
+import com.ditchoom.mqtt.controlpacket.rawPayload
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.BufferOverflow
@@ -166,13 +167,17 @@ abstract class RemoteMqttClient(
     ): kotlinx.coroutines.flow.Flow<Pair<PublishMessage, P>> =
         kotlinx.coroutines.flow.flow {
             observe(filter).collect { pub ->
-                val raw = pub.payloadAsReadBufferOrNull()
+                val raw = pub.rawPayload()
                 val decoded =
-                    if (raw == null) {
-                        codec.decode(BufferFactory.Default.allocate(0))
+                    if (raw == null || raw.remaining() == 0) {
+                        codec.decode(ReadBuffer.EMPTY_BUFFER)
                     } else {
-                        raw.position(0)
-                        codec.decode(raw)
+                        val slice = raw.slice()
+                        try {
+                            codec.decode(slice)
+                        } finally {
+                            slice.freeIfNeeded()
+                        }
                     }
                 emit(pub to decoded)
             }

@@ -17,7 +17,7 @@ import com.ditchoom.mqtt.controlpacket.PublishMessage
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.TopicName
-import com.ditchoom.mqtt.controlpacket.payloadAsReadBufferOrNull
+import com.ditchoom.mqtt.controlpacket.rawPayload
 import com.ditchoom.mqtt3.controlpacket.ConnectionRequest
 import com.ditchoom.socket.NetworkCapabilities
 import com.ditchoom.socket.getNetworkCapabilities
@@ -347,7 +347,7 @@ class MqttClientTest {
         clientLwt.shutdown(sendDisconnect = false)
         val message = receivedLwt.await()
         assertEquals(message.topic.toString(), willTopic.toString())
-        val payload = checkNotNull(message.payloadAsReadBufferOrNull())
+        val payload = checkNotNull(message.rawPayload())
         assertEquals("yolo", payload.readString(payload.remaining(), Charset.UTF8))
     }
 
@@ -381,7 +381,7 @@ class MqttClientTest {
         val collectJob =
             scope.launch {
                 flow.filterIsInstance<PublishMessage>().take(3).collect {
-                    val payload = it.payloadAsReadBufferOrNull() ?: EMPTY_BUFFER
+                    val payload = it.rawPayload() ?: EMPTY_BUFFER
                     val qosValue = it.qualityOfService.integerValue.toString()
                     assertEquals(payloadString + qosValue, payload.readString(payload.limit()))
                 }

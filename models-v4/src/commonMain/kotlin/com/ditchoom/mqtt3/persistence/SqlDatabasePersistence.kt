@@ -22,7 +22,7 @@ import com.ditchoom.mqtt.controlpacket.IUnsubscribeAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IUnsubscribeRequest
 import com.ditchoom.mqtt.controlpacket.NO_PACKET_ID
 import com.ditchoom.mqtt.controlpacket.PublishMessage
-import com.ditchoom.mqtt.controlpacket.payloadAsReadBufferOrNull
+import com.ditchoom.mqtt.controlpacket.payloadAsByteArrayOrNull
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.TopicName
@@ -321,9 +321,7 @@ class SqlDatabasePersistence(
         if (packet.qualityOfService == QualityOfService.AT_MOST_ONCE) {
             return@withContext
         }
-        val rawPayload = packet.payloadAsReadBufferOrNull()
-        val payload = rawPayload?.readByteArray(rawPayload.remaining())
-        rawPayload?.resetForRead()
+        val payload = packet.payloadAsByteArrayOrNull()
         pubQueries.insertPublishMessage(
             broker.identifier.toLong(),
             1L,
@@ -477,9 +475,7 @@ class SqlDatabasePersistence(
             return NO_PACKET_ID
         }
         val brokerId = broker.identifier
-        val rawPayload = pub.payloadAsReadBufferOrNull()
-        val payload = rawPayload?.readByteArray(rawPayload.remaining())
-        rawPayload?.resetForRead()
+        val payload = pub.payloadAsByteArrayOrNull()
         val packetId =
             withContext(dispatcher) {
                 packetIdMutex.withLock {

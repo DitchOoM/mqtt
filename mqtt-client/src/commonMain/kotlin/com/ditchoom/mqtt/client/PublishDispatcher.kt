@@ -1,7 +1,10 @@
 package com.ditchoom.mqtt.client
 
+import com.ditchoom.buffer.ReadBuffer
+import com.ditchoom.buffer.freeIfNeeded
 import com.ditchoom.mqtt.controlpacket.PublishMessage
 import com.ditchoom.mqtt.controlpacket.TopicFilter
+import com.ditchoom.mqtt.controlpacket.rawPayload
 
 /**
  * Dispatches incoming publish messages to registered [SubscriberEntry] instances
@@ -47,8 +50,25 @@ internal class PublishDispatcher {
     suspend fun dispatch(publish: PublishMessage): Boolean {
         val entries = trie.matchAll(publish.topic)
         if (entries.isEmpty()) return false
+        val rawPayload = publish.rawPayload()
         for (entry in entries) {
-            entry.dispatch(publish)
+            when (entry) {
+                is SubscriberEntry.Untyped -> entry.dispatch(publish)
+                is SubscriberEntry.Typed<*> -> {
+                    if (rawPayload == null || rawPayload.remaining() == 0) {
+                        // Empty-payload PUBLISH: hand the shared EMPTY_BUFFER to the codec.
+                        // No slice is owned, so no freeIfNeeded — the singleton must not be freed.
+                        entry.dispatch(publish, ReadBuffer.EMPTY_BUFFER)
+                    } else {
+                        val slice = rawPayload.slice()
+                        try {
+                            entry.dispatch(publish, slice)
+                        } finally {
+                            slice.freeIfNeeded()
+                        }
+                    }
+                }
+            }
         }
         return true
     }

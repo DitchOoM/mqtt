@@ -4,46 +4,58 @@ import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
+import com.ditchoom.mqtt.codec.IdentityBufferCodec
 import com.ditchoom.mqtt.codec.PayloadCodec
 
 /**
- * Materialize a [PublishMessage]'s payload as a [ReadBuffer] using its attached codec.
- *
- * Used by persistence/IPC machinery that needs the raw wire bytes of the payload. Returns
- * `null` when the payload is empty (size 0).
- *
- * Callers must not retain the returned buffer across buffer-pool boundaries; copy the bytes
- * out (e.g., via [ReadBuffer.readByteArray]) if long-term retention is needed.
- */
-fun PublishMessage.payloadAsReadBufferOrNull(): ReadBuffer? {
-    val materializer = this as? PublishMessagePayloadMaterializer<*> ?: return null
-    return materializer.materializePayload()
-}
-
-/**
- * Contract for PUBLISH implementations to expose their payload as raw bytes for persistence
- * and IPC. Each concrete v4/v5 PublishMessage type implements this.
- *
- * Not intended for direct use by application code — prefer [payloadAsReadBufferOrNull] or
- * [encodePayloadTo].
- *
- * This is the generic typed form of [PublishMessage]. Client code that cares about the
- * decoded payload type `P` can depend on this interface directly (via typed subscribe /
- * observe APIs), while untyped machinery (dispatchers, persistence, wire encoding) depends
- * on the non-generic [PublishMessage] marker.
+ * Contract for PUBLISH implementations carrying a typed payload + its codec. Each
+ * concrete v4/v5 PublishMessage type implements this. Not intended for direct use by
+ * application code — prefer [rawPayload], [payloadAsByteArrayOrNull], or [encodePayloadTo].
  */
 interface PublishMessagePayloadMaterializer<P> : PublishMessage {
     val payload: P
     val codec: PayloadCodec<P>
+}
 
-    fun materializePayload(): ReadBuffer? {
-        val size = codec.encodedSize(payload)
+/**
+ * Shared reference to the wire-bytes payload, non-null only when the payload is
+ * already a [ReadBuffer] (i.e. a wire-decoded or `ofRaw`-constructed publish). The
+ * returned buffer shares position/limit with the message's stored payload — if
+ * you need independent read progress (e.g. multi-subscriber dispatch), call
+ * [ReadBuffer.slice] on the result.
+ *
+ * Zero-copy: no bytes are read, allocated, or moved. For persistence and IPC paths
+ * that need a `ByteArray`, use [payloadAsByteArrayOrNull] instead.
+ */
+fun PublishMessage.rawPayload(): ReadBuffer? {
+    val m = this as? PublishMessagePayloadMaterializer<*> ?: return null
+    return if (m.codec === IdentityBufferCodec) m.payload as ReadBuffer else null
+}
+
+/**
+ * Payload as bytes for storage (SQLite BLOB / IndexedDB) or IPC (Android AIDL parcel).
+ * When the underlying payload is already a [ReadBuffer] (identity codec), bytes are
+ * copied directly from a zero-copy slice. Otherwise the codec is invoked to encode
+ * the typed payload.
+ *
+ * Returns `null` for zero-size payloads.
+ */
+fun PublishMessage.payloadAsByteArrayOrNull(): ByteArray? {
+    val m = this as? PublishMessagePayloadMaterializer<*> ?: return null
+    if (m.codec === IdentityBufferCodec) {
+        val raw = m.payload as ReadBuffer
+        val size = raw.remaining()
         if (size == 0) return null
-        val buf = BufferFactory.Default.allocate(size)
-        codec.encode(buf, payload)
-        buf.resetForRead()
-        return buf
+        return raw.slice().readByteArray(size)
     }
+    @Suppress("UNCHECKED_CAST")
+    val mAny = m as PublishMessagePayloadMaterializer<Any?>
+    val size = mAny.codec.encodedSize(mAny.payload)
+    if (size == 0) return null
+    val buf = BufferFactory.Default.allocate(size)
+    mAny.codec.encode(buf, mAny.payload)
+    buf.resetForRead()
+    return buf.readByteArray(size)
 }
 
 /**

@@ -53,7 +53,13 @@ class IPCTest {
                     serviceRule.bindService(i, connection, Context.BIND_AUTO_CREATE)
                 }
             // inMemory will not work because it's separate processes
-            val service: MqttService = AndroidRemoteMqttServiceClient(serviceBinder, LocalMqttService.buildService(context))
+            // Client-side stub connection factory — the remote MqttManagerService owns real connections.
+            val clientSideService =
+                LocalMqttService.buildService(
+                    connectionFactory = { throw UnsupportedOperationException("Client proxy does not create connections directly") },
+                    androidContext = context,
+                )
+            val service: MqttService = AndroidRemoteMqttServiceClient(serviceBinder, clientSideService)
             service.allBrokers().forEach { service.removeBroker(it.brokerId, it.protocolVersion) }
 
             val broker = service.addBroker(listOf(testWsMqttConnectionOptions), connectionRequestMqtt4)

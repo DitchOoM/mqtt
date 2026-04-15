@@ -37,7 +37,16 @@ object MqttServiceHelper {
                 }
                 this.serviceConnection = serviceConnection
             }
-        val c = AndroidRemoteMqttServiceClient(serviceBinder, LocalMqttService.buildService(context, inMemory))
+        // Client-side LocalMqttService acts as a proxy — scope + persistence only, no real
+        // connections. Actual broker connections are owned by the remote MqttManagerService
+        // (different process). Stub factory throws so accidental direct use surfaces early.
+        val clientSideService =
+            LocalMqttService.buildService(
+                connectionFactory = { throw UnsupportedOperationException("Client proxy does not create connections directly; use AIDL") },
+                androidContext = context,
+                inMemory = inMemory,
+            )
+        val c = AndroidRemoteMqttServiceClient(serviceBinder, clientSideService)
         this.ipcClient = c
         return c
     }

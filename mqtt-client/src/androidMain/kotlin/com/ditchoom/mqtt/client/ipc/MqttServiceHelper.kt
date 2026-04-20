@@ -23,23 +23,25 @@ object MqttServiceHelper {
         context: Context,
         inMemory: Boolean = false,
     ): MqttService {
-        val ipcClient = ipcClient
-        if (ipcClient != null) {
-            return ipcClient
+        val existing = ipcClient
+        if (existing != null) {
+            return existing
         }
         val i = Intent(context, MqttManagerService::class.java)
         context.startService(i)
         val serviceBinder =
-            suspendCancellableCoroutine {
-                val serviceConnection = MqttServiceConnection(context, it)
-                if (!context.bindService(i, serviceConnection, Context.BIND_AUTO_CREATE)) {
-                    it.resumeWithException(RemoteException("Failed to allocate bind mqtt service"))
+            suspendCancellableCoroutine { cont ->
+                val conn = MqttServiceConnection(cont)
+                cont.invokeOnCancellation {
+                    serviceConnection = null
+                    ipcClient = null
+                    runCatching { context.unbindService(conn) }
                 }
-                this.serviceConnection = serviceConnection
+                if (!context.bindService(i, conn, Context.BIND_AUTO_CREATE)) {
+                    cont.resumeWithException(RemoteException("Failed to allocate bind mqtt service"))
+                }
+                serviceConnection = conn
             }
-        // Client-side LocalMqttService acts as a proxy — scope + persistence only, no real
-        // connections. Actual broker connections are owned by the remote MqttManagerService
-        // (different process). Stub factory throws so accidental direct use surfaces early.
         val clientSideService =
             LocalMqttService.buildService(
                 connectionFactory = { throw UnsupportedOperationException("Client proxy does not create connections directly; use AIDL") },
@@ -47,43 +49,44 @@ object MqttServiceHelper {
                 inMemory = inMemory,
             )
         val c = AndroidRemoteMqttServiceClient(serviceBinder, clientSideService)
-        this.ipcClient = c
+        ipcClient = c
         return c
     }
 
     fun unregisterService(context: Context) {
-        serviceConnection?.unbind(context)
+        val conn = serviceConnection ?: return
         serviceConnection = null
+        ipcClient = null
+        runCatching { context.unbindService(conn) }
     }
 
     class MqttServiceConnection(
-        context: Context,
         private val cont: CancellableContinuation<IBinder>,
     ) : ServiceConnection {
-        init {
-            cont.invokeOnCancellation {
-                unbind(context)
-            }
-        }
+        @Volatile
+        var bound: Boolean = false
+            private set
 
         override fun onServiceConnected(
             name: ComponentName,
             service: IBinder,
         ) {
-            cont.resume(service)
+            bound = true
+            if (cont.isActive) {
+                cont.resume(service)
+            }
         }
 
         override fun onServiceDisconnected(name: ComponentName) {
-            cont.resumeWithException(
-                MqttException(
-                    "Failed to connect to service $name",
-                    ReasonCode.NOT_AUTHORIZED.byte,
-                ),
-            )
-        }
-
-        fun unbind(context: Context) {
-            context.unbindService(this)
+            bound = false
+            if (cont.isActive) {
+                cont.resumeWithException(
+                    MqttException(
+                        "Failed to connect to service $name",
+                        ReasonCode.NOT_AUTHORIZED.byte,
+                    ),
+                )
+            }
         }
     }
 }

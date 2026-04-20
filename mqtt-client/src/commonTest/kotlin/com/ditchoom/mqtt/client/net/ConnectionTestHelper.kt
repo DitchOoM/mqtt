@@ -11,8 +11,7 @@ import com.ditchoom.mqtt.controlpacket.ControlPacketFactory
  * (same behaviour) lives in commonMain now. Kept here so existing test call sites
  * (`createConnectFactory(broker)`) don't need to churn.
  */
-fun createConnectFactory(broker: MqttBroker): suspend () -> Connection<ControlPacket> =
-    defaultConnectionFactory(broker)
+fun createConnectFactory(broker: MqttBroker): suspend () -> Connection<ControlPacket> = defaultConnectionFactory(broker)
 
 fun createConnectFactory(
     connectionOps: Collection<MqttConnectionOptions>,

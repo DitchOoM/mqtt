@@ -1,8 +1,8 @@
 package com.ditchoom.mqtt.client
 
 import com.ditchoom.buffer.ReadBuffer
-import com.ditchoom.buffer.freeIfNeeded
 import com.ditchoom.buffer.flow.Connection
+import com.ditchoom.buffer.freeIfNeeded
 import com.ditchoom.mqtt.Persistence
 import com.ditchoom.mqtt.codec.PayloadCodec
 import com.ditchoom.mqtt.connection.MqttBroker

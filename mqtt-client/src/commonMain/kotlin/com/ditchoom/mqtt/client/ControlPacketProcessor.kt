@@ -240,9 +240,10 @@ class ControlPacketProcessor(
                 .toInt()
                 .seconds
         if (interval == 0.seconds) return
+        val checkInterval = interval / 2
         while (currentCoroutineContext().isActive) {
-            delay(interval)
-            if ((TimeSource.Monotonic.markNow() - lastActivityMark) >= interval) {
+            delay(checkInterval)
+            if ((TimeSource.Monotonic.markNow() - lastActivityMark) >= checkInterval) {
                 writeChannel.send(listOf(broker.connectionRequest.controlPacketFactory.pingRequest()))
                 pingCount++
                 noteActivity()

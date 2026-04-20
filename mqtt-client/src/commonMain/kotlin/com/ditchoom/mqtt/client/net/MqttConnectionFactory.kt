@@ -1,6 +1,7 @@
 package com.ditchoom.mqtt.client.net
 
 import com.ditchoom.buffer.flow.Connection
+import com.ditchoom.buffer.flow.mapNotNull
 import com.ditchoom.mqtt.client.MqttCodec
 import com.ditchoom.mqtt.connection.MqttBroker
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
@@ -11,14 +12,10 @@ import com.ditchoom.socket.SocketOptions
 import com.ditchoom.socket.TlsConfig
 import com.ditchoom.socket.transport.CodecConnection
 import com.ditchoom.socket.transport.TcpTransport
+import com.ditchoom.websocket.WebSocketMessage
+import com.ditchoom.websocket.connectWebSocket
+import com.ditchoom.websocket.WebSocketConnectionOptions as WsLibOptions
 
-/**
- * Default MQTT [Connection] factory for production use. Iterates the broker's configured
- * [MqttConnectionOptions] in order, returning the first endpoint that connects.
- *
- * TCP connections use [CodecConnection] with [MqttCodec] and [TcpTransport]. WebSocket
- * options currently throw — callers needing WebSocket should supply their own factory.
- */
 fun defaultConnectionFactory(broker: MqttBroker): suspend () -> Connection<ControlPacket> =
     defaultConnectionFactory(broker.connectionOps, broker.connectionRequest.controlPacketFactory)
 
@@ -46,27 +43,13 @@ private suspend fun connectSingle(
 ): Connection<ControlPacket> =
     when (connectionOp) {
         is MqttConnectionOptions.SocketConnection -> {
-            val socketOptions =
-                if (connectionOp.tlsEnabled) {
-                    SocketOptions(
-                        tls =
-                            TlsConfig(
-                                verifyCertificates = connectionOp.tlsVerifyCerts,
-                                verifyHostname = connectionOp.tlsVerifyHostname,
-                                allowExpiredCertificates = connectionOp.tlsAllowExpired,
-                                allowSelfSigned = connectionOp.tlsAllowSelfSigned,
-                            ),
-                    )
-                } else {
-                    SocketOptions()
-                }
             CodecConnection.connect(
                 connectionOp.host,
                 connectionOp.port,
                 MqttCodec(factory),
                 TcpTransport(),
                 ConnectionOptions(
-                    socketOptions = socketOptions,
+                    socketOptions = buildSocketOptions(connectionOp),
                     connectionTimeout = connectionOp.connectionTimeout,
                     readTimeout = connectionOp.readTimeout,
                     writeTimeout = connectionOp.writeTimeout,
@@ -74,9 +57,57 @@ private suspend fun connectSingle(
             )
         }
 
-        is MqttConnectionOptions.WebSocketConnectionOptions ->
-            throw UnsupportedOperationException(
-                "WebSocket transport not yet wired into defaultConnectionFactory. " +
-                    "Supply a custom factory to LocalMqttService.buildService() for WebSocket brokers.",
+        is MqttConnectionOptions.WebSocketConnectionOptions -> {
+            val byteStream =
+                TcpTransport().connect(
+                    connectionOp.host,
+                    connectionOp.port,
+                    ConnectionOptions(
+                        socketOptions = buildSocketOptions(connectionOp),
+                        connectionTimeout = connectionOp.connectionTimeout,
+                        readTimeout = connectionOp.readTimeout,
+                        writeTimeout = connectionOp.writeTimeout,
+                    ),
+                )
+            val wsConnection: Connection<WebSocketMessage<ControlPacket>> =
+                connectWebSocket(
+                    transport = byteStream,
+                    connectionOptions =
+                        WsLibOptions(
+                            name = connectionOp.host,
+                            port = connectionOp.port,
+                            tls = connectionOp.tlsEnabled,
+                            connectionTimeout = connectionOp.connectionTimeout,
+                            readTimeout = connectionOp.readTimeout,
+                            writeTimeout = connectionOp.writeTimeout,
+                            websocketEndpoint = connectionOp.websocketEndpoint,
+                            protocols = connectionOp.protocols,
+                        ),
+                    binaryCodec = MqttCodec(factory),
+                )
+            wsConnection.mapNotNull(
+                encode = { packet -> WebSocketMessage.Binary(packet) },
+                decode = { message ->
+                    when (message) {
+                        is WebSocketMessage.Binary -> message.payload
+                        else -> null
+                    }
+                },
             )
+        }
+    }
+
+private fun buildSocketOptions(connectionOp: MqttConnectionOptions): SocketOptions =
+    if (connectionOp.tlsEnabled) {
+        SocketOptions(
+            tls =
+                TlsConfig(
+                    verifyCertificates = connectionOp.tlsVerifyCerts,
+                    verifyHostname = connectionOp.tlsVerifyHostname,
+                    allowExpiredCertificates = connectionOp.tlsAllowExpired,
+                    allowSelfSigned = connectionOp.tlsAllowSelfSigned,
+                ),
+        )
+    } else {
+        SocketOptions()
     }

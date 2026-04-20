@@ -64,6 +64,7 @@ kotlin {
             implementation(libs.buffer.codec)
             implementation(libs.buffer.flow)
             implementation(libs.socket)
+            implementation(libs.websocket)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
@@ -89,6 +90,11 @@ kotlin {
             implementation(libs.androidx.test.runner)
             implementation(libs.androidx.test.rules)
             implementation(libs.androidx.test.core.ktx)
+        }
+
+        val jvmTest by getting
+        jvmTest.dependencies {
+            implementation(libs.testcontainers)
         }
     }
 }
@@ -144,6 +150,7 @@ android {
     }
     defaultConfig {
         minSdk = 21
+        targetSdk = 36
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     publishing {
@@ -156,6 +163,43 @@ android {
         disable += "EnsureInitializerMetadata"
     }
     namespace = "com.ditchoom.mqtt.client"
+}
+
+// Mosquitto container for Android instrumented tests.
+// Run with: ./gradlew :mqtt-client:connectedDebugAndroidTest -PuseMosquittoContainer=true
+if (project.hasProperty("useMosquittoContainer")) {
+    val mosquittoConf = "${project.projectDir}/src/androidInstrumentedTest/resources/mosquitto.conf"
+    val startMosquitto by tasks.registering(Exec::class) {
+        group = "testing"
+        description = "Start Mosquitto Docker container for instrumented tests"
+        commandLine(
+            "docker",
+            "run",
+            "-d",
+            "--rm",
+            "-p",
+            "1883:1883",
+            "-p",
+            "8080:8080",
+            "--name",
+            "mqtt-it",
+            "-v",
+            "$mosquittoConf:/mosquitto/config/mosquitto.conf",
+            "eclipse-mosquitto:2",
+        )
+    }
+    val stopMosquitto by tasks.registering(Exec::class) {
+        group = "testing"
+        description = "Stop Mosquitto Docker container"
+        commandLine("docker", "stop", "mqtt-it")
+        isIgnoreExitValue = true
+    }
+    afterEvaluate {
+        tasks.named("connectedDebugAndroidTest") {
+            dependsOn(startMosquitto)
+            finalizedBy(stopMosquitto)
+        }
+    }
 }
 
 // SQLDelight native linker fix (transitive dependency via models-v4/v5)

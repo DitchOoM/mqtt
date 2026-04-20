@@ -2,7 +2,6 @@ package com.ditchoom.mqtt.client.ipc
 
 import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.JsBuffer
-import com.ditchoom.buffer.PlatformBuffer
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.deterministic
 import com.ditchoom.mqtt.Persistence

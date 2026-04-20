@@ -1,7 +1,6 @@
 package com.ditchoom.mqtt.client.ipc
 
 import com.ditchoom.buffer.BufferFactory
-import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.freeIfNeeded
 import com.ditchoom.mqtt.Persistence

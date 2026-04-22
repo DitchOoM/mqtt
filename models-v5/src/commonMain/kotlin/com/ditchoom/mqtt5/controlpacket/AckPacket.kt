@@ -50,6 +50,17 @@ data class AckVariableHeader(
             validReasonCodes: Map<UByte, ReasonCode>,
             packetName: String,
         ): AckVariableHeader {
+            // MQTT 5.0 §3.4.1 / §3.5.1 / §3.6.1 / §3.7.1: ACK-family packets
+            // (PUBACK, PUBREC, PUBREL, PUBCOMP) carry at minimum a 2-byte
+            // packet identifier. Remaining length 0 or 1 is structurally
+            // malformed — the pre-fix code fell through to the full codec
+            // decode which then silently returned garbage values instead of
+            // rejecting. Reject at the top per spec.
+            if (remainingLength < 2) {
+                throw MalformedPacketException(
+                    "$packetName remaining length $remainingLength is below the 2-byte packet identifier minimum",
+                )
+            }
             if (remainingLength == 2) {
                 return AckVariableHeader(buffer.readUnsignedShort().toInt())
             }

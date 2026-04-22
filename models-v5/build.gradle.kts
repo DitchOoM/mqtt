@@ -145,3 +145,8 @@ afterEvaluate {
                 }
         }
 }
+
+// Gradle 8.14 strict-mode: sourcesJar / ktlint tasks consume KSP-generated sources; declare the dep explicitly.
+tasks
+    .matching { it.name.endsWith("SourcesJar") || it.name == "sourcesJar" || it.name == "runKtlintCheckOverCommonMainSourceSet" }
+    .configureEach { dependsOn("kspCommonMainKotlinMetadata") }

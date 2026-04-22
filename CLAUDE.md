@@ -8,6 +8,19 @@ MQTT is a Kotlin Multiplatform library providing MQTT 3.1.1 (v4) and MQTT 5.0 cl
 
 **Package:** `com.ditchoom.mqtt`
 
+## No ByteArray in Production Code
+
+Production source sets (`*Main/`) must not allocate or accept `kotlin.ByteArray`. Control-packet decode, payload dispatch, and persistence flows all run at message volume; a single missed `ByteArray` in a hot path is a guaranteed copy per packet. Use `ReadBuffer` / `WriteBuffer` from the `com.ditchoom:buffer` dependency; consume payloads via `PublishMessage.rawPayload()` (zero-copy) or `encodePayloadTo(WriteBuffer)` (direct-write) whenever possible.
+
+**Platform boundaries** where `ByteArray` is genuinely unavoidable:
+
+- **SQLDelight BLOB binding** — JDBC `PreparedStatement.setBytes(int, byte[])` and the K/N SQLite driver's `bind_blob` both take a `ByteArray`. Sites: `SqlDatabasePersistence` (v4 + v5) for Will payload, auth data, correlation data. A custom `ColumnAdapter<ReadBuffer, ByteArray>` would move this boundary but not eliminate it — tracked for Phase 4.
+- **IndexedDB on JS** — `Int8Array` keys, reached via `ByteArray.unsafeCast<Int8Array>()`.
+- **Android AIDL / `Parcel`** — `writeByteArray` takes `ByteArray`.
+- **Kotlin stdlib `Base64`** — takes / returns `ByteArray`. Used by the MQTT v5 AUTH flow.
+
+For each, annotate the call site with `@Suppress("NoByteArrayInProd")` and a one-line inline comment naming the specific driver / API. Tests (`*Test/`) may use `ByteArray` freely.
+
 ## Build Commands
 
 ```bash

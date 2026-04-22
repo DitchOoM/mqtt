@@ -149,6 +149,10 @@ class SqlDatabasePersistence(
                 brokerQueries.insertBroker()
                 val brokerId = brokerQueries.lastRowId().executeAsOne()
                 val willPayload = connect.payload.willPayload
+                // SQLDelight BLOB binding takes ByteArray at the JDBC / native
+                // SQLite driver boundary. True zero-copy needs a custom
+                // ColumnAdapter (Phase 4 architecture work).
+                @Suppress("NoByteArrayInProd") // SQLDelight BLOB boundary
                 val willPayloadByteArray = willPayload?.readByteArray(willPayload.remaining())
                 willPayload?.resetForRead()
                 connectionRequestQueries.insertConnectionRequest(

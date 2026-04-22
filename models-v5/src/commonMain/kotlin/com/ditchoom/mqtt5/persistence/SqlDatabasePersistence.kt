@@ -184,14 +184,22 @@ class SqlDatabasePersistence(
                 brokerQueries.insertBroker()
                 val brokerId = brokerQueries.lastRowId().executeAsOne()
                 val willPayload = connect.payload.willPayload
+                // SQLDelight BLOB binding takes ByteArray at the JDBC / native
+                // SQLite driver boundary — the three reads below materialise
+                // Will payload / auth data / correlation data for that call.
+                // A true zero-copy path needs a custom ColumnAdapter + per-
+                // platform driver plumbing (deferred to Phase 4).
+                @Suppress("NoByteArrayInProd")
                 val willPayloadByteArray = willPayload?.readByteArray(willPayload.remaining())
                 willPayload?.resetForRead()
                 val authPayload =
                     connect.variableHeader.properties.authentication
                         ?.data
+                @Suppress("NoByteArrayInProd") // SQLDelight BLOB boundary
                 val authData = authPayload?.let { it.readByteArray(it.remaining()) }
                 authPayload?.resetForRead()
                 val correlationData = connect.payload.willProperties?.correlationData
+                @Suppress("NoByteArrayInProd") // SQLDelight BLOB boundary
                 val willPropsCorrelationData = correlationData?.let { it.readByteArray(it.remaining()) }
                 correlationData?.resetForRead()
                 connectionRequestQueries.insertConnectionRequest(
@@ -467,6 +475,7 @@ class SqlDatabasePersistence(
                     p.properties.messageExpiryInterval,
                     p.properties.topicAlias?.toLong(),
                     p.properties.responseTopic?.toString(),
+                    @Suppress("NoByteArrayInProd") // SQLDelight BLOB boundary (correlationData)
                     p.properties.correlationData?.let { it.readByteArray(it.remaining()) },
                     subIds,
                     p.properties.contentType,
@@ -770,6 +779,7 @@ class SqlDatabasePersistence(
                             p.properties.messageExpiryInterval,
                             p.properties.topicAlias?.toLong(),
                             p.properties.responseTopic?.toString(),
+                            @Suppress("NoByteArrayInProd") // SQLDelight BLOB boundary (correlationData)
                             p.properties.correlationData
                                 ?.let { it.readByteArray(it.remaining()) },
                             subIds,

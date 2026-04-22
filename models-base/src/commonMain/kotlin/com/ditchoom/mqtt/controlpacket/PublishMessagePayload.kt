@@ -39,7 +39,18 @@ fun PublishMessage.rawPayload(): ReadBuffer? {
  * the typed payload.
  *
  * Returns `null` for zero-size payloads.
+ *
+ * This function is a deliberate platform-boundary ByteArray exit point —
+ * SQLDelight BLOB binding, IndexedDB, and Android AIDL all consume bytes, and
+ * their driver APIs ultimately require a `ByteArray` (JDBC
+ * `setBytes(int, byte[])`, `Int8Array.unsafeCast<ByteArray>`, AIDL
+ * `writeByteArray`). A zero-copy replacement would require a custom
+ * SQLDelight `ColumnAdapter<ReadBuffer, ByteArray>` plus per-platform
+ * driver plumbing — deferred to the Phase 4 ownership/borrowed buffer
+ * design cycle. Callers that don't need bytes should use [rawPayload]
+ * (zero-copy) instead.
  */
+@Suppress("NoByteArrayInProd") // platform boundary: SQL BLOB / IDB / AIDL all take ByteArray
 fun PublishMessage.payloadAsByteArrayOrNull(): ByteArray? {
     val m = this as? PublishMessagePayloadMaterializer<*> ?: return null
     if (m.codec === IdentityBufferCodec) {

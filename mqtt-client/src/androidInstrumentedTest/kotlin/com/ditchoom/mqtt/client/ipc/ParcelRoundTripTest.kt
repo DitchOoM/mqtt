@@ -8,11 +8,11 @@ import com.ditchoom.buffer.JvmBuffer
 import com.ditchoom.buffer.ParcelableSharedMemoryBuffer
 import com.ditchoom.buffer.managed
 import com.ditchoom.buffer.shared
+import com.ditchoom.mqtt.controlpacket.QualityOfService
+import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt3.controlpacket.ConnectionAcknowledgment
 import com.ditchoom.mqtt3.controlpacket.ControlPacketV4Factory
 import com.ditchoom.mqtt3.controlpacket.PublishMessageV4
-import com.ditchoom.mqtt.controlpacket.QualityOfService
-import com.ditchoom.mqtt.controlpacket.TopicName
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNotSame
@@ -185,7 +185,10 @@ class ParcelRoundTripTest {
     @Test
     fun roundTripProducesDistinctInstance() {
         val original = BufferFactory.shared().allocate(4) as JvmBuffer
-        original.writeByte(1); original.writeByte(2); original.writeByte(3); original.writeByte(4)
+        original.writeByte(1)
+        original.writeByte(2)
+        original.writeByte(3)
+        original.writeByte(4)
         original.resetForRead()
 
         val restored = roundTripThroughParcel(original)

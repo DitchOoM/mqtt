@@ -50,7 +50,7 @@ interface MqttService {
 
     companion object {
         suspend fun buildNewService(
-            connectionFactory: (MqttBroker) -> suspend () -> Connection<ControlPacket>,
+            connectionFactory: (MqttBroker) -> suspend (MqttConnectionOptions) -> Connection<ControlPacket>,
             ipcEnabled: Boolean,
             androidContextOrAbstractWorker: Any? = null,
             inMemory: Boolean = false,

@@ -44,7 +44,9 @@ object MqttServiceHelper {
             }
         val clientSideService =
             LocalMqttService.buildService(
-                connectionFactory = { throw UnsupportedOperationException("Client proxy does not create connections directly; use AIDL") },
+                connectionFactory = { _ ->
+                    { _ -> throw UnsupportedOperationException("Client proxy does not create connections directly; use AIDL") }
+                },
                 androidContext = context,
                 inMemory = inMemory,
             )

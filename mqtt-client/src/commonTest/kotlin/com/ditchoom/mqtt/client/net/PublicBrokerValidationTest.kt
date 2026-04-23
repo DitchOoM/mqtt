@@ -1,7 +1,6 @@
 package com.ditchoom.mqtt.client.net
 
 import com.ditchoom.buffer.flow.Connection
-import com.ditchoom.mqtt.client.MqttCodec
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.IConnectionAcknowledgment
@@ -13,13 +12,8 @@ import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt3.controlpacket.ConnectionRequest
-import com.ditchoom.socket.ConnectionOptions
 import com.ditchoom.socket.NetworkCapabilities
-import com.ditchoom.socket.SocketOptions
-import com.ditchoom.socket.TlsConfig
 import com.ditchoom.socket.getNetworkCapabilities
-import com.ditchoom.socket.transport.CodecConnection
-import com.ditchoom.socket.transport.TcpTransport
 import kotlinx.coroutines.flow.first
 import kotlin.random.Random
 import kotlin.test.Ignore
@@ -43,13 +37,13 @@ import com.ditchoom.mqtt5.controlpacket.ConnectionRequest as ConnectionRequestV5
  * - 8080: MQTT over WebSocket unencrypted
  * - 8081: MQTT over WebSocket TLS
  *
- * All `*Websocket*` tests below are `@Ignore`d: [openConnection] throws for WS transport
- * because this test harness has no WS → `Connection<ControlPacket>` adapter yet. The real
- * factory at mqtt-client commonMain `MqttConnectionFactory.connectSingle` shows the shape
- * (TcpTransport → byteStream → `connectWebSocket(binaryCodec = MqttCodec(factory))` →
- * `mapNotNull` into `Connection<ControlPacket>`). Port that into this class (or extract a
- * shared helper) to re-enable. `mosquittoTcpPlaintext`/`V5` are ignored separately for
- * external-endpoint flake.
+ * [openConnection] delegates to the production [defaultSingleConnection] factory, so TCP
+ * and WebSocket paths go through exactly the same code as runtime clients. The only tests
+ * still `@Ignore`d are the `test.mosquitto.org` variants (`mosquittoTcpPlaintext(V5)`,
+ * `mosquittoWebsocketPlaintext(V5)`, `mosquittoWebsocketTls(V5)`) — that endpoint flakes
+ * the same way websocket's `mosquittoWssConnect` does: handshake accepts, data path
+ * hangs or drops. HiveMQ public-broker endpoints exercise the equivalent TCP / WS / TLS
+ * matrix on a stable endpoint.
  */
 class PublicBrokerValidationTest {
     // --- HiveMQ public broker (standard TLS certs) ---
@@ -72,7 +66,6 @@ class PublicBrokerValidationTest {
             )
         }
 
-    @Ignore
     @Test
     fun hivemqWebsocketPlaintext() =
         runTestNoTimeSkipping(timeout = 30.seconds) {
@@ -88,7 +81,6 @@ class PublicBrokerValidationTest {
             )
         }
 
-    @Ignore
     @Test
     fun hivemqWebsocketTls() =
         runTestNoTimeSkipping(timeout = 30.seconds) {
@@ -167,7 +159,6 @@ class PublicBrokerValidationTest {
             )
         }
 
-    @Ignore
     @Test
     fun hivemqWebsocketTlsMultiplePublishes() =
         runTestNoTimeSkipping(timeout = 30.seconds) {
@@ -198,7 +189,6 @@ class PublicBrokerValidationTest {
             )
         }
 
-    @Ignore
     @Test
     fun hivemqWebsocketTlsSubscribeReceive() =
         runTestNoTimeSkipping(timeout = 30.seconds) {
@@ -236,7 +226,6 @@ class PublicBrokerValidationTest {
             )
         }
 
-    @Ignore
     @Test
     fun hivemqWebsocketPlaintextV5() =
         runTestNoTimeSkipping(timeout = 30.seconds) {
@@ -253,7 +242,6 @@ class PublicBrokerValidationTest {
             )
         }
 
-    @Ignore
     @Test
     fun hivemqWebsocketTlsV5() =
         runTestNoTimeSkipping(timeout = 30.seconds) {
@@ -280,7 +268,6 @@ class PublicBrokerValidationTest {
             )
         }
 
-    @Ignore
     @Test
     fun hivemqWebsocketTlsSubscribeReceiveV5() =
         runTestNoTimeSkipping(timeout = 30.seconds) {
@@ -356,57 +343,14 @@ class PublicBrokerValidationTest {
         }
 
     /**
-     * Opens a [MessageConnection] for the given [MqttConnectionOptions].
-     * TCP connections use [CodecConnection] + [MqttCodec].
-     * WebSocket connections are not yet supported (requires WebSocketByteStream adapter).
+     * Opens a [Connection] for the given [MqttConnectionOptions]. Delegates to the production
+     * [defaultSingleConnection] factory so tests exercise the same TCP / WebSocket code paths
+     * that [LocalMqttClient] uses — no parallel test-only transport adapter to maintain.
      */
     private suspend fun openConnection(
         connectionOptions: MqttConnectionOptions,
         connectionRequest: IConnectionRequest,
-    ): Connection<ControlPacket> {
-        val factory = connectionRequest.controlPacketFactory
-        return when (connectionOptions) {
-            is MqttConnectionOptions.SocketConnection -> {
-                val socketOptions =
-                    if (connectionOptions.tlsEnabled) {
-                        SocketOptions(
-                            tls =
-                                TlsConfig(
-                                    verifyCertificates = connectionOptions.tlsVerifyCerts,
-                                    verifyHostname = connectionOptions.tlsVerifyHostname,
-                                    allowExpiredCertificates = connectionOptions.tlsAllowExpired,
-                                    allowSelfSigned = connectionOptions.tlsAllowSelfSigned,
-                                ),
-                        )
-                    } else {
-                        SocketOptions()
-                    }
-                CodecConnection.connect(
-                    connectionOptions.host,
-                    connectionOptions.port,
-                    MqttCodec(factory),
-                    TcpTransport(),
-                    ConnectionOptions(
-                        socketOptions = socketOptions,
-                        connectionTimeout = connectionOptions.connectionTimeout,
-                        readTimeout = connectionOptions.readTimeout,
-                        writeTimeout = connectionOptions.writeTimeout,
-                    ),
-                )
-            }
-
-            is MqttConnectionOptions.WebSocketConnectionOptions -> {
-                // TODO(mqtt-client test harness): mirror the WS branch of MqttConnectionFactory.connectSingle
-                //   (commonMain net/MqttConnectionFactory.kt:60). It builds TcpTransport → byteStream →
-                //   connectWebSocket(binaryCodec = MqttCodec(factory)) → mapNotNull into
-                //   Connection<ControlPacket>. Inlining that here (or extracting a shared test helper)
-                //   unblocks every `*Websocket*` test currently @Ignore'd at the top of this class.
-                throw UnsupportedOperationException(
-                    "WebSocket transport not yet supported in tests. Requires WebSocketByteStream adapter.",
-                )
-            }
-        }
-    }
+    ): Connection<ControlPacket> = defaultSingleConnection(connectionOptions, connectionRequest.controlPacketFactory)
 
     /**
      * Sends CONNECT, validates CONNACK, and returns the connection.

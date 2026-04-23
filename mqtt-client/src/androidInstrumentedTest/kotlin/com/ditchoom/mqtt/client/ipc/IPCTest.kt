@@ -67,7 +67,9 @@ class IPCTest {
             }
         val clientSideService =
             LocalMqttService.buildService(
-                connectionFactory = { throw UnsupportedOperationException("Client proxy does not create connections directly") },
+                connectionFactory = { _ ->
+                    { _ -> throw UnsupportedOperationException("Client proxy does not create connections directly") }
+                },
                 androidContext = context,
             )
         return AndroidRemoteMqttServiceClient(serviceBinder, clientSideService)

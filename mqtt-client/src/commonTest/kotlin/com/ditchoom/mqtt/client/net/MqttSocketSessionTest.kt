@@ -1,22 +1,15 @@
 package com.ditchoom.mqtt.client.net
 
-import com.ditchoom.mqtt.client.MqttCodec
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.IConnectionAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IPublishAcknowledgment
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt3.controlpacket.ConnectionRequest
-import com.ditchoom.socket.ConnectionOptions
 import com.ditchoom.socket.NetworkCapabilities
-import com.ditchoom.socket.SocketOptions
-import com.ditchoom.socket.TlsConfig
 import com.ditchoom.socket.getNetworkCapabilities
-import com.ditchoom.socket.transport.CodecConnection
-import com.ditchoom.socket.transport.TcpTransport
 import kotlinx.coroutines.flow.first
 import kotlin.random.Random
-import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.seconds
@@ -55,14 +48,21 @@ class MqttSocketSessionTest {
             connectTest(connectionOptions, 5)
         }
 
-    // Marker for WS transport in this helper — requires the WebSocketByteStream test adapter that
-    // also blocks PublicBrokerValidationTest.openConnection's WS branch. Ignored until that adapter
-    // lands; keep the @Test so it shows up in coverage as "pending".
-    @Ignore
     @Test
     fun connectWebsockets() =
         runTestNoTimeSkipping {
-            throw UnsupportedOperationException("WebSocket transport not yet supported in tests")
+            // Mosquitto container (mqtt-client/build.gradle.kts) binds 8080 for plain WS; same
+            // endpoint `stayConnectedEchoWebsockets*` uses.
+            val connectionOptions =
+                MqttConnectionOptions.WebSocketConnectionOptions(
+                    host = host,
+                    port = 8080,
+                    websocketEndpoint = "/mqtt",
+                    tlsEnabled = false,
+                    protocols = listOf("mqttv3.1"),
+                    connectionTimeout = 10.seconds,
+                )
+            connectTest(connectionOptions, version = 4)
         }
 
     //    @Test
@@ -79,19 +79,10 @@ class MqttSocketSessionTest {
             connectTest(connectionOptions)
         }
 
-    //    @Test
-    fun connectWebsocketsTestMosquitto() =
-        runTestNoTimeSkipping {
-            throw UnsupportedOperationException("WebSocket transport not yet supported in tests")
-        }
-
     private suspend fun connectTest(
         connectionOptions: MqttConnectionOptions,
         version: Int = 4,
     ) {
-        require(connectionOptions is MqttConnectionOptions.SocketConnection) {
-            "Only TCP socket connections are supported in this test"
-        }
         var testCompleted = false
         try {
             val connectionRequest =
@@ -102,33 +93,7 @@ class MqttSocketSessionTest {
                         .ConnectionRequest(clientId = "taco123-" + Random.nextInt())
                 }
             val factory = connectionRequest.controlPacketFactory
-            val socketOptions =
-                if (connectionOptions.tlsEnabled) {
-                    SocketOptions(
-                        tls =
-                            TlsConfig(
-                                verifyCertificates = connectionOptions.tlsVerifyCerts,
-                                verifyHostname = connectionOptions.tlsVerifyHostname,
-                                allowExpiredCertificates = connectionOptions.tlsAllowExpired,
-                                allowSelfSigned = connectionOptions.tlsAllowSelfSigned,
-                            ),
-                    )
-                } else {
-                    SocketOptions()
-                }
-            val connection =
-                CodecConnection.connect(
-                    connectionOptions.host,
-                    connectionOptions.port,
-                    MqttCodec(factory),
-                    TcpTransport(),
-                    ConnectionOptions(
-                        socketOptions = socketOptions,
-                        connectionTimeout = connectionOptions.connectionTimeout,
-                        readTimeout = connectionOptions.readTimeout,
-                        writeTimeout = connectionOptions.writeTimeout,
-                    ),
-                )
+            val connection = defaultSingleConnection(connectionOptions, factory)
             // Send CONNECT and read CONNACK
             connection.send(connectionRequest)
             val connack = connection.receive().first()

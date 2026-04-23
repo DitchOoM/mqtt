@@ -6,14 +6,13 @@ import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.ControlPacketFactory
 
-/**
- * Test-facing aliases for [defaultConnectionFactory] — the production factory
- * (same behaviour) lives in commonMain now. Kept here so existing test call sites
- * (`createConnectFactory(broker)`) don't need to churn.
- */
-fun createConnectFactory(broker: MqttBroker): suspend () -> Connection<ControlPacket> = defaultConnectionFactory(broker)
+internal typealias TestConnectSingle = suspend (MqttConnectionOptions) -> Connection<ControlPacket>
 
-fun createConnectFactory(
-    connectionOps: Collection<MqttConnectionOptions>,
-    factory: ControlPacketFactory,
-): suspend () -> Connection<ControlPacket> = defaultConnectionFactory(connectionOps, factory)
+/**
+ * Test-facing alias for [defaultSingleConnection] — the production per-option connector lives
+ * in commonMain. Kept here so existing test call sites (`createConnectFactory(broker)`) read
+ * as "give me the factory my client wants" without leaking the internal name.
+ */
+fun createConnectFactory(broker: MqttBroker): TestConnectSingle = defaultSingleConnection(broker)
+
+fun createConnectFactory(factory: ControlPacketFactory): TestConnectSingle = { op -> defaultSingleConnection(op, factory) }

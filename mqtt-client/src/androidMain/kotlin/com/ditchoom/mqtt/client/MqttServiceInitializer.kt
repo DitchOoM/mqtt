@@ -2,7 +2,7 @@ package com.ditchoom.mqtt.client
 
 import android.content.Context
 import androidx.startup.Initializer
-import com.ditchoom.mqtt.client.net.defaultConnectionFactory
+import com.ditchoom.mqtt.client.net.defaultSingleConnection
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 
@@ -10,7 +10,7 @@ class MqttServiceInitializer : Initializer<LocalMqttService> {
     override fun create(context: Context): LocalMqttService =
         runBlocking(Dispatchers.Default) {
             LocalMqttService.buildService(
-                connectionFactory = ::defaultConnectionFactory,
+                connectionFactory = ::defaultSingleConnection,
                 androidContext = context,
             )
         }

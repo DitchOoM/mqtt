@@ -3,9 +3,11 @@ package com.ditchoom.mqtt.client
 import com.ditchoom.buffer.flow.Connection
 import com.ditchoom.mqtt.Persistence
 import com.ditchoom.mqtt.connection.MqttBroker
+import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.IConnectionAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IDisconnectNotification
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
@@ -24,16 +26,20 @@ import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Duration.Companion.seconds
 
 /**
- * Manages a single MQTT connection: handshake, read/write loops, ping timer, session recovery.
+ * Owns a single MQTT broker connection: iterates [MqttBroker.connectionOps] for failover,
+ * performs the CONNECT/CONNACK handshake, runs read/write loops, and surfaces session state.
  *
- * Does NOT handle reconnection — the caller provides a [Connection] that may already be wrapped
- * with reconnection logic (e.g. socket's `ReconnectingConnection`). This keeps mqtt-client
- * transport-agnostic with no hard dependency on the socket library.
+ * The caller — [LocalMqttClient] — is responsible for re-invoking [run] when the underlying
+ * connection ends (session-resume / "stay connected" pattern). That outer loop keeps the
+ * reconnection policy in one place; [run] itself is a single-session body.
+ *
+ * [connectSingle] is atomic: given a [MqttConnectionOptions], establish one transport. Option
+ * iteration happens here so each attempted option is counted in [connectionAttempts].
  */
 class ConnectivityManager(
     internal val persistence: Persistence,
     internal val broker: MqttBroker,
-    private val connect: suspend () -> Connection<ControlPacket>,
+    private val connectSingle: suspend (MqttConnectionOptions) -> Connection<ControlPacket>,
 ) {
     var connectionCount = 0L
         private set
@@ -48,6 +54,14 @@ class ConnectivityManager(
     private val connectionBroadcastInternal = MutableSharedFlow<IConnectionAcknowledgment>()
     val connectionBroadcastChannel: SharedFlow<IConnectionAcknowledgment> = connectionBroadcastInternal
 
+    /**
+     * Completes after the first full pass of [connectAndHandshake] (success OR all options
+     * exhausted). Lets [LocalMqttClient.start] suspend until observable counters are accurate
+     * — tests asserting `connectionAttempts == 2` immediately after `start()` relied on this
+     * invariant in v1 and would race against the launched coroutine without it.
+     */
+    internal val firstAttemptComplete = CompletableDeferred<Unit>()
+
     // Eagerly constructed so IPC worker wiring (RemoteMqttClientWorker.init) can subscribe
     // to processor.readChannel / sentPackets before run() starts — otherwise the worker
     // races against run() and crashes with UninitializedPropertyAccessException.
@@ -60,63 +74,100 @@ class ConnectivityManager(
 
     /**
      * Connects, performs the MQTT handshake, then runs read/write loops until the connection
-     * ends or the coroutine is cancelled.
-     *
-     * If the caller wants reconnection, wrap the [connect] factory with a reconnecting
-     * connection (e.g. socket's `ReconnectingConnection`) before passing it in.
+     * ends or the coroutine is cancelled. Caller ([LocalMqttClient]) decides whether to loop.
      */
     suspend fun run() {
-        val conn = connectAndHandshake()
+        val conn =
+            try {
+                connectAndHandshake()
+            } finally {
+                // Unblock start() whether we handshook or threw — the first attempt pass is
+                // observable either way.
+                firstAttemptComplete.complete(Unit)
+            }
         try {
             coroutineScope {
-                launch { processor.processIncomingMessages() }
-                launch { processor.runPingTimer() }
-                launch { writeLoop(conn) }
-
-                conn.receive().collect { packet -> readChannel.emit(packet) }
+                // The processor / ping-timer / write-loop children loop indefinitely. Cancel
+                // them explicitly when the main receive flow exits (clean EOF after server
+                // closes, or our own sendDisconnect → server FIN) so `coroutineScope` can
+                // actually return — otherwise it waits forever for the infinite children and
+                // the outer reconnect loop in LocalMqttClient never gets to re-invoke run().
+                val children =
+                    listOf(
+                        launch { processor.processIncomingMessages() },
+                        launch { processor.runPingTimer() },
+                        launch { writeLoop(conn) },
+                    )
+                try {
+                    conn.receive().collect { packet -> readChannel.emit(packet) }
+                } finally {
+                    children.forEach { it.cancel() }
+                }
             }
         } finally {
             withContext(NonCancellable) {
                 _connectionState.value = ConnectionState.Disconnected
+                // Clear the cached CONNACK so awaitConnectivity() waits for the next one on
+                // reconnect rather than returning a stale ack from the session we just left.
+                currentConnack = null
                 conn.close()
             }
         }
     }
 
     private suspend fun connectAndHandshake(): Connection<ControlPacket> {
-        connectionAttempts++
-        val conn = connect()
-        try {
-            _connectionState.value = ConnectionState.Handshaking
-            conn.send(broker.connectionRequest as ControlPacket)
-            val response = conn.receive().first()
-            if (response is IConnectionAcknowledgment && response.isSuccessful) {
-                connectionCount++
-                currentConnack = response
-                _connectionState.value = ConnectionState.Connected(response)
-                prepareSession(response)
-                connectionBroadcastInternal.emit(response)
-                return conn
+        var lastException: Throwable? = null
+        for (connectionOp in broker.connectionOps) {
+            connectionAttempts++
+            val conn =
+                try {
+                    connectSingle(connectionOp)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (
+                    @Suppress("TooGenericExceptionCaught") e: Throwable,
+                ) {
+                    lastException = e
+                    continue
+                }
+            try {
+                _connectionState.value = ConnectionState.Handshaking
+                conn.send(broker.connectionRequest as ControlPacket)
+                val response = conn.receive().first()
+                if (response is IConnectionAcknowledgment && response.isSuccessful) {
+                    connectionCount++
+                    currentConnack = response
+                    _connectionState.value = ConnectionState.Connected(response)
+                    prepareSession(response)
+                    connectionBroadcastInternal.emit(response)
+                    return conn
+                }
+                conn.close()
+                lastException =
+                    if (response is IConnectionAcknowledgment) {
+                        MqttConnectionException.ConnackRejected(
+                            "CONNACK rejected: ${response.connectionReason}",
+                            response.byte1,
+                        )
+                    } else {
+                        MqttConnectionException.ProtocolError(
+                            "Expected CONNACK, got ${response::class.simpleName}",
+                        )
+                    }
+            } catch (e: MqttConnectionException) {
+                conn.close()
+                lastException = e
+            } catch (e: CancellationException) {
+                conn.close()
+                throw e
+            } catch (
+                @Suppress("TooGenericExceptionCaught") e: Exception,
+            ) {
+                conn.close()
+                lastException = e
             }
-            conn.close()
-            if (response is IConnectionAcknowledgment) {
-                throw MqttConnectionException.ConnackRejected(
-                    "CONNACK rejected: ${response.connectionReason}",
-                    response.byte1,
-                )
-            }
-            throw MqttConnectionException.ProtocolError(
-                "Expected CONNACK, got ${response::class.simpleName}",
-            )
-        } catch (e: MqttConnectionException) {
-            throw e
-        } catch (e: CancellationException) {
-            conn.close()
-            throw e
-        } catch (e: Exception) {
-            conn.close()
-            throw e
         }
+        throw lastException ?: IllegalStateException("No connection options configured for broker ${broker.brokerId}")
     }
 
     private suspend fun writeLoop(conn: Connection<ControlPacket>) {
@@ -183,6 +234,11 @@ class ConnectivityManager(
     }
 
     suspend fun sendDisconnect() {
+        // Invalidate the cached CONNACK synchronously so `awaitConnectivity()` called right
+        // after `sendDisconnect()` doesn't race against the write loop and return the ack of
+        // the session we're tearing down. The outer reconnect loop will populate a fresh ack
+        // after the next successful handshake.
+        currentConnack = null
         val disconnect = broker.connectionRequest.controlPacketFactory.disconnect()
         try {
             writeChannel.send(listOf(disconnect))

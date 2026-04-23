@@ -16,28 +16,13 @@ import com.ditchoom.websocket.WebSocketMessage
 import com.ditchoom.websocket.connectWebSocket
 import com.ditchoom.websocket.WebSocketConnectionOptions as WsLibOptions
 
-fun defaultConnectionFactory(broker: MqttBroker): suspend () -> Connection<ControlPacket> =
-    defaultConnectionFactory(broker.connectionOps, broker.connectionRequest.controlPacketFactory)
-
-fun defaultConnectionFactory(
-    connectionOps: Collection<MqttConnectionOptions>,
-    factory: ControlPacketFactory,
-): suspend () -> Connection<ControlPacket> =
-    {
-        var lastException: Throwable? = null
-        var result: Connection<ControlPacket>? = null
-        for (connectionOp in connectionOps) {
-            try {
-                result = connectSingle(connectionOp, factory)
-                break
-            } catch (e: Throwable) {
-                lastException = e
-            }
-        }
-        result ?: throw lastException ?: IllegalStateException("No connection options configured")
-    }
-
-private suspend fun connectSingle(
+/**
+ * Opens one TCP or WebSocket connection for the given [connectionOp] and wraps it in an
+ * `MqttCodec`-typed [Connection]. Option-list iteration (HA failover) and handshake live in
+ * [com.ditchoom.mqtt.client.ConnectivityManager]; this function is intentionally atomic so the
+ * caller can count each attempt and decide retry/failover policy.
+ */
+suspend fun defaultSingleConnection(
     connectionOp: MqttConnectionOptions,
     factory: ControlPacketFactory,
 ): Connection<ControlPacket> =
@@ -96,6 +81,10 @@ private suspend fun connectSingle(
             )
         }
     }
+
+/** Curries [defaultSingleConnection] against [broker]'s control-packet factory. */
+fun defaultSingleConnection(broker: MqttBroker): suspend (MqttConnectionOptions) -> Connection<ControlPacket> =
+    { op -> defaultSingleConnection(op, broker.connectionRequest.controlPacketFactory) }
 
 private fun buildSocketOptions(connectionOp: MqttConnectionOptions): SocketOptions =
     if (connectionOp.tlsEnabled) {

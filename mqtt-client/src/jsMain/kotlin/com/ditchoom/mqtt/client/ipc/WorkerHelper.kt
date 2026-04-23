@@ -18,7 +18,7 @@ suspend fun buildMqttServiceIPCServer(): JsRemoteMqttServiceWorker {
     }
     val service =
         LocalMqttService.buildService(
-            connectionFactory = { broker -> { throw UnsupportedOperationException("IPC worker does not create connections directly") } },
+            connectionFactory = { _ -> { _ -> throw UnsupportedOperationException("IPC worker does not create connections directly") } },
         )
     val serviceServer = RemoteMqttServiceWorker(service)
     val workerLocal = JsRemoteMqttServiceWorker(serviceServer)

@@ -53,8 +53,7 @@ class DefaultConnectionFactoryTcpIntegrationTest {
                 ConnectionRequest(
                     payload = ConnectionRequest.Payload(clientId = "ditchoom-tcp-${Random.nextInt()}"),
                 )
-            val connect = defaultConnectionFactory(listOf(options), connectionRequest.controlPacketFactory)
-            val connection = connect()
+            val connection = defaultSingleConnection(options, connectionRequest.controlPacketFactory)
 
             connection.send(connectionRequest)
             val connack = connection.receive().first()

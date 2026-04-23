@@ -6,6 +6,7 @@ import com.ditchoom.buffer.freeIfNeeded
 import com.ditchoom.mqtt.Persistence
 import com.ditchoom.mqtt.codec.PayloadCodec
 import com.ditchoom.mqtt.connection.MqttBroker
+import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.ControlPacketFactory
 import com.ditchoom.mqtt.controlpacket.IConnectionAcknowledgment
@@ -32,6 +33,7 @@ import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 class LocalMqttClient(
@@ -247,19 +249,55 @@ class LocalMqttClient(
 
     companion object {
         /**
-         * Creates a client and starts the connection. If the caller wants reconnection,
-         * wrap the [connect] factory with a reconnecting connection before passing it in.
+         * Starts a client for [broker] and suspends until the first full handshake pass
+         * completes (CONNACK received OR all of [MqttBroker.connectionOps] exhausted).
+         *
+         * After the first session ends — either because the peer closed the TCP socket or
+         * because the user called [sendDisconnect] — an outer loop here re-invokes
+         * [ConnectivityManager.run] so the session-resume / "stay connected" pattern works
+         * without the caller having to wrap [connectSingle] in socket's
+         * [com.ditchoom.socket.transport.ReconnectingConnection]. The loop exits only when
+         * the client's [CoroutineScope] is cancelled (e.g. via [shutdown]) or when the next
+         * handshake pass throws a non-retryable exception.
+         *
+         * [connectSingle] opens one transport for one [MqttConnectionOptions]; option
+         * iteration is [ConnectivityManager]'s job so each attempt is counted in
+         * [connectionAttempts].
          */
-        fun start(
+        suspend fun start(
             scope: CoroutineScope = CoroutineScope(Dispatchers.Default + CoroutineName("MQTT Client")),
             broker: MqttBroker,
             persistence: Persistence,
-            connect: suspend () -> Connection<ControlPacket>,
+            connectSingle: suspend (MqttConnectionOptions) -> Connection<ControlPacket> =
+                com.ditchoom.mqtt.client.net
+                    .defaultSingleConnection(broker),
         ): LocalMqttClient {
-            val cm = ConnectivityManager(persistence, broker, connect)
+            val cm = ConnectivityManager(persistence, broker, connectSingle)
             val client = LocalMqttClient(cm, scope)
-            client.connectionJob = scope.launch { cm.run() }
+            client.connectionJob =
+                scope.launch {
+                    while (kotlinx.coroutines.currentCoroutineContext().isActive) {
+                        try {
+                            cm.run()
+                            // Clean session end (sendDisconnect → server FIN). Reconnect.
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            throw e
+                        } catch (
+                            @Suppress("TooGenericExceptionCaught") _: Throwable,
+                        ) {
+                            // Connection error — back off, then retry.
+                            kotlinx.coroutines.delay(reconnectBackoff)
+                        }
+                    }
+                }
+            cm.firstAttemptComplete.await()
             return client
         }
+
+        /**
+         * Delay between reconnect attempts. Small, fixed — callers that want sophisticated
+         * backoff / network-aware retry can wrap [connectSingle] in their own factory.
+         */
+        private val reconnectBackoff = kotlin.time.Duration.parse("PT1S")
     }
 }

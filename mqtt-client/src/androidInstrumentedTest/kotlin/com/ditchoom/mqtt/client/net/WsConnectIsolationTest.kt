@@ -4,6 +4,7 @@ import androidx.test.filters.MediumTest
 import androidx.test.runner.AndroidJUnit4
 import com.ditchoom.mqtt.InMemoryPersistence
 import com.ditchoom.mqtt.client.LocalMqttClient
+import com.ditchoom.mqtt.client.net.defaultSingleConnection
 import com.ditchoom.mqtt.connection.MqttBroker
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.IConnectionAcknowledgment
@@ -54,8 +55,7 @@ class WsConnectIsolationTest {
                         tlsEnabled = false,
                         connectionTimeout = 10.seconds,
                     )
-                val connect = defaultConnectionFactory(listOf(options), connectionRequest.controlPacketFactory)
-                val conn = connect()
+                val conn = defaultSingleConnection(options, connectionRequest.controlPacketFactory)
                 try {
                     conn.send(connectionRequest)
                     val connack = conn.receive().first()
@@ -80,8 +80,7 @@ class WsConnectIsolationTest {
                         protocols = listOf("mqtt"),
                         connectionTimeout = 10.seconds,
                     )
-                val connect = defaultConnectionFactory(listOf(options), connectionRequest.controlPacketFactory)
-                val conn = connect()
+                val conn = defaultSingleConnection(options, connectionRequest.controlPacketFactory)
                 try {
                     conn.send(connectionRequest)
                     val connack = conn.receive().first()
@@ -184,7 +183,7 @@ class WsConnectIsolationTest {
                         scope = scope,
                         broker = broker,
                         persistence = InMemoryPersistence(),
-                        connect = defaultConnectionFactory(broker),
+                        connectSingle = defaultSingleConnection(broker),
                     )
                 try {
                     val connack = client.awaitConnectivity()

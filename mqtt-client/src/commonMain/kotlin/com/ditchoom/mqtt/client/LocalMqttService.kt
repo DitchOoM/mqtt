@@ -22,7 +22,7 @@ class LocalMqttService private constructor(
     internal val scope: CoroutineScope,
     private val persistenceV4: Persistence,
     private val persistenceV5: Persistence,
-    private val connectionFactory: (MqttBroker) -> suspend () -> Connection<ControlPacket>,
+    private val connectionFactory: (MqttBroker) -> suspend (MqttConnectionOptions) -> Connection<ControlPacket>,
 ) : MqttService {
     private val brokerClientMap = mutableMapOf<Byte, HashMap<Int, LocalMqttClient>>()
 
@@ -123,7 +123,7 @@ class LocalMqttService private constructor(
             }
 
         suspend fun buildService(
-            connectionFactory: (MqttBroker) -> suspend () -> Connection<ControlPacket>,
+            connectionFactory: (MqttBroker) -> suspend (MqttConnectionOptions) -> Connection<ControlPacket>,
             androidContext: Any? = null,
             inMemory: Boolean = false,
         ): LocalMqttService =
@@ -132,7 +132,7 @@ class LocalMqttService private constructor(
             }
 
         fun buildService(
-            connectionFactory: (MqttBroker) -> suspend () -> Connection<ControlPacket>,
+            connectionFactory: (MqttBroker) -> suspend (MqttConnectionOptions) -> Connection<ControlPacket>,
             androidContext: Any? = null,
             inMemory: Boolean = false,
             cb: (LocalMqttService) -> Unit,

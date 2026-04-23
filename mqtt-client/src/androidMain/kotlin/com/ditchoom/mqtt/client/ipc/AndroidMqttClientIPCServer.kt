@@ -3,6 +3,7 @@ package com.ditchoom.mqtt.client.ipc
 import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.JvmBuffer
 import com.ditchoom.buffer.shared
+import com.ditchoom.mqtt.controlpacket.encoding.readVariableByteInteger
 import kotlinx.coroutines.launch
 
 class AndroidMqttClientIPCServer(
@@ -12,13 +13,36 @@ class AndroidMqttClientIPCServer(
     private val publishStateObservers = HashMap<Int, MqttPublishStateCallback>()
 
     init {
-        clientServer.observers += { incoming, byte1, remaining, buffer ->
-            observers.values.forEach {
-                if (incoming) {
-                    it.onControlPacketReceived(byte1.toByte(), remaining, buffer as JvmBuffer)
+        clientServer.observers += { incoming, packet ->
+            // Skip serialization when nobody's listening — this hook fires on every
+            // packet in both directions for the lifetime of the worker.
+            if (observers.isNotEmpty()) {
+                // serialize() returns a read-ready buffer (position=0, limit=N).
+                // Do NOT resetForRead() on it — that's the double-reset bug that
+                // collapses limit to 0. After each AIDL callback, the Parcel marshal
+                // advances position to limit; resetForRead() between iterations
+                // flips it back to read-ready for the next observer.
+                val buffer = packet.serialize(BufferFactory.shared()) as JvmBuffer
+                observers.values.forEach { cb ->
+                    if (incoming) {
+                        // AIDL contract: onControlPacketReceived takes (byte1,
+                        // remainingLength, bodyBuffer). packetFactory.from(buffer,
+                        // byte1, remainingLength) does not re-read the fixed header,
+                        // so advance past it first.
+                        buffer.readUnsignedByte()
+                        buffer.readVariableByteInteger()
+                        cb.onControlPacketReceived(
+                            packet.byte1.toByte(),
+                            packet.remainingLength(),
+                            buffer,
+                        )
+                    } else {
+                        // onControlPacketSent takes the whole wire buffer; the
+                        // client-side packetFactory.from(buffer) re-reads byte1 +
+                        // remainingLength.
+                        cb.onControlPacketSent(buffer)
+                    }
                     buffer.resetForRead()
-                } else {
-                    it.onControlPacketSent(buffer as JvmBuffer)
                 }
             }
         }

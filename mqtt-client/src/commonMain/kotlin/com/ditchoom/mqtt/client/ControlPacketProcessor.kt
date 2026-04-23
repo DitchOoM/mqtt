@@ -16,9 +16,11 @@ import com.ditchoom.mqtt.controlpacket.IUnsubscribeAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IUnsubscribeRequest
 import com.ditchoom.mqtt.controlpacket.PublishMessage
 import com.ditchoom.mqtt.controlpacket.QualityOfService
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.last
@@ -45,11 +47,23 @@ class ControlPacketProcessor(
     /** Active outbound QoS 2 publish state flows, keyed by packet ID. */
     internal val qos2States = mutableMapOf<Int, MutableStateFlow<QoS2State>>()
 
+    // IPC observer hook: RemoteMqttClientWorker fans readChannel + sentPackets out to
+    // registered per-process observers so remote clients see packets that cross this
+    // in-process MQTT session. DROP_OLDEST keeps a slow observer from blocking the
+    // processor's hot path.
+    private val _sentPackets =
+        MutableSharedFlow<ControlPacket>(
+            extraBufferCapacity = 64,
+            onBufferOverflow = BufferOverflow.DROP_OLDEST,
+        )
+    val sentPackets: SharedFlow<ControlPacket> = _sentPackets
+
     /** Called by writeLoop when a packet is actually written to wire. */
     fun onPacketSent(packet: ControlPacket) {
         val packetId = packet.packetIdentifier
         qos1States[packetId]?.let { if (it.value == QoS1State.Queued) it.value = QoS1State.Sent }
         qos2States[packetId]?.let { if (it.value == QoS2State.Queued) it.value = QoS2State.Sent }
+        _sentPackets.tryEmit(packet)
     }
 
     @kotlin.concurrent.Volatile

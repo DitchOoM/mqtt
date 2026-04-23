@@ -1,6 +1,8 @@
 package com.ditchoom.mqtt.client.ipc
 
+import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.JsBuffer
+import com.ditchoom.buffer.shared
 import kotlinx.coroutines.launch
 import org.w3c.dom.MessageEvent
 import org.w3c.dom.MessagePort
@@ -62,13 +64,15 @@ class JsRemoteMqttServiceWorker(
                     protocolVersion,
                 ),
             )
-            client.observers += { incoming, byte1, remaining, buffer ->
-
+            client.observers += { incoming, packet ->
+                // Serialize at the IPC boundary — the processor stays in ControlPacket
+                // space; only the Web Worker hop needs the wire buffer.
+                val buffer = packet.serialize(BufferFactory.shared()) as JsBuffer
                 val packetMessage =
                     if (incoming) {
-                        sendIncomingControlPacketMessage(byte1, remaining, buffer as JsBuffer)
+                        sendIncomingControlPacketMessage(packet.byte1, packet.remainingLength(), buffer)
                     } else {
-                        buildOutgoingControlPacketMessage(buffer as JsBuffer)
+                        buildOutgoingControlPacketMessage(buffer)
                     }
                 port.postMessage(packetMessage)
             }

@@ -3,8 +3,10 @@ package com.ditchoom.mqtt.client.ipc
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.mqtt.client.LocalMqttClient
 import com.ditchoom.mqtt.client.MqttService
+import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.IConnectionAcknowledgment
 import com.ditchoom.mqtt.controlpacket.PublishMessage
+import kotlinx.coroutines.launch
 
 class RemoteMqttClientWorker(
     private val service: MqttService,
@@ -12,7 +14,27 @@ class RemoteMqttClientWorker(
 ) {
     internal val scope = client.scope
     internal val factory = client.packetFactory
-    internal val observers = ArrayList<(Boolean, UByte, Int, ReadBuffer) -> Unit>()
+
+    // Registered by platform-specific IPC adapters (AndroidMqttClientIPCServer,
+    // JsRemoteMqttServiceWorker). Adapters serialize the ControlPacket to a wire
+    // ReadBuffer at their own boundary — the processor stays in ControlPacket space.
+    internal val observers = ArrayList<(incoming: Boolean, packet: ControlPacket) -> Unit>()
+
+    init {
+        // Fan processor packet streams out to registered observers. Launched in
+        // client.scope so cancellation cascades with the client lifetime.
+        val processor = client.connectivityManager.processor
+        scope.launch {
+            processor.readChannel.collect { packet ->
+                observers.forEach { it(true, packet) }
+            }
+        }
+        scope.launch {
+            processor.sentPackets.collect { packet ->
+                observers.forEach { it(false, packet) }
+            }
+        }
+    }
 
     suspend fun currentConnack(): IConnectionAcknowledgment? = client.currentConnectionAcknowledgment()
 

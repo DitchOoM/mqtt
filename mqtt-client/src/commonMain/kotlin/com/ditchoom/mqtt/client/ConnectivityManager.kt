@@ -48,8 +48,11 @@ class ConnectivityManager(
     private val connectionBroadcastInternal = MutableSharedFlow<IConnectionAcknowledgment>()
     val connectionBroadcastChannel: SharedFlow<IConnectionAcknowledgment> = connectionBroadcastInternal
 
-    lateinit var processor: ControlPacketProcessor
-        private set
+    // Eagerly constructed so IPC worker wiring (RemoteMqttClientWorker.init) can subscribe
+    // to processor.readChannel / sentPackets before run() starts — otherwise the worker
+    // races against run() and crashes with UninitializedPropertyAccessException.
+    val processor: ControlPacketProcessor =
+        ControlPacketProcessor(broker, readChannel, writeChannel, persistence)
 
     private var currentConnack: IConnectionAcknowledgment? = null
 
@@ -63,8 +66,6 @@ class ConnectivityManager(
      * connection (e.g. socket's `ReconnectingConnection`) before passing it in.
      */
     suspend fun run() {
-        processor = ControlPacketProcessor(broker, readChannel, writeChannel, persistence)
-
         val conn = connectAndHandshake()
         try {
             coroutineScope {

@@ -100,6 +100,32 @@ data class PersistablePublishMessage(
         pub.payloadAsByteArrayOrNull()?.unsafeCast<Int8Array>(),
         0,
     )
+
+    companion object {
+        /**
+         * Rebuild a [PersistablePublishMessage] from an IndexedDB-restored
+         * dynamic JS object. IDB serializes via `structuredClone`, which copies
+         * data properties but drops the prototype chain — so any later access
+         * to a Kotlin-mangled getter (e.g. `get_qos_18ixjo_k$`) on a value
+         * obtained via `unsafeCast<PersistablePublishMessage>()` throws
+         * `TypeError: ... is not a function`. Pinned by
+         * `models-v4 commonTest PersistenceTests.incomingQos1` /
+         * `incomingQos2` failing only on `jsBrowserTest`. Always pass IDB
+         * results through this factory before reading Kotlin properties.
+         */
+        fun fromIdb(d: dynamic): PersistablePublishMessage =
+            PersistablePublishMessage(
+                brokerId = d.brokerId.unsafeCast<Int>(),
+                incoming = d.incoming.unsafeCast<Int>(),
+                dup = d.dup.unsafeCast<Boolean>(),
+                qos = d.qos.unsafeCast<Byte>(),
+                retain = d.retain.unsafeCast<Boolean>(),
+                topicName = d.topicName.unsafeCast<String>(),
+                packetId = d.packetId.unsafeCast<Int>(),
+                payload = (d.payload as? Int8Array),
+                state = (d.state as? Int) ?: 0,
+            )
+    }
 }
 
 fun toPub(p: PersistablePublishMessage): PublishMessage =

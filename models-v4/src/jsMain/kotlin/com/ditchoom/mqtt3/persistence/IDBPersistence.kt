@@ -363,7 +363,8 @@ class IDBPersistence(
         val getReq = store.get(key)
         commitTransaction(tx, "incomingHandlerComplete.read")
         await(getReq)
-        val existing = getReq.result?.unsafeCast<PersistablePublishMessage>() ?: return
+        // Rebuild via fromIdb — see PersistablePublishMessage.Companion.fromIdb for why
+        val existing = getReq.result?.let { PersistablePublishMessage.fromIdb(it.asDynamic()) } ?: return
         val tx2 = db.transaction(PUB_MSG, IDBTransactionMode.readwrite)
         val store2 = tx2.objectStore(PUB_MSG)
         when (existing.qos.toQos()) {
@@ -400,9 +401,9 @@ class IDBPersistence(
         commitTransaction(tx, "incomingMessagesToRedispatch")
         await(req)
         return req.result.map {
-            val persistable = it.unsafeCast<PersistablePublishMessage>()
+            val persistable = PersistablePublishMessage.fromIdb(it.asDynamic())
             val pub = toPub(persistable)
-            val state = persistable.asDynamic().state as? Int ?: 0
+            val state = persistable.state
             com.ditchoom.mqtt.IncomingPublishRecord(pub, state)
         }
     }
@@ -442,7 +443,7 @@ class IDBPersistence(
         await(pubIdbRequest)
         val pubs =
             pubIdbRequest.result.map {
-                toPub(it.unsafeCast<PersistablePublishMessage>()).setDupFlagNewPubMessage()
+                toPub(PersistablePublishMessage.fromIdb(it.asDynamic())).setDupFlagNewPubMessage()
             }
         await(qos2PersistableIdbRequest)
         val qos2 =
@@ -592,7 +593,7 @@ class IDBPersistence(
             )
         commitTransaction(tx, "getPubWithPacketId")
         await(pubRequest)
-        val persistablePub = pubRequest.result?.unsafeCast<PersistablePublishMessage>() ?: return null
+        val persistablePub = pubRequest.result?.let { PersistablePublishMessage.fromIdb(it.asDynamic()) } ?: return null
         return toPub(persistablePub)
     }
 

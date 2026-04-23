@@ -28,16 +28,17 @@ class RemoteMqttClientWorker(
         packetId: Int,
         buffer: ReadBuffer?,
     ) {
-        try {
-            val pub0 =
-                buffer?.let {
-                    it.resetForRead()
-                    factory.from(it) as? PublishMessage
-                }
-            client.sendQueuedPublishMessage(packetId, pub0)
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        // Buffer arrives ready-for-read across the IPC boundary — caller used
+        // pub.serialize(factory) which already called resetForRead(). A second
+        // reset here would collapse limit to 0, factory.from() would underflow,
+        // and the silent catch would drop the publish without surfacing the
+        // error — the client then hangs forever waiting for the echo.
+        //
+        // The catch also hides real parse failures; a ParseException from a
+        // malformed publish packet should propagate so the client sees an
+        // IPC error instead of a dropped message. Removed.
+        val pub0 = buffer?.let { factory.from(it) as? PublishMessage }
+        client.sendQueuedPublishMessage(packetId, pub0)
     }
 
     suspend fun onPublishQueued(

@@ -36,7 +36,10 @@ class AndroidRemoteMqttClient(
             override fun id(): Int = id
 
             override fun onControlPacketSent(controlPacket: JvmBuffer) {
-                controlPacket.resetForRead()
+                // Buffer arrives ready-for-read: the server serialized it via
+                // ControlPacket.serialize(factory), which already calls
+                // resetForRead() before the AIDL marshal. A second flip() here
+                // collapses limit to 0 and the next readByte() underflows.
                 val packet = packetFactory.from(controlPacket)
                 Log.i("RAHUL", "IPCOUT:  $packet")
                 onControlPacketSent(packet)
@@ -95,8 +98,9 @@ class AndroidRemoteMqttClient(
         suspendCoroutine { aidl.unsubscribeQueued(packetId, SuspendingMqttCompletionCallback("sendUnsubscribe", it)) }
 
     override suspend fun currentConnectionAcknowledgment(): IConnectionAcknowledgment? {
+        // Server returns a buffer already serialize()'d — ready-for-read across the
+        // AIDL parcel boundary. Don't resetForRead here; see onControlPacketSent note.
         val buffer = aidl.currentConnectionAcknowledgmentOrNull() ?: return null
-        buffer.resetForRead()
         return packetFactory.from(buffer) as? IConnectionAcknowledgment
     }
 
@@ -105,7 +109,10 @@ class AndroidRemoteMqttClient(
             aidl.awaitConnectivity(
                 object : MqttMessageCallback.Stub() {
                     override fun onMessage(buffer: JvmBuffer) {
-                        buffer.resetForRead()
+                        // Ready-for-read post-AIDL; a second resetForRead() would
+                        // flip limit to 0 and the next readByte() would throw
+                        // BufferUnderflowException — hanging the coroutine because
+                        // Binder swallows the exception and `it.resume(...)` never runs.
                         it.resume(packetFactory.from(buffer) as IConnectionAcknowledgment)
                     }
                 },

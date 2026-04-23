@@ -2,15 +2,12 @@ package com.ditchoom.mqtt.benchmark
 
 import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Default
-import com.ditchoom.buffer.PlatformBuffer
 import com.ditchoom.buffer.ReadBuffer
-import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt3.controlpacket.ConnectionAcknowledgment
 import com.ditchoom.mqtt3.controlpacket.ControlPacketV4
-import com.ditchoom.mqtt3.controlpacket.ControlPacketV4Factory
 import com.ditchoom.mqtt3.controlpacket.PingRequest
-import com.ditchoom.mqtt3.controlpacket.PublishMessage
+import com.ditchoom.mqtt3.controlpacket.PublishMessageV4
 import kotlinx.benchmark.Benchmark
 import kotlinx.benchmark.BenchmarkMode
 import kotlinx.benchmark.BenchmarkTimeUnit
@@ -25,15 +22,15 @@ import kotlinx.benchmark.State
 @BenchmarkMode(Mode.Throughput)
 @OutputTimeUnit(BenchmarkTimeUnit.MICROSECONDS)
 class ControlPacketParsingBenchmark {
-    private lateinit var connackBytes: PlatformBuffer
-    private lateinit var pingReqBytes: PlatformBuffer
-    private lateinit var publishSmallBytes: PlatformBuffer
-    private lateinit var publishMediumBytes: PlatformBuffer
-    private lateinit var publishLargeBytes: PlatformBuffer
+    private lateinit var connackBytes: ReadBuffer
+    private lateinit var pingReqBytes: ReadBuffer
+    private lateinit var publishSmallBytes: ReadBuffer
+    private lateinit var publishMediumBytes: ReadBuffer
+    private lateinit var publishLargeBytes: ReadBuffer
 
-    private lateinit var publishSmall: PublishMessage
-    private lateinit var publishMedium: PublishMessage
-    private lateinit var publishLarge: PublishMessage
+    private lateinit var publishSmall: PublishMessageV4<ReadBuffer>
+    private lateinit var publishMedium: PublishMessageV4<ReadBuffer>
+    private lateinit var publishLarge: PublishMessageV4<ReadBuffer>
 
     private val topic = TopicName.fromOrThrow("test/benchmark")
 
@@ -50,21 +47,21 @@ class ControlPacketParsingBenchmark {
         val smallPayload = BufferFactory.Default.allocate(64)
         repeat(64) { smallPayload.writeByte(it.toByte()) }
         smallPayload.resetForRead()
-        publishSmall = PublishMessage.buildPayload(topicName = topic, payload = smallPayload)
+        publishSmall = PublishMessageV4.ofRaw(topic = topic, payload = smallPayload)
         publishSmallBytes = publishSmall.serialize()
 
         // PUBLISH with 1KB payload
         val mediumPayload = BufferFactory.Default.allocate(1024)
         repeat(1024) { mediumPayload.writeByte(it.toByte()) }
         mediumPayload.resetForRead()
-        publishMedium = PublishMessage.buildPayload(topicName = topic, payload = mediumPayload)
+        publishMedium = PublishMessageV4.ofRaw(topic = topic, payload = mediumPayload)
         publishMediumBytes = publishMedium.serialize()
 
         // PUBLISH with 64KB payload
         val largePayload = BufferFactory.Default.allocate(65536)
         repeat(65536) { largePayload.writeByte(it.toByte()) }
         largePayload.resetForRead()
-        publishLarge = PublishMessage.buildPayload(topicName = topic, payload = largePayload)
+        publishLarge = PublishMessageV4.ofRaw(topic = topic, payload = largePayload)
         publishLargeBytes = publishLarge.serialize()
     }
 

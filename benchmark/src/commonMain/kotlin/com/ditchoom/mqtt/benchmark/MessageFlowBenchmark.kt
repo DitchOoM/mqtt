@@ -2,14 +2,13 @@ package com.ditchoom.mqtt.benchmark
 
 import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Default
-import com.ditchoom.buffer.PlatformBuffer
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.pool.BufferPool
 import com.ditchoom.buffer.stream.StreamProcessor
 import com.ditchoom.buffer.stream.builder
 import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt3.controlpacket.ControlPacketV4
-import com.ditchoom.mqtt3.controlpacket.PublishMessage
+import com.ditchoom.mqtt3.controlpacket.PublishMessageV4
 import kotlinx.benchmark.Benchmark
 import kotlinx.benchmark.BenchmarkMode
 import kotlinx.benchmark.BenchmarkTimeUnit
@@ -25,8 +24,8 @@ import kotlinx.coroutines.channels.Channel
 @BenchmarkMode(Mode.Throughput)
 @OutputTimeUnit(BenchmarkTimeUnit.MICROSECONDS)
 class MessageFlowBenchmark {
-    private lateinit var publishSmall: PublishMessage
-    private lateinit var publishSmallBytes: PlatformBuffer
+    private lateinit var publishSmall: PublishMessageV4<ReadBuffer>
+    private lateinit var publishSmallBytes: ReadBuffer
 
     private val topic = TopicName.fromOrThrow("test/flow")
 
@@ -35,7 +34,7 @@ class MessageFlowBenchmark {
         val payload = BufferFactory.Default.allocate(64)
         repeat(64) { payload.writeByte(it.toByte()) }
         payload.resetForRead()
-        publishSmall = PublishMessage.buildPayload(topicName = topic, payload = payload)
+        publishSmall = PublishMessageV4.ofRaw(topic = topic, payload = payload)
         publishSmallBytes = publishSmall.serialize()
     }
 

@@ -3,10 +3,11 @@ package com.ditchoom.mqtt.benchmark
 import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.PlatformBuffer
+import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.mqtt.client.toBuffer
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicName
-import com.ditchoom.mqtt3.controlpacket.PublishMessage
+import com.ditchoom.mqtt3.controlpacket.PublishMessageV4
 import kotlinx.benchmark.Benchmark
 import kotlinx.benchmark.BenchmarkMode
 import kotlinx.benchmark.BenchmarkTimeUnit
@@ -25,7 +26,7 @@ class ZeroCopyPublishBenchmark {
     @Param("64", "1024", "4096", "32768")
     var payloadSize: Int = 64
 
-    private lateinit var publish: PublishMessage
+    private lateinit var publish: PublishMessageV4<ReadBuffer>
     private lateinit var payload: PlatformBuffer
     private val topic = TopicName.fromOrThrow("bench/zero-copy/test")
 
@@ -34,8 +35,8 @@ class ZeroCopyPublishBenchmark {
         payload = BufferFactory.Default.allocate(payloadSize)
         repeat(payloadSize) { payload.writeByte(it.toByte()) }
         payload.resetForRead()
-        publish = PublishMessage.buildPayload(
-            topicName = topic,
+        publish = PublishMessageV4.ofRaw(
+            topic = topic,
             qos = QualityOfService.AT_LEAST_ONCE,
             packetIdentifier = 1,
             payload = payload,

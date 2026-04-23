@@ -2,13 +2,14 @@ package com.ditchoom.mqtt.benchmark
 
 import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Default
+import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.mqtt.client.toBuffer
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt3.controlpacket.PingRequest
 import com.ditchoom.mqtt3.controlpacket.PublishAcknowledgment
-import com.ditchoom.mqtt3.controlpacket.PublishMessage
+import com.ditchoom.mqtt3.controlpacket.PublishMessageV4
 import com.ditchoom.mqtt3.controlpacket.SubscribeRequest
 import com.ditchoom.mqtt3.controlpacket.Subscription
 import kotlinx.benchmark.Benchmark
@@ -25,8 +26,8 @@ import kotlinx.benchmark.State
 @BenchmarkMode(Mode.Throughput)
 @OutputTimeUnit(BenchmarkTimeUnit.MICROSECONDS)
 class WritePathBenchmark {
-    private lateinit var publishSmall: PublishMessage
-    private lateinit var publishLarge: PublishMessage
+    private lateinit var publishSmall: PublishMessageV4<ReadBuffer>
+    private lateinit var publishLarge: PublishMessageV4<ReadBuffer>
     private lateinit var subscribe: SubscribeRequest
     private val topic = TopicName.fromOrThrow("bench/topic/foo")
 
@@ -35,8 +36,8 @@ class WritePathBenchmark {
         val smallPayload = BufferFactory.Default.allocate(64)
         repeat(64) { smallPayload.writeByte(it.toByte()) }
         smallPayload.resetForRead()
-        publishSmall = PublishMessage.buildPayload(
-            topicName = topic,
+        publishSmall = PublishMessageV4.ofRaw(
+            topic = topic,
             qos = QualityOfService.AT_LEAST_ONCE,
             packetIdentifier = 1,
             payload = smallPayload,
@@ -45,8 +46,8 @@ class WritePathBenchmark {
         val largePayload = BufferFactory.Default.allocate(4096)
         repeat(4096) { largePayload.writeByte(it.toByte()) }
         largePayload.resetForRead()
-        publishLarge = PublishMessage.buildPayload(
-            topicName = topic,
+        publishLarge = PublishMessageV4.ofRaw(
+            topic = topic,
             qos = QualityOfService.AT_LEAST_ONCE,
             packetIdentifier = 2,
             payload = largePayload,

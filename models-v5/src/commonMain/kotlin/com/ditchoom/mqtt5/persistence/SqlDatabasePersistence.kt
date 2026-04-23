@@ -5,7 +5,6 @@ import com.ditchoom.Mqtt5
 import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.ByteOrder
 import com.ditchoom.buffer.Default
-import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.mqtt.Persistence
 import com.ditchoom.mqtt.connection.MqttBroker
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
@@ -13,8 +12,6 @@ import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.IConnectionRequest
 import com.ditchoom.mqtt.controlpacket.IPublishAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IPublishComplete
-import com.ditchoom.mqtt.controlpacket.PublishMessage
-import com.ditchoom.mqtt.controlpacket.payloadAsByteArrayOrNull
 import com.ditchoom.mqtt.controlpacket.IPublishReceived
 import com.ditchoom.mqtt.controlpacket.IPublishRelease
 import com.ditchoom.mqtt.controlpacket.ISubscribeAcknowledgement
@@ -23,10 +20,12 @@ import com.ditchoom.mqtt.controlpacket.ISubscription
 import com.ditchoom.mqtt.controlpacket.IUnsubscribeAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IUnsubscribeRequest
 import com.ditchoom.mqtt.controlpacket.NO_PACKET_ID
+import com.ditchoom.mqtt.controlpacket.PublishMessage
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
+import com.ditchoom.mqtt.controlpacket.payloadAsByteArrayOrNull
 import com.ditchoom.mqtt5.controlpacket.AckProperties
 import com.ditchoom.mqtt5.controlpacket.AckVariableHeader
 import com.ditchoom.mqtt5.controlpacket.ConnectionRequest
@@ -184,6 +183,7 @@ class SqlDatabasePersistence(
                 brokerQueries.insertBroker()
                 val brokerId = brokerQueries.lastRowId().executeAsOne()
                 val willPayload = connect.payload.willPayload
+
                 // SQLDelight BLOB binding takes ByteArray at the JDBC / native
                 // SQLite driver boundary — the three reads below materialise
                 // Will payload / auth data / correlation data for that call.
@@ -195,10 +195,12 @@ class SqlDatabasePersistence(
                 val authPayload =
                     connect.variableHeader.properties.authentication
                         ?.data
+
                 @Suppress("NoByteArrayInProd") // SQLDelight BLOB boundary
                 val authData = authPayload?.let { it.readByteArray(it.remaining()) }
                 authPayload?.resetForRead()
                 val correlationData = connect.payload.willProperties?.correlationData
+
                 @Suppress("NoByteArrayInProd") // SQLDelight BLOB boundary
                 val willPropsCorrelationData = correlationData?.let { it.readByteArray(it.remaining()) }
                 correlationData?.resetForRead()

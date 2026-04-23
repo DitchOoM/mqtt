@@ -70,8 +70,7 @@ object ControlPacketV4Factory : ControlPacketFactory {
     ): PublishMessage {
         val codec =
             object : PayloadCodec<P> {
-                override fun decode(buffer: ReadBuffer): P =
-                    error("Outgoing publish codec is not used for decoding")
+                override fun decode(buffer: ReadBuffer): P = error("Outgoing publish codec is not used for decoding")
 
                 override fun encode(
                     buffer: WriteBuffer,

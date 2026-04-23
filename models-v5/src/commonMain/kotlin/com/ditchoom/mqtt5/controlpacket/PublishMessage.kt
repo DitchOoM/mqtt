@@ -49,7 +49,9 @@ class PublishMessageV5<P> internal constructor(
     val properties: Properties,
     override val payload: P,
     override val codec: PayloadCodec<P>,
-) : PublishMessage, ControlPacketV5, PublishMessagePayloadMaterializer<P> {
+) : PublishMessage,
+    ControlPacketV5,
+    PublishMessagePayloadMaterializer<P> {
     override val controlPacketValue: Byte get() = PublishMessage.CONTROL_PACKET_VALUE
     override val flags: Byte
         get() {
@@ -213,7 +215,8 @@ class PublishMessageV5<P> internal constructor(
                 val payloadFormatIndicator = p.single<PayloadFormatIndicator>()?.isUtf8 ?: false
                 val messageExpiryInterval = p.single<MessageExpiryInterval>()?.seconds?.toLong()
                 val topicAlias =
-                    p.single<TopicAlias>()
+                    p
+                        .single<TopicAlias>()
                         ?.also {
                             if (it.value == 0.toUShort()) {
                                 throw ProtocolError(
@@ -221,7 +224,8 @@ class PublishMessageV5<P> internal constructor(
                                         "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477413",
                                 )
                             }
-                        }?.value?.toInt()
+                        }?.value
+                        ?.toInt()
                 val responseTopic = p.single<ResponseTopic>()?.let { TopicName.fromOrThrow(it.value) }
                 val correlationData = p.single<CorrelationData<*>>()?.data as? ReadBuffer
                 val userProperty = p.list<UserProperty>().map { it.key to it.value }
@@ -259,16 +263,36 @@ class PublishMessageV5<P> internal constructor(
         companion object {
             fun fromByte(byte1: UByte): FixedHeader {
                 val byte1Int = byte1.toInt()
-                val dup = byte1Int.shl(4).toUByte().toInt().shr(7) == 1
-                val qosBit2 = byte1Int.shl(5).toUByte().toInt().shr(7) == 1
-                val qosBit1 = byte1Int.shl(6).toUByte().toInt().shr(7) == 1
+                val dup =
+                    byte1Int
+                        .shl(4)
+                        .toUByte()
+                        .toInt()
+                        .shr(7) == 1
+                val qosBit2 =
+                    byte1Int
+                        .shl(5)
+                        .toUByte()
+                        .toInt()
+                        .shr(7) == 1
+                val qosBit1 =
+                    byte1Int
+                        .shl(6)
+                        .toUByte()
+                        .toInt()
+                        .shr(7) == 1
                 if (qosBit2 && qosBit1) {
                     throw MalformedPacketException(
                         "A PUBLISH Packet MUST NOT have both QoS bits set to 1 [MQTT-3.3.1-4].",
                     )
                 }
                 val qos = QualityOfService.fromBooleans(qosBit2, qosBit1)
-                val retain = byte1Int.shl(7).toUByte().toInt().shr(7) == 1
+                val retain =
+                    byte1Int
+                        .shl(7)
+                        .toUByte()
+                        .toInt()
+                        .shr(7) == 1
                 return FixedHeader(dup, qos, retain)
             }
         }
@@ -329,7 +353,12 @@ class PublishMessageV5<P> internal constructor(
             properties: Properties = Properties(),
         ): PublishMessageV5<ReadBuffer> =
             PublishMessageV5(
-                topic, qos, dup, retain, packetIdentifier, properties,
+                topic,
+                qos,
+                dup,
+                retain,
+                packetIdentifier,
+                properties,
                 payload ?: BufferFactory.Default.allocate(0),
                 IdentityBufferCodec,
             )
@@ -343,8 +372,7 @@ class PublishMessageV5<P> internal constructor(
             retain: Boolean = false,
             packetIdentifier: Int = NO_PACKET_ID,
             properties: Properties = Properties(),
-        ): PublishMessageV5<P> =
-            PublishMessageV5(topic, qos, dup, retain, packetIdentifier, properties, payload, codec)
+        ): PublishMessageV5<P> = PublishMessageV5(topic, qos, dup, retain, packetIdentifier, properties, payload, codec)
 
         private fun readFullPayload(pr: PayloadReader): ReadBuffer = pr.copyToBuffer()
     }

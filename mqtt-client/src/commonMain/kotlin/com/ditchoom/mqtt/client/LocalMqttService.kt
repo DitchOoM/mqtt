@@ -14,7 +14,6 @@ import com.ditchoom.mqtt5.controlpacket.ControlPacketV5Factory
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
@@ -107,7 +106,12 @@ class LocalMqttService private constructor(
             it.shutdown()
         }
         brokerClientMap.clear()
-        scope.cancel()
+        // Do NOT cancel the scope. This service is cached as an AppInitializer singleton
+        // and must outlive any single MqttManagerService incarnation. Cancelling here
+        // makes the next service onCreate retrieve a dead instance whose
+        // LocalMqttClient.start(scope, ...) launches into a cancelled scope — cm.run()
+        // never executes, no CONNACK arrives, awaitConnectivity() hangs forever. Pinned
+        // by androidInstrumentedTest WsConnectIsolationTest.serviceSurvivesShutdownAndCleanupCycle.
     }
 
     companion object {

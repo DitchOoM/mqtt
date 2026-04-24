@@ -13,11 +13,11 @@ CREATE TABLE IF NOT EXISTS PublishMessage (
     message_expiry_interval INTEGER CHECK(IFNULL(message_expiry_interval, 0) BETWEEN 0 AND 4294967295),
     topic_alias INTEGER CHECK(IFNULL(topic_alias, 0) BETWEEN 0 AND 65535),
     response_topic TEXT,
-    correlation_data BLOB,
+    correlation_data BLOB AS com.ditchoom.buffer.ReadBuffer,
     subscription_identifier TEXT,
     content_type TEXT,
 -- 	payload
-	payload BLOB,
+	payload BLOB AS com.ditchoom.buffer.ReadBuffer,
 --  state column — meaning depends on `incoming`:
 --    outgoing (incoming=0): 0=QUEUED, 1=SENT, 2=PUBREC_RECEIVED, 3=PUBREL_SENT
 --    incoming (incoming=1): 0=RECEIVED_PENDING_HANDLER, 1=QOS2_HANDLER_COMPLETE_PUBREC_SENT

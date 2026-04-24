@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS ConnectionRequest (
 	keep_alive_seconds	INTEGER NOT NULL DEFAULT 3600 CHECK(keep_alive_seconds BETWEEN 0 AND 65535),
 	client_id	TEXT NOT NULL,
 	will_topic	TEXT,
-	will_payload	BLOB,
+	will_payload	BLOB AS com.ditchoom.buffer.ReadBuffer,
 	username	TEXT,
 	password	TEXT,
 	FOREIGN KEY(broker_id) REFERENCES Broker(id) ON DELETE CASCADE

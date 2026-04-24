@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS PublishMessage (
 	topic_name TEXT NOT NULL,
 	packet_id INTEGER NOT NULL CHECK(packet_id BETWEEN 0 AND 65535),
 -- 	payload
-	payload BLOB,
+	payload BLOB AS com.ditchoom.buffer.ReadBuffer,
 --  state column — meaning depends on `incoming`:
 --    outgoing (incoming=0): 0=QUEUED, 1=SENT, 2=PUBREC_RECEIVED, 3=PUBREL_SENT
 --    incoming (incoming=1): 0=RECEIVED_PENDING_HANDLER, 1=QOS2_HANDLER_COMPLETE_PUBREC_SENT

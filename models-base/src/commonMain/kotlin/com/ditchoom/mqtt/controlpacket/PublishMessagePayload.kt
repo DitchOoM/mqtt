@@ -70,6 +70,32 @@ fun PublishMessage.payloadAsByteArrayOrNull(): ByteArray? {
 }
 
 /**
+ * Payload as a [ReadBuffer] for persistence paths that store buffers (the SQLDelight
+ * `ColumnAdapter<ReadBuffer, ByteArray>` pipeline). Zero-copy when the underlying
+ * payload is already a `ReadBuffer` (identity codec); otherwise the codec encodes
+ * into a fresh buffer. Returns `null` for zero-size payloads.
+ *
+ * Unlike [payloadAsByteArrayOrNull], no `ByteArray` materialises here — the adapter
+ * converts to `ByteArray` inside the driver boundary.
+ */
+fun PublishMessage.payloadAsReadBufferOrNull(): ReadBuffer? {
+    val m = this as? PublishMessagePayloadMaterializer<*> ?: return null
+    if (m.codec === IdentityBufferCodec) {
+        val raw = m.payload as ReadBuffer
+        if (raw.remaining() == 0) return null
+        return raw.slice()
+    }
+    @Suppress("UNCHECKED_CAST")
+    val mAny = m as PublishMessagePayloadMaterializer<Any?>
+    val size = mAny.codec.encodedSize(mAny.payload)
+    if (size == 0) return null
+    val buf = BufferFactory.Default.allocate(size)
+    mAny.codec.encode(buf, mAny.payload)
+    buf.resetForRead()
+    return buf
+}
+
+/**
  * Writes a [PublishMessage]'s payload directly to [out] using its attached codec.
  * Zero-copy if the codec doesn't allocate internally.
  */

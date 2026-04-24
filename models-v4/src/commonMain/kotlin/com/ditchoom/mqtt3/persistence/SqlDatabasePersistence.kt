@@ -2,9 +2,6 @@ package com.ditchoom.mqtt3.persistence
 
 import app.cash.sqldelight.db.SqlDriver
 import com.ditchoom.Mqtt4
-import com.ditchoom.buffer.BufferFactory
-import com.ditchoom.buffer.ByteOrder
-import com.ditchoom.buffer.Default
 import com.ditchoom.mqtt.Persistence
 import com.ditchoom.mqtt.connection.MqttBroker
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
@@ -25,7 +22,7 @@ import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt.controlpacket.WillConfig
-import com.ditchoom.mqtt.controlpacket.payloadAsByteArrayOrNull
+import com.ditchoom.mqtt.controlpacket.payloadAsReadBufferOrNull
 import com.ditchoom.mqtt3.controlpacket.ConnectionRequest
 import com.ditchoom.mqtt3.controlpacket.PublishComplete
 import com.ditchoom.mqtt3.controlpacket.PublishMessageV4
@@ -38,12 +35,19 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlin.time.Duration.Companion.milliseconds
+import com.ditchoom.mqtt3.persistence.ConnectionRequest as SqlConnectionRequest
+import com.ditchoom.mqtt3.persistence.PublishMessage as SqlPublishMessage
 
 class SqlDatabasePersistence(
     driver: SqlDriver,
 ) : Persistence {
     private val packetIdMutex = Mutex()
-    private val database = Mqtt4(driver)
+    private val database =
+        Mqtt4(
+            driver,
+            ConnectionRequestAdapter = SqlConnectionRequest.Adapter(will_payloadAdapter = ReadBufferBlobAdapter),
+            PublishMessageAdapter = SqlPublishMessage.Adapter(payloadAdapter = ReadBufferBlobAdapter),
+        )
     private val brokerQueries = database.brokerQueries
     private val connectionRequestQueries = database.connectionRequestQueries
     private val socketConnectionQueries = database.socketConnectionQueries
@@ -147,14 +151,6 @@ class SqlDatabasePersistence(
             brokerQueries.transactionWithResult {
                 brokerQueries.insertBroker()
                 val brokerId = brokerQueries.lastRowId().executeAsOne()
-                val willPayload = connect.payload.willPayload
-
-                // SQLDelight BLOB binding takes ByteArray at the JDBC / native
-                // SQLite driver boundary. True zero-copy needs a custom
-                // ColumnAdapter (Phase 4 architecture work).
-                @Suppress("NoByteArrayInProd") // SQLDelight BLOB boundary
-                val willPayloadByteArray = willPayload?.readByteArray(willPayload.remaining())
-                willPayload?.resetForRead()
                 connectionRequestQueries.insertConnectionRequest(
                     brokerId,
                     connect.protocolName,
@@ -167,7 +163,7 @@ class SqlDatabasePersistence(
                     connect.variableHeader.keepAliveSeconds.toLong(),
                     connect.payload.clientId,
                     connect.payload.willTopic?.toString(),
-                    willPayloadByteArray,
+                    connect.payload.willPayload,
                     connect.payload.userName,
                     connect.payload.password,
                 )
@@ -227,12 +223,7 @@ class SqlDatabasePersistence(
         val socketConnections = socketConnectionQueries.connectionsByBrokerId(id)
         val connectionRequestDatabaseRecord =
             connectionRequestQueries.connectionRequestByBrokerId(id).executeAsOneOrNull() ?: return null
-        val willPayload =
-            if (connectionRequestDatabaseRecord.will_payload != null) {
-                BufferFactory.Default.wrap(connectionRequestDatabaseRecord.will_payload, ByteOrder.BIG_ENDIAN)
-            } else {
-                null
-            }
+        val willPayload = connectionRequestDatabaseRecord.will_payload
         val willTopic = connectionRequestDatabaseRecord.will_topic
         val willConfig =
             if (willTopic != null && willPayload != null) {
@@ -325,7 +316,7 @@ class SqlDatabasePersistence(
         if (packet.qualityOfService == QualityOfService.AT_MOST_ONCE) {
             return@withContext
         }
-        val payload = packet.payloadAsByteArrayOrNull()
+        val payload = packet.payloadAsReadBufferOrNull()
         pubQueries.insertPublishMessage(
             broker.identifier.toLong(),
             1L,
@@ -367,17 +358,11 @@ class SqlDatabasePersistence(
                 .queuedIncomingPubMessages(broker.identifier.toLong())
                 .executeAsList()
                 .map { row ->
-                    val payload =
-                        if (row.payload != null) {
-                            BufferFactory.Default.wrap(row.payload, ByteOrder.BIG_ENDIAN)
-                        } else {
-                            null
-                        }
                     val pub =
                         PublishMessageV4.ofRaw(
                             topic = TopicName.fromOrThrow(row.topic_name),
                             qos = row.qos.toQos(),
-                            payload = payload,
+                            payload = row.payload,
                             dup = row.dup == 1L,
                             retain = row.retain == 1L,
                             packetIdentifier = row.packet_id.toInt(),
@@ -397,16 +382,10 @@ class SqlDatabasePersistence(
         val map = ArrayList<ControlPacket>()
         map +=
             pubQueries.queuedPubMessages(broker.identifier.toLong()).executeAsList().map {
-                val payload =
-                    if (it.payload != null) {
-                        BufferFactory.Default.wrap(it.payload, ByteOrder.BIG_ENDIAN)
-                    } else {
-                        null
-                    }
                 PublishMessageV4.ofRaw(
                     topic = TopicName.fromOrThrow(it.topic_name),
                     qos = it.qos.toQos(),
-                    payload = payload,
+                    payload = it.payload,
                     dup = true,
                     retain = it.retain == 1L,
                     packetIdentifier = it.packet_id.toInt(),
@@ -479,7 +458,7 @@ class SqlDatabasePersistence(
             return NO_PACKET_ID
         }
         val brokerId = broker.identifier
-        val payload = pub.payloadAsByteArrayOrNull()
+        val payload = pub.payloadAsReadBufferOrNull()
         val packetId =
             withContext(dispatcher) {
                 packetIdMutex.withLock {
@@ -512,16 +491,10 @@ class SqlDatabasePersistence(
             pubQueries
                 .messageWithId(broker.identifier.toLong(), 0L, packetId.toLong())
                 .executeAsOneOrNull() ?: return null
-        val payload =
-            if (pub.payload != null) {
-                BufferFactory.Default.wrap(pub.payload, ByteOrder.BIG_ENDIAN)
-            } else {
-                null
-            }
         return PublishMessageV4.ofRaw(
             topic = TopicName.fromOrThrow(pub.topic_name),
             qos = pub.qos.toQos(),
-            payload = payload,
+            payload = pub.payload,
             dup = pub.dup == 1L,
             retain = pub.retain == 1L,
             packetIdentifier = pub.packet_id.toInt(),

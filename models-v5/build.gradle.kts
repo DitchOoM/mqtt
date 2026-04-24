@@ -153,5 +153,4 @@ tasks
             it.name == "sourcesJar" ||
             it.name == "runKtlintCheckOverCommonMainSourceSet" ||
             it.name.startsWith("dokkaGenerate")
-    }
-    .configureEach { dependsOn("kspCommonMainKotlinMetadata") }
+    }.configureEach { dependsOn("kspCommonMainKotlinMetadata") }

@@ -14,10 +14,11 @@ Production source sets (`*Main/`) must not allocate or accept `kotlin.ByteArray`
 
 **Platform boundaries** where `ByteArray` is genuinely unavoidable:
 
-- **SQLDelight BLOB binding** — JDBC `PreparedStatement.setBytes(int, byte[])` and the K/N SQLite driver's `bind_blob` both take a `ByteArray`. Sites: `SqlDatabasePersistence` (v4 + v5) for Will payload, auth data, correlation data. A custom `ColumnAdapter<ReadBuffer, ByteArray>` would move this boundary but not eliminate it — tracked for Phase 4.
-- **IndexedDB on JS** — `Int8Array` keys, reached via `ByteArray.unsafeCast<Int8Array>()`.
-- **Android AIDL / `Parcel`** — `writeByteArray` takes `ByteArray`.
+- **SQLDelight BLOB binding** — JDBC `PreparedStatement.setBytes(int, byte[])` and the K/N SQLite driver's `bind_blob` both take a `ByteArray`. Sites: `SqlDatabasePersistence` (v4 + v5) for Will payload, auth data, correlation data. A custom `ColumnAdapter<ReadBuffer, ByteArray>` would consolidate the six call-site copies into a single adapter — tracked for Phase 4.
+- **IndexedDB on JS** — `Int8Array` keys, reached via `ByteArray.unsafeCast<Int8Array>()`. Zero-copy when the source buffer is `JsBuffer`-backed.
 - **Kotlin stdlib `Base64`** — takes / returns `ByteArray`. Used by the MQTT v5 AUTH flow.
+
+Android AIDL is **not** a remaining boundary: `IPCMqttClient.aidl` takes `JvmBuffer` (Parcelable), and `buffer/JvmBuffer.writeToParcel` uses `SharedMemory` on API 27+ (zero-copy) and a `ParcelFileDescriptor` pipe on earlier APIs. No `ByteArray` traverses the AIDL surface.
 
 For each, annotate the call site with `@Suppress("NoByteArrayInProd")` and a one-line inline comment naming the specific driver / API. Tests (`*Test/`) may use `ByteArray` freely.
 

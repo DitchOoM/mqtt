@@ -2,6 +2,8 @@ package com.ditchoom.mqtt3.persistence
 
 import com.ditchoom.mqtt.Persistence
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.newSingleThreadContext
 
 actual suspend fun newDefaultPersistence(
@@ -10,6 +12,7 @@ actual suspend fun newDefaultPersistence(
     inMemory: Boolean,
 ): Persistence = SqlDatabasePersistence(sqlDriver(androidContext, name, inMemory)!!)
 
+@OptIn(DelicateCoroutinesApi::class, ExperimentalCoroutinesApi::class)
 actual fun defaultDispatcher(
     nThreads: Int,
     name: String,

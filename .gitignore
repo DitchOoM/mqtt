@@ -41,6 +41,9 @@ bin/
 ### Mac OS ###
 .DS_Store
 
+### Gradle (per-dev, SDK path etc.) ###
+local.properties
+
 ### Application DB
 mqtt-client/mqtt4.db
 mqtt-client/mqtt5.db

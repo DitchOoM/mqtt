@@ -3,48 +3,42 @@ package com.ditchoom.mqtt5.controlpacket.properties
 import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.ReadBuffer
+import com.ditchoom.buffer.WriteBuffer
+
+/** ReadBuffer-based encoder for both binary-data property variants. */
+private fun encodeBinaryData(
+    buf: WriteBuffer,
+    data: ReadBuffer,
+) {
+    data.position(0)
+    buf.write(data)
+}
 
 /**
  * Measures the encoded wire size of an [MqttProperty] by encoding it to a temporary buffer.
- * This includes the identifier byte + the payload bytes.
- *
- * Uses [encodeMqttProperty] which handles binary data properties (CorrelationData, AuthenticationData)
- * via ReadBuffer-based encode callbacks. [MqttPropertyCodec.encode] cannot handle those because
- * it requires EncodeContext with registered encode keys.
+ * Includes the identifier byte + payload bytes.
  */
 fun encodedSize(prop: MqttProperty): Int {
     val buf = BufferFactory.Default.allocate(512)
-    buf.encodeMqttProperty<ReadBuffer, ReadBuffer>(
+    MqttPropertyCodec.encode<ReadBuffer, ReadBuffer>(
+        buf,
         prop,
-        encodeCorrelationData = { wb, data ->
-            data.position(0)
-            wb.write(data)
-        },
-        encodeAuthenticationData = { wb, data ->
-            data.position(0)
-            wb.write(data)
-        },
+        encodeAuthenticationDataData = ::encodeBinaryData,
+        encodeCorrelationDataData = ::encodeBinaryData,
     )
     buf.resetForRead()
     return buf.remaining()
 }
 
-/**
- * Encodes an [MqttProperty] to the given buffer, handling binary data properties.
- */
+/** Encodes an [MqttProperty] to the given buffer, handling binary data properties. */
 fun encodeProperty(
-    buf: com.ditchoom.buffer.WriteBuffer,
+    buf: WriteBuffer,
     prop: MqttProperty,
 ) {
-    buf.encodeMqttProperty<ReadBuffer, ReadBuffer>(
+    MqttPropertyCodec.encode<ReadBuffer, ReadBuffer>(
+        buf,
         prop,
-        encodeCorrelationData = { wb, data ->
-            data.position(0)
-            wb.write(data)
-        },
-        encodeAuthenticationData = { wb, data ->
-            data.position(0)
-            wb.write(data)
-        },
+        encodeAuthenticationDataData = ::encodeBinaryData,
+        encodeCorrelationDataData = ::encodeBinaryData,
     )
 }

@@ -537,12 +537,6 @@ class PropertyRoundTripTests {
      * Writes a property to a buffer via codec, reads back the raw bytes and decodes
      * via MqttPropertyCodec.decode(). Returns both the raw bytes and the decoded property.
      */
-    private val defaultDecoders =
-        BinaryPropertyDecoders<ReadBuffer, ReadBuffer>(
-            decodeCorrelationData = { reader -> reader.copyToBuffer() },
-            decodeAuthenticationData = { reader -> reader.copyToBuffer() },
-        )
-
     private fun roundTrip(prop: MqttProperty): Pair<ByteArray, MqttProperty> {
         val size = propSize(prop)
         val buffer = BufferFactory.Default.allocate(size + 1)
@@ -553,7 +547,12 @@ class PropertyRoundTripTests {
             rawBytes[i] = buffer.readByte()
         }
         buffer.resetForRead()
-        val decoded = buffer.decodeMqttProperty(defaultDecoders)
+        val decoded =
+            MqttPropertyCodec.decode<ReadBuffer, ReadBuffer>(
+                buffer,
+                decodeAuthenticationDataData = { reader -> reader.copyToBuffer() },
+                decodeCorrelationDataData = { reader -> reader.copyToBuffer() },
+            )
         return Pair(rawBytes, decoded)
     }
 }

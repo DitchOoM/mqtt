@@ -227,14 +227,14 @@ value class SubscriptionIdentifier(
 
 @PacketType(value = 0x09, wire = 0x09)
 @ProtocolMessage
-data class CorrelationData<@Payload D>(
+data class CorrelationData<@Payload CD>(
     val length: UShort,
-    @LengthFrom("length") val data: D,
+    @LengthFrom("length") val data: CD,
 ) : MqttProperty
 
 @PacketType(value = 0x16, wire = 0x16)
 @ProtocolMessage
-data class AuthenticationData<@Payload D>(
+data class AuthenticationData<@Payload AD>(
     val length: UShort,
-    @LengthFrom("length") val data: D,
+    @LengthFrom("length") val data: AD,
 ) : MqttProperty

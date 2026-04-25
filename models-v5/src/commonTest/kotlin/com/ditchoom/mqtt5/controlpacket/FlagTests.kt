@@ -230,7 +230,7 @@ class FlagTests {
     @Test
     fun controlPacketFlagsMatchSpecForPUBACK() =
         assertEquals(
-            PublishAcknowledgment(AckVariableHeader(packetIdentifier)).flags,
+            PublishAcknowledgment(packetIdentifier).flags,
             0b0,
             controlPacketSpectMatchError,
         )
@@ -238,7 +238,7 @@ class FlagTests {
     @Test
     fun controlPacketFlagsMatchSpecForPUBREC() =
         assertEquals(
-            PublishReceived(AckVariableHeader(packetIdentifier)).flags,
+            PublishReceived(packetIdentifier).flags,
             0b0,
             controlPacketSpectMatchError,
         )
@@ -246,7 +246,7 @@ class FlagTests {
     @Test
     fun controlPacketFlagsMatchSpecForPUBREL() =
         assertEquals(
-            PublishRelease(AckVariableHeader(packetIdentifier)).flags,
+            PublishRelease(packetIdentifier).flags,
             0b10,
             controlPacketSpectMatchError,
         )
@@ -254,7 +254,7 @@ class FlagTests {
     @Test
     fun controlPacketFlagsMatchSpecForPUBCOMP() =
         assertEquals(
-            PublishComplete(AckVariableHeader(packetIdentifier)).flags,
+            PublishComplete(packetIdentifier).flags,
             0b0,
             controlPacketSpectMatchError,
         )
@@ -263,10 +263,7 @@ class FlagTests {
     fun controlPacketFlagsMatchSpecForSUBSCRIBE() =
         assertEquals(
             0b10,
-            SubscribeRequest(
-                SubscribeRequest.VariableHeader(packetIdentifier),
-                setOf(Subscription(TopicFilter.fromOrThrow("yolo"))),
-            ).flags,
+            SubscribeRequest(packetIdentifier.toUShort(), "yolo", AT_LEAST_ONCE).flags,
             controlPacketSpectMatchError,
         )
 
@@ -281,21 +278,15 @@ class FlagTests {
     @Test
     fun controlPacketFlagsMatchSpecForUNSUBSCRIBE() =
         assertEquals(
-            UnsubscribeAcknowledgment(
-                UnsubscribeAcknowledgment.VariableHeader(packetIdentifier),
-                listOf(SUCCESS),
-            ).flags,
-            0b0,
+            0b10,
+            UnsubscribeRequest("yolo").flags,
             controlPacketSpectMatchError,
         )
 
     @Test
     fun controlPacketFlagsMatchSpecForUNSUBACK() =
         assertEquals(
-            UnsubscribeAcknowledgment(
-                UnsubscribeAcknowledgment.VariableHeader(packetIdentifier),
-                listOf(SUCCESS),
-            ).flags,
+            UnsubscribeAcknowledgment(packetIdentifier, reasonCodes = listOf(SUCCESS)).flags,
             0b0,
             controlPacketSpectMatchError,
         )
@@ -309,7 +300,7 @@ class FlagTests {
     @Test
     fun controlPacketFlagsMatchSpecForDISCONNECT() =
         assertEquals(
-            DisconnectNotification(DisconnectNotification.VariableHeader(NORMAL_DISCONNECTION)).flags,
+            DisconnectNotification(reasonCode = NORMAL_DISCONNECTION).flags,
             0b0,
             controlPacketSpectMatchError,
         )
@@ -317,17 +308,7 @@ class FlagTests {
     @Test
     fun controlPacketFlagsMatchSpecForAUTH() =
         assertEquals(
-            AuthenticationExchange(
-                AuthenticationExchange.VariableHeader(
-                    SUCCESS,
-                    AuthenticationExchange.VariableHeader.Properties(
-                        Authentication(
-                            "yolo",
-                            BufferFactory.Default.allocate(0),
-                        ),
-                    ),
-                ),
-            ).flags,
+            AuthenticationExchange().flags,
             0b0,
             controlPacketSpectMatchError,
         )

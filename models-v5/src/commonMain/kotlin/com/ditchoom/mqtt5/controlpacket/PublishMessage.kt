@@ -101,14 +101,8 @@ class PublishMessageV5<P> internal constructor(
         userProperty: List<Pair<String, String>>,
     ): ControlPacket? =
         when (qualityOfService) {
-            AT_LEAST_ONCE ->
-                PublishAcknowledgment(
-                    AckVariableHeader(packetIdentifier, reasonCode, AckProperties(reasonString, userProperty)),
-                )
-            QualityOfService.EXACTLY_ONCE ->
-                PublishReceived(
-                    AckVariableHeader(packetIdentifier, reasonCode, AckProperties(reasonString, userProperty)),
-                )
+            AT_LEAST_ONCE -> PublishAcknowledgment(packetIdentifier, reasonCode, reasonString, userProperty)
+            QualityOfService.EXACTLY_ONCE -> PublishReceived(packetIdentifier, reasonCode, reasonString, userProperty)
             else -> null
         }
 

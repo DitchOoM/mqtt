@@ -220,14 +220,10 @@ class PersistenceTests {
                 )
             val sub =
                 SubscribeRequest(
-                    SubscribeRequest.VariableHeader(
-                        NO_PACKET_ID,
-                        SubscribeRequest.VariableHeader.Properties(
-                            "testReason",
-                            userProperty = listOf(Pair("Rahul", "Behera")),
-                        ),
-                    ),
-                    subscriptions,
+                    packetIdentifier = NO_PACKET_ID.toUShort(),
+                    subscriptions = subscriptions,
+                    reasonString = "testReason",
+                    userProperty = listOf(Pair("Rahul", "Behera")),
                 )
 
             val subWithPacketId = persistence.writeSubUpdatePacketIdAndSimplifySubscriptions(broker, sub)
@@ -320,32 +316,28 @@ class PersistenceTests {
             )
         private val connectionRequestMqtt5 =
             ConnectionRequest(
-                variableHeader =
-                    ConnectionRequest.VariableHeader(
-                        cleanStart = true,
-                        keepAliveSeconds = 1,
-                        willFlag = true,
-                        properties =
-                            ConnectionRequest.VariableHeader.Properties(
-                                sessionExpiryIntervalSeconds = 1u,
-                                receiveMaximum = 500,
-                                10_000_000uL,
-                                topicAliasMaximum = 40,
-                                requestProblemInformation = true,
-                                userProperty = listOf(Pair("Rahul", "Behera"), Pair("yolo", "swag")),
-                            ),
-                    ),
-                payload =
-                    ConnectionRequest.Payload(
-                        clientId = "taco123-" + Random.nextUInt(),
-                        willProperties =
-                            ConnectionRequest.Payload.WillProperties(
-                                willDelayIntervalSeconds = 1,
-                                correlationData = BufferFactory.Default.wrap(byteArrayOf(1, 2, 3, 4)).also { it.position(0) },
-                                userProperty = listOf(Pair("will", "test"), Pair("test", "will")),
-                            ),
-                        willTopic = TopicName.fromOrThrow("testWill"),
-                    ),
+                clientId = "taco123-" + Random.nextUInt(),
+                keepAliveSeconds = 1,
+                cleanStart = true,
+                will = com.ditchoom.mqtt.controlpacket.WillConfig.Enabled(
+                    topic = TopicName.fromOrThrow("testWill"),
+                    payload = BufferFactory.Default.allocate(0),
+                    qos = com.ditchoom.mqtt.controlpacket.QualityOfService.AT_MOST_ONCE,
+                    retain = false,
+                ),
+                props = com.ditchoom.mqtt5.controlpacket.ConnectProperties(
+                    sessionExpiryIntervalSeconds = 1u,
+                    receiveMaximum = 500,
+                    maximumPacketSize = 10_000_000uL,
+                    topicAliasMaximum = 40,
+                    requestProblemInformation = true,
+                    userProperty = listOf(Pair("Rahul", "Behera"), Pair("yolo", "swag")),
+                ),
+                willProperties = com.ditchoom.mqtt5.controlpacket.ConnectWillProperties(
+                    willDelayIntervalSeconds = 1,
+                    correlationData = BufferFactory.Default.wrap(byteArrayOf(1, 2, 3, 4)).also { it.position(0) },
+                    userProperty = listOf(Pair("will", "test"), Pair("test", "will")),
+                ),
             )
     }
 }

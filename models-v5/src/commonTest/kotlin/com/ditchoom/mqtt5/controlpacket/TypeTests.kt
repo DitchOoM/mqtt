@@ -1,8 +1,6 @@
 package com.ditchoom.mqtt5.controlpacket
 
-import com.ditchoom.buffer.BufferFactory
-import com.ditchoom.buffer.Default
-import com.ditchoom.mqtt.controlpacket.TopicFilter
+import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.GRANTED_QOS_0
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.NORMAL_DISCONNECTION
@@ -10,7 +8,6 @@ import com.ditchoom.mqtt.controlpacket.format.ReasonCode.SUCCESS
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow.BIDIRECTIONAL
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow.CLIENT_TO_SERVER
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow.SERVER_TO_CLIENT
-import com.ditchoom.mqtt5.controlpacket.properties.Authentication
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -43,7 +40,7 @@ class TypeTests {
     fun controlPacketTypeValueMatchesSpecForPUBACK() =
         assertEquals(
             4,
-            PublishAcknowledgment(AckVariableHeader(packetIdentifier)).controlPacketValue,
+            PublishAcknowledgment(packetIdentifier).controlPacketValue,
             controlPacketSpectMatchError,
         )
 
@@ -51,7 +48,7 @@ class TypeTests {
     fun controlPacketTypeValueMatchesSpecForPUBREC() =
         assertEquals(
             5,
-            PublishReceived(AckVariableHeader(packetIdentifier)).controlPacketValue,
+            PublishReceived(packetIdentifier).controlPacketValue,
             controlPacketSpectMatchError,
         )
 
@@ -59,7 +56,7 @@ class TypeTests {
     fun controlPacketTypeValueMatchesSpecForPUBREL() =
         assertEquals(
             6,
-            PublishRelease(AckVariableHeader(packetIdentifier)).controlPacketValue,
+            PublishRelease(packetIdentifier).controlPacketValue,
             controlPacketSpectMatchError,
         )
 
@@ -67,7 +64,7 @@ class TypeTests {
     fun controlPacketTypeValueMatchesSpecForPUBCOMP() =
         assertEquals(
             7,
-            PublishComplete(AckVariableHeader(packetIdentifier)).controlPacketValue,
+            PublishComplete(packetIdentifier).controlPacketValue,
             controlPacketSpectMatchError,
         )
 
@@ -75,10 +72,7 @@ class TypeTests {
     fun controlPacketTypeValueMatchesSpecForSUBSCRIBE() =
         assertEquals(
             8,
-            SubscribeRequest(
-                SubscribeRequest.VariableHeader(packetIdentifier),
-                setOf(Subscription(TopicFilter.fromOrThrow("yolo"))),
-            ).controlPacketValue,
+SubscribeRequest(packetIdentifier.toUShort(), "yolo", QualityOfService.AT_LEAST_ONCE).controlPacketValue,
             controlPacketSpectMatchError,
         )
 
@@ -94,10 +88,7 @@ class TypeTests {
     fun controlPacketTypeValueMatchesSpecForUNSUBSCRIBE() =
         assertEquals(
             10,
-            UnsubscribeRequest(
-                UnsubscribeRequest.VariableHeader(packetIdentifier),
-                setOf(TopicFilter.fromOrThrow("yolo")),
-            ).controlPacketValue,
+UnsubscribeRequest("yolo").controlPacketValue,
             controlPacketSpectMatchError,
         )
 
@@ -105,10 +96,7 @@ class TypeTests {
     fun controlPacketTypeValueMatchesSpecForUNSUBACK() =
         assertEquals(
             11,
-            UnsubscribeAcknowledgment(
-                UnsubscribeAcknowledgment.VariableHeader(packetIdentifier),
-                listOf(SUCCESS),
-            ).controlPacketValue,
+UnsubscribeAcknowledgment(packetIdentifier, reasonCodes = listOf(SUCCESS)).controlPacketValue,
             controlPacketSpectMatchError,
         )
 
@@ -122,7 +110,7 @@ class TypeTests {
     fun controlPacketTypeValueMatchesSpecForDISCONNECT() =
         assertEquals(
             14,
-            DisconnectNotification(DisconnectNotification.VariableHeader(NORMAL_DISCONNECTION)).controlPacketValue,
+            DisconnectNotification(reasonCode = NORMAL_DISCONNECTION).controlPacketValue,
             controlPacketSpectMatchError,
         )
 
@@ -130,17 +118,7 @@ class TypeTests {
     fun controlPacketTypeValueMatchesSpecForAUTH() =
         assertEquals(
             15,
-            AuthenticationExchange(
-                AuthenticationExchange.VariableHeader(
-                    SUCCESS,
-                    AuthenticationExchange.VariableHeader.Properties(
-                        Authentication(
-                            "yolo",
-                            BufferFactory.Default.allocate(0),
-                        ),
-                    ),
-                ),
-            ).controlPacketValue,
+            AuthenticationExchange().controlPacketValue,
             controlPacketSpectMatchError,
         )
 
@@ -170,7 +148,7 @@ class TypeTests {
     fun controlPacketTypeDirectionOfFlowPUBACK() =
         assertEquals(
             BIDIRECTIONAL,
-            PublishAcknowledgment(AckVariableHeader(packetIdentifier)).direction,
+            PublishAcknowledgment(packetIdentifier).direction,
             controlPacketSpectMatchError,
         )
 
@@ -178,7 +156,7 @@ class TypeTests {
     fun controlPacketTypeDirectionOfFlowPUBREC() =
         assertEquals(
             BIDIRECTIONAL,
-            PublishReceived(AckVariableHeader(packetIdentifier)).direction,
+            PublishReceived(packetIdentifier).direction,
             controlPacketSpectMatchError,
         )
 
@@ -186,7 +164,7 @@ class TypeTests {
     fun controlPacketTypeDirectionOfFlowPUBREL() =
         assertEquals(
             BIDIRECTIONAL,
-            PublishRelease(AckVariableHeader(packetIdentifier)).direction,
+            PublishRelease(packetIdentifier).direction,
             controlPacketSpectMatchError,
         )
 
@@ -194,7 +172,7 @@ class TypeTests {
     fun controlPacketTypeDirectionOfFlowPUBCOMP() =
         assertEquals(
             BIDIRECTIONAL,
-            PublishComplete(AckVariableHeader(packetIdentifier)).direction,
+            PublishComplete(packetIdentifier).direction,
             controlPacketSpectMatchError,
         )
 
@@ -202,10 +180,7 @@ class TypeTests {
     fun controlPacketTypeDirectionOfFlowSUBSCRIBE() =
         assertEquals(
             CLIENT_TO_SERVER,
-            SubscribeRequest(
-                SubscribeRequest.VariableHeader(packetIdentifier),
-                setOf(Subscription(TopicFilter.fromOrThrow("yolo"))),
-            ).direction,
+SubscribeRequest(packetIdentifier.toUShort(), "yolo", QualityOfService.AT_LEAST_ONCE).direction,
             controlPacketSpectMatchError,
         )
 
@@ -221,10 +196,7 @@ class TypeTests {
     fun controlPacketTypeDirectionOfFlowUNSUBSCRIBE() =
         assertEquals(
             CLIENT_TO_SERVER,
-            UnsubscribeRequest(
-                UnsubscribeRequest.VariableHeader(packetIdentifier),
-                setOf(TopicFilter.fromOrThrow("yolo")),
-            ).direction,
+UnsubscribeRequest("yolo").direction,
             controlPacketSpectMatchError,
         )
 
@@ -232,10 +204,7 @@ class TypeTests {
     fun controlPacketTypeDirectionOfFlowUNSUBACK() =
         assertEquals(
             SERVER_TO_CLIENT,
-            UnsubscribeAcknowledgment(
-                UnsubscribeAcknowledgment.VariableHeader(packetIdentifier),
-                listOf(SUCCESS),
-            ).direction,
+UnsubscribeAcknowledgment(packetIdentifier, reasonCodes = listOf(SUCCESS)).direction,
             controlPacketSpectMatchError,
         )
 
@@ -249,7 +218,7 @@ class TypeTests {
     fun controlPacketTypeDirectionOfFlowDISCONNECT() =
         assertEquals(
             BIDIRECTIONAL,
-            DisconnectNotification(DisconnectNotification.VariableHeader(NORMAL_DISCONNECTION)).direction,
+            DisconnectNotification(reasonCode = NORMAL_DISCONNECTION).direction,
             controlPacketSpectMatchError,
         )
 
@@ -257,17 +226,7 @@ class TypeTests {
     fun controlPacketTypeDirectionOfFlowAUTH() =
         assertEquals(
             BIDIRECTIONAL,
-            AuthenticationExchange(
-                AuthenticationExchange.VariableHeader(
-                    SUCCESS,
-                    AuthenticationExchange.VariableHeader.Properties(
-                        Authentication(
-                            "yolo",
-                            BufferFactory.Default.allocate(0),
-                        ),
-                    ),
-                ),
-            ).direction,
+            AuthenticationExchange().direction,
             controlPacketSpectMatchError,
         )
 }

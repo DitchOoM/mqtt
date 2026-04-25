@@ -89,9 +89,7 @@ class MalformedPacketTests {
     @Test
     fun pubackInvalidReasonCodeThrows() {
         assertFailsWith<IllegalArgumentException> {
-            PublishAcknowledgment(
-                AckVariableHeader(1, ReasonCode.RECEIVE_MAXIMUM_EXCEEDED),
-            )
+            PublishAcknowledgment(1, ReasonCode.RECEIVE_MAXIMUM_EXCEEDED)
         }
     }
 

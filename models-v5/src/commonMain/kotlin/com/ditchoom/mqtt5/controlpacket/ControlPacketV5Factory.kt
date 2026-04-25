@@ -118,15 +118,12 @@ object ControlPacketV5Factory : ControlPacketFactory {
         subscriptions: Set<ISubscription>,
         serverReference: String?,
         userProperty: List<Pair<String, String>>,
-    ): ISubscribeRequest {
-        val props =
-            SubscribeRequest.VariableHeader.Properties(
-                reasonString = "",
-                userProperty = userProperty,
-            )
-        val variableHeader = SubscribeRequest.VariableHeader(NO_PACKET_ID, props)
-        return SubscribeRequest(variableHeader, subscriptions)
-    }
+    ): ISubscribeRequest =
+        SubscribeRequest(
+            packetIdentifier = NO_PACKET_ID.toUShort(),
+            subscriptions = subscriptions,
+            userProperty = userProperty,
+        )
 
     override fun unsubscribe(
         topics: Set<TopicFilter>,
@@ -138,15 +135,13 @@ object ControlPacketV5Factory : ControlPacketFactory {
         sessionExpiryIntervalSeconds: ULong?,
         reasonString: String?,
         userProperty: List<Pair<String, String>>,
-    ): IDisconnectNotification {
-        val props =
-            DisconnectNotification.VariableHeader.Properties(
-                sessionExpiryIntervalSeconds,
-                reasonString,
-                userProperty,
-            )
-        return DisconnectNotification(DisconnectNotification.VariableHeader(reasonCode, props))
-    }
+    ): IDisconnectNotification =
+        DisconnectNotification(
+            reasonCode = reasonCode,
+            sessionExpiryIntervalSeconds = sessionExpiryIntervalSeconds,
+            reasonString = reasonString,
+            userProperty = userProperty,
+        )
 
     override suspend fun defaultPersistence(
         androidContext: Any?,

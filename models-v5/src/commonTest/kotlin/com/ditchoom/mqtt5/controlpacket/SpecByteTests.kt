@@ -169,9 +169,7 @@ class SpecByteTests {
     fun connackSuccessNoPropertiesExactBytes() {
         val buf =
             packetBuffer {
-                ConnectionAcknowledgment(
-                    ConnectionAcknowledgment.VariableHeader(sessionPresent = false, connectReason = ReasonCode.SUCCESS),
-                )
+                ConnectionAcknowledgment(sessionPresent = false, connectReason = ReasonCode.SUCCESS)
             }
         assertEquals(5, buf.remaining())
         assertEquals(0x20u, buf.readUnsignedByte()) // type=2
@@ -192,8 +190,8 @@ class SpecByteTests {
         buf.resetForRead()
         val packet = ControlPacketV5.from(buf)
         assertIs<ConnectionAcknowledgment>(packet)
-        assertFalse(packet.header.sessionPresent)
-        assertEquals(ReasonCode.SUCCESS, packet.header.connectReason)
+        assertFalse(packet.sessionPresent)
+        assertEquals(ReasonCode.SUCCESS, packet.connectReason)
     }
 
     @Test
@@ -203,14 +201,9 @@ class SpecByteTests {
         val buf =
             packetBuffer {
                 ConnectionAcknowledgment(
-                    ConnectionAcknowledgment.VariableHeader(
-                        sessionPresent = false,
-                        connectReason = ReasonCode.SUCCESS,
-                        properties =
-                            ConnectionAcknowledgment.VariableHeader.Properties(
-                                sessionExpiryIntervalSeconds = 300uL,
-                            ),
-                    ),
+                    sessionPresent = false,
+                    connectReason = ReasonCode.SUCCESS,
+                    properties = ConnAckProperties(sessionExpiryIntervalSeconds = 300uL),
                 )
             }
         assertEquals(10, buf.remaining())
@@ -230,9 +223,7 @@ class SpecByteTests {
     fun connackSessionPresentExactBytes() {
         val buf =
             packetBuffer {
-                ConnectionAcknowledgment(
-                    ConnectionAcknowledgment.VariableHeader(sessionPresent = true, connectReason = ReasonCode.SUCCESS),
-                )
+                ConnectionAcknowledgment(sessionPresent = true, connectReason = ReasonCode.SUCCESS)
             }
         assertEquals(5, buf.remaining())
         assertEquals(0x20u, buf.readUnsignedByte()) // type=2
@@ -246,12 +237,7 @@ class SpecByteTests {
     fun connackNotAuthorizedExactBytes() {
         val buf =
             packetBuffer {
-                ConnectionAcknowledgment(
-                    ConnectionAcknowledgment.VariableHeader(
-                        sessionPresent = false,
-                        connectReason = ReasonCode.NOT_AUTHORIZED,
-                    ),
-                )
+                ConnectionAcknowledgment(sessionPresent = false, connectReason = ReasonCode.NOT_AUTHORIZED)
             }
         assertEquals(5, buf.remaining())
         assertEquals(0x20u, buf.readUnsignedByte()) // type=2
@@ -451,7 +437,7 @@ class SpecByteTests {
         // packetId=1, NO_MATCHING_SUBSCRIBERS=0x10, no properties
         val buf =
             packetBuffer {
-                PublishAcknowledgment(AckVariableHeader(1, ReasonCode.NO_MATCHING_SUBSCRIBERS))
+                PublishAcknowledgment(1, ReasonCode.NO_MATCHING_SUBSCRIBERS)
             }
         assertEquals(6, buf.remaining())
         assertEquals(0x40u, buf.readUnsignedByte()) // type=4
@@ -587,8 +573,8 @@ class SpecByteTests {
         val buf =
             packetBuffer {
                 SubscribeAcknowledgement(
-                    SubscribeAcknowledgement.VariableHeader(1),
-                    listOf(ReasonCode.GRANTED_QOS_0, ReasonCode.GRANTED_QOS_2, ReasonCode.UNSPECIFIED_ERROR),
+                    packetIdentifier = 1.toUShort(),
+                    reasonCodes = listOf(ReasonCode.GRANTED_QOS_0, ReasonCode.GRANTED_QOS_2, ReasonCode.UNSPECIFIED_ERROR),
                 )
             }
         assertEquals(8, buf.remaining())
@@ -610,8 +596,8 @@ class SpecByteTests {
         val buf =
             packetBuffer {
                 UnsubscribeRequest(
-                    UnsubscribeRequest.VariableHeader(10),
-                    setOf(TopicFilter.fromOrThrow("a/b"), TopicFilter.fromOrThrow("c/d")),
+                    packetIdentifier = 10.toUShort(),
+                    topics = setOf(TopicFilter.fromOrThrow("a/b"), TopicFilter.fromOrThrow("c/d")),
                 )
             }
         assertEquals(15, buf.remaining())
@@ -698,10 +684,7 @@ class SpecByteTests {
 
     @Test
     fun disconnectNormalExactBytes() {
-        val buf =
-            packetBuffer {
-                DisconnectNotification(DisconnectNotification.VariableHeader())
-            }
+        val buf = packetBuffer { DisconnectNotification() }
         assertEquals(2, buf.remaining())
         assertEquals(0xE0u, buf.readUnsignedByte()) // type=14
         assertEquals(0x00u, buf.readUnsignedByte()) // RL=0
@@ -710,10 +693,7 @@ class SpecByteTests {
     @Test
     fun disconnectWithReasonCodeExactBytes() {
         // UNSPECIFIED_ERROR, no properties → RL=2 (reason code + prop-length VBI=0)
-        val buf =
-            packetBuffer {
-                DisconnectNotification(DisconnectNotification.VariableHeader(ReasonCode.UNSPECIFIED_ERROR))
-            }
+        val buf = packetBuffer { DisconnectNotification(reasonCode = ReasonCode.UNSPECIFIED_ERROR) }
         assertEquals(4, buf.remaining())
         assertEquals(0xE0u, buf.readUnsignedByte()) // type=14
         assertEquals(0x02u, buf.readUnsignedByte()) // RL=2
@@ -729,7 +709,7 @@ class SpecByteTests {
         buf.resetForRead()
         val packet = ControlPacketV5.from(buf)
         assertIs<DisconnectNotification>(packet)
-        assertEquals(ReasonCode.NORMAL_DISCONNECTION, packet.variable.reasonCode)
+        assertEquals(null, packet.reasonCode) // RL=0 → null reason code, decoded as default NORMAL_DISCONNECTION
     }
 
     @Test
@@ -743,7 +723,7 @@ class SpecByteTests {
         buf.resetForRead()
         val packet = ControlPacketV5.from(buf)
         assertIs<DisconnectNotification>(packet)
-        assertEquals(ReasonCode.UNSPECIFIED_ERROR, packet.variable.reasonCode)
+        assertEquals(ReasonCode.UNSPECIFIED_ERROR.byte, packet.reasonCode)
     }
 
     @Test
@@ -756,22 +736,15 @@ class SpecByteTests {
         buf.resetForRead()
         val packet = ControlPacketV5.from(buf)
         assertIs<DisconnectNotification>(packet)
-        assertEquals(ReasonCode.DISCONNECT_WITH_WILL_MESSAGE, packet.variable.reasonCode)
+        assertEquals(ReasonCode.DISCONNECT_WITH_WILL_MESSAGE.byte, packet.reasonCode)
+        assertEquals(null, packet.properties) // RL=1 → no properties section on the wire
     }
 
     // ── AUTH (§3.15) ───────────────────────────────────────────────────────
 
     @Test
     fun authSuccessExactBytes() {
-        val buf =
-            packetBuffer {
-                AuthenticationExchange(
-                    AuthenticationExchange.VariableHeader(
-                        ReasonCode.SUCCESS,
-                        AuthenticationExchange.VariableHeader.Properties(authentication = null),
-                    ),
-                )
-            }
+        val buf = packetBuffer { AuthenticationExchange() }
         assertEquals(2, buf.remaining())
         assertEquals(0xF0u, buf.readUnsignedByte()) // type=15
         assertEquals(0x00u, buf.readUnsignedByte()) // RL=0
@@ -785,7 +758,7 @@ class SpecByteTests {
         buf.resetForRead()
         val packet = ControlPacketV5.from(buf)
         assertIs<AuthenticationExchange>(packet)
-        assertEquals(ReasonCode.SUCCESS, packet.variable.reasonCode)
+        assertEquals(null, packet.reasonCode) // RL=0 → omitted, decoded as default SUCCESS
     }
 
     @Test
@@ -793,12 +766,7 @@ class SpecByteTests {
         // CONTINUE_AUTHENTICATION = 0x18, no properties
         val buf =
             packetBuffer {
-                AuthenticationExchange(
-                    AuthenticationExchange.VariableHeader(
-                        ReasonCode.CONTINUE_AUTHENTICATION,
-                        AuthenticationExchange.VariableHeader.Properties(authentication = null),
-                    ),
-                )
+                AuthenticationExchange(reasonCode = ReasonCode.CONTINUE_AUTHENTICATION)
             }
         assertEquals(4, buf.remaining())
         assertEquals(0xF0u, buf.readUnsignedByte()) // type=15

@@ -23,10 +23,11 @@ import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
 import com.ditchoom.mqtt.controlpacket.payloadAsReadBufferOrNull
-import com.ditchoom.mqtt5.controlpacket.AckProperties
-import com.ditchoom.mqtt5.controlpacket.AckVariableHeader
+import com.ditchoom.mqtt5.controlpacket.ConnectProperties
+import com.ditchoom.mqtt5.controlpacket.ConnectWillProperties
 import com.ditchoom.mqtt5.controlpacket.ConnectionRequest
 import com.ditchoom.mqtt5.controlpacket.PublishComplete
+import com.ditchoom.mqtt5.controlpacket.V5Packet
 import com.ditchoom.mqtt5.controlpacket.PublishMessageV5
 import com.ditchoom.mqtt5.controlpacket.PublishReceived
 import com.ditchoom.mqtt5.controlpacket.PublishRelease
@@ -34,6 +35,8 @@ import com.ditchoom.mqtt5.controlpacket.SubscribeRequest
 import com.ditchoom.mqtt5.controlpacket.Subscription
 import com.ditchoom.mqtt5.controlpacket.UnsubscribeRequest
 import com.ditchoom.mqtt5.controlpacket.properties.Authentication
+import com.ditchoom.mqtt5.controlpacket.reasonStringValue
+import com.ditchoom.mqtt5.controlpacket.userProperties
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -102,12 +105,11 @@ class SqlDatabasePersistence(
                     broker.identifier.toLong(),
                     0L,
                     incomingPubRecv.packetIdentifier.toLong(),
-                    publishRelease.variable.reasonCode.byte
-                        .toLong(),
-                    publishRelease.variable.properties.reasonString,
+                    (publishRelease.reasonCode ?: ReasonCode.SUCCESS.byte).toLong(),
+                    publishRelease.properties.reasonStringValue(),
                     publishRelease.controlPacketValue.toLong(),
                 )
-                for ((key, value) in publishRelease.variable.properties.userProperty) {
+                for ((key, value) in publishRelease.properties.userProperties()) {
                     propertyQueries.addProp(
                         broker.identifier.toLong(),
                         0L,
@@ -133,7 +135,7 @@ class SqlDatabasePersistence(
                     1L,
                     incomingPubRel.packetIdentifier.toLong(),
                 )
-                val userProperty = (outPubComp as PublishComplete).variable.properties.userProperty
+                val userProperty = (outPubComp as PublishComplete).properties.userProperties()
                 if (userProperty.isNotEmpty()) {
                     for ((key, value) in userProperty) {
                         propertyQueries.addProp(
@@ -191,6 +193,8 @@ class SqlDatabasePersistence(
         connectionRequest: IConnectionRequest,
     ): MqttBroker {
         val connect = connectionRequest as ConnectionRequest
+        val typed = connect.typedProperties
+        val typedWill = connect.typedWillProperties
         val brokerId =
             brokerQueries.transactionWithResult {
                 brokerQueries.insertBroker()
@@ -199,50 +203,37 @@ class SqlDatabasePersistence(
                     brokerId,
                     connect.protocolName,
                     connect.protocolVersion.toLong(),
-                    connect.variableHeader.willRetain.toLong(),
-                    connect.variableHeader.willQos.integerValue
-                        .toLong(),
-                    connect.variableHeader.willFlag.toLong(),
-                    connect.variableHeader.cleanStart.toLong(),
-                    connect.variableHeader.keepAliveSeconds.toLong(),
-                    connect.variableHeader.properties.sessionExpiryIntervalSeconds
-                        ?.toLong(),
-                    connect.variableHeader.properties.receiveMaximum
-                        ?.toLong(),
-                    connect.variableHeader.properties.maximumPacketSize
-                        ?.toLong(),
-                    connect.variableHeader.properties.topicAliasMaximum
-                        ?.toLong(),
-                    connect.variableHeader.properties.requestResponseInformation
-                        ?.toLong(),
-                    connect.variableHeader.properties.requestProblemInformation
-                        ?.toLong(),
-                    connect.variableHeader.properties.authentication
-                        ?.method,
-                    connect.variableHeader.properties.authentication
-                        ?.data,
-                    connect.payload.clientId,
-                    (connect.payload.willProperties != null).toLong(),
-                    connect.payload.willTopic?.toString(),
-                    connect.payload.willPayload,
-                    connect.payload.userName,
-                    connect.payload.password,
-                    connect.payload.willProperties?.willDelayIntervalSeconds ?: 0L,
-                    connect.payload.willProperties
-                        ?.payloadFormatIndicator
-                        ?.toLong(),
-                    connect.payload.willProperties?.messageExpiryIntervalSeconds,
-                    connect.payload.willProperties?.contentType,
-                    connect.payload.willProperties
-                        ?.responseTopic
-                        ?.toString(),
-                    connect.payload.willProperties?.correlationData,
+                    connect.connectFlags.willRetain.toLong(),
+                    connect.connectFlags.willQos.toLong(),
+                    connect.connectFlags.willFlag.toLong(),
+                    connect.connectFlags.cleanStart.toLong(),
+                    connect.keepAlive.toLong(),
+                    typed.sessionExpiryIntervalSeconds?.toLong(),
+                    typed.receiveMaximum?.toLong(),
+                    typed.maximumPacketSize?.toLong(),
+                    typed.topicAliasMaximum?.toLong(),
+                    typed.requestResponseInformation?.toLong(),
+                    typed.requestProblemInformation?.toLong(),
+                    typed.authentication?.method,
+                    typed.authentication?.data,
+                    connect.clientId,
+                    (typedWill != null).toLong(),
+                    connect.willTopicString,
+                    connect.willPayloadValue,
+                    connect.userName,
+                    connect.password,
+                    typedWill?.willDelayIntervalSeconds ?: 0L,
+                    typedWill?.payloadFormatIndicator?.toLong(),
+                    typedWill?.messageExpiryIntervalSeconds,
+                    typedWill?.contentType,
+                    typedWill?.responseTopic?.toString(),
+                    typedWill?.correlationData,
                 )
-                val userProps = connect.variableHeader.properties.userProperty
+                val userProps = typed.userProperty
                 for ((key, value) in userProps) {
                     propertyQueries.addProp(brokerId, 0, -1, key, value)
                 }
-                val willUserProps = connect.payload.willProperties?.userProperty
+                val willUserProps = typedWill?.userProperty
                 if (willUserProps != null) {
                     for ((key, value) in willUserProps) {
                         propertyQueries.addProp(brokerId, 0, -2, key, value)
@@ -324,54 +315,58 @@ class SqlDatabasePersistence(
                 .allProps(id, 0L, -2) { k, v ->
                     Pair(k, v)
                 }.executeAsList()
-        val variable =
-            ConnectionRequest.VariableHeader(
-                connectionRequestDatabaseRecord.protocol_name,
-                connectionRequestDatabaseRecord.protocol_version.toUByte(),
-                connectionRequestDatabaseRecord.username != null,
-                connectionRequestDatabaseRecord.password != null,
-                connectionRequestDatabaseRecord.will_retain == 1L,
-                connectionRequestDatabaseRecord.will_qos.toQos(),
-                connectionRequestDatabaseRecord.will_flag == 1L,
-                connectionRequestDatabaseRecord.clean_start == 1L,
-                connectionRequestDatabaseRecord.keep_alive_seconds.toInt(),
-                ConnectionRequest.VariableHeader.Properties(
-                    connectionRequestDatabaseRecord.session_expiry_interval_seconds?.toULong(),
-                    connectionRequestDatabaseRecord.receive_maximum?.toInt(),
-                    connectionRequestDatabaseRecord.maximum_packet_size?.toULong(),
-                    connectionRequestDatabaseRecord.topic_alias_maximum?.toInt(),
-                    connectionRequestDatabaseRecord.request_response_information.toNullableBoolean(),
-                    connectionRequestDatabaseRecord.request_problem_information.toNullableBoolean(),
-                    userProps,
-                    auth,
-                ),
-            )
-        val willProperties =
+        val typedProps = ConnectProperties(
+            sessionExpiryIntervalSeconds = connectionRequestDatabaseRecord.session_expiry_interval_seconds?.toULong(),
+            receiveMaximum = connectionRequestDatabaseRecord.receive_maximum?.toInt(),
+            maximumPacketSize = connectionRequestDatabaseRecord.maximum_packet_size?.toULong(),
+            topicAliasMaximum = connectionRequestDatabaseRecord.topic_alias_maximum?.toInt(),
+            requestResponseInformation = connectionRequestDatabaseRecord.request_response_information.toNullableBoolean(),
+            requestProblemInformation = connectionRequestDatabaseRecord.request_problem_information.toNullableBoolean(),
+            userProperty = userProps,
+            authentication = auth,
+        )
+        val typedWillProps =
             if (connectionRequestDatabaseRecord.has_will_properties == 1L) {
-                ConnectionRequest.Payload.WillProperties(
-                    connectionRequestDatabaseRecord.will_property_will_delay_interval_seconds,
-                    connectionRequestDatabaseRecord.will_property_payload_format_indicator == 1L,
-                    connectionRequestDatabaseRecord.will_property_message_expiry_interval_seconds,
-                    connectionRequestDatabaseRecord.will_property_content_type,
-                    connectionRequestDatabaseRecord.will_property_response_topic?.let {
+                ConnectWillProperties(
+                    willDelayIntervalSeconds = connectionRequestDatabaseRecord.will_property_will_delay_interval_seconds,
+                    payloadFormatIndicator = connectionRequestDatabaseRecord.will_property_payload_format_indicator == 1L,
+                    messageExpiryIntervalSeconds = connectionRequestDatabaseRecord.will_property_message_expiry_interval_seconds,
+                    contentType = connectionRequestDatabaseRecord.will_property_content_type,
+                    responseTopic = connectionRequestDatabaseRecord.will_property_response_topic?.let {
                         TopicName.fromOrThrow(it)
                     },
-                    connectionRequestDatabaseRecord.will_property_correlation_data,
-                    willUserProps,
+                    correlationData = connectionRequestDatabaseRecord.will_property_correlation_data,
+                    userProperty = willUserProps,
                 )
             } else {
                 null
             }
-        val payload =
-            ConnectionRequest.Payload(
-                connectionRequestDatabaseRecord.client_id,
-                willProperties,
-                connectionRequestDatabaseRecord.will_topic?.let { TopicName.fromOrThrow(it) },
-                willPayload,
-                connectionRequestDatabaseRecord.username,
-                connectionRequestDatabaseRecord.password,
-            )
-        val connectionRequest = ConnectionRequest(variable, payload)
+        val will: com.ditchoom.mqtt.controlpacket.WillConfig =
+            if (connectionRequestDatabaseRecord.will_flag == 1L &&
+                connectionRequestDatabaseRecord.will_topic != null &&
+                willPayload != null
+            ) {
+                com.ditchoom.mqtt.controlpacket.WillConfig.Enabled(
+                    TopicName.fromOrThrow(connectionRequestDatabaseRecord.will_topic),
+                    willPayload,
+                    connectionRequestDatabaseRecord.will_qos.toQos(),
+                    connectionRequestDatabaseRecord.will_retain == 1L,
+                )
+            } else {
+                com.ditchoom.mqtt.controlpacket.WillConfig.Disabled
+            }
+        val connectionRequest = V5Packet.Connect.create(
+            clientId = connectionRequestDatabaseRecord.client_id,
+            keepAliveSeconds = connectionRequestDatabaseRecord.keep_alive_seconds.toInt(),
+            cleanStart = connectionRequestDatabaseRecord.clean_start == 1L,
+            userName = connectionRequestDatabaseRecord.username,
+            password = connectionRequestDatabaseRecord.password,
+            will = will,
+            protocolName = connectionRequestDatabaseRecord.protocol_name,
+            protocolVersion = connectionRequestDatabaseRecord.protocol_version.toUByte(),
+            props = typedProps,
+            willProperties = typedWillProps,
+        )
         val socketConnections = socketConnectionQueries.connectionsByBrokerId(id)
         val connectionOps =
             socketConnections
@@ -592,40 +587,37 @@ class SqlDatabasePersistence(
                 when (it.type) {
                     5L ->
                         PublishReceived(
-                            AckVariableHeader(
-                                it.packet_id.toInt(),
-                                when (it.reason_code.toUByte()) {
-                                    ReasonCode.SUCCESS.byte -> ReasonCode.SUCCESS
-                                    ReasonCode.NO_MATCHING_SUBSCRIBERS.byte -> ReasonCode.NO_MATCHING_SUBSCRIBERS
-                                    ReasonCode.UNSPECIFIED_ERROR.byte -> ReasonCode.UNSPECIFIED_ERROR
-                                    ReasonCode.IMPLEMENTATION_SPECIFIC_ERROR.byte -> ReasonCode.IMPLEMENTATION_SPECIFIC_ERROR
-                                    ReasonCode.NOT_AUTHORIZED.byte -> ReasonCode.NOT_AUTHORIZED
-                                    ReasonCode.TOPIC_NAME_INVALID.byte -> ReasonCode.TOPIC_NAME_INVALID
-                                    ReasonCode.PACKET_IDENTIFIER_IN_USE.byte -> ReasonCode.PACKET_IDENTIFIER_IN_USE
-                                    ReasonCode.QUOTA_EXCEEDED.byte -> ReasonCode.QUOTA_EXCEEDED
-                                    ReasonCode.PAYLOAD_FORMAT_INVALID.byte -> ReasonCode.PAYLOAD_FORMAT_INVALID
-                                    else -> error("Invalid PublishReceived QOS Reason code ${it.reason_code}")
-                                },
-                                AckProperties(it.reason_string, userProps),
-                            ),
+                            packetIdentifier = it.packet_id.toInt(),
+                            reasonCode = when (it.reason_code.toUByte()) {
+                                ReasonCode.SUCCESS.byte -> ReasonCode.SUCCESS
+                                ReasonCode.NO_MATCHING_SUBSCRIBERS.byte -> ReasonCode.NO_MATCHING_SUBSCRIBERS
+                                ReasonCode.UNSPECIFIED_ERROR.byte -> ReasonCode.UNSPECIFIED_ERROR
+                                ReasonCode.IMPLEMENTATION_SPECIFIC_ERROR.byte -> ReasonCode.IMPLEMENTATION_SPECIFIC_ERROR
+                                ReasonCode.NOT_AUTHORIZED.byte -> ReasonCode.NOT_AUTHORIZED
+                                ReasonCode.TOPIC_NAME_INVALID.byte -> ReasonCode.TOPIC_NAME_INVALID
+                                ReasonCode.PACKET_IDENTIFIER_IN_USE.byte -> ReasonCode.PACKET_IDENTIFIER_IN_USE
+                                ReasonCode.QUOTA_EXCEEDED.byte -> ReasonCode.QUOTA_EXCEEDED
+                                ReasonCode.PAYLOAD_FORMAT_INVALID.byte -> ReasonCode.PAYLOAD_FORMAT_INVALID
+                                else -> error("Invalid PublishReceived QOS Reason code ${it.reason_code}")
+                            },
+                            reasonString = it.reason_string,
+                            userProperty = userProps,
                         )
 
                     6L ->
                         PublishRelease(
-                            AckVariableHeader(
-                                it.packet_id.toInt(),
-                                pubRelOrPubCompReasonCode(it.reason_code.toInt()),
-                                AckProperties(it.reason_string, userProps),
-                            ),
+                            packetIdentifier = it.packet_id.toInt(),
+                            reasonCode = pubRelOrPubCompReasonCode(it.reason_code.toInt()),
+                            reasonString = it.reason_string,
+                            userProperty = userProps,
                         )
 
                     7L ->
                         PublishComplete(
-                            AckVariableHeader(
-                                it.packet_id.toInt(),
-                                pubRelOrPubCompReasonCode(it.reason_code.toInt()),
-                                AckProperties(it.reason_string, userProps),
-                            ),
+                            packetIdentifier = it.packet_id.toInt(),
+                            reasonCode = pubRelOrPubCompReasonCode(it.reason_code.toInt()),
+                            reasonString = it.reason_string,
+                            userProperty = userProps,
                         )
 
                     else -> throw IllegalArgumentException("Unexpected type ${it.type}")
@@ -657,11 +649,10 @@ class SqlDatabasePersistence(
                             )
                         }.toSet()
                 SubscribeRequest(
-                    SubscribeRequest.VariableHeader(
-                        subscribeRequest.packet_id.toInt(),
-                        SubscribeRequest.VariableHeader.Properties(subscribeRequest.reason_string, userProps),
-                    ),
-                    subs,
+                    packetIdentifier = subscribeRequest.packet_id.toInt().toUShort(),
+                    subscriptions = subs,
+                    reasonString = subscribeRequest.reason_string,
+                    userProperty = userProps,
                 )
             }
         map +=
@@ -683,11 +674,9 @@ class SqlDatabasePersistence(
                                     Pair(k, v)
                                 }.executeAsList()
                         UnsubscribeRequest(
-                            UnsubscribeRequest.VariableHeader(
-                                unsubscribeRequest.packet_id.toInt(),
-                                UnsubscribeRequest.VariableHeader.Properties(userProps),
-                            ),
-                            subscriptions,
+                            packetIdentifier = unsubscribeRequest.packet_id.toInt().toUShort(),
+                            topics = subscriptions,
+                            userProperty = userProps,
                         )
                     } else {
                         null
@@ -822,7 +811,7 @@ class SqlDatabasePersistence(
                         subQueries.insertSubscribeRequest(
                             broker.identifier.toLong(),
                             packetId,
-                            subscribeRequest.variable.properties.reasonString,
+                            subscribeRequest.properties.reasonStringValue(),
                         )
                         subscribeRequest.subscriptions.forEach {
                             subscriptionQueries.insertSubscription(
@@ -835,7 +824,7 @@ class SqlDatabasePersistence(
                                 it.retainHandling.value.toLong(),
                             )
                         }
-                        for ((key, value) in subscribeRequest.variable.properties.userProperty) {
+                        for ((key, value) in subscribeRequest.properties.userProperties()) {
                             propertyQueries.addProp(broker.identifier.toLong(), 0L, packetId, key, value)
                         }
                         packetId
@@ -876,11 +865,10 @@ class SqlDatabasePersistence(
                     )
                 }.toSet()
         return SubscribeRequest(
-            SubscribeRequest.VariableHeader(
-                subscribeRequest.packet_id.toInt(),
-                SubscribeRequest.VariableHeader.Properties(subscribeRequest.reason_string, userProps),
-            ),
-            subs,
+            packetIdentifier = subscribeRequest.packet_id.toInt().toUShort(),
+            subscriptions = subs,
+            reasonString = subscribeRequest.reason_string,
+            userProperty = userProps,
         )
     }
 
@@ -903,7 +891,7 @@ class SqlDatabasePersistence(
                             it.toString(),
                         )
                     }
-                    for ((key, value) in unsubscribe.variable.properties.userProperty) {
+                    for ((key, value) in unsubscribe.properties.userProperties()) {
                         propertyQueries.addProp(broker.identifier.toLong(), 0L, packetId, key, value)
                     }
                     packetId.toInt()
@@ -933,11 +921,9 @@ class SqlDatabasePersistence(
                         Pair(k, v)
                     }.executeAsList()
             UnsubscribeRequest(
-                UnsubscribeRequest.VariableHeader(
-                    unsubscribeRequest.packet_id.toInt(),
-                    UnsubscribeRequest.VariableHeader.Properties(userProps),
-                ),
-                subscriptions,
+                packetIdentifier = unsubscribeRequest.packet_id.toInt().toUShort(),
+                topics = subscriptions,
+                userProperty = userProps,
             )
         } else {
             null

@@ -1,6 +1,7 @@
 package com.ditchoom.mqtt5.controlpacket
 
 import com.ditchoom.buffer.ReadBuffer
+import com.ditchoom.buffer.codec.DecodeContext
 import com.ditchoom.mqtt.MalformedPacketException
 import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readVariableByteInteger
@@ -43,28 +44,72 @@ sealed interface ControlPacketV5 : ControlPacket {
             byte1: UByte,
             remainingLength: Int,
         ): ControlPacketV5 {
-            val byte1AsUInt = byte1.toUInt()
-            val packetValue = byte1AsUInt.shr(4).toInt()
+            val packetValue = (byte1.toUInt() shr 4).toInt()
             return when (packetValue) {
                 0 -> throw MalformedPacketException("Reserved packet type 0 is not permitted")
-                1 -> ConnectionRequest.from(buffer)
-                2 -> ConnectionAcknowledgment.from(buffer, remainingLength)
                 3 -> PublishMessageV5.from(buffer, byte1, remainingLength)
-                4 -> PublishAcknowledgment.from(buffer, remainingLength)
-                5 -> PublishReceived.from(buffer, remainingLength)
-                6 -> PublishRelease.from(buffer, remainingLength)
-                7 -> PublishComplete.from(buffer, remainingLength)
-                8 -> SubscribeRequest.from(buffer, remainingLength)
-                9 -> SubscribeAcknowledgement.from(buffer, remainingLength)
-                10 -> UnsubscribeRequest.from(buffer, remainingLength)
-                11 -> UnsubscribeAcknowledgment.from(buffer, remainingLength)
-                12 -> PingRequest
-                13 -> PingResponse
-                14 -> DisconnectNotification.from(buffer, remainingLength)
-                15 -> AuthenticationExchange.from(buffer)
+                in migratedPacketTypes -> decodeMigrated(buffer, byte1, packetValue, remainingLength)
                 else -> throw MalformedPacketException(
                     "Invalid MQTT Control Packet Type: $packetValue Should be in range between 0 and 15 inclusive",
                 )
+            }
+        }
+
+        // Packet types whose decode is delegated to the generated `V5Packet` per-variant codecs.
+        // Migrated as part of the @ProtocolMessage rollout.
+        private val migratedPacketTypes = setOf(1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)
+
+        private fun decodeMigrated(
+            buffer: ReadBuffer,
+            byte1: UByte,
+            packetValue: Int,
+            remainingLength: Int,
+        ): V5Packet {
+            // PUBREL/SUBSCRIBE/UNSUBSCRIBE pin reserved low-nibble bits to `0010`. Validate before
+            // dispatch — the generated codec enforces packetType (top nibble) but not flags.
+            val flags = byte1.toInt() and 0x0F
+            val expectedFlags = if (packetValue == 6 || packetValue == 8 || packetValue == 10) 0x02 else 0x00
+            if (flags != expectedFlags) {
+                throw MalformedPacketException(
+                    "Reserved fixed-header flags for packet type $packetValue must be 0x${
+                        expectedFlags.toString(16)
+                    }, got 0x${flags.toString(16)}",
+                )
+            }
+            // Variant codecs read body only; populate the discriminator into the decode context
+            // for any variant that pulls fields off it (ack-family doesn't, but PUBLISH will once
+            // it migrates).
+            val ctx = DecodeContext.Empty.with(V5PacketCodec.DiscriminatorKey, MqttFixedHeader(byte1))
+            return when (packetValue) {
+                1 -> V5PacketConnectCodec.decode<com.ditchoom.buffer.ReadBuffer?>(buffer) { pr ->
+                    if (pr.remaining() > 0) pr.copyToBuffer() else null
+                }
+                2 -> V5PacketConnAckCodec.decode(buffer, ctx)
+                4 -> V5PacketPubAckCodec.decode(buffer, ctx)
+                5 -> V5PacketPubRecCodec.decode(buffer, ctx)
+                6 -> V5PacketPubRelCodec.decode(buffer, ctx)
+                7 -> V5PacketPubCompCodec.decode(buffer, ctx)
+                8 -> V5PacketSubscribeCodec.decode(buffer, ctx)
+                9 -> V5PacketSubAckCodec.decode(buffer, ctx)
+                10 -> V5PacketUnsubscribeCodec.decode(buffer, ctx)
+                11 -> V5PacketUnsubAckCodec.decode(buffer, ctx)
+                12 -> if (remainingLength != 0) {
+                    throw MalformedPacketException(
+                        "PINGREQ remaining length must be 0, got $remainingLength",
+                    )
+                } else {
+                    V5Packet.PingReq
+                }
+                13 -> if (remainingLength != 0) {
+                    throw MalformedPacketException(
+                        "PINGRESP remaining length must be 0, got $remainingLength",
+                    )
+                } else {
+                    V5Packet.PingResp
+                }
+                14 -> V5PacketDisconnectCodec.decode(buffer, ctx)
+                15 -> V5PacketAuthCodec.decode(buffer, ctx)
+                else -> throw IllegalStateException("Unreachable: $packetValue not in migratedPacketTypes")
             }
         }
     }

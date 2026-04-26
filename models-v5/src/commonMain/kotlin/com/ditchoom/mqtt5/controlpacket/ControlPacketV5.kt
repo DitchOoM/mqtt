@@ -12,13 +12,9 @@ import com.ditchoom.buffer.codec.annotations.ProtocolMessage
 import com.ditchoom.buffer.codec.annotations.RemainingBytes
 import com.ditchoom.buffer.codec.annotations.WhenRemaining
 import com.ditchoom.buffer.codec.annotations.WhenTrue
-import com.ditchoom.buffer.utf8Length
-import com.ditchoom.buffer.writeLengthPrefixedUtf8String
-import com.ditchoom.buffer.writeVariableByteIntegerLengthPrefixed
 import com.ditchoom.mqtt.MalformedPacketException
 import com.ditchoom.mqtt.MqttWarning
 import com.ditchoom.mqtt.ProtocolError
-import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.variableByteSize
 import com.ditchoom.mqtt.controlpacket.IConnectionAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IConnectionRequest
 import com.ditchoom.mqtt.controlpacket.IDisconnectNotification
@@ -83,12 +79,10 @@ import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
 import com.ditchoom.mqtt5.controlpacket.properties.AuthenticationDataCodec
 import com.ditchoom.mqtt5.controlpacket.properties.CorrelationDataCodec
 import com.ditchoom.mqtt5.controlpacket.properties.MqttProperty
-import com.ditchoom.mqtt5.controlpacket.properties.MqttPropertyCodec
 import com.ditchoom.mqtt5.controlpacket.properties.ReasonString
 import com.ditchoom.mqtt5.controlpacket.properties.ServerReference
 import com.ditchoom.mqtt5.controlpacket.properties.SessionExpiryInterval
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
-import com.ditchoom.mqtt5.controlpacket.properties.mqttPropertiesSize
 import kotlin.jvm.JvmInline
 
 // ── Wire-shape element types for list-payload packets ─────────────────────
@@ -549,34 +543,26 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
         /** Typed view of the variable-header properties (§3.3.2.3). */
         val typedProperties: PublishProperties get() = PublishProperties.from(properties)
 
-        // Both encodeBody and remainingLength stay hand-rolled because PublishProperties
-        // contains payload-bearing property variants (CorrelationData, AuthData). The
-        // generated codec's inline-prefix encode and wireSize for properties both call
-        // MqttPropertyCodec.wireSize(it) which throws for payload variants — they need
-        // their own payloadSize lambda. Until the codec processor emits nested sealed
-        // wireSize calls via wireSizeFromContext (so the registered SizeKeys flow
-        // through), we keep mqttPropertiesSize + writeVariableByteIntegerLengthPrefixed
-        // which know each property subtype's size explicitly.
+        // Both encodeBody and remainingLength delegate to the generated codec. The
+        // property-section's varint length prefix is computed inline via
+        // MqttPropertyCodec.wireSize(it, context); the context registers SizeKey lambdas
+        // for the payload-bearing property variants (CorrelationData, AuthData) so the
+        // dispatcher can size them without a hand-walked subtype switch.
         override fun encodeBody(writeBuffer: WriteBuffer) {
-            val ctx = publishPropertyEncodeContext()
-            writeBuffer.writeLengthPrefixedUtf8String(topicName)
-            if (header.publishHasPacketIdentifier) {
-                writeBuffer.writeUShort(packetId!!)
-            }
-            writeBuffer.writeVariableByteIntegerLengthPrefixed(maxBytes = 4, fieldName = "properties") { buf ->
-                properties.forEach { MqttPropertyCodec.encode(buf, it, ctx) }
-            }
-            (payload as? ReadBuffer)?.let { writeBuffer.write(it) }
+            @Suppress("UNCHECKED_CAST")
+            ControlPacketV5PublishCodec.encodeBody(
+                writeBuffer,
+                this as Publish<ReadBuffer?>,
+                publishPropertyEncodeContext(),
+            ) { buf, p -> if (p != null) buf.write(p) }
         }
 
-        override fun remainingLength(): Int {
-            var size = UShort.SIZE_BYTES + topicName.utf8Length()
-            if (header.publishHasPacketIdentifier) size += UShort.SIZE_BYTES
-            val propsSize = mqttPropertiesSize(properties)
-            size += variableByteSize(propsSize) + propsSize
-            size += (payload as? ReadBuffer)?.remaining() ?: 0
-            return size
-        }
+        @Suppress("UNCHECKED_CAST")
+        override fun remainingLength(): Int =
+            ControlPacketV5PublishCodec.wireSizeBody(
+                this as Publish<ReadBuffer?>,
+                publishPropertyEncodeContext(),
+            ) { p -> p?.remaining() ?: 0 }
 
         override fun expectedResponse(
             reasonCode: ReasonCode,
@@ -1471,7 +1457,8 @@ private val unsubAckValidReasonCodes: Set<UByte> =
 /**
  * Encode context for the two MQTT v5 binary-data property variants — the codec dispatcher
  * reads these lambdas to write `data: ReadBuffer` payloads on the wire (zero-copy slice
- * transfer).
+ * transfer) and to compute their wire size when summing the property section's varint
+ * length prefix.
  */
 internal fun publishPropertyEncodeContext(): EncodeContext =
     EncodeContext.Empty
@@ -1483,7 +1470,8 @@ internal fun publishPropertyEncodeContext(): EncodeContext =
             val rb = data as ReadBuffer
             rb.position(0)
             buf.write(rb)
-        }
+        }.with(CorrelationDataCodec.DataSizeKey) { data -> (data as ReadBuffer).remaining() }
+        .with(AuthenticationDataCodec.DataSizeKey) { data -> (data as ReadBuffer).remaining() }
 
 /**
  * Decode context for the two MQTT v5 binary-data property variants — identity slice

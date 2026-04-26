@@ -22,7 +22,6 @@ develocity {
 }
 
 include(
-    "codec-spi",
     "models-base",
     "models-v4",
     "models-v5",

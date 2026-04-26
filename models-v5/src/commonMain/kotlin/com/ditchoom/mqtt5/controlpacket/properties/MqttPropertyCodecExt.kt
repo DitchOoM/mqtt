@@ -7,18 +7,14 @@ import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readVariableByteI
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.variableByteSize
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.writeVariableByteInteger
 
-/**
- * MQTT v5 property-section helpers — the irreducibly MQTT-specific code that wraps the
- * generated [MqttPropertyCodec] dispatch with a Variable Byte Integer length prefix
- * (MQTT 5.0 §2.2.2). VBI is a spec-named encoding and stays in MQTT-land rather than
- * leaking into `buffer-codec`'s generic `LengthPrefix` enum.
- *
- * The per-property encode/decode/size walks that used to live here are gone — the
- * generated [MqttPropertyCodec] handles them via distinct `<AD, CD>` type parameters
- * for the two `@Payload` variants (AuthenticationData / CorrelationData).
- */
-
-// ──────────────────────── Property-section read / write ────────────────────────
+// MQTT v5 property-section helpers — the irreducibly MQTT-specific code that wraps the
+// generated MqttPropertyCodec dispatch with a Variable Byte Integer length prefix
+// (MQTT 5.0 §2.2.2). VBI is a spec-named encoding and stays in MQTT-land rather than
+// leaking into buffer-codec's generic LengthPrefix enum.
+//
+// Per-property encode/decode/size walks that used to live here are gone — the generated
+// MqttPropertyCodec handles them via distinct <AD, CD> type parameters for the two
+// @Payload variants (AuthenticationData / CorrelationData).
 
 /**
  * Decodes a VBI-prefixed MQTT v5 property section into a list of typed properties.
@@ -115,50 +111,5 @@ fun mqttPropertiesSize(properties: List<MqttProperty>): Int {
 
 fun mqttPropertiesSectionSize(properties: List<MqttProperty>): Int {
     val bodySize = mqttPropertiesSize(properties)
-    return bodySize + variableByteSize(bodySize)
-}
-
-// ──────────────────────── @MqttProperties SPI bridge ────────────────────────
-// Default binary decoders/encoders copy payload bytes through ReadBuffer for zero-copy
-// transfer from the wire. Used by codecs generated via the @MqttProperties SPI provider.
-
-private val defaultDecodeCorrelationData: CorrelationDataContext.(com.ditchoom.buffer.codec.payload.PayloadReader) -> ReadBuffer =
-    { reader -> reader.copyToBuffer() }
-
-private val defaultDecodeAuthenticationData: AuthenticationDataContext.(com.ditchoom.buffer.codec.payload.PayloadReader) -> ReadBuffer =
-    { reader -> reader.copyToBuffer() }
-
-fun ReadBuffer.readProperties(): Collection<MqttProperty>? {
-    val result =
-        decodeMqttProperties<ReadBuffer, ReadBuffer>(
-            decodeAuthenticationData = defaultDecodeAuthenticationData,
-            decodeCorrelationData = defaultDecodeCorrelationData,
-        )
-    return result.ifEmpty { null }
-}
-
-fun WriteBuffer.writeProperties(properties: Collection<MqttProperty>?) {
-    if (properties == null || properties.isEmpty()) {
-        writeVariableByteInteger(0)
-        return
-    }
-    val list = if (properties is List) properties else properties.toList()
-    encodeMqttProperties<ReadBuffer, ReadBuffer>(
-        list,
-        encodeAuthenticationData = { buf, data ->
-            data.position(0)
-            buf.write(data)
-        },
-        encodeCorrelationData = { buf, data ->
-            data.position(0)
-            buf.write(data)
-        },
-    )
-}
-
-fun propertiesSize(properties: Collection<MqttProperty>?): Int {
-    if (properties == null || properties.isEmpty()) return 1 // VBI for 0
-    val list = if (properties is List) properties else properties.toList()
-    val bodySize = mqttPropertiesSize(list)
     return bodySize + variableByteSize(bodySize)
 }

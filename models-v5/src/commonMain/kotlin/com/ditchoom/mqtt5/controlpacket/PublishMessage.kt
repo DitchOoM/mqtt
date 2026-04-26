@@ -4,6 +4,8 @@ import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
+import com.ditchoom.buffer.codec.DecodeContext
+import com.ditchoom.buffer.codec.EncodeContext
 import com.ditchoom.buffer.codec.payload.PayloadReader
 import com.ditchoom.buffer.utf8Length
 import com.ditchoom.mqtt.MalformedPacketException
@@ -21,8 +23,10 @@ import com.ditchoom.mqtt.controlpacket.QualityOfService.AT_MOST_ONCE
 import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
 import com.ditchoom.mqtt.controlpacket.validControlPacketIdentifierRange
+import com.ditchoom.mqtt5.controlpacket.properties.AuthenticationDataCodec
 import com.ditchoom.mqtt5.controlpacket.properties.ContentType
 import com.ditchoom.mqtt5.controlpacket.properties.CorrelationData
+import com.ditchoom.mqtt5.controlpacket.properties.CorrelationDataCodec
 import com.ditchoom.mqtt5.controlpacket.properties.MessageExpiryInterval
 import com.ditchoom.mqtt5.controlpacket.properties.MqttProperty
 import com.ditchoom.mqtt5.controlpacket.properties.PayloadFormatIndicator
@@ -82,15 +86,18 @@ class PublishMessageV5<P> internal constructor(
 
     override fun encodeBody(writeBuffer: WriteBuffer) {
         val props: List<MqttProperty> = properties.props
+        val ctx = publishPropertyEncodeContext()
         if (qualityOfService == AT_MOST_ONCE) {
             PublishBodyV5Qos0Codec.encode(
                 writeBuffer,
                 PublishBodyV5Qos0(topic.toString(), props, payload),
+                ctx,
             ) { buf, v -> codec.encode(buf, v) }
         } else {
             PublishBodyV5QosNonZeroCodec.encode(
                 writeBuffer,
                 PublishBodyV5QosNonZero(topic.toString(), packetIdentifier.toUShort(), props, payload),
+                ctx,
             ) { buf, v -> codec.encode(buf, v) }
         }
     }
@@ -310,8 +317,9 @@ class PublishMessageV5<P> internal constructor(
         ): PublishMessageV5<ReadBuffer> {
             val fixed = FixedHeader.fromByte(byte1)
             val sliced = buffer.readBytes(remainingLength)
+            val ctx = publishPropertyDecodeContext()
             return if (fixed.qos == AT_MOST_ONCE) {
-                val body = PublishBodyV5Qos0Codec.decode(sliced) { pr -> readFullPayload(pr) }
+                val body = PublishBodyV5Qos0Codec.decode(sliced, ctx) { pr -> readFullPayload(pr) }
                 PublishMessageV5(
                     topic = TopicName.fromOrThrow(body.topic),
                     qualityOfService = fixed.qos,
@@ -323,7 +331,7 @@ class PublishMessageV5<P> internal constructor(
                     codec = IdentityBufferCodec,
                 )
             } else {
-                val body = PublishBodyV5QosNonZeroCodec.decode(sliced) { pr -> readFullPayload(pr) }
+                val body = PublishBodyV5QosNonZeroCodec.decode(sliced, ctx) { pr -> readFullPayload(pr) }
                 PublishMessageV5(
                     topic = TopicName.fromOrThrow(body.topic),
                     qualityOfService = fixed.qos,
@@ -371,3 +379,32 @@ class PublishMessageV5<P> internal constructor(
         private fun readFullPayload(pr: PayloadReader): ReadBuffer = pr.copyToBuffer()
     }
 }
+
+/**
+ * Default encode context for the two MQTT v5 binary-data property variants
+ * (CorrelationData, AuthenticationData). The codec dispatcher reads these lambdas
+ * from `EncodeContext` to write the `data: ReadBuffer` payload on the wire.
+ *
+ * Defaults: `data.position(0)` then `buf.write(data)` — a zero-copy slice transfer
+ * (mirrors the legacy `MqttPropertyCodecExt.writeProperties` behavior).
+ */
+private fun publishPropertyEncodeContext(): EncodeContext =
+    EncodeContext.Empty
+        .with(CorrelationDataCodec.DataEncodeKey) { buf, data ->
+            val rb = data as ReadBuffer
+            rb.position(0)
+            buf.write(rb)
+        }.with(AuthenticationDataCodec.DataEncodeKey) { buf, data ->
+            val rb = data as ReadBuffer
+            rb.position(0)
+            buf.write(rb)
+        }
+
+/**
+ * Default decode context — payload `data` is materialized as a `ReadBuffer` slice via
+ * `PayloadReader.copyToBuffer()`. Mirrors the legacy `MqttPropertyCodecExt.readProperties`.
+ */
+private fun publishPropertyDecodeContext(): DecodeContext =
+    DecodeContext.Empty
+        .with(CorrelationDataCodec.DataDecodeKey) { reader -> reader.copyToBuffer() }
+        .with(AuthenticationDataCodec.DataDecodeKey) { reader -> reader.copyToBuffer() }

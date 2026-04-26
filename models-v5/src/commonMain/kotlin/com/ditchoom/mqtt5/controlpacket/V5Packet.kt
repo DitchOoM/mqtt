@@ -3,6 +3,7 @@ package com.ditchoom.mqtt5.controlpacket
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
 import com.ditchoom.buffer.utf8Length
+import com.ditchoom.buffer.codec.Encoder
 import com.ditchoom.buffer.codec.annotations.DispatchOn
 import com.ditchoom.buffer.codec.annotations.LengthPrefix
 import com.ditchoom.buffer.codec.annotations.LengthPrefixed
@@ -12,6 +13,13 @@ import com.ditchoom.buffer.codec.annotations.ProtocolMessage
 import com.ditchoom.buffer.codec.annotations.RemainingBytes
 import com.ditchoom.buffer.codec.annotations.WhenRemaining
 import com.ditchoom.buffer.codec.annotations.WhenTrue
+import com.ditchoom.buffer.codec.EncodeContext
+import com.ditchoom.buffer.codec.encodeToBuffer
+import com.ditchoom.buffer.writeLengthPrefixedUtf8String
+import com.ditchoom.buffer.writeVariableByteIntegerLengthPrefixed
+import com.ditchoom.mqtt5.controlpacket.properties.AuthenticationDataCodec
+import com.ditchoom.mqtt5.controlpacket.properties.CorrelationDataCodec
+import com.ditchoom.mqtt5.controlpacket.properties.MqttPropertyCodec
 import com.ditchoom.mqtt.MalformedPacketException
 import com.ditchoom.mqtt.MqttWarning
 import com.ditchoom.mqtt.ProtocolError
@@ -459,11 +467,17 @@ sealed interface V5Packet : ControlPacketV5 {
         val typedProperties: PublishProperties get() = PublishProperties.from(properties)
 
         override fun encodeBody(writeBuffer: WriteBuffer) {
-            // V5PacketPublishCodec.encode is generic; production always uses ReadBuffer payloads.
-            @Suppress("UNCHECKED_CAST")
-            V5PacketPublishCodec.encode(writeBuffer, this as Publish<ReadBuffer>) { buf, p ->
-                buf.write(p)
+            // ControlPacket.serialize already wrote byte1 + RL; emit body only here.
+            // V5PacketPublishCodec.encode prepends the fixed header, so we can't reuse it directly.
+            val ctx = publishPropertyEncodeContext()
+            writeBuffer.writeLengthPrefixedUtf8String(topicName)
+            if (header.publishHasPacketIdentifier) {
+                writeBuffer.writeUShort(packetId!!)
             }
+            writeBuffer.writeVariableByteIntegerLengthPrefixed(maxBytes = 4, fieldName = "properties") { buf ->
+                properties.forEach { MqttPropertyCodec.encode(buf, it, ctx) }
+            }
+            (payload as? ReadBuffer)?.let { writeBuffer.write(it) }
         }
 
         override fun remainingLength(): Int {
@@ -544,6 +558,38 @@ sealed interface V5Packet : ControlPacketV5 {
                     properties = properties.props,
                     payload = payload ?: ReadBuffer.EMPTY_BUFFER,
                 )
+            }
+
+            /**
+             * Eagerly-encoded typed payload factory. Invokes [encodePayload] once on a
+             * `GrowableWriteBuffer` and stores the resulting `ReadBuffer`; the message is
+             * monomorphic in `Publish<ReadBuffer>` after construction.
+             */
+            fun <P> ofTyped(
+                topic: TopicName,
+                qos: QualityOfService,
+                payload: P,
+                encodePayload: WriteBuffer.(P) -> Unit,
+                dup: Boolean = false,
+                retain: Boolean = false,
+                packetIdentifier: Int = NO_PACKET_ID,
+                properties: PublishProperties = PublishProperties(),
+            ): Publish<ReadBuffer> = ofRaw(topic, qos, eagerEncode(payload, encodePayload), dup, retain, packetIdentifier, properties)
+
+            private fun <P> eagerEncode(
+                value: P,
+                encodePayload: WriteBuffer.(P) -> Unit,
+            ): ReadBuffer {
+                val encoder =
+                    object : Encoder<P> {
+                        override fun encode(
+                            buffer: WriteBuffer,
+                            value: P,
+                        ) {
+                            buffer.encodePayload(value)
+                        }
+                    }
+                return encoder.encodeToBuffer(value)
             }
 
             private fun makePublishHeaderByte(
@@ -1383,3 +1429,29 @@ private val unsubAckValidReasonCodes: Set<UByte> = setOf(
     TOPIC_FILTER_INVALID.byte,
     PACKET_IDENTIFIER_IN_USE.byte,
 )
+
+/**
+ * Encode context for the two MQTT v5 binary-data property variants — the codec dispatcher
+ * reads these lambdas to write `data: ReadBuffer` payloads on the wire (zero-copy slice
+ * transfer).
+ */
+internal fun publishPropertyEncodeContext(): EncodeContext =
+    EncodeContext.Empty
+        .with(CorrelationDataCodec.DataEncodeKey) { buf, data ->
+            val rb = data as ReadBuffer
+            rb.position(0)
+            buf.write(rb)
+        }.with(AuthenticationDataCodec.DataEncodeKey) { buf, data ->
+            val rb = data as ReadBuffer
+            rb.position(0)
+            buf.write(rb)
+        }
+
+/**
+ * Decode context for the two MQTT v5 binary-data property variants — identity slice
+ * passthrough; callers retaining the data past the decode scope must copy explicitly.
+ */
+internal fun publishPropertyDecodeContext(): com.ditchoom.buffer.codec.DecodeContext =
+    com.ditchoom.buffer.codec.DecodeContext.Empty
+        .with(CorrelationDataCodec.DataDecodeKey) { slice -> slice }
+        .with(AuthenticationDataCodec.DataDecodeKey) { slice -> slice }

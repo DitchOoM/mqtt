@@ -30,7 +30,7 @@ import kotlin.test.assertTrue
  *  - validate() spec-violation paths
  *  - expectedResponse() shape per QoS
  *
- * Independent from the legacy `PublishMessageV5` round-trip path; locks in the new shape.
+ * Locks in the round-trip shape for `V5Packet.Publish<P>`.
  */
 class V5PacketPublishTests {
     private fun roundTrip(value: V5Packet.Publish<ReadBuffer>): V5Packet.Publish<ReadBuffer> {

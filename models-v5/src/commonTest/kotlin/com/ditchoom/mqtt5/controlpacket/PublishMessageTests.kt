@@ -35,7 +35,7 @@ class PublishMessageTests {
     @Test
     fun serialize() {
         val expected =
-            PublishMessageV5.ofRaw(
+            V5Packet.Publish.ofRaw(
                 topic = TopicName.fromOrThrow("a"),
                 qos = QualityOfService.AT_LEAST_ONCE,
                 packetIdentifier = 1,
@@ -53,7 +53,7 @@ class PublishMessageTests {
         assertEquals(1u, buffer.readUnsignedShort(), "packet identifier")
         assertEquals(0, buffer.readProperties()?.count() ?: 0, "properties")
         buffer.resetForRead()
-        val actual = ControlPacketV5.from(buffer) as PublishMessageV5
+        val actual = ControlPacketV5.from(buffer) as V5Packet.Publish<*>
         assertEquals(expected, actual)
     }
 
@@ -67,7 +67,7 @@ class PublishMessageTests {
         buffer.writeByte(1)
         buffer.resetForRead()
         try {
-            ControlPacketV5.from(buffer) as PublishMessageV5
+            ControlPacketV5.from(buffer) as V5Packet.Publish<*>
             fail()
         } catch (_: MalformedPacketException) {
         }
@@ -75,7 +75,7 @@ class PublishMessageTests {
 
     @Test
     fun payloadFormatIndicatorDefault() {
-        val expected = PublishMessageV5.ofRaw(topic = TopicName.fromOrThrow("t"))
+        val expected = V5Packet.Publish.ofRaw(topic = TopicName.fromOrThrow("t"))
         val buffer = BufferFactory.Default.allocate(expected.packetSize())
         expected.serialize(buffer)
         buffer.resetForRead()
@@ -88,16 +88,16 @@ class PublishMessageTests {
         )
         assertEquals(0, buffer.readProperties()?.count() ?: 0, "properties")
         buffer.resetForRead()
-        val publish = ControlPacketV5.from(buffer) as PublishMessageV5
-        assertFalse(publish.properties.payloadFormatIndicator)
+        val publish = ControlPacketV5.from(buffer) as V5Packet.Publish<*>
+        assertFalse(publish.typedProperties.payloadFormatIndicator)
     }
 
     @Test
     fun payloadFormatIndicatorTrue() {
         val expected =
-            PublishMessageV5.ofRaw(
+            V5Packet.Publish.ofRaw(
                 topic = TopicName.fromOrThrow("t"),
-                properties = PublishMessageV5.Properties(payloadFormatIndicator = true),
+                properties = PublishProperties(payloadFormatIndicator = true),
             )
         val buffer = BufferFactory.Default.allocate(expected.packetSize())
         expected.serialize(buffer)
@@ -116,16 +116,16 @@ class PublishMessageTests {
             (propertiesActual?.first() as PayloadFormatIndicator).isUtf8,
         )
         buffer.resetForRead()
-        val publish = ControlPacketV5.from(buffer) as PublishMessageV5
-        assertTrue(publish.properties.payloadFormatIndicator)
+        val publish = ControlPacketV5.from(buffer) as V5Packet.Publish<*>
+        assertTrue(publish.typedProperties.payloadFormatIndicator)
     }
 
     @Test
     fun payloadFormatIndicatorFalse() {
         val expected =
-            PublishMessageV5.ofRaw(
+            V5Packet.Publish.ofRaw(
                 topic = TopicName.fromOrThrow("t"),
-                properties = PublishMessageV5.Properties(payloadFormatIndicator = false),
+                properties = PublishProperties(payloadFormatIndicator = false),
             )
         val buffer = BufferFactory.Default.allocate(expected.packetSize())
         expected.serialize(buffer)
@@ -141,8 +141,8 @@ class PublishMessageTests {
         assertEquals(0, propertiesActual?.count() ?: 0, "properties")
         assertNull((propertiesActual?.firstOrNull() as? PayloadFormatIndicator)?.isUtf8)
         buffer.resetForRead()
-        val publish = ControlPacketV5.from(buffer) as PublishMessageV5
-        assertFalse(publish.properties.payloadFormatIndicator)
+        val publish = ControlPacketV5.from(buffer) as V5Packet.Publish<*>
+        assertFalse(publish.typedProperties.payloadFormatIndicator)
     }
 
     @Test
@@ -155,7 +155,7 @@ class PublishMessageTests {
         encodeProperty(buffer, obj2)
         buffer.resetForRead()
         try {
-            PublishMessageV5.Properties.from(buffer.readProperties())
+            PublishProperties.from(buffer.readProperties())
             fail()
         } catch (_: ProtocolError) {
         }
@@ -164,9 +164,9 @@ class PublishMessageTests {
     @Test
     fun messageExpiryInterval() {
         val msg =
-            PublishMessageV5.ofRaw(
+            V5Packet.Publish.ofRaw(
                 topic = TopicName.fromOrThrow("t"),
-                properties = PublishMessageV5.Properties(messageExpiryInterval = 2),
+                properties = PublishProperties(messageExpiryInterval = 2),
             )
         val buffer = BufferFactory.Default.allocate(msg.packetSize())
         msg.serialize(buffer)
@@ -185,8 +185,8 @@ class PublishMessageTests {
             (propertiesActual?.firstOrNull() as? MessageExpiryInterval)?.seconds,
         )
         buffer.resetForRead()
-        val publish = ControlPacketV5.from(buffer) as PublishMessageV5
-        assertEquals(2L, publish.properties.messageExpiryInterval)
+        val publish = ControlPacketV5.from(buffer) as V5Packet.Publish<*>
+        assertEquals(2L, publish.typedProperties.messageExpiryInterval)
     }
 
     @Test
@@ -199,7 +199,7 @@ class PublishMessageTests {
         encodeProperty(buffer, obj2)
         buffer.resetForRead()
         try {
-            PublishMessageV5.Properties.from(buffer.readProperties())
+            PublishProperties.from(buffer.readProperties())
             fail()
         } catch (_: ProtocolError) {
         }
@@ -208,9 +208,9 @@ class PublishMessageTests {
     @Test
     fun topicAlias() {
         val expected =
-            PublishMessageV5.ofRaw(
+            V5Packet.Publish.ofRaw(
                 topic = TopicName.fromOrThrow("t"),
-                properties = PublishMessageV5.Properties(topicAlias = 2),
+                properties = PublishProperties(topicAlias = 2),
             )
         val buffer = BufferFactory.Default.allocate(expected.packetSize())
         expected.serialize(buffer)
@@ -226,19 +226,19 @@ class PublishMessageTests {
         assertEquals(1, propertiesActual?.count() ?: 0, "properties")
         assertEquals(2.toUShort(), (propertiesActual?.firstOrNull() as? TopicAlias)?.value)
         buffer.resetForRead()
-        val publish = ControlPacketV5.from(buffer) as PublishMessageV5
+        val publish = ControlPacketV5.from(buffer) as V5Packet.Publish<*>
         assertEquals(expected, publish)
     }
 
     @Test
     fun topicAliasZeroValueThrowsProtocolError() {
         assertFailsWith<ProtocolError> {
-            PublishMessageV5.Properties(topicAlias = 0)
+            PublishProperties(topicAlias = 0)
         }
         assertFails {
-            PublishMessageV5.ofRaw(
+            V5Packet.Publish.ofRaw(
                 topic = TopicName.fromOrThrow("t"),
-                properties = PublishMessageV5.Properties(topicAlias = 0),
+                properties = PublishProperties(topicAlias = 0),
             )
         }
     }
@@ -253,7 +253,7 @@ class PublishMessageTests {
         encodeProperty(buffer, obj2)
         buffer.resetForRead()
         try {
-            PublishMessageV5.Properties.from(buffer.readProperties())
+            PublishProperties.from(buffer.readProperties())
             fail()
         } catch (_: ProtocolError) {
         }
@@ -262,9 +262,9 @@ class PublishMessageTests {
     @Test
     fun responseTopic() {
         val actual =
-            PublishMessageV5.ofRaw(
+            V5Packet.Publish.ofRaw(
                 topic = TopicName.fromOrThrow("t"),
-                properties = PublishMessageV5.Properties(responseTopic = TopicName.fromOrThrow("t/as")),
+                properties = PublishProperties(responseTopic = TopicName.fromOrThrow("t/as")),
             )
         val buffer = BufferFactory.Default.allocate(actual.packetSize())
         actual.serialize(buffer)
@@ -284,10 +284,10 @@ class PublishMessageTests {
             "response topic value",
         )
         buffer.resetForRead()
-        val publish = ControlPacketV5.from(buffer) as PublishMessageV5
+        val publish = ControlPacketV5.from(buffer) as V5Packet.Publish<*>
         assertEquals(
             "t/as",
-            publish.properties.responseTopic
+            publish.typedProperties.responseTopic
                 ?.toString(),
         )
     }
@@ -302,7 +302,7 @@ class PublishMessageTests {
         encodeProperty(buffer, obj2)
         buffer.resetForRead()
         try {
-            PublishMessageV5.Properties.from(buffer.readProperties())
+            PublishProperties.from(buffer.readProperties())
             fail()
         } catch (_: ProtocolError) {
         }
@@ -317,9 +317,9 @@ class PublishMessageTests {
     fun correlationData() {
         yoyoBuffer.position(0)
         val actual =
-            PublishMessageV5.ofRaw(
+            V5Packet.Publish.ofRaw(
                 topic = TopicName.fromOrThrow("t"),
-                properties = PublishMessageV5.Properties(correlationData = yoyoBuffer),
+                properties = PublishProperties(correlationData = yoyoBuffer),
             )
         val buffer = BufferFactory.Default.allocate(actual.packetSize())
         actual.serialize(buffer)
@@ -340,10 +340,10 @@ class PublishMessageTests {
         )
         assertEquals("yoyo", buffer.readString(4, Charset.UTF8), "correlation data payload")
         buffer.resetForRead()
-        val publish = ControlPacketV5.from(buffer) as PublishMessageV5
+        val publish = ControlPacketV5.from(buffer) as V5Packet.Publish<*>
         assertEquals(
             "yoyo",
-            publish.properties.correlationData
+            publish.typedProperties.correlationData
                 ?.readString(4, Charset.UTF8)
                 .toString(),
         )
@@ -360,7 +360,7 @@ class PublishMessageTests {
         encodeProperty(buffer, obj2)
         buffer.resetForRead()
         try {
-            PublishMessageV5.Properties.from(buffer.readProperties())
+            PublishProperties.from(buffer.readProperties())
             fail()
         } catch (_: ProtocolError) {
         }
@@ -368,7 +368,7 @@ class PublishMessageTests {
 
     @Test
     fun variableHeaderPropertyUserProperty() {
-        val props = PublishMessageV5.Properties.from(setOf(UserProperty("key", "value")))
+        val props = PublishProperties.from(setOf(UserProperty("key", "value")))
         val userPropertyResult = props.userProperty
         for ((key, value) in userPropertyResult) {
             assertEquals(key, "key")
@@ -377,16 +377,16 @@ class PublishMessageTests {
         assertEquals(userPropertyResult.size, 1)
 
         val request =
-            PublishMessageV5.ofRaw(
+            V5Packet.Publish.ofRaw(
                 topic = TopicName.fromOrThrow("t"),
                 properties = props,
             )
         val buffer = BufferFactory.Default.allocate(100)
         request.serialize(buffer)
         buffer.resetForRead()
-        val requestRead = ControlPacketV5.from(buffer) as PublishMessageV5
+        val requestRead = ControlPacketV5.from(buffer) as V5Packet.Publish<*>
         val (key, value) =
-            requestRead.properties.userProperty
+            requestRead.typedProperties.userProperty
                 .first()
         assertEquals("key", key.toString())
         assertEquals("value", value.toString())
@@ -395,17 +395,17 @@ class PublishMessageTests {
     @Test
     fun subscriptionIdentifier() {
         val actual =
-            PublishMessageV5.ofRaw(
+            V5Packet.Publish.ofRaw(
                 topic = TopicName.fromOrThrow("t"),
-                properties = PublishMessageV5.Properties(subscriptionIdentifier = setOf(2L)),
+                properties = PublishProperties(subscriptionIdentifier = setOf(2L)),
             )
         val buffer = BufferFactory.Default.allocate(actual.packetSize())
         actual.serialize(buffer)
         buffer.resetForRead()
-        val publish = ControlPacketV5.from(buffer) as PublishMessageV5
+        val publish = ControlPacketV5.from(buffer) as V5Packet.Publish<*>
         assertEquals(
             2L,
-            publish.properties.subscriptionIdentifier
+            publish.typedProperties.subscriptionIdentifier
                 .first(),
         )
     }
@@ -418,23 +418,23 @@ class PublishMessageTests {
         buffer.writeVariableByteInteger(size)
         encodeProperty(buffer, obj1)
         buffer.resetForRead()
-        assertFailsWith<ProtocolError> { PublishMessageV5.Properties.from(buffer.readProperties()) }
+        assertFailsWith<ProtocolError> { PublishProperties.from(buffer.readProperties()) }
     }
 
     @Test
     fun contentType() {
         val actual =
-            PublishMessageV5.ofRaw(
+            V5Packet.Publish.ofRaw(
                 topic = TopicName.fromOrThrow("t"),
-                properties = PublishMessageV5.Properties(contentType = "t/as"),
+                properties = PublishProperties(contentType = "t/as"),
             )
         val buffer = BufferFactory.Default.allocate(actual.packetSize())
         actual.serialize(buffer)
         buffer.resetForRead()
-        val publish = ControlPacketV5.from(buffer) as PublishMessageV5
+        val publish = ControlPacketV5.from(buffer) as V5Packet.Publish<*>
         assertEquals(
             "t/as",
-            publish.properties.contentType
+            publish.typedProperties.contentType
                 ?.toString(),
         )
     }
@@ -448,14 +448,14 @@ class PublishMessageTests {
         encodeProperty(buffer, obj1)
         encodeProperty(buffer, obj2)
         buffer.resetForRead()
-        assertFailsWith<ProtocolError> { PublishMessageV5.Properties.from(buffer.readProperties()) }
+        assertFailsWith<ProtocolError> { PublishProperties.from(buffer.readProperties()) }
     }
 
     @Test
     fun invalidPropertyOnVariableHeaderThrowsMalformedPacketException() {
         val method = WillDelayInterval(3u)
         try {
-            PublishMessageV5.Properties.from(listOf(method, method))
+            PublishProperties.from(listOf(method, method))
             fail()
         } catch (_: MalformedPacketException) {
         }

@@ -31,7 +31,7 @@ class TypeTests {
     fun controlPacketTypeValueMatchesSpecForPUBLISH() {
         assertEquals(
             3,
-            PublishMessageV5.ofRaw(topic = TopicName.fromOrThrow("t")).controlPacketValue,
+            V5Packet.Publish.ofRaw(topic = TopicName.fromOrThrow("t")).controlPacketValue,
             controlPacketSpectMatchError,
         )
     }
@@ -139,7 +139,7 @@ UnsubscribeAcknowledgment(packetIdentifier, reasonCodes = listOf(SUCCESS)).contr
     fun controlPacketTypeDirectionOfFlowPUBLISH() {
         assertEquals(
             BIDIRECTIONAL,
-            PublishMessageV5.ofRaw(topic = TopicName.fromOrThrow("t")).direction,
+            V5Packet.Publish.ofRaw(topic = TopicName.fromOrThrow("t")).direction,
             controlPacketSpectMatchError,
         )
     }

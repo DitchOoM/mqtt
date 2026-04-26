@@ -27,11 +27,11 @@ import com.ditchoom.mqtt5.controlpacket.ConnectProperties
 import com.ditchoom.mqtt5.controlpacket.ConnectWillProperties
 import com.ditchoom.mqtt5.controlpacket.ConnectionRequest
 import com.ditchoom.mqtt5.controlpacket.PublishComplete
-import com.ditchoom.mqtt5.controlpacket.V5Packet
-import com.ditchoom.mqtt5.controlpacket.PublishMessageV5
+import com.ditchoom.mqtt5.controlpacket.PublishProperties
 import com.ditchoom.mqtt5.controlpacket.PublishReceived
 import com.ditchoom.mqtt5.controlpacket.PublishRelease
 import com.ditchoom.mqtt5.controlpacket.SubscribeRequest
+import com.ditchoom.mqtt5.controlpacket.V5Packet
 import com.ditchoom.mqtt5.controlpacket.Subscription
 import com.ditchoom.mqtt5.controlpacket.UnsubscribeRequest
 import com.ditchoom.mqtt5.controlpacket.properties.Authentication
@@ -437,15 +437,15 @@ class SqlDatabasePersistence(
         if (packet.qualityOfService == QualityOfService.AT_MOST_ONCE) return
         val brokerId = broker.identifier.toLong()
         val incoming = 1L
-        val p = packet as PublishMessageV5
+        val p = packet as V5Packet.Publish<*>
         val payload = p.payloadAsReadBufferOrNull()
         withContext(dispatcher) {
             pubQueries.transaction {
                 val subIds =
-                    if (p.properties.subscriptionIdentifier.isEmpty()) {
+                    if (p.typedProperties.subscriptionIdentifier.isEmpty()) {
                         null
                     } else {
-                        p.properties.subscriptionIdentifier.joinToString()
+                        p.typedProperties.subscriptionIdentifier.joinToString()
                     }
                 pubQueries.insertPublishMessage(
                     brokerId,
@@ -455,16 +455,16 @@ class SqlDatabasePersistence(
                     if (p.retain) 1L else 0L,
                     p.topic.toString(),
                     p.packetIdentifier.toLong(),
-                    p.properties.payloadFormatIndicator.toLong(),
-                    p.properties.messageExpiryInterval,
-                    p.properties.topicAlias?.toLong(),
-                    p.properties.responseTopic?.toString(),
-                    p.properties.correlationData,
+                    p.typedProperties.payloadFormatIndicator.toLong(),
+                    p.typedProperties.messageExpiryInterval,
+                    p.typedProperties.topicAlias?.toLong(),
+                    p.typedProperties.responseTopic?.toString(),
+                    p.typedProperties.correlationData,
                     subIds,
-                    p.properties.contentType,
+                    p.typedProperties.contentType,
                     payload,
                 )
-                for ((key, value) in p.properties.userProperty) {
+                for ((key, value) in p.typedProperties.userProperty) {
                     propertyQueries.addProp(brokerId, incoming, p.packetIdentifier.toLong(), key, value)
                 }
             }
@@ -505,7 +505,7 @@ class SqlDatabasePersistence(
                             .executeAsList()
                             .map { (key, value) -> Pair(key, value) }
                     val properties =
-                        PublishMessageV5.Properties(
+                        PublishProperties(
                             row.payload_format_indicator == 1L,
                             row.message_expiry_interval,
                             row.topic_alias?.toInt(),
@@ -519,7 +519,7 @@ class SqlDatabasePersistence(
                             row.content_type,
                         )
                     val pub =
-                        PublishMessageV5.ofRaw(
+                        V5Packet.Publish.ofRaw(
                             topic = TopicName.fromOrThrow(row.topic_name),
                             qos = row.qos.toQos(),
                             payload = row.payload,
@@ -554,7 +554,7 @@ class SqlDatabasePersistence(
                         .executeAsList()
                         .map { (key, value) -> Pair(key, value) }
                 val properties =
-                    PublishMessageV5.Properties(
+                    PublishProperties(
                         it.payload_format_indicator == 1L,
                         it.message_expiry_interval,
                         it.topic_alias?.toInt(),
@@ -567,7 +567,7 @@ class SqlDatabasePersistence(
                             ?.toSet() ?: emptySet(),
                         it.content_type,
                     )
-                PublishMessageV5.ofRaw(
+                V5Packet.Publish.ofRaw(
                     topic = TopicName.fromOrThrow(it.topic_name),
                     qos = it.qos.toQos(),
                     payload = it.payload,
@@ -718,7 +718,7 @@ class SqlDatabasePersistence(
         }
         val brokerId = broker.identifier.toLong()
         val incoming = 0L
-        val p = pub as PublishMessageV5
+        val p = pub as V5Packet.Publish<*>
         val payload = p.payloadAsReadBufferOrNull()
         val packetId =
             withContext(dispatcher) {
@@ -727,10 +727,10 @@ class SqlDatabasePersistence(
                         val packetId = brokerQueries.nextPacketId(brokerId).executeAsOne().toLong()
                         brokerQueries.incrementPacketId(brokerId)
                         val subIds =
-                            if (p.properties.subscriptionIdentifier.isEmpty()) {
+                            if (p.typedProperties.subscriptionIdentifier.isEmpty()) {
                                 null
                             } else {
-                                p.properties.subscriptionIdentifier.joinToString()
+                                p.typedProperties.subscriptionIdentifier.joinToString()
                             }
                         pubQueries.insertPublishMessage(
                             brokerId,
@@ -740,16 +740,16 @@ class SqlDatabasePersistence(
                             if (p.retain) 1L else 0L,
                             p.topic.toString(),
                             packetId,
-                            p.properties.payloadFormatIndicator.toLong(),
-                            p.properties.messageExpiryInterval,
-                            p.properties.topicAlias?.toLong(),
-                            p.properties.responseTopic?.toString(),
-                            p.properties.correlationData,
+                            p.typedProperties.payloadFormatIndicator.toLong(),
+                            p.typedProperties.messageExpiryInterval,
+                            p.typedProperties.topicAlias?.toLong(),
+                            p.typedProperties.responseTopic?.toString(),
+                            p.typedProperties.correlationData,
                             subIds,
-                            p.properties.contentType,
+                            p.typedProperties.contentType,
                             payload,
                         )
-                        for ((key, value) in p.properties.userProperty) {
+                        for ((key, value) in p.typedProperties.userProperty) {
                             propertyQueries.addProp(brokerId, incoming, packetId, key, value)
                         }
                         packetId.toInt()
@@ -773,7 +773,7 @@ class SqlDatabasePersistence(
                 .executeAsList()
                 .map { (key, value) -> Pair(key, value) }
         val properties =
-            PublishMessageV5.Properties(
+            PublishProperties(
                 p.payload_format_indicator == 1L,
                 p.message_expiry_interval,
                 p.topic_alias?.toInt(),
@@ -786,7 +786,7 @@ class SqlDatabasePersistence(
                     ?.toSet() ?: emptySet(),
                 p.content_type,
             )
-        return PublishMessageV5.ofRaw(
+        return V5Packet.Publish.ofRaw(
             topic = TopicName.fromOrThrow(p.topic_name),
             qos = p.qos.toQos(),
             payload = p.payload,

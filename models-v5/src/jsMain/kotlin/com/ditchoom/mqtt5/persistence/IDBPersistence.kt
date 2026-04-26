@@ -20,7 +20,7 @@ import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
 import com.ditchoom.mqtt5.controlpacket.ConnectionRequest
 import com.ditchoom.mqtt5.controlpacket.PublishComplete
-import com.ditchoom.mqtt5.controlpacket.PublishMessageV5
+import com.ditchoom.mqtt5.controlpacket.V5Packet
 import com.ditchoom.mqtt5.controlpacket.PublishReceived
 import com.ditchoom.mqtt5.controlpacket.PublishRelease
 import com.ditchoom.mqtt5.controlpacket.SubscribeRequest
@@ -461,12 +461,12 @@ class IDBPersistence(
         packet: PublishMessage,
     ) {
         if (packet.qualityOfService == QualityOfService.AT_MOST_ONCE) return
-        val p = packet as PublishMessageV5
+        val p = packet as V5Packet.Publish<*>
         val tx = db.transaction(arrayOf(PUB_MSG, USER_PROPERTIES), IDBTransactionMode.readwrite)
         val pubStore = tx.objectStore(PUB_MSG)
         pubStore.put(PersistablePublishMessage(broker.identifier, true, p))
         val propStore = tx.objectStore(USER_PROPERTIES)
-        for ((key, value) in p.properties.userProperty) {
+        for ((key, value) in p.typedProperties.userProperty) {
             propStore.put(PersistableUserProperty(broker.identifier, 1, p.packetIdentifier, key, value))
         }
         commitTransaction(tx, "persistIncomingPublish")
@@ -799,11 +799,11 @@ class IDBPersistence(
         val newPacketId = getAndIncrementPacketId(broker)
         val tx = db.transaction(arrayOf(PACKET_ID, USER_PROPERTIES, PUB_MSG), IDBTransactionMode.readwrite)
         val queuedMsgStore = tx.objectStore(PUB_MSG)
-        val packetIdPub = pub.maybeCopyWithNewPacketIdentifier(newPacketId) as PublishMessageV5
+        val packetIdPub = pub.maybeCopyWithNewPacketIdentifier(newPacketId) as V5Packet.Publish<*>
         val persistablePub = PersistablePublishMessage(broker.identifier, false, packetIdPub)
         queuedMsgStore.put(persistablePub)
         val propStore = tx.objectStore(USER_PROPERTIES)
-        for ((key, value) in packetIdPub.properties.userProperty) {
+        for ((key, value) in packetIdPub.typedProperties.userProperty) {
             propStore.put(PersistableUserProperty(broker.identifier, 0, newPacketId, key, value))
         }
         commitTransaction(tx, "writePubGetPacketId")

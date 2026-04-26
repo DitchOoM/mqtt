@@ -47,7 +47,18 @@ sealed interface ControlPacketV5 : ControlPacket {
             val packetValue = (byte1.toUInt() shr 4).toInt()
             return when (packetValue) {
                 0 -> throw MalformedPacketException("Reserved packet type 0 is not permitted")
-                3 -> PublishMessageV5.from(buffer, byte1, remainingLength)
+                3 -> {
+                    val header = MqttFixedHeader(byte1)
+                    if (header.publishQos == 3) {
+                        throw MalformedPacketException(
+                            "[MQTT-3.3.1-4] PUBLISH MUST NOT have both QoS bits set to 1.",
+                        )
+                    }
+                    val ctx =
+                        publishPropertyDecodeContext()
+                            .with(V5PacketCodec.DiscriminatorKey, header)
+                    V5PacketPublishCodec.decode(buffer, ctx) { slice -> slice }
+                }
                 in migratedPacketTypes -> decodeMigrated(buffer, byte1, packetValue, remainingLength)
                 else -> throw MalformedPacketException(
                     "Invalid MQTT Control Packet Type: $packetValue Should be in range between 0 and 15 inclusive",

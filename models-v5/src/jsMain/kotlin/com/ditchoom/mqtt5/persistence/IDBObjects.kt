@@ -16,8 +16,9 @@ import com.ditchoom.mqtt.controlpacket.WillConfig
 import com.ditchoom.mqtt5.controlpacket.ConnectProperties
 import com.ditchoom.mqtt5.controlpacket.ConnectWillProperties
 import com.ditchoom.mqtt5.controlpacket.ConnectionRequest
-import com.ditchoom.mqtt5.controlpacket.PublishMessageV5
+import com.ditchoom.mqtt5.controlpacket.PublishProperties
 import com.ditchoom.mqtt5.controlpacket.Subscription
+import com.ditchoom.mqtt5.controlpacket.V5Packet
 import com.ditchoom.mqtt5.controlpacket.UnsubscribeRequest
 import com.ditchoom.mqtt5.controlpacket.properties.Authentication
 import org.khronos.webgl.Int8Array
@@ -160,7 +161,7 @@ data class PersistablePublishMessage(
     val state: Int = 0,
 ) {
     @JsName("construct")
-    constructor(brokerId: Int, incoming: Boolean, pub: PublishMessageV5) : this(
+    constructor(brokerId: Int, incoming: Boolean, pub: V5Packet.Publish<*>) : this(
         brokerId,
         if (incoming) 1 else 0,
         pub.dup,
@@ -168,17 +169,17 @@ data class PersistablePublishMessage(
         pub.retain,
         pub.topic.toString(),
         pub.packetIdentifier,
-        pub.properties.payloadFormatIndicator.toLong().toInt(),
-        pub.properties.messageExpiryInterval?.toString(),
-        pub.properties.topicAlias,
-        pub.properties.responseTopic?.toString(),
-        pub.properties.correlationData?.let { (it as JsBuffer).buffer },
-        if (pub.properties.subscriptionIdentifier.isNotEmpty()) {
-            pub.properties.subscriptionIdentifier.joinToString(", ")
+        pub.typedProperties.payloadFormatIndicator.toLong().toInt(),
+        pub.typedProperties.messageExpiryInterval?.toString(),
+        pub.typedProperties.topicAlias,
+        pub.typedProperties.responseTopic?.toString(),
+        pub.typedProperties.correlationData?.let { (it as JsBuffer).buffer },
+        if (pub.typedProperties.subscriptionIdentifier.isNotEmpty()) {
+            pub.typedProperties.subscriptionIdentifier.joinToString(", ")
         } else {
             null
         },
-        pub.properties.contentType,
+        pub.typedProperties.contentType,
         pub.payloadAsByteArrayOrNull()?.unsafeCast<Int8Array>(),
         0,
     )
@@ -188,7 +189,7 @@ fun toPub(
     p: PersistablePublishMessage,
     userProperty: List<Pair<String, String>>,
 ): PublishMessage =
-    PublishMessageV5.ofRaw(
+    V5Packet.Publish.ofRaw(
         topic = TopicName.fromOrThrow(p.topicName),
         qos = p.qos.toQos(),
         payload =
@@ -202,7 +203,7 @@ fun toPub(
         retain = p.retain,
         packetIdentifier = p.packetId,
         properties =
-            PublishMessageV5.Properties(
+            PublishProperties(
                 p.payloadFormatIndicator == 1,
                 p.messageExpiryInterval?.toLong(),
                 p.topicAlias,

@@ -42,7 +42,7 @@ object ControlPacketV5Factory : ControlPacketFactory {
         subscriptionIdentifier: Set<Long>,
         contentType: String?,
     ): PublishMessage =
-        PublishMessageV5.ofRaw(
+        V5Packet.Publish.ofRaw(
             topic = topicName,
             qos = qos,
             payload = payload,
@@ -50,7 +50,7 @@ object ControlPacketV5Factory : ControlPacketFactory {
             retain = retain,
             packetIdentifier = NO_PACKET_ID,
             properties =
-                PublishMessageV5.Properties(
+                PublishProperties(
                     payloadFormatIndicator,
                     messageExpiryInterval,
                     topicAlias,

@@ -14,7 +14,7 @@ import com.ditchoom.mqtt.controlpacket.format.ReasonCode
 import com.ditchoom.mqtt5.controlpacket.ConnectionRequest
 import com.ditchoom.mqtt5.controlpacket.PublishAcknowledgment
 import com.ditchoom.mqtt5.controlpacket.PublishComplete
-import com.ditchoom.mqtt5.controlpacket.PublishMessageV5
+import com.ditchoom.mqtt5.controlpacket.PublishProperties
 import com.ditchoom.mqtt5.controlpacket.PublishReceived
 import com.ditchoom.mqtt5.controlpacket.PublishRelease
 import com.ditchoom.mqtt5.controlpacket.SubscribeAcknowledgement
@@ -22,6 +22,7 @@ import com.ditchoom.mqtt5.controlpacket.SubscribeRequest
 import com.ditchoom.mqtt5.controlpacket.Subscription
 import com.ditchoom.mqtt5.controlpacket.UnsubscribeAcknowledgment
 import com.ditchoom.mqtt5.controlpacket.UnsubscribeRequest
+import com.ditchoom.mqtt5.controlpacket.V5Packet
 import kotlinx.coroutines.test.runTest
 import kotlin.random.Random
 import kotlin.random.nextUInt
@@ -50,12 +51,12 @@ class PersistenceTests {
             val (persistence, broker) = setupPersistence()
             buffer.position(0)
             val pub =
-                PublishMessageV5.ofRaw(
+                V5Packet.Publish.ofRaw(
                     topic = TopicName.fromOrThrow("test"),
                     qos = QualityOfService.AT_LEAST_ONCE,
                     payload = buffer,
                     properties =
-                        PublishMessageV5.Properties(
+                        PublishProperties(
                             messageExpiryInterval = 5L,
                             topicAlias = 1,
                             userProperty = listOf(Pair("Rahul", "Behera")),
@@ -87,12 +88,12 @@ class PersistenceTests {
             val (persistence, broker) = setupPersistence()
             buffer.position(0)
             val pub =
-                PublishMessageV5.ofRaw(
+                V5Packet.Publish.ofRaw(
                     topic = TopicName.fromOrThrow("test"),
                     qos = QualityOfService.EXACTLY_ONCE,
                     payload = buffer,
                     properties =
-                        PublishMessageV5.Properties(
+                        PublishProperties(
                             userProperty = listOf(Pair("Rahul", "Behera")),
                         ),
                 )
@@ -129,13 +130,13 @@ class PersistenceTests {
             buffer.position(0)
             val packetId = 2
             val pub =
-                PublishMessageV5.ofRaw(
+                V5Packet.Publish.ofRaw(
                     topic = TopicName.fromOrThrow("test"),
                     qos = QualityOfService.AT_LEAST_ONCE,
                     payload = buffer,
                     packetIdentifier = packetId,
                     properties =
-                        PublishMessageV5.Properties(
+                        PublishProperties(
                             userProperty = listOf(Pair("Rahul", "Behera")),
                         ),
                 )
@@ -157,13 +158,13 @@ class PersistenceTests {
             buffer.position(0)
             val packetId = 3
             val pub =
-                PublishMessageV5.ofRaw(
+                V5Packet.Publish.ofRaw(
                     topic = TopicName.fromOrThrow("test"),
                     qos = QualityOfService.EXACTLY_ONCE,
                     payload = buffer,
                     packetIdentifier = packetId,
                     properties =
-                        PublishMessageV5.Properties(
+                        PublishProperties(
                             userProperty = listOf(Pair("Rahul", "Behera")),
                         ),
                 )

@@ -26,7 +26,7 @@ class ZeroCopyPublishBenchmark {
     @Param("64", "1024", "4096", "32768")
     var payloadSize: Int = 64
 
-    private lateinit var publish: PublishMessageV4<ReadBuffer>
+    private lateinit var publish: PublishMessageV4
     private lateinit var payload: PlatformBuffer
     private val topic = TopicName.fromOrThrow("bench/zero-copy/test")
 

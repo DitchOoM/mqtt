@@ -25,7 +25,7 @@ import kotlinx.benchmark.TearDown
 @BenchmarkMode(Mode.Throughput)
 @OutputTimeUnit(BenchmarkTimeUnit.MICROSECONDS)
 class PoolBenchmark {
-    private lateinit var publish: PublishMessageV4<ReadBuffer>
+    private lateinit var publish: PublishMessageV4
     private lateinit var pool: BufferPool
     private lateinit var pooledFactory: BufferFactory
     private val topic = TopicName.fromOrThrow("bench/pool/test")

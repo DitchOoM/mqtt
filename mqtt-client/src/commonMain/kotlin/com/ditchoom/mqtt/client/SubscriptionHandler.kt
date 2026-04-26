@@ -11,7 +11,7 @@ import com.ditchoom.mqtt.controlpacket.PublishMessage
  *
  * The [PublishMessage] owns its decoded payload — callers can retain the message without
  * worrying about buffer-lifecycle contracts. For typed payloads, prefer the typed subscribe
- * overload on [MqttClient] which invokes a [com.ditchoom.mqtt.codec.PayloadCodec] and passes
+ * overload on [MqttClient] which invokes a `ReadBuffer.() -> P` decode lambda and passes
  * the decoded value alongside the [PublishMessage].
  */
 sealed interface SubscriptionHandler {

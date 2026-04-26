@@ -160,7 +160,7 @@ data class PersistablePublishMessage(
     val state: Int = 0,
 ) {
     @JsName("construct")
-    constructor(brokerId: Int, incoming: Boolean, pub: PublishMessageV5<*>) : this(
+    constructor(brokerId: Int, incoming: Boolean, pub: PublishMessageV5) : this(
         brokerId,
         if (incoming) 1 else 0,
         pub.dup,

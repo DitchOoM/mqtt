@@ -1,14 +1,17 @@
 package com.ditchoom.mqtt.controlpacket
 
+import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
 
 /**
  * Marker interface for an MQTT PUBLISH Control Packet (MQTT 3.1.1 §3.3 / MQTT 5 §3.3).
  *
- * Protocol-version concrete types ([com.ditchoom.mqtt3.controlpacket.PublishMessageV4] and
- * [com.ditchoom.mqtt5.controlpacket.PublishMessageV5]) are generic on the payload type `P`.
- * The payload's wire encoding/decoding is supplied at the call site via [com.ditchoom.buffer.codec.Codec].
+ * Concrete types ([com.ditchoom.mqtt3.controlpacket.PublishMessageV4],
+ * [com.ditchoom.mqtt5.controlpacket.PublishMessageV5], and the sealed-tree
+ * `V5Packet.Publish<P>`) carry the payload as a [ReadBuffer]. Typed payload encoding
+ * happens eagerly at the publish API boundary; on the dispatch side, subscribers
+ * decode the wire slice through their own `ReadBuffer.() -> P` lambda.
  */
 interface PublishMessage : ControlPacket {
     val topic: TopicName
@@ -16,6 +19,15 @@ interface PublishMessage : ControlPacket {
     val dup: Boolean
     val retain: Boolean
     override val direction: DirectionOfFlow get() = DirectionOfFlow.BIDIRECTIONAL
+
+    /**
+     * Wire-bytes payload (zero-copy slice). Empty payloads return an empty buffer (never null
+     * for the v4/v5 [PublishMessageV4] / [PublishMessageV5] impls). Returns null only for the
+     * sealed-tree `V5Packet.Publish<P>` variant when `P` is not a [ReadBuffer] — that variant
+     * exists for the codec processor's typed-payload pipeline and is not used by the
+     * eager-encode publish API.
+     */
+    fun rawPayload(): ReadBuffer?
 
     /**
      * The expected acknowledgement response for QoS 1 / QoS 2 incoming PUBLISH messages.

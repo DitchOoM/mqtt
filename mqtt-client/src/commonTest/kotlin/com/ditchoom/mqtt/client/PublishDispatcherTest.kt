@@ -3,7 +3,6 @@ package com.ditchoom.mqtt.client
 import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.ReadBuffer
-import com.ditchoom.mqtt.codec.PayloadCodec
 import com.ditchoom.mqtt.controlpacket.PublishMessage
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
@@ -86,33 +85,10 @@ class PublishDispatcherTest {
 
     // ── Typed subscribe ───────────────────────────────────────────────
 
-    private object IntPayloadCodec : PayloadCodec<Int> {
-        override fun decode(buffer: ReadBuffer): Int = buffer.readInt()
+    private val decodeInt: ReadBuffer.() -> Int = { readInt() }
 
-        override fun encode(
-            buffer: com.ditchoom.buffer.WriteBuffer,
-            value: Int,
-        ) {
-            buffer.writeInt(value)
-        }
-
-        override fun encodedSize(value: Int): Int = Int.SIZE_BYTES
-    }
-
-    private data class StringBytesCodec(
-        val charset: com.ditchoom.buffer.Charset = com.ditchoom.buffer.Charset.UTF8,
-    ) : PayloadCodec<String> {
-        override fun decode(buffer: ReadBuffer): String = buffer.readString(buffer.remaining(), charset)
-
-        override fun encode(
-            buffer: com.ditchoom.buffer.WriteBuffer,
-            value: String,
-        ) {
-            buffer.writeString(value, charset)
-        }
-
-        override fun encodedSize(value: String): Int = value.encodeToByteArray().size
-    }
+    private fun decodeString(charset: com.ditchoom.buffer.Charset = com.ditchoom.buffer.Charset.UTF8): ReadBuffer.() -> String =
+        { readString(remaining(), charset) }
 
     @Test
     fun typedSubscribeDecodesPayloadThroughCodec() =
@@ -121,7 +97,7 @@ class PublishDispatcherTest {
             val received = mutableListOf<Pair<PublishMessage, Int>>()
             dispatcher.subscribeTyped(
                 TopicFilter.fromOrThrow("data/#"),
-                SubscriberEntry.Typed(IntPayloadCodec) { pub, decoded ->
+                SubscriberEntry.Typed(decodeInt) { pub, decoded ->
                     received.add(pub to decoded)
                 },
             )
@@ -139,7 +115,7 @@ class PublishDispatcherTest {
             val received = mutableListOf<Pair<PublishMessage, Int>>()
             dispatcher.subscribeTyped(
                 TopicFilter.fromOrThrow("cmd/+"),
-                SubscriberEntry.Typed(IntPayloadCodec) { pub, decoded ->
+                SubscriberEntry.Typed(decodeInt) { pub, decoded ->
                     received.add(pub to decoded)
                 },
             )
@@ -161,11 +137,11 @@ class PublishDispatcherTest {
             // Two subscribers on overlapping filters, each with its own codec.
             dispatcher.subscribeTyped(
                 TopicFilter.fromOrThrow("dual/int"),
-                SubscriberEntry.Typed(IntPayloadCodec) { _, decoded -> intResults.add(decoded) },
+                SubscriberEntry.Typed(decodeInt) { _, decoded -> intResults.add(decoded) },
             )
             dispatcher.subscribeTyped(
                 TopicFilter.fromOrThrow("dual/+"),
-                SubscriberEntry.Typed(StringBytesCodec()) { _, decoded -> strResults.add(decoded) },
+                SubscriberEntry.Typed(decodeString()) { _, decoded -> strResults.add(decoded) },
             )
 
             // Only the int subscriber's exact filter matches; the second filter matches too.
@@ -192,7 +168,7 @@ class PublishDispatcherTest {
             val received = mutableListOf<String>()
             dispatcher.subscribeTyped(
                 TopicFilter.fromOrThrow("empty/+"),
-                SubscriberEntry.Typed(StringBytesCodec()) { _, s -> received.add(s) },
+                SubscriberEntry.Typed(decodeString()) { _, s -> received.add(s) },
             )
             dispatcher.dispatch(v4Publish("empty/x", BufferFactory.Default.allocate(0).also { it.resetForRead() }))
             assertEquals(listOf(""), received)
@@ -223,7 +199,7 @@ class PublishDispatcherTest {
             dispatcher.subscribe(TopicFilter.fromOrThrow("a/#"), SubscriptionHandler.Async { })
             dispatcher.subscribeTyped(
                 TopicFilter.fromOrThrow("b/+"),
-                SubscriberEntry.Typed(IntPayloadCodec) { _, _ -> },
+                SubscriberEntry.Typed(decodeInt) { _, _ -> },
             )
             assertFalse(dispatcher.isEmpty())
             dispatcher.clear()

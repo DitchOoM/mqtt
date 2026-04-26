@@ -1,9 +1,7 @@
 package com.ditchoom.mqtt3.controlpacket
 
 import com.ditchoom.buffer.ReadBuffer
-import com.ditchoom.buffer.WriteBuffer
 import com.ditchoom.mqtt.Persistence
-import com.ditchoom.mqtt.codec.PayloadCodec
 import com.ditchoom.mqtt.controlpacket.ControlPacketFactory
 import com.ditchoom.mqtt.controlpacket.ISubscribeRequest
 import com.ditchoom.mqtt.controlpacket.ISubscription
@@ -58,39 +56,6 @@ object ControlPacketV4Factory : ControlPacketFactory {
             retain = retain,
             packetIdentifier = NO_PACKET_ID,
         )
-
-    override fun <P> publish(
-        dup: Boolean,
-        qos: QualityOfService,
-        retain: Boolean,
-        topicName: TopicName,
-        payload: P,
-        encodePayload: (WriteBuffer, P) -> Unit,
-        payloadSize: (P) -> Int,
-    ): PublishMessage {
-        val codec =
-            object : PayloadCodec<P> {
-                override fun decode(buffer: ReadBuffer): P = error("Outgoing publish codec is not used for decoding")
-
-                override fun encode(
-                    buffer: WriteBuffer,
-                    value: P,
-                ) {
-                    encodePayload(buffer, value)
-                }
-
-                override fun encodedSize(value: P): Int = payloadSize(value)
-            }
-        return PublishMessageV4.ofTyped(
-            topic = topicName,
-            qos = qos,
-            payload = payload,
-            codec = codec,
-            dup = dup,
-            retain = retain,
-            packetIdentifier = NO_PACKET_ID,
-        )
-    }
 
     override fun subscribe(
         topicFilter: TopicFilter,

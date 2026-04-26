@@ -306,7 +306,7 @@ class SpecByteTests {
         buf.writeUByte(0x00u) // props len=0
         buf.resetForRead()
         val packet = ControlPacketV5.from(buf)
-        assertIs<PublishMessageV5<*>>(packet)
+        assertIs<PublishMessageV5>(packet)
         assertEquals("a", packet.topic.toString())
         assertEquals(AT_MOST_ONCE, packet.qualityOfService)
     }
@@ -324,7 +324,7 @@ class SpecByteTests {
         buf.writeUByte(0x00u) // props len=0
         buf.resetForRead()
         val packet = ControlPacketV5.from(buf)
-        assertIs<PublishMessageV5<*>>(packet)
+        assertIs<PublishMessageV5>(packet)
         assertEquals("a", packet.topic.toString())
         assertEquals(AT_LEAST_ONCE, packet.qualityOfService)
         assertEquals(1, packet.packetIdentifier)
@@ -777,31 +777,8 @@ class SpecByteTests {
 
     // ── Typed payload serialization ────────────────────────────────────────
 
-    private object IntPayloadCodec : com.ditchoom.mqtt.codec.PayloadCodec<Int> {
-        override fun decode(buffer: ReadBuffer): Int = buffer.readInt()
-
-        override fun encode(
-            buffer: com.ditchoom.buffer.WriteBuffer,
-            value: Int,
-        ) {
-            buffer.writeInt(value)
-        }
-
-        override fun encodedSize(value: Int): Int = Int.SIZE_BYTES
-    }
-
-    private object ShortPayloadCodec : com.ditchoom.mqtt.codec.PayloadCodec<Short> {
-        override fun decode(buffer: ReadBuffer): Short = buffer.readShort()
-
-        override fun encode(
-            buffer: com.ditchoom.buffer.WriteBuffer,
-            value: Short,
-        ) {
-            buffer.writeShort(value)
-        }
-
-        override fun encodedSize(value: Short): Int = Short.SIZE_BYTES
-    }
+    private val encodeInt: com.ditchoom.buffer.WriteBuffer.(Int) -> Unit = { writeInt(it) }
+    private val encodeShort: com.ditchoom.buffer.WriteBuffer.(Short) -> Unit = { writeShort(it) }
 
     @Test
     fun publishTypedPayloadQos0ExactBytes() {
@@ -812,7 +789,7 @@ class SpecByteTests {
                     topic = TopicName.fromOrThrow("a"),
                     qos = AT_MOST_ONCE,
                     payload = 42,
-                    codec = IntPayloadCodec,
+                    encodePayload = encodeInt,
                 ).serialize(BufferFactory.Default)
         // topic "a" (3 bytes) + props VBI (1 byte) + payload (4 bytes) = 8 bytes remaining
         assertEquals(10, buf.remaining())
@@ -837,7 +814,7 @@ class SpecByteTests {
                     topic = TopicName.fromOrThrow("a"),
                     qos = AT_LEAST_ONCE,
                     payload = 0x1234.toShort(),
-                    codec = ShortPayloadCodec,
+                    encodePayload = encodeShort,
                     packetIdentifier = 5,
                 ).serialize(BufferFactory.Default)
         // topic "a" (3) + packetId (2) + props VBI (1) + payload (2) = 8
@@ -872,7 +849,7 @@ class SpecByteTests {
                     topic = TopicName.fromOrThrow("a"),
                     qos = AT_MOST_ONCE,
                     payload = 42,
-                    codec = IntPayloadCodec,
+                    encodePayload = encodeInt,
                 ).serialize(BufferFactory.Default)
 
         assertEquals(readBufferPub.remaining(), typedPub.remaining())

@@ -1,8 +1,7 @@
 package com.ditchoom.mqtt.client
 
 import com.ditchoom.buffer.ReadBuffer
-import com.ditchoom.mqtt.codec.IdentityBufferCodec
-import com.ditchoom.mqtt.codec.PayloadCodec
+import com.ditchoom.buffer.WriteBuffer
 import com.ditchoom.mqtt.connection.MqttBroker
 import com.ditchoom.mqtt.controlpacket.ControlPacketFactory
 import com.ditchoom.mqtt.controlpacket.IConnectionAcknowledgment
@@ -55,12 +54,12 @@ interface MqttClient {
     fun observe(filter: TopicFilter): Flow<PublishMessage>
 
     /**
-     * Observe incoming publishes matching [filter] decoded through [codec]. Each emitted
+     * Observe incoming publishes matching [filter] decoded via [decodePayload]. Each emitted
      * value contains the owned typed payload — no buffer-lifecycle contract.
      */
     fun <P> observe(
         filter: TopicFilter,
-        codec: PayloadCodec<P>,
+        decodePayload: ReadBuffer.() -> P,
     ): Flow<Pair<PublishMessage, P>>
 
     suspend fun subscribe(
@@ -80,7 +79,7 @@ interface MqttClient {
      *
      * The handler receives a [PublishMessage] whose payload is owned (no scope contract);
      * capture it freely. For typed payloads, prefer the overload that accepts a
-     * [PayloadCodec].
+     * `ReadBuffer.() -> P` decode lambda.
      */
     suspend fun subscribe(
         topicFilter: String,
@@ -105,36 +104,37 @@ interface MqttClient {
     // --- v2 typed API ---
 
     /**
-     * Publish a typed payload. The [codec] writes [payload] directly into the wire buffer
-     * (zero intermediate copy if the codec implementation doesn't allocate internally).
+     * Publish a typed payload. [encodePayload] is invoked eagerly to convert [payload] to
+     * wire bytes before queueing; the resulting `PublishMessage` carries the encoded
+     * `ReadBuffer` uniformly. The lambda runs once per publish call — capture-friendly.
      */
     suspend fun <P> publish(
         topic: String,
         payload: P,
-        codec: PayloadCodec<P>,
+        encodePayload: WriteBuffer.(P) -> Unit,
         qos: QualityOfService = QualityOfService.AT_MOST_ONCE,
         retain: Boolean = false,
     ): PublishResult
 
     /**
-     * Publish raw bytes. Convenience over [publish] with [IdentityBufferCodec].
+     * Publish raw bytes. Convenience over the typed [publish] for `P = ReadBuffer`.
      */
     suspend fun publish(
         topic: String,
         payload: ReadBuffer,
         qos: QualityOfService = QualityOfService.AT_MOST_ONCE,
         retain: Boolean = false,
-    ): PublishResult = publish(topic, payload, IdentityBufferCodec, qos, retain)
+    ): PublishResult = publish(topic, payload, { write(it) }, qos, retain)
 
     /**
-     * Subscribe with a typed handler. The dispatcher decodes the payload via [codec] and
-     * passes both the [PublishMessage] (for metadata) and the decoded value to [handler].
-     * Auto-ack on handler return — if the handler throws, the message is NOT acknowledged
-     * and will be redelivered on reconnect.
+     * Subscribe with a typed handler. The dispatcher hands [decodePayload] a wire-payload
+     * `ReadBuffer` slice and passes both the [PublishMessage] (for metadata) and the
+     * decoded value to [handler]. Auto-ack on handler return — if the handler throws, the
+     * message is NOT acknowledged and will be redelivered on reconnect.
      */
     suspend fun <P> subscribe(
         topicFilter: String,
-        codec: PayloadCodec<P>,
+        decodePayload: ReadBuffer.() -> P,
         maxQos: QualityOfService = QualityOfService.AT_LEAST_ONCE,
         handler: suspend (PublishMessage, P) -> Unit,
     ): SubscribeOperation

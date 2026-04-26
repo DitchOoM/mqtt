@@ -437,7 +437,7 @@ class SqlDatabasePersistence(
         if (packet.qualityOfService == QualityOfService.AT_MOST_ONCE) return
         val brokerId = broker.identifier.toLong()
         val incoming = 1L
-        val p = packet as PublishMessageV5<*>
+        val p = packet as PublishMessageV5
         val payload = p.payloadAsReadBufferOrNull()
         withContext(dispatcher) {
             pubQueries.transaction {
@@ -718,7 +718,7 @@ class SqlDatabasePersistence(
         }
         val brokerId = broker.identifier.toLong()
         val incoming = 0L
-        val p = pub as PublishMessageV5<*>
+        val p = pub as PublishMessageV5
         val payload = p.payloadAsReadBufferOrNull()
         val packetId =
             withContext(dispatcher) {

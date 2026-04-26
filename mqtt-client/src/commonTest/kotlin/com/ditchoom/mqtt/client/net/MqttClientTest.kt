@@ -18,7 +18,6 @@ import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt.controlpacket.WillConfig
-import com.ditchoom.mqtt.controlpacket.rawPayload
 import com.ditchoom.mqtt3.controlpacket.ConnectionRequest
 import com.ditchoom.mqtt5.controlpacket.ConnectWillProperties
 import com.ditchoom.socket.NetworkCapabilities

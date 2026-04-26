@@ -453,6 +453,8 @@ sealed interface V5Packet : ControlPacketV5 {
         override val retain: Boolean get() = header.publishRetain
         override val packetIdentifier: Int get() = packetId?.toInt() ?: NO_PACKET_ID
 
+        override fun rawPayload(): ReadBuffer? = payload as? ReadBuffer
+
         /** Typed view of the variable-header properties (§3.3.2.3). */
         val typedProperties: PublishProperties get() = PublishProperties.from(properties)
 

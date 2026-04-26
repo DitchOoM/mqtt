@@ -26,8 +26,8 @@ import kotlinx.benchmark.State
 @BenchmarkMode(Mode.Throughput)
 @OutputTimeUnit(BenchmarkTimeUnit.MICROSECONDS)
 class WritePathBenchmark {
-    private lateinit var publishSmall: PublishMessageV4<ReadBuffer>
-    private lateinit var publishLarge: PublishMessageV4<ReadBuffer>
+    private lateinit var publishSmall: PublishMessageV4
+    private lateinit var publishLarge: PublishMessageV4
     private lateinit var subscribe: SubscribeRequest
     private val topic = TopicName.fromOrThrow("bench/topic/foo")
 

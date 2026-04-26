@@ -4,14 +4,13 @@ import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
+import com.ditchoom.buffer.codec.Encoder
+import com.ditchoom.buffer.codec.encodeToBuffer
 import com.ditchoom.buffer.utf8Length
 import com.ditchoom.mqtt.MalformedPacketException
-import com.ditchoom.mqtt.codec.IdentityBufferCodec
-import com.ditchoom.mqtt.codec.PayloadCodec
 import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.NO_PACKET_ID
 import com.ditchoom.mqtt.controlpacket.PublishMessage
-import com.ditchoom.mqtt.controlpacket.PublishMessagePayloadMaterializer
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.QualityOfService.AT_LEAST_ONCE
 import com.ditchoom.mqtt.controlpacket.QualityOfService.AT_MOST_ONCE
@@ -21,27 +20,19 @@ import com.ditchoom.mqtt.controlpacket.format.ReasonCode
 import com.ditchoom.mqtt.controlpacket.validControlPacketIdentifierRange
 
 /**
- * MQTT 3.1.1 PUBLISH packet, parameterized on the payload type [P].
- *
- * The payload is supplied via a [Codec] — see [ofRaw] for the `P = ReadBuffer` convenience
- * and [ofTyped] for an arbitrary typed payload. Wire encoding delegates to the generated
- * [PublishBodyV4Qos0Codec] / [PublishBodyV4QosNonZeroCodec] body codecs, which in turn
- * delegate the payload portion back to the supplied [Codec].
- *
- * Note: the [codec] is stored on the instance so that [ControlPacket.serialize] (which has
- * no codec parameter) can invoke it. See the Phase 1 commit message for the rationale.
+ * MQTT 3.1.1 PUBLISH packet. Payload is always a [ReadBuffer] — typed payloads are
+ * eagerly encoded at the publish API boundary via [ofTyped] before storage, so
+ * persistence, IPC, and wire-encode all see uniform `ReadBuffer` bytes.
  */
-class PublishMessageV4<P> internal constructor(
+class PublishMessageV4 internal constructor(
     override val topic: TopicName,
     override val qualityOfService: QualityOfService,
     override val dup: Boolean,
     override val retain: Boolean,
     packetIdentifier: Int,
-    override val payload: P,
-    override val codec: PayloadCodec<P>,
+    val payload: ReadBuffer,
 ) : PublishMessage,
-    ControlPacketV4,
-    PublishMessagePayloadMaterializer<P> {
+    ControlPacketV4 {
     override val controlPacketValue: Byte get() = PublishMessage.CONTROL_PACKET_VALUE
     override val flags: Byte
         get() {
@@ -52,14 +43,14 @@ class PublishMessageV4<P> internal constructor(
         }
     override val packetIdentifier: Int = packetIdentifier
 
-    private fun topicEncodedSize(): Int = UShort.SIZE_BYTES + topic.toString().utf8Length()
+    override fun rawPayload(): ReadBuffer = payload
 
-    private fun payloadSize(): Int = codec.encodedSize(payload)
+    private fun topicEncodedSize(): Int = UShort.SIZE_BYTES + topic.toString().utf8Length()
 
     override fun remainingLength(): Int {
         var size = topicEncodedSize()
         if (packetIdentifier in validControlPacketIdentifierRange) size += UShort.SIZE_BYTES
-        size += payloadSize()
+        size += payload.remaining()
         return size
     }
 
@@ -68,12 +59,12 @@ class PublishMessageV4<P> internal constructor(
             PublishBodyV4Qos0Codec.encode(
                 writeBuffer,
                 PublishBodyV4Qos0(topic.toString(), payload),
-            ) { buf, v -> codec.encode(buf, v) }
+            ) { buf, v -> buf.write(v) }
         } else {
             PublishBodyV4QosNonZeroCodec.encode(
                 writeBuffer,
                 PublishBodyV4QosNonZero(topic.toString(), packetIdentifier.toUShort(), payload),
-            ) { buf, v -> codec.encode(buf, v) }
+            ) { buf, v -> buf.write(v) }
         }
     }
 
@@ -90,9 +81,9 @@ class PublishMessageV4<P> internal constructor(
 
     override fun setDupFlagNewPubMessage(): PublishMessage =
         if (qualityOfService == AT_MOST_ONCE && dup) {
-            PublishMessageV4(topic, qualityOfService, false, retain, packetIdentifier, payload, codec)
+            PublishMessageV4(topic, qualityOfService, false, retain, packetIdentifier, payload)
         } else if (qualityOfService != AT_MOST_ONCE && !dup) {
-            PublishMessageV4(topic, qualityOfService, true, retain, packetIdentifier, payload, codec)
+            PublishMessageV4(topic, qualityOfService, true, retain, packetIdentifier, payload)
         } else {
             this
         }
@@ -101,7 +92,7 @@ class PublishMessageV4<P> internal constructor(
         when (qualityOfService) {
             AT_MOST_ONCE -> this
             AT_LEAST_ONCE, EXACTLY_ONCE ->
-                PublishMessageV4(topic, qualityOfService, dup, retain, packetIdentifier, payload, codec)
+                PublishMessageV4(topic, qualityOfService, dup, retain, packetIdentifier, payload)
         }
 
     override fun validate(): MalformedPacketException? {
@@ -124,7 +115,7 @@ class PublishMessageV4<P> internal constructor(
     }
 
     override fun equals(other: Any?): Boolean {
-        if (other !is PublishMessageV4<*>) return false
+        if (other !is PublishMessageV4) return false
         return topic == other.topic &&
             qualityOfService == other.qualityOfService &&
             dup == other.dup &&
@@ -139,7 +130,7 @@ class PublishMessageV4<P> internal constructor(
         r = 31 * r + dup.hashCode()
         r = 31 * r + retain.hashCode()
         r = 31 * r + packetIdentifier
-        r = 31 * r + (payload?.hashCode() ?: 0)
+        r = 31 * r + payload.hashCode()
         return r
     }
 
@@ -150,10 +141,10 @@ class PublishMessageV4<P> internal constructor(
     companion object {
         /**
          * Decode an incoming v4 PUBLISH from its fixed-header byte1 and VBI remaining-length.
-         * Returns `PublishMessageV4<ReadBuffer>` — the payload is a zero-copy slice of [buffer].
+         * The payload is a zero-copy slice of [buffer].
          *
          * `internal` because typed subscribers must go through `SubscriberEntry.Typed` for
-         * decoding — this factory can only produce the raw-bytes variant. `@PublishedApi`
+         * decoding — this factory produces the wire-shape variant. `@PublishedApi`
          * lets the inline `ControlPacketV4.fromTyped` dispatch reach it without widening
          * the source-level API.
          */
@@ -162,7 +153,7 @@ class PublishMessageV4<P> internal constructor(
             buffer: ReadBuffer,
             byte1: UByte,
             remainingLength: Int,
-        ): PublishMessageV4<ReadBuffer> {
+        ): PublishMessageV4 {
             val fixed = FixedHeader.fromByte(byte1)
             val sliced = buffer.readBytes(remainingLength)
             return if (fixed.qos == AT_MOST_ONCE) {
@@ -174,7 +165,6 @@ class PublishMessageV4<P> internal constructor(
                     retain = fixed.retain,
                     packetIdentifier = NO_PACKET_ID,
                     payload = body.payload,
-                    codec = IdentityBufferCodec,
                 )
             } else {
                 val body = PublishBodyV4QosNonZeroCodec.decode(sliced) { pr -> readFullPayload(pr) }
@@ -185,17 +175,12 @@ class PublishMessageV4<P> internal constructor(
                     retain = fixed.retain,
                     packetIdentifier = body.packetIdentifier.toInt(),
                     payload = body.payload,
-                    codec = IdentityBufferCodec,
                 )
             }
         }
 
         /**
-         * Create a v4 PUBLISH with a raw-bytes payload (`P = ReadBuffer`).
-         *
-         * Note: null payload is represented as an empty [ReadBuffer] via the caller — if the
-         * legacy nullable-payload shape is required, use the other overload and pass
-         * a caller-allocated empty buffer.
+         * Create a v4 PUBLISH with a raw-bytes payload. Null falls back to an empty buffer.
          */
         fun ofRaw(
             topic: TopicName,
@@ -204,7 +189,7 @@ class PublishMessageV4<P> internal constructor(
             dup: Boolean = false,
             retain: Boolean = false,
             packetIdentifier: Int = NO_PACKET_ID,
-        ): PublishMessageV4<ReadBuffer> =
+        ): PublishMessageV4 =
             PublishMessageV4(
                 topic,
                 qos,
@@ -212,23 +197,46 @@ class PublishMessageV4<P> internal constructor(
                 retain,
                 packetIdentifier,
                 payload ?: BufferFactory.Default.allocate(0),
-                IdentityBufferCodec,
             )
 
         /**
-         * Create a v4 PUBLISH with a typed payload. The [codec] is invoked during wire encoding
-         * to write the payload bytes directly into the frame buffer (zero intermediate copy
-         * if the codec implementation doesn't allocate internally).
+         * Create a v4 PUBLISH with a typed payload. Eagerly encodes [payload] via [encodePayload]
+         * into a `ReadBuffer` (auto-sized via `GrowableWriteBuffer`); the resulting message
+         * carries the encoded bytes uniformly.
          */
         fun <P> ofTyped(
             topic: TopicName,
             qos: QualityOfService,
             payload: P,
-            codec: PayloadCodec<P>,
+            encodePayload: WriteBuffer.(P) -> Unit,
             dup: Boolean = false,
             retain: Boolean = false,
             packetIdentifier: Int = NO_PACKET_ID,
-        ): PublishMessageV4<P> = PublishMessageV4(topic, qos, dup, retain, packetIdentifier, payload, codec)
+        ): PublishMessageV4 =
+            PublishMessageV4(
+                topic,
+                qos,
+                dup,
+                retain,
+                packetIdentifier,
+                eagerEncode(payload, encodePayload),
+            )
+
+        private fun <P> eagerEncode(
+            value: P,
+            encodePayload: WriteBuffer.(P) -> Unit,
+        ): ReadBuffer {
+            val encoder =
+                object : Encoder<P> {
+                    override fun encode(
+                        buffer: WriteBuffer,
+                        value: P,
+                    ) {
+                        buffer.encodePayload(value)
+                    }
+                }
+            return encoder.encodeToBuffer(value)
+        }
 
         private fun readFullPayload(slice: ReadBuffer): ReadBuffer = slice
     }

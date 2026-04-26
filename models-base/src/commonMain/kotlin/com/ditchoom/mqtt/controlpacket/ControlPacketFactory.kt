@@ -1,7 +1,6 @@
 package com.ditchoom.mqtt.controlpacket
 
 import com.ditchoom.buffer.ReadBuffer
-import com.ditchoom.buffer.WriteBuffer
 import com.ditchoom.mqtt.Persistence
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readVariableByteInteger
 import com.ditchoom.mqtt.controlpacket.ISubscription.RetainHandling
@@ -62,21 +61,6 @@ interface ControlPacketFactory {
         userProperty: List<Pair<String, String>> = emptyList(),
         subscriptionIdentifier: Set<Long> = emptySet(),
         contentType: String? = null,
-    ): PublishMessage
-
-    /**
-     * Create a PUBLISH message with a typed payload. The [encodePayload] and [payloadSize] closures
-     * are captured and invoked during serialization, writing directly into the wire buffer
-     * (backpatch zero-copy outgoing path).
-     */
-    fun <P> publish(
-        dup: Boolean = false,
-        qos: QualityOfService = QualityOfService.AT_MOST_ONCE,
-        retain: Boolean = false,
-        topicName: TopicName,
-        payload: P,
-        encodePayload: (WriteBuffer, P) -> Unit,
-        payloadSize: (P) -> Int,
     ): PublishMessage
 
     fun unsubscribe(

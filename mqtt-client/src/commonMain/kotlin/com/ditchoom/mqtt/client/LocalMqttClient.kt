@@ -1,10 +1,12 @@
 package com.ditchoom.mqtt.client
 
 import com.ditchoom.buffer.ReadBuffer
+import com.ditchoom.buffer.WriteBuffer
+import com.ditchoom.buffer.codec.Encoder
+import com.ditchoom.buffer.codec.encodeToBuffer
 import com.ditchoom.buffer.flow.Connection
 import com.ditchoom.buffer.freeIfNeeded
 import com.ditchoom.mqtt.Persistence
-import com.ditchoom.mqtt.codec.PayloadCodec
 import com.ditchoom.mqtt.connection.MqttBroker
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.ControlPacket
@@ -19,7 +21,6 @@ import com.ditchoom.mqtt.controlpacket.PublishMessage
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.TopicName
-import com.ditchoom.mqtt.controlpacket.rawPayload
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -112,17 +113,17 @@ class LocalMqttClient(
 
     override fun <P> observe(
         filter: TopicFilter,
-        codec: PayloadCodec<P>,
+        decodePayload: ReadBuffer.() -> P,
     ): Flow<Pair<PublishMessage, P>> =
         observe(filter).map { pub ->
             val raw = pub.rawPayload()
             val decoded =
                 if (raw == null || raw.remaining() == 0) {
-                    codec.decode(ReadBuffer.EMPTY_BUFFER)
+                    ReadBuffer.EMPTY_BUFFER.decodePayload()
                 } else {
                     val slice = raw.slice()
                     try {
-                        codec.decode(slice)
+                        slice.decodePayload()
                     } finally {
                         slice.freeIfNeeded()
                     }
@@ -202,32 +203,47 @@ class LocalMqttClient(
     override suspend fun <P> publish(
         topic: String,
         payload: P,
-        codec: PayloadCodec<P>,
+        encodePayload: WriteBuffer.(P) -> Unit,
         qos: QualityOfService,
         retain: Boolean,
     ): PublishResult {
+        val encoded = eagerEncode(payload, encodePayload)
         val pub =
             packetFactory.publish(
                 topicName = TopicName.fromOrThrow(topic),
                 qos = qos,
                 retain = retain,
-                payload = payload,
-                encodePayload = { buf, p -> codec.encode(buf, p) },
-                payloadSize = { p -> codec.encodedSize(p) },
+                payload = encoded,
             )
         return publish(pub)
     }
 
     override suspend fun <P> subscribe(
         topicFilter: String,
-        codec: PayloadCodec<P>,
+        decodePayload: ReadBuffer.() -> P,
         maxQos: QualityOfService,
         handler: suspend (PublishMessage, P) -> Unit,
     ): SubscribeOperation {
         val filter = TopicFilter.fromOrThrow(topicFilter)
         val sub = packetFactory.subscribe(filter, maxQos)
-        processor.publishDispatcher.subscribeTyped(filter, SubscriberEntry.Typed(codec, handler))
+        processor.publishDispatcher.subscribeTyped(filter, SubscriberEntry.Typed(decodePayload, handler))
         return observeSub(processor.subscribe(sub))
+    }
+
+    private fun <P> eagerEncode(
+        value: P,
+        encodePayload: WriteBuffer.(P) -> Unit,
+    ): ReadBuffer {
+        val encoder =
+            object : Encoder<P> {
+                override fun encode(
+                    buffer: WriteBuffer,
+                    value: P,
+                ) {
+                    buffer.encodePayload(value)
+                }
+            }
+        return encoder.encodeToBuffer(value)
     }
 
     override suspend fun pendingPublishes(): List<PublishResult> {

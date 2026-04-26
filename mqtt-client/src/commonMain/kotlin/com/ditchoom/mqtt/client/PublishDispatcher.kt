@@ -4,14 +4,13 @@ import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.freeIfNeeded
 import com.ditchoom.mqtt.controlpacket.PublishMessage
 import com.ditchoom.mqtt.controlpacket.TopicFilter
-import com.ditchoom.mqtt.controlpacket.rawPayload
 
 /**
  * Dispatches incoming publish messages to registered [SubscriberEntry] instances
  * using a [TopicTrie] for O(segments) wildcard matching.
  *
  * Each entry captures its own payload decoding rule (typed subscribers bundle a
- * [com.ditchoom.mqtt.codec.PayloadCodec] plus handler; untyped subscribers accept the raw
+ * `ReadBuffer.() -> P` decode lambda plus handler; untyped subscribers accept the raw
  * [PublishMessage]). Since payloads are owned by the decoder call site (no scope
  * invalidation), multi-subscriber dispatch simply runs each entry's dispatch in sequence.
  */

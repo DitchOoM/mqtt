@@ -24,7 +24,7 @@ import kotlinx.coroutines.channels.Channel
 @BenchmarkMode(Mode.Throughput)
 @OutputTimeUnit(BenchmarkTimeUnit.MICROSECONDS)
 class MessageFlowBenchmark {
-    private lateinit var publishSmall: PublishMessageV4<ReadBuffer>
+    private lateinit var publishSmall: PublishMessageV4
     private lateinit var publishSmallBytes: ReadBuffer
 
     private val topic = TopicName.fromOrThrow("test/flow")

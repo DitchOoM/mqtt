@@ -28,9 +28,9 @@ class ControlPacketParsingBenchmark {
     private lateinit var publishMediumBytes: ReadBuffer
     private lateinit var publishLargeBytes: ReadBuffer
 
-    private lateinit var publishSmall: PublishMessageV4<ReadBuffer>
-    private lateinit var publishMedium: PublishMessageV4<ReadBuffer>
-    private lateinit var publishLarge: PublishMessageV4<ReadBuffer>
+    private lateinit var publishSmall: PublishMessageV4
+    private lateinit var publishMedium: PublishMessageV4
+    private lateinit var publishLarge: PublishMessageV4
 
     private val topic = TopicName.fromOrThrow("test/benchmark")
 

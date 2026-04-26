@@ -3,16 +3,12 @@ package com.ditchoom.mqtt.client
 import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.ReadBuffer
-import com.ditchoom.buffer.WriteBuffer
-import com.ditchoom.mqtt.codec.IdentityBufferCodec
-import com.ditchoom.mqtt.codec.PayloadCodec
 import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.PublishMessage
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt.controlpacket.payloadAsByteArrayOrNull
-import com.ditchoom.mqtt.controlpacket.rawPayload
 import com.ditchoom.mqtt3.controlpacket.PingRequest
 import com.ditchoom.mqtt3.controlpacket.PublishMessageV4
 import kotlinx.coroutines.test.runTest
@@ -27,18 +23,20 @@ import kotlin.test.assertTrue
  * behaviour can't silently regress.
  */
 class PublishContractTests {
-    // ── Finding 1: IdentityBufferCodec.encode must not mutate source position ──
+    // ── Finding 1: rawPayload exposes a stable wire slice ──
 
     @Test
-    fun identityCodecEncodeDoesNotAdvanceSourcePosition() {
+    fun rawPayloadIsStableAcrossReads() {
         val source = BufferFactory.Default.wrap(byteArrayOf(1, 2, 3, 4))
-        val sink = BufferFactory.Default.allocate(4)
-        val before = source.position()
-
-        IdentityBufferCodec.encode(sink, source)
-
-        assertEquals(before, source.position(), "encode must not advance source position")
-        assertEquals(4, source.remaining(), "source remaining unchanged")
+        val pub = rawPublish("topic", source)
+        val raw = pub.rawPayload()
+        assertEquals(4, raw?.remaining(), "rawPayload exposes the full wire bytes")
+        // Slicing yields an independent reader that doesn't perturb the underlying buffer.
+        val sliceA = raw!!.slice()
+        val sliceB = raw.slice()
+        sliceA.readUnsignedByte()
+        assertEquals(3, sliceA.remaining())
+        assertEquals(4, sliceB.remaining(), "independent slices don't share position")
     }
 
     // ── Finding 2: ControlPacket.serialize(factory) returns read-positioned buffer ──
@@ -55,21 +53,15 @@ class PublishContractTests {
 
     // ── Finding 4: zero-copy dispatch — each typed subscriber gets an independent slice ──
 
-    /** Decodes by consuming all remaining bytes; records the buffer identity it was handed. */
-    private class RecordingCodec : PayloadCodec<ByteArray> {
+    /** Records each `ReadBuffer` slice handed to it for cross-subscriber identity checks. */
+    private class RecordingDecoder {
         val decodeInputs = mutableListOf<ReadBuffer>()
 
-        override fun decode(buffer: ReadBuffer): ByteArray {
-            decodeInputs.add(buffer)
-            return buffer.readByteArray(buffer.remaining())
+        @Suppress("NoByteArrayInProd") // test fixture: assertion on payload contents
+        val lambda: ReadBuffer.() -> ByteArray = {
+            decodeInputs.add(this)
+            readByteArray(remaining())
         }
-
-        override fun encode(
-            buffer: WriteBuffer,
-            value: ByteArray,
-        ) = error("unused in these tests")
-
-        override fun encodedSize(value: ByteArray): Int = value.size
     }
 
     private fun payload(vararg bytes: Byte): ReadBuffer =
@@ -92,61 +84,61 @@ class PublishContractTests {
     fun typedDispatchGivesEachSubscriberIndependentSlice() =
         runTest {
             val dispatcher = PublishDispatcher()
-            val codecA = RecordingCodec()
-            val codecB = RecordingCodec()
+            val recorderA = RecordingDecoder()
+            val recorderB = RecordingDecoder()
             dispatcher.subscribeTyped(
                 TopicFilter.fromOrThrow("dual/one"),
-                SubscriberEntry.Typed(codecA) { _, _ -> },
+                SubscriberEntry.Typed(recorderA.lambda) { _, _ -> },
             )
             dispatcher.subscribeTyped(
                 TopicFilter.fromOrThrow("dual/+"),
-                SubscriberEntry.Typed(codecB) { _, _ -> },
+                SubscriberEntry.Typed(recorderB.lambda) { _, _ -> },
             )
 
             dispatcher.dispatch(rawPublish("dual/one", payload(1, 2, 3, 4)))
 
-            assertEquals(1, codecA.decodeInputs.size)
-            assertEquals(1, codecB.decodeInputs.size)
+            assertEquals(1, recorderA.decodeInputs.size)
+            assertEquals(1, recorderB.decodeInputs.size)
             // Each subscriber receives its own slice — not the same object.
             assertNotSame(
-                codecA.decodeInputs[0],
-                codecB.decodeInputs[0],
+                recorderA.decodeInputs[0],
+                recorderB.decodeInputs[0],
                 "each typed subscriber must receive an independent slice",
             )
         }
 
-    // ── Finding 5: empty-payload PUBLISH delivered to typed codec without allocation ──
+    // ── Finding 5: empty-payload PUBLISH delivered to typed lambda without allocation ──
 
     @Test
     fun emptyPayloadDispatchUsesSharedEmptyBuffer() =
         runTest {
             val dispatcher = PublishDispatcher()
-            val codec = RecordingCodec()
+            val recorder = RecordingDecoder()
             dispatcher.subscribeTyped(
                 TopicFilter.fromOrThrow("empty/+"),
-                SubscriberEntry.Typed(codec) { _, _ -> },
+                SubscriberEntry.Typed(recorder.lambda) { _, _ -> },
             )
 
             dispatcher.dispatch(
                 rawPublish("empty/x", BufferFactory.Default.allocate(0).also { it.resetForRead() }),
             )
 
-            assertEquals(1, codec.decodeInputs.size)
-            val delivered = codec.decodeInputs[0]
+            assertEquals(1, recorder.decodeInputs.size)
+            val delivered = recorder.decodeInputs[0]
             assertEquals(0, delivered.remaining(), "empty payload must deliver a zero-remaining buffer")
             // Verify it's the shared singleton — no per-dispatch allocation for empty payloads.
             assertEquals(ReadBuffer.EMPTY_BUFFER, delivered)
         }
 
-    // ── API split: payloadAsByteArrayOrNull identity-codec fast path ──
+    // ── API split: payloadAsByteArrayOrNull copies bytes from the wire payload ──
 
     @Test
-    fun payloadAsByteArrayOrNullIdentityCodecCopiesBytes() {
+    fun payloadAsByteArrayOrNullCopiesBytes() {
         val bytes = byteArrayOf(0x0A, 0x0B, 0x0C, 0x0D)
         val pub = rawPublish("topic", BufferFactory.Default.wrap(bytes))
         val result = pub.payloadAsByteArrayOrNull()
         assertEquals(4, result?.size)
-        assertTrue(result!!.contentEquals(bytes), "bytes must round-trip through identity codec")
+        assertTrue(result!!.contentEquals(bytes), "bytes must round-trip through payloadAsByteArrayOrNull")
     }
 
     @Test

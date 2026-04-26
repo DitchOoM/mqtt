@@ -63,8 +63,8 @@ class PersistenceTests {
                         ),
                 )
             val packetId = persistence.writePubGetPacketId(broker, pub)
-            // Encoding the payload through IdentityBufferCodec advances pub.payload's position
-            // to the end; reset so the equality check compares all 4 bytes on both sides.
+            // Persistence encode advances pub.payload's position to the end; reset so the
+            // equality check compares all 4 bytes on both sides.
             buffer.position(0)
             assertEquals(
                 pub.maybeCopyWithNewPacketIdentifier(packetId),

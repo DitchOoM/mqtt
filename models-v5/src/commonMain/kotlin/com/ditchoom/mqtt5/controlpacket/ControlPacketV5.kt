@@ -549,9 +549,15 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
         /** Typed view of the variable-header properties (§3.3.2.3). */
         val typedProperties: PublishProperties get() = PublishProperties.from(properties)
 
+        // Both encodeBody and remainingLength stay hand-rolled because PublishProperties
+        // contains payload-bearing property variants (CorrelationData, AuthData). The
+        // generated codec's inline-prefix encode and wireSize for properties both call
+        // MqttPropertyCodec.wireSize(it) which throws for payload variants — they need
+        // their own payloadSize lambda. Until the codec processor emits nested sealed
+        // wireSize calls via wireSizeFromContext (so the registered SizeKeys flow
+        // through), we keep mqttPropertiesSize + writeVariableByteIntegerLengthPrefixed
+        // which know each property subtype's size explicitly.
         override fun encodeBody(writeBuffer: WriteBuffer) {
-            // ControlPacket.serialize already wrote byte1 + RL; emit body only here.
-            // ControlPacketV5PublishCodec.encode prepends the fixed header, so we can't reuse it directly.
             val ctx = publishPropertyEncodeContext()
             writeBuffer.writeLengthPrefixedUtf8String(topicName)
             if (header.publishHasPacketIdentifier) {

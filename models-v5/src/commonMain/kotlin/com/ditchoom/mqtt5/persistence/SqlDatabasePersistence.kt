@@ -31,7 +31,7 @@ import com.ditchoom.mqtt5.controlpacket.PublishProperties
 import com.ditchoom.mqtt5.controlpacket.PublishReceived
 import com.ditchoom.mqtt5.controlpacket.PublishRelease
 import com.ditchoom.mqtt5.controlpacket.SubscribeRequest
-import com.ditchoom.mqtt5.controlpacket.V5Packet
+import com.ditchoom.mqtt5.controlpacket.ControlPacketV5
 import com.ditchoom.mqtt5.controlpacket.Subscription
 import com.ditchoom.mqtt5.controlpacket.UnsubscribeRequest
 import com.ditchoom.mqtt5.controlpacket.properties.Authentication
@@ -355,7 +355,7 @@ class SqlDatabasePersistence(
             } else {
                 com.ditchoom.mqtt.controlpacket.WillConfig.Disabled
             }
-        val connectionRequest = V5Packet.Connect.create(
+        val connectionRequest = ControlPacketV5.Connect.create(
             clientId = connectionRequestDatabaseRecord.client_id,
             keepAliveSeconds = connectionRequestDatabaseRecord.keep_alive_seconds.toInt(),
             cleanStart = connectionRequestDatabaseRecord.clean_start == 1L,
@@ -437,7 +437,7 @@ class SqlDatabasePersistence(
         if (packet.qualityOfService == QualityOfService.AT_MOST_ONCE) return
         val brokerId = broker.identifier.toLong()
         val incoming = 1L
-        val p = packet as V5Packet.Publish<*>
+        val p = packet as ControlPacketV5.Publish<*>
         val payload = p.payloadAsReadBufferOrNull()
         withContext(dispatcher) {
             pubQueries.transaction {
@@ -519,7 +519,7 @@ class SqlDatabasePersistence(
                             row.content_type,
                         )
                     val pub =
-                        V5Packet.Publish.ofRaw(
+                        ControlPacketV5.Publish.ofRaw(
                             topic = TopicName.fromOrThrow(row.topic_name),
                             qos = row.qos.toQos(),
                             payload = row.payload,
@@ -567,7 +567,7 @@ class SqlDatabasePersistence(
                             ?.toSet() ?: emptySet(),
                         it.content_type,
                     )
-                V5Packet.Publish.ofRaw(
+                ControlPacketV5.Publish.ofRaw(
                     topic = TopicName.fromOrThrow(it.topic_name),
                     qos = it.qos.toQos(),
                     payload = it.payload,
@@ -718,7 +718,7 @@ class SqlDatabasePersistence(
         }
         val brokerId = broker.identifier.toLong()
         val incoming = 0L
-        val p = pub as V5Packet.Publish<*>
+        val p = pub as ControlPacketV5.Publish<*>
         val payload = p.payloadAsReadBufferOrNull()
         val packetId =
             withContext(dispatcher) {
@@ -786,7 +786,7 @@ class SqlDatabasePersistence(
                     ?.toSet() ?: emptySet(),
                 p.content_type,
             )
-        return V5Packet.Publish.ofRaw(
+        return ControlPacketV5.Publish.ofRaw(
             topic = TopicName.fromOrThrow(p.topic_name),
             qos = p.qos.toQos(),
             payload = p.payload,

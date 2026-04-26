@@ -22,7 +22,7 @@ import com.ditchoom.mqtt5.controlpacket.SubscribeRequest
 import com.ditchoom.mqtt5.controlpacket.Subscription
 import com.ditchoom.mqtt5.controlpacket.UnsubscribeAcknowledgment
 import com.ditchoom.mqtt5.controlpacket.UnsubscribeRequest
-import com.ditchoom.mqtt5.controlpacket.V5Packet
+import com.ditchoom.mqtt5.controlpacket.ControlPacketV5
 import kotlinx.coroutines.test.runTest
 import kotlin.random.Random
 import kotlin.random.nextUInt
@@ -51,7 +51,7 @@ class PersistenceTests {
             val (persistence, broker) = setupPersistence()
             buffer.position(0)
             val pub =
-                V5Packet.Publish.ofRaw(
+                ControlPacketV5.Publish.ofRaw(
                     topic = TopicName.fromOrThrow("test"),
                     qos = QualityOfService.AT_LEAST_ONCE,
                     payload = buffer,
@@ -88,7 +88,7 @@ class PersistenceTests {
             val (persistence, broker) = setupPersistence()
             buffer.position(0)
             val pub =
-                V5Packet.Publish.ofRaw(
+                ControlPacketV5.Publish.ofRaw(
                     topic = TopicName.fromOrThrow("test"),
                     qos = QualityOfService.EXACTLY_ONCE,
                     payload = buffer,
@@ -130,7 +130,7 @@ class PersistenceTests {
             buffer.position(0)
             val packetId = 2
             val pub =
-                V5Packet.Publish.ofRaw(
+                ControlPacketV5.Publish.ofRaw(
                     topic = TopicName.fromOrThrow("test"),
                     qos = QualityOfService.AT_LEAST_ONCE,
                     payload = buffer,
@@ -158,7 +158,7 @@ class PersistenceTests {
             buffer.position(0)
             val packetId = 3
             val pub =
-                V5Packet.Publish.ofRaw(
+                ControlPacketV5.Publish.ofRaw(
                     topic = TopicName.fromOrThrow("test"),
                     qos = QualityOfService.EXACTLY_ONCE,
                     payload = buffer,

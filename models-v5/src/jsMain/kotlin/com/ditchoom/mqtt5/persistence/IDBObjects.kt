@@ -18,7 +18,7 @@ import com.ditchoom.mqtt5.controlpacket.ConnectWillProperties
 import com.ditchoom.mqtt5.controlpacket.ConnectionRequest
 import com.ditchoom.mqtt5.controlpacket.PublishProperties
 import com.ditchoom.mqtt5.controlpacket.Subscription
-import com.ditchoom.mqtt5.controlpacket.V5Packet
+import com.ditchoom.mqtt5.controlpacket.ControlPacketV5
 import com.ditchoom.mqtt5.controlpacket.UnsubscribeRequest
 import com.ditchoom.mqtt5.controlpacket.properties.Authentication
 import org.khronos.webgl.Int8Array
@@ -161,7 +161,7 @@ data class PersistablePublishMessage(
     val state: Int = 0,
 ) {
     @JsName("construct")
-    constructor(brokerId: Int, incoming: Boolean, pub: V5Packet.Publish<*>) : this(
+    constructor(brokerId: Int, incoming: Boolean, pub: ControlPacketV5.Publish<*>) : this(
         brokerId,
         if (incoming) 1 else 0,
         pub.dup,
@@ -189,7 +189,7 @@ fun toPub(
     p: PersistablePublishMessage,
     userProperty: List<Pair<String, String>>,
 ): PublishMessage =
-    V5Packet.Publish.ofRaw(
+    ControlPacketV5.Publish.ofRaw(
         topic = TopicName.fromOrThrow(p.topicName),
         qos = p.qos.toQos(),
         payload =

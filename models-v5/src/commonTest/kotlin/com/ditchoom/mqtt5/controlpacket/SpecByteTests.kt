@@ -251,7 +251,7 @@ class SpecByteTests {
 
     @Test
     fun publishQos0TopicANoPayloadExactBytes() {
-        val buf = packetBuffer { V5Packet.Publish.ofRaw(topic = TopicName.fromOrThrow("a")) }
+        val buf = packetBuffer { ControlPacketV5.Publish.ofRaw(topic = TopicName.fromOrThrow("a")) }
         assertEquals(6, buf.remaining())
         assertEquals(0x30u, buf.readUnsignedByte()) // type=3, flags=0000
         assertEquals(0x04u, buf.readUnsignedByte()) // RL=4
@@ -265,7 +265,7 @@ class SpecByteTests {
     fun publishQos1TopicAPacketId1ExactBytes() {
         val buf =
             packetBuffer {
-                V5Packet.Publish.ofRaw(topic = TopicName.fromOrThrow("a"), qos = AT_LEAST_ONCE, packetIdentifier = 1)
+                ControlPacketV5.Publish.ofRaw(topic = TopicName.fromOrThrow("a"), qos = AT_LEAST_ONCE, packetIdentifier = 1)
             }
         assertEquals(8, buf.remaining())
         assertEquals(0x32u, buf.readUnsignedByte()) // type=3, flags=0010 (QoS 1)
@@ -282,7 +282,7 @@ class SpecByteTests {
     fun publishQos2TopicAPacketId1ExactBytes() {
         val buf =
             packetBuffer {
-                V5Packet.Publish.ofRaw(topic = TopicName.fromOrThrow("a"), qos = EXACTLY_ONCE, packetIdentifier = 1)
+                ControlPacketV5.Publish.ofRaw(topic = TopicName.fromOrThrow("a"), qos = EXACTLY_ONCE, packetIdentifier = 1)
             }
         assertEquals(8, buf.remaining())
         assertEquals(0x34u, buf.readUnsignedByte()) // type=3, flags=0100 (QoS 2)
@@ -306,7 +306,7 @@ class SpecByteTests {
         buf.writeUByte(0x00u) // props len=0
         buf.resetForRead()
         val packet = ControlPacketV5.from(buf)
-        assertIs<V5Packet.Publish<*>>(packet)
+        assertIs<ControlPacketV5.Publish<*>>(packet)
         assertEquals("a", packet.topic.toString())
         assertEquals(AT_MOST_ONCE, packet.qualityOfService)
     }
@@ -324,7 +324,7 @@ class SpecByteTests {
         buf.writeUByte(0x00u) // props len=0
         buf.resetForRead()
         val packet = ControlPacketV5.from(buf)
-        assertIs<V5Packet.Publish<*>>(packet)
+        assertIs<ControlPacketV5.Publish<*>>(packet)
         assertEquals("a", packet.topic.toString())
         assertEquals(AT_LEAST_ONCE, packet.qualityOfService)
         assertEquals(1, packet.packetIdentifier)
@@ -335,7 +335,7 @@ class SpecByteTests {
         // DUP=1, QoS=1, RETAIN=1 → flags=1011
         val buf =
             packetBuffer {
-                V5Packet.Publish.ofRaw(
+                ControlPacketV5.Publish.ofRaw(
                     topic = TopicName.fromOrThrow("a"),
                     qos = AT_LEAST_ONCE,
                     packetIdentifier = 1,
@@ -360,7 +360,7 @@ class SpecByteTests {
         // Property: id=0x03, value="json" (2+4=6 bytes) → props=7 bytes
         val buf =
             packetBuffer {
-                V5Packet.Publish.ofRaw(
+                ControlPacketV5.Publish.ofRaw(
                     topic = TopicName.fromOrThrow("a"),
                     properties = PublishProperties(contentType = "json"),
                 )
@@ -385,7 +385,7 @@ class SpecByteTests {
     fun publishMaxPacketIdExactBytes() {
         val buf =
             packetBuffer {
-                V5Packet.Publish.ofRaw(topic = TopicName.fromOrThrow("a"), qos = AT_LEAST_ONCE, packetIdentifier = 0xFFFF)
+                ControlPacketV5.Publish.ofRaw(topic = TopicName.fromOrThrow("a"), qos = AT_LEAST_ONCE, packetIdentifier = 0xFFFF)
             }
         assertEquals(8, buf.remaining())
         assertEquals(0x32u, buf.readUnsignedByte()) // type=3, QoS 1
@@ -784,7 +784,7 @@ class SpecByteTests {
     fun publishTypedPayloadQos0ExactBytes() {
         // Typed publish: payload is Int (4 bytes), no properties
         val buf =
-            V5Packet.Publish
+            ControlPacketV5.Publish
                 .ofTyped(
                     topic = TopicName.fromOrThrow("a"),
                     qos = AT_MOST_ONCE,
@@ -809,7 +809,7 @@ class SpecByteTests {
     @Test
     fun publishTypedPayloadQos1ExactBytes() {
         val buf =
-            V5Packet.Publish
+            ControlPacketV5.Publish
                 .ofTyped(
                     topic = TopicName.fromOrThrow("a"),
                     qos = AT_LEAST_ONCE,
@@ -839,12 +839,12 @@ class SpecByteTests {
         payloadBytes.resetForRead()
 
         val readBufferPub =
-            V5Packet.Publish
+            ControlPacketV5.Publish
                 .ofRaw(topic = TopicName.fromOrThrow("a"), payload = payloadBytes)
                 .serialize(BufferFactory.Default)
 
         val typedPub =
-            V5Packet.Publish
+            ControlPacketV5.Publish
                 .ofTyped(
                     topic = TopicName.fromOrThrow("a"),
                     qos = AT_MOST_ONCE,

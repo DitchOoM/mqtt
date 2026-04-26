@@ -24,7 +24,7 @@ import com.ditchoom.mqtt3.controlpacket.ConnectionRequest as ConnectV4
 import com.ditchoom.mqtt3.controlpacket.PublishMessageV4 as PublishV4
 import com.ditchoom.mqtt3.controlpacket.SubscribeRequest as SubscribeV4
 import com.ditchoom.mqtt5.controlpacket.ConnectionRequest as ConnectV5
-import com.ditchoom.mqtt5.controlpacket.V5Packet.Publish as PublishV5
+import com.ditchoom.mqtt5.controlpacket.ControlPacketV5.Publish as PublishV5
 import com.ditchoom.mqtt5.controlpacket.SubscribeRequest as SubscribeV5
 
 /**

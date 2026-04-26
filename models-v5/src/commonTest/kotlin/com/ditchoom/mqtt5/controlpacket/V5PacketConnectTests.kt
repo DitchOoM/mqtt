@@ -14,7 +14,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * Spec round-trip and edge-case tests for `V5Packet.Connect` (CONNECT, §3.1). Validates:
+ * Spec round-trip and edge-case tests for `ControlPacketV5.Connect` (CONNECT, §3.1). Validates:
  *  - empty CONNECT (just clientId), full wire round-trip via the legacy `serialize()` framework
  *  - cleanStart, hasUserName, hasPassword bits round-trip through the connectFlags byte
  *  - rich variable-header properties (`ConnectProperties`) round-trip
@@ -24,7 +24,7 @@ import kotlin.test.assertTrue
  *  - §3.1.2-12 will QoS = 3 — rejected at decode
  *  - §3.1.2-11 will QoS != 0 with willFlag=0 — rejected at decode
  *  - §3.1.2-13 willRetain = 1 with willFlag=0 — rejected at decode
- *  - dispatcher routes 0x10 → V5Packet.Connect
+ *  - dispatcher routes 0x10 → ControlPacketV5.Connect
  */
 class V5PacketConnectTests {
     @Test
@@ -156,7 +156,7 @@ class V5PacketConnectTests {
     fun connectWillQos3RejectedAtConstruction() {
         // §3.1.2-12: Will QoS = 3 is malformed. Init validation rejects construction.
         assertFailsWith<MalformedPacketException> {
-            V5Packet.Connect<com.ditchoom.buffer.ReadBuffer?>(
+            ControlPacketV5.Connect<com.ditchoom.buffer.ReadBuffer?>(
                 protocolName = "MQTT",
                 protocolLevel = 5u,
                 connectFlags = ConnectFlagsV5(0x1Cu), // willFlag=1, willQos=3
@@ -215,7 +215,7 @@ class V5PacketConnectTests {
         val pkt = ConnectionRequest(clientId = "dispatched")
         val buf = pkt.serialize()
         val decoded = ControlPacketV5.from(buf)
-        assertIs<V5Packet.Connect<*>>(decoded)
+        assertIs<ControlPacketV5.Connect<*>>(decoded)
         assertEquals(1.toByte(), decoded.controlPacketValue)
     }
 

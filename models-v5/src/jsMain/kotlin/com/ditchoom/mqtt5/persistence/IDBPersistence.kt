@@ -20,7 +20,7 @@ import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
 import com.ditchoom.mqtt5.controlpacket.ConnectionRequest
 import com.ditchoom.mqtt5.controlpacket.PublishComplete
-import com.ditchoom.mqtt5.controlpacket.V5Packet
+import com.ditchoom.mqtt5.controlpacket.ControlPacketV5
 import com.ditchoom.mqtt5.controlpacket.PublishReceived
 import com.ditchoom.mqtt5.controlpacket.PublishRelease
 import com.ditchoom.mqtt5.controlpacket.SubscribeRequest
@@ -461,7 +461,7 @@ class IDBPersistence(
         packet: PublishMessage,
     ) {
         if (packet.qualityOfService == QualityOfService.AT_MOST_ONCE) return
-        val p = packet as V5Packet.Publish<*>
+        val p = packet as ControlPacketV5.Publish<*>
         val tx = db.transaction(arrayOf(PUB_MSG, USER_PROPERTIES), IDBTransactionMode.readwrite)
         val pubStore = tx.objectStore(PUB_MSG)
         pubStore.put(PersistablePublishMessage(broker.identifier, true, p))
@@ -799,7 +799,7 @@ class IDBPersistence(
         val newPacketId = getAndIncrementPacketId(broker)
         val tx = db.transaction(arrayOf(PACKET_ID, USER_PROPERTIES, PUB_MSG), IDBTransactionMode.readwrite)
         val queuedMsgStore = tx.objectStore(PUB_MSG)
-        val packetIdPub = pub.maybeCopyWithNewPacketIdentifier(newPacketId) as V5Packet.Publish<*>
+        val packetIdPub = pub.maybeCopyWithNewPacketIdentifier(newPacketId) as ControlPacketV5.Publish<*>
         val persistablePub = PersistablePublishMessage(broker.identifier, false, packetIdPub)
         queuedMsgStore.put(persistablePub)
         val propStore = tx.objectStore(USER_PROPERTIES)

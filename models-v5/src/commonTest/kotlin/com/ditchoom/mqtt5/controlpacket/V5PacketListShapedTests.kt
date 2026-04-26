@@ -15,7 +15,7 @@ import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 /**
- * Spec-edge-case round-trip tests for the four list-shaped packets migrated to `V5Packet`:
+ * Spec-edge-case round-trip tests for the four list-shaped packets migrated to `ControlPacketV5`:
  * SUBSCRIBE, SUBACK, UNSUBSCRIBE, UNSUBACK.
  *
  * Each is validated for:
@@ -110,7 +110,7 @@ class V5PacketListShapedTests {
     fun subscribeRetainHandlingValue3RejectedAtConstruction() {
         // Constructing directly with malformed entry should fail spec validation.
         assertFailsWith<IllegalArgumentException> {
-            V5Packet.Subscribe(
+            ControlPacketV5.Subscribe(
                 packetId = 1.toUShort(),
                 properties = emptyList(),
                 subscriptionEntries = listOf(SubscriptionV5Entry("a", 0x30u)), // rh=3
@@ -121,7 +121,7 @@ class V5PacketListShapedTests {
     @Test
     fun subscribeMaxQos3RejectedAtConstruction() {
         assertFailsWith<IllegalArgumentException> {
-            V5Packet.Subscribe(
+            ControlPacketV5.Subscribe(
                 packetId = 1.toUShort(),
                 properties = emptyList(),
                 subscriptionEntries = listOf(SubscriptionV5Entry("a", 0x03u)), // qos=3
@@ -132,7 +132,7 @@ class V5PacketListShapedTests {
     @Test
     fun subscribeEmptyPayloadRejected() {
         assertFailsWith<IllegalArgumentException> {
-            V5Packet.Subscribe(packetId = 1.toUShort(), properties = emptyList(), subscriptionEntries = emptyList())
+            ControlPacketV5.Subscribe(packetId = 1.toUShort(), properties = emptyList(), subscriptionEntries = emptyList())
         }
     }
 
@@ -181,7 +181,7 @@ class V5PacketListShapedTests {
     @Test
     fun subAckEmptyPayloadRejected() {
         assertFailsWith<IllegalArgumentException> {
-            V5Packet.SubAck(packetId = 1.toUShort(), properties = emptyList(), reasonCodeEntries = emptyList())
+            ControlPacketV5.SubAck(packetId = 1.toUShort(), properties = emptyList(), reasonCodeEntries = emptyList())
         }
     }
 
@@ -239,7 +239,7 @@ class V5PacketListShapedTests {
     @Test
     fun unsubscribeEmptyPayloadRejected() {
         assertFailsWith<ProtocolError> {
-            V5Packet.Unsubscribe(packetId = 1.toUShort(), properties = emptyList(), topicEntries = emptyList())
+            ControlPacketV5.Unsubscribe(packetId = 1.toUShort(), properties = emptyList(), topicEntries = emptyList())
         }
     }
 
@@ -292,7 +292,7 @@ class V5PacketListShapedTests {
     @Test
     fun unsubAckEmptyPayloadRejected() {
         assertFailsWith<ProtocolError> {
-            V5Packet.UnsubAck(packetId = 1.toUShort(), properties = emptyList(), reasonCodeEntries = emptyList())
+            ControlPacketV5.UnsubAck(packetId = 1.toUShort(), properties = emptyList(), reasonCodeEntries = emptyList())
         }
     }
 

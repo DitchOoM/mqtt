@@ -8,7 +8,7 @@ import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
  * Marker interface for an MQTT PUBLISH Control Packet (MQTT 3.1.1 §3.3 / MQTT 5 §3.3).
  *
  * Concrete types ([com.ditchoom.mqtt3.controlpacket.PublishMessageV4] and the
- * sealed-tree `V5Packet.Publish<P>`) carry the payload as a [ReadBuffer]. Typed payload encoding
+ * sealed-tree `ControlPacketV5.Publish<P>`) carry the payload as a [ReadBuffer]. Typed payload encoding
  * happens eagerly at the publish API boundary; on the dispatch side, subscribers
  * decode the wire slice through their own `ReadBuffer.() -> P` lambda.
  */
@@ -22,7 +22,7 @@ interface PublishMessage : ControlPacket {
     /**
      * Wire-bytes payload (zero-copy slice). Empty payloads return an empty buffer (never null
      * for the v4 [PublishMessageV4] impl). Returns null only for the
-     * sealed-tree `V5Packet.Publish<P>` variant when `P` is not a [ReadBuffer] — that variant
+     * sealed-tree `ControlPacketV5.Publish<P>` variant when `P` is not a [ReadBuffer] — that variant
      * exists for the codec processor's typed-payload pipeline and is not used by the
      * eager-encode publish API.
      */

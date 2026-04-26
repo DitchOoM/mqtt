@@ -42,7 +42,7 @@ object ControlPacketV5Factory : ControlPacketFactory {
         subscriptionIdentifier: Set<Long>,
         contentType: String?,
     ): PublishMessage =
-        V5Packet.Publish.ofRaw(
+        ControlPacketV5.Publish.ofRaw(
             topic = topicName,
             qos = qos,
             payload = payload,

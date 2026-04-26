@@ -12,7 +12,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertSame
 
 /**
- * Spec-edge-case round-trip tests for the six ack-shaped packets migrated to `V5Packet`:
+ * Spec-edge-case round-trip tests for the six ack-shaped packets migrated to `ControlPacketV5`:
  * PUBACK, PUBREC, PUBREL, PUBCOMP, DISCONNECT, AUTH. Plus PINGREQ / PINGRESP.
  *
  * For each ack-shaped packet, three wire-format branches are validated:

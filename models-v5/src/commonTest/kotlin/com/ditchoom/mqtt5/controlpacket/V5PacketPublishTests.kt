@@ -20,9 +20,9 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * Spec-conformance round-trip tests for the new `V5Packet.Publish<P>` sealed-tree variant.
+ * Spec-conformance round-trip tests for the new `ControlPacketV5.Publish<P>` sealed-tree variant.
  *
- * Validates the wire format directly via `V5PacketPublishCodec.encode/decode`, exercising:
+ * Validates the wire format directly via `ControlPacketV5PublishCodec.encode/decode`, exercising:
  *  - QoS 0/1/2 — packet identifier presence rule (§3.3.2.2 / §2.3.1)
  *  - dup/retain header bits (§3.3.1.1, §3.3.1.3)
  *  - empty vs non-empty property bag (§3.3.2.3)
@@ -30,21 +30,21 @@ import kotlin.test.assertTrue
  *  - validate() spec-violation paths
  *  - expectedResponse() shape per QoS
  *
- * Locks in the round-trip shape for `V5Packet.Publish<P>`.
+ * Locks in the round-trip shape for `ControlPacketV5.Publish<P>`.
  */
 class V5PacketPublishTests {
-    private fun roundTrip(value: V5Packet.Publish<ReadBuffer>): V5Packet.Publish<ReadBuffer> {
+    private fun roundTrip(value: ControlPacketV5.Publish<ReadBuffer>): ControlPacketV5.Publish<ReadBuffer> {
         val buf = BufferFactory.Default.allocate(value.remainingLength() + 8, ByteOrder.BIG_ENDIAN)
-        // V5PacketPublishCodec.encode writes byte1 (the fixed-header byte) into the buffer
+        // ControlPacketV5PublishCodec.encode writes byte1 (the fixed-header byte) into the buffer
         // because PUBLISH carries `header: MqttFixedHeader` as its first field. The matching
         // decode reads `header` from context (set by the dispatcher) and skips byte1 from the
         // wire — so the round-trip helper consumes byte1 explicitly here, then hands the
         // remaining body bytes to the variant codec along with the header in context.
-        V5PacketPublishCodec.encode(buf, value) { wbuf, p -> wbuf.write(p) }
+        ControlPacketV5PublishCodec.encode(buf, value) { wbuf, p -> wbuf.write(p) }
         buf.resetForRead()
         val byte1 = MqttFixedHeader(buf.readUnsignedByte())
-        val ctx = com.ditchoom.buffer.codec.DecodeContext.Empty.with(V5PacketCodec.DiscriminatorKey, byte1)
-        return V5PacketPublishCodec.decode<ReadBuffer>(buf, ctx) { slice ->
+        val ctx = com.ditchoom.buffer.codec.DecodeContext.Empty.with(ControlPacketV5Codec.DiscriminatorKey, byte1)
+        return ControlPacketV5PublishCodec.decode<ReadBuffer>(buf, ctx) { slice ->
             slice.readBytes(slice.remaining())
         }
     }
@@ -57,7 +57,7 @@ class V5PacketPublishTests {
     @Test
     fun qos0NoPacketIdRoundTrip() {
         val original =
-            V5Packet.Publish.ofRaw(
+            ControlPacketV5.Publish.ofRaw(
                 topic = TopicName.fromOrThrow("t/a"),
                 qos = AT_MOST_ONCE,
                 payload = makePayload("hello"),
@@ -75,7 +75,7 @@ class V5PacketPublishTests {
     @Test
     fun qos1PacketIdRoundTrip() {
         val original =
-            V5Packet.Publish.ofRaw(
+            ControlPacketV5.Publish.ofRaw(
                 topic = TopicName.fromOrThrow("t/a"),
                 qos = AT_LEAST_ONCE,
                 packetIdentifier = 42,
@@ -91,7 +91,7 @@ class V5PacketPublishTests {
     @Test
     fun qos2PacketIdRoundTrip() {
         val original =
-            V5Packet.Publish.ofRaw(
+            ControlPacketV5.Publish.ofRaw(
                 topic = TopicName.fromOrThrow("t/a"),
                 qos = EXACTLY_ONCE,
                 packetIdentifier = 0xFFFF,
@@ -105,7 +105,7 @@ class V5PacketPublishTests {
     @Test
     fun dupAndRetainHeaderBitsRoundTrip() {
         val original =
-            V5Packet.Publish.ofRaw(
+            ControlPacketV5.Publish.ofRaw(
                 topic = TopicName.fromOrThrow("t/a"),
                 qos = AT_LEAST_ONCE,
                 packetIdentifier = 1,
@@ -122,7 +122,7 @@ class V5PacketPublishTests {
     @Test
     fun emptyPropertyBagDecodesAsEmpty() {
         val original =
-            V5Packet.Publish.ofRaw(
+            ControlPacketV5.Publish.ofRaw(
                 topic = TopicName.fromOrThrow("t/a"),
                 qos = AT_MOST_ONCE,
                 payload = makePayload("p"),
@@ -136,7 +136,7 @@ class V5PacketPublishTests {
     @Test
     fun nonEmptyPropertyBagRoundTrip() {
         val original =
-            V5Packet.Publish.ofRaw(
+            ControlPacketV5.Publish.ofRaw(
                 topic = TopicName.fromOrThrow("t/a"),
                 qos = AT_LEAST_ONCE,
                 packetIdentifier = 7,
@@ -157,7 +157,7 @@ class V5PacketPublishTests {
     @Test
     fun validateRejectsQos0WithPacketId() {
         val invalid =
-            V5Packet.Publish<ReadBuffer>(
+            ControlPacketV5.Publish<ReadBuffer>(
                 header = MqttFixedHeader(0x30u),
                 topicName = "t/a",
                 packetId = 1u, // QoS 0 with packet id — invalid per [MQTT-2.3.1-1]
@@ -171,7 +171,7 @@ class V5PacketPublishTests {
     @Test
     fun validateRejectsQosGreaterZeroWithoutPacketId() {
         val invalid =
-            V5Packet.Publish<ReadBuffer>(
+            ControlPacketV5.Publish<ReadBuffer>(
                 header = MqttFixedHeader(0x32u), // QoS 1
                 topicName = "t/a",
                 packetId = null,
@@ -186,7 +186,7 @@ class V5PacketPublishTests {
     fun reservedQos3Rejected() {
         // QoS bits = 11 → spec §3.3.1-4 malformed
         assertFailsWith<com.ditchoom.mqtt.MalformedPacketException> {
-            V5Packet.Publish<ReadBuffer>(
+            ControlPacketV5.Publish<ReadBuffer>(
                 header = MqttFixedHeader(0x36u),
                 topicName = "t/a",
                 packetId = null,
@@ -199,7 +199,7 @@ class V5PacketPublishTests {
     @Test
     fun expectedResponseShapeMatchesQos() {
         val q0 =
-            V5Packet.Publish.ofRaw(
+            ControlPacketV5.Publish.ofRaw(
                 topic = TopicName.fromOrThrow("t"),
                 qos = AT_MOST_ONCE,
                 payload = ReadBuffer.EMPTY_BUFFER,
@@ -207,28 +207,28 @@ class V5PacketPublishTests {
         assertNull(q0.expectedResponse())
 
         val q1 =
-            V5Packet.Publish.ofRaw(
+            ControlPacketV5.Publish.ofRaw(
                 topic = TopicName.fromOrThrow("t"),
                 qos = AT_LEAST_ONCE,
                 packetIdentifier = 1,
                 payload = ReadBuffer.EMPTY_BUFFER,
             )
-        assertIs<V5Packet.PubAck>(q1.expectedResponse())
+        assertIs<ControlPacketV5.PubAck>(q1.expectedResponse())
 
         val q2 =
-            V5Packet.Publish.ofRaw(
+            ControlPacketV5.Publish.ofRaw(
                 topic = TopicName.fromOrThrow("t"),
                 qos = EXACTLY_ONCE,
                 packetIdentifier = 1,
                 payload = ReadBuffer.EMPTY_BUFFER,
             )
-        assertIs<V5Packet.PubRec>(q2.expectedResponse())
+        assertIs<ControlPacketV5.PubRec>(q2.expectedResponse())
     }
 
     @Test
     fun setDupFlagFlipsBit() {
         val q1 =
-            V5Packet.Publish.ofRaw(
+            ControlPacketV5.Publish.ofRaw(
                 topic = TopicName.fromOrThrow("t"),
                 qos = AT_LEAST_ONCE,
                 packetIdentifier = 1,
@@ -236,7 +236,7 @@ class V5PacketPublishTests {
             )
         assertEquals(false, q1.dup)
         val redup = q1.setDupFlagNewPubMessage()
-        assertIs<V5Packet.Publish<*>>(redup)
+        assertIs<ControlPacketV5.Publish<*>>(redup)
         assertEquals(true, redup.dup)
         assertEquals(AT_LEAST_ONCE, redup.qualityOfService)
         // Other fields preserved
@@ -246,21 +246,21 @@ class V5PacketPublishTests {
     @Test
     fun maybeCopyWithNewPacketIdentifierAtQos0Returnsself() {
         val q0 =
-            V5Packet.Publish.ofRaw(
+            ControlPacketV5.Publish.ofRaw(
                 topic = TopicName.fromOrThrow("t"),
                 qos = AT_MOST_ONCE,
                 payload = ReadBuffer.EMPTY_BUFFER,
             )
         val copy = q0.maybeCopyWithNewPacketIdentifier(99)
         // QoS 0 disallows packet id; the copy must retain that.
-        assertNull((copy as V5Packet.Publish<*>).packetId)
+        assertNull((copy as ControlPacketV5.Publish<*>).packetId)
     }
 
     @Test
     fun userPropertyDuplicatesAllowed() {
         // §3.3.2.3.5: User Property can repeat. Round-trip preserves order.
         val original =
-            V5Packet.Publish.ofRaw(
+            ControlPacketV5.Publish.ofRaw(
                 topic = TopicName.fromOrThrow("t/a"),
                 qos = AT_MOST_ONCE,
                 payload = ReadBuffer.EMPTY_BUFFER,

@@ -15,7 +15,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * Spec round-trip and edge-case tests for `V5Packet.ConnAck` (CONNACK, §3.2). Validates:
+ * Spec round-trip and edge-case tests for `ControlPacketV5.ConnAck` (CONNACK, §3.2). Validates:
  *  - the shortest legal encoding (sessionPresent=false, SUCCESS, no properties)
  *  - sessionPresent flag round-trips through the acknowledgeFlags byte
  *  - typed [ConnAckProperties] round-trips for each rich property field
@@ -115,7 +115,7 @@ class V5PacketConnAckTests {
     fun connackReservedFlagBitsRejectedAtConstruction() {
         // Acknowledge flags reserved bits 1-7 MUST be 0.
         assertFailsWith<IllegalArgumentException> {
-            V5Packet.ConnAck(
+            ControlPacketV5.ConnAck(
                 acknowledgeFlags = 0x02u,
                 connectReasonCode = ReasonCode.SUCCESS.byte,
                 properties = emptyList(),
@@ -139,7 +139,7 @@ class V5PacketConnAckTests {
     fun connackInvalidReasonCodeRejected() {
         // GRANTED_QOS_2 (0x02) is not in CONNACK's valid reason code set.
         assertFailsWith<IllegalArgumentException> {
-            V5Packet.ConnAck(
+            ControlPacketV5.ConnAck(
                 acknowledgeFlags = 0x00u,
                 connectReasonCode = 0x02u,
                 properties = emptyList(),

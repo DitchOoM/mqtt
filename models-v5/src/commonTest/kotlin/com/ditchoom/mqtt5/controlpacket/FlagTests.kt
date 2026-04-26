@@ -34,7 +34,7 @@ class FlagTests {
 
     @Test
     fun controlPacketFlagsMatchSpecForPUBLISH_dup_false_Qos_AtMostOnce_Retain_false() {
-        val detailed = V5Packet.Publish.ofRaw(topic = TopicName.fromOrThrow("t"))
+        val detailed = ControlPacketV5.Publish.ofRaw(topic = TopicName.fromOrThrow("t"))
         assertEquals(detailed.controlPacketValue, 0x03, "invalid byte controlPacketValue")
         assertEquals(detailed.flags, 0b0, controlPacketSpectMatchError)
     }
@@ -43,7 +43,7 @@ class FlagTests {
     fun controlPacketFlagsMatchSpecForPUBLISH_dup_trueQos_AtMostOnceRetain_false() {
         val expected = 0b1000.toByte()
         val detailed =
-            V5Packet.Publish.ofRaw(
+            ControlPacketV5.Publish.ofRaw(
                 topic = TopicName.fromOrThrow("t"),
                 qos = AT_MOST_ONCE,
                 dup = true,
@@ -57,7 +57,7 @@ class FlagTests {
     fun controlPacketFlagsMatchSpecForPUBLISH_dup_false_Qos_AtMostOnce_retain_true() {
         val expected = 0b1.toByte()
         val detailed =
-            V5Packet.Publish.ofRaw(
+            ControlPacketV5.Publish.ofRaw(
                 topic = TopicName.fromOrThrow("t"),
                 qos = AT_MOST_ONCE,
                 dup = false,
@@ -71,7 +71,7 @@ class FlagTests {
     fun controlPacketFlagsMatchSpecForPUBLISH_dup_true_Qos_AtMostOnce_retain_true() {
         val expected = 0b1001.toByte()
         val detailed =
-            V5Packet.Publish.ofRaw(
+            ControlPacketV5.Publish.ofRaw(
                 topic = TopicName.fromOrThrow("t"),
                 qos = AT_MOST_ONCE,
                 dup = true,
@@ -85,7 +85,7 @@ class FlagTests {
     fun controlPacketFlagsMatchSpecForPUBLISH_dup_false_Qos_AtLeastOnce_retain_false() {
         val expected = 0b10.toByte()
         val detailed =
-            V5Packet.Publish.ofRaw(
+            ControlPacketV5.Publish.ofRaw(
                 topic = TopicName.fromOrThrow("t"),
                 qos = AT_LEAST_ONCE,
                 dup = false,
@@ -126,7 +126,7 @@ class FlagTests {
     fun controlPacketFlagsMatchSpecForPUBLISH_dup_true_Qos_AtLeastOnce_retain_false() {
         val expected = 0b1010.toByte()
         val detailed =
-            V5Packet.Publish.ofRaw(
+            ControlPacketV5.Publish.ofRaw(
                 topic = TopicName.fromOrThrow("t"),
                 qos = AT_LEAST_ONCE,
                 dup = true,
@@ -141,7 +141,7 @@ class FlagTests {
     fun controlPacketFlagsMatchSpecForPUBLISH_dup_false_Qos_AtLeastOnce_retain_true() {
         val expected = 0b11.toByte()
         val detailed =
-            V5Packet.Publish.ofRaw(
+            ControlPacketV5.Publish.ofRaw(
                 topic = TopicName.fromOrThrow("t"),
                 qos = AT_LEAST_ONCE,
                 dup = false,
@@ -156,7 +156,7 @@ class FlagTests {
     fun controlPacketFlagsMatchSpecForPUBLISH_dup_true_Qos_AtLeastOnce_retain_true() {
         val expected = 0b1011.toByte()
         val simple =
-            V5Packet.Publish.ofRaw(
+            ControlPacketV5.Publish.ofRaw(
                 topic = TopicName.fromOrThrow("t"),
                 qos = AT_LEAST_ONCE,
                 dup = true,
@@ -171,7 +171,7 @@ class FlagTests {
     fun controlPacketFlagsMatchSpecForPUBLISH_dup_false_Qos_ExactlyOnce_retain_false() {
         val expected = 0b100.toByte()
         val detailed =
-            V5Packet.Publish.ofRaw(
+            ControlPacketV5.Publish.ofRaw(
                 topic = TopicName.fromOrThrow("t"),
                 qos = EXACTLY_ONCE,
                 dup = false,
@@ -186,7 +186,7 @@ class FlagTests {
     fun controlPacketFlagsMatchSpecForPUBLISH_dup_true_Qos_ExactlyOnce_retain_false() {
         val expected = 0b1100.toByte()
         val detailed =
-            V5Packet.Publish.ofRaw(
+            ControlPacketV5.Publish.ofRaw(
                 topic = TopicName.fromOrThrow("t"),
                 qos = EXACTLY_ONCE,
                 dup = true,
@@ -201,7 +201,7 @@ class FlagTests {
     fun controlPacketFlagsMatchSpecForPUBLISH_dup_false_Qos_ExactlyOnce_retain_true() {
         val expected = 0b101.toByte()
         val detailed =
-            V5Packet.Publish.ofRaw(
+            ControlPacketV5.Publish.ofRaw(
                 topic = TopicName.fromOrThrow("t"),
                 qos = EXACTLY_ONCE,
                 dup = false,
@@ -216,7 +216,7 @@ class FlagTests {
     fun controlPacketFlagsMatchSpecForPUBLISH_dup_true_Qos_ExactlyOnce_retain_true() {
         val expected = 0b1101.toByte()
         val simple =
-            V5Packet.Publish.ofRaw(
+            ControlPacketV5.Publish.ofRaw(
                 topic = TopicName.fromOrThrow("t"),
                 qos = EXACTLY_ONCE,
                 dup = true,

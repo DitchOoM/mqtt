@@ -6,7 +6,7 @@ import com.ditchoom.buffer.WriteBuffer
 /**
  * Payload as bytes for storage (SQLite BLOB / IndexedDB) or IPC (Android AIDL parcel).
  * Returns `null` for zero-size payloads (or when the message is a typed-payload
- * `V5Packet.Publish<P>` whose `P` is not a [ReadBuffer]).
+ * `ControlPacketV5.Publish<P>` whose `P` is not a [ReadBuffer]).
  *
  * This function is a deliberate platform-boundary ByteArray exit point —
  * SQLDelight BLOB binding, IndexedDB, and Android AIDL all consume bytes, and

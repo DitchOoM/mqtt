@@ -161,7 +161,7 @@ class V5PacketConnectTests {
                 protocolLevel = 5u,
                 connectFlags = ConnectFlagsV5(0x1Cu), // willFlag=1, willQos=3
                 keepAlive = 0u,
-                properties = null,
+                properties = emptyList(),
                 clientId = "",
                 willProperties = emptyList(),
                 willTopicString = "",

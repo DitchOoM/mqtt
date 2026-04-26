@@ -81,7 +81,7 @@ class PublishMessageV5<P> internal constructor(
     }
 
     override fun encodeBody(writeBuffer: WriteBuffer) {
-        val props: Collection<MqttProperty>? = properties.props.ifEmpty { null }
+        val props: List<MqttProperty> = properties.props
         if (qualityOfService == AT_MOST_ONCE) {
             PublishBodyV5Qos0Codec.encode(
                 writeBuffer,

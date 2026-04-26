@@ -4,6 +4,7 @@ import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
 import com.ditchoom.buffer.utf8Length
 import com.ditchoom.buffer.codec.annotations.DispatchOn
+import com.ditchoom.buffer.codec.annotations.LengthPrefix
 import com.ditchoom.buffer.codec.annotations.LengthPrefixed
 import com.ditchoom.buffer.codec.annotations.PacketType
 import com.ditchoom.buffer.codec.annotations.Payload
@@ -14,7 +15,6 @@ import com.ditchoom.buffer.codec.annotations.WhenTrue
 import com.ditchoom.mqtt.MalformedPacketException
 import com.ditchoom.mqtt.MqttWarning
 import com.ditchoom.mqtt.ProtocolError
-import com.ditchoom.mqtt.codec.annotations.MqttProperties
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.variableByteSize
 import com.ditchoom.mqtt.controlpacket.IConnectionAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IConnectionRequest
@@ -164,9 +164,9 @@ sealed interface V5Packet : ControlPacketV5 {
         val protocolLevel: UByte,
         val connectFlags: ConnectFlagsV5,
         val keepAlive: UShort,
-        @MqttProperties val properties: Collection<MqttProperty>?,
+        @LengthPrefixed(LengthPrefix.Varint, maxBytes = 4) val properties: List<MqttProperty> = emptyList(),
         @LengthPrefixed val clientId: String,
-        @WhenTrue("connectFlags.willFlag") @MqttProperties val willProperties: Collection<MqttProperty>? = null,
+        @WhenTrue("connectFlags.willFlag") @LengthPrefixed(LengthPrefix.Varint, maxBytes = 4) val willProperties: List<MqttProperty>? = null,
         // Wire-shape will fields. Names are distinct from IConnectionRequest's typed
         // accessors (willTopic: TopicName?, willPayload: ReadBuffer?) which are derived
         // via `will: WillConfig`. The codec processor uses these names verbatim for the
@@ -327,7 +327,7 @@ sealed interface V5Packet : ControlPacketV5 {
                     protocolLevel = protocolVersion,
                     connectFlags = flags,
                     keepAlive = keepAliveSeconds.toUShort(),
-                    properties = props.props.ifEmpty { null },
+                    properties = props.props,
                     clientId = clientId,
                     willProperties = if (will is WillConfig.Enabled) {
                         (willProperties ?: ConnectWillProperties()).props
@@ -348,7 +348,7 @@ sealed interface V5Packet : ControlPacketV5 {
     data class ConnAck(
         val acknowledgeFlags: UByte,
         val connectReasonCode: UByte,
-        @MqttProperties val properties: Collection<MqttProperty>?,
+        @LengthPrefixed(LengthPrefix.Varint, maxBytes = 4) val properties: List<MqttProperty> = emptyList(),
     ) : V5Packet,
         IConnectionAcknowledgment {
         constructor(
@@ -358,7 +358,7 @@ sealed interface V5Packet : ControlPacketV5 {
         ) : this(
             acknowledgeFlags = (if (sessionPresent) 1u else 0u).toUByte(),
             connectReasonCode = connectReason.byte,
-            properties = properties.props.ifEmpty { null },
+            properties = properties.props,
         )
 
         init {
@@ -411,7 +411,7 @@ sealed interface V5Packet : ControlPacketV5 {
     data class PubAck(
         val packetId: UShort,
         @WhenRemaining(1) val reasonCode: UByte? = null,
-        @WhenRemaining(1) @MqttProperties val properties: Collection<MqttProperty>? = null,
+        @WhenRemaining(1) @LengthPrefixed(LengthPrefix.Varint, maxBytes = 4) val properties: List<MqttProperty>? = null,
     ) : V5Packet,
         IPublishAcknowledgment {
         constructor(
@@ -450,7 +450,7 @@ sealed interface V5Packet : ControlPacketV5 {
     data class PubRec(
         val packetId: UShort,
         @WhenRemaining(1) val reasonCode: UByte? = null,
-        @WhenRemaining(1) @MqttProperties val properties: Collection<MqttProperty>? = null,
+        @WhenRemaining(1) @LengthPrefixed(LengthPrefix.Varint, maxBytes = 4) val properties: List<MqttProperty>? = null,
     ) : V5Packet,
         IPublishReceived {
         constructor(
@@ -495,7 +495,7 @@ sealed interface V5Packet : ControlPacketV5 {
     data class PubRel(
         val packetId: UShort,
         @WhenRemaining(1) val reasonCode: UByte? = null,
-        @WhenRemaining(1) @MqttProperties val properties: Collection<MqttProperty>? = null,
+        @WhenRemaining(1) @LengthPrefixed(LengthPrefix.Varint, maxBytes = 4) val properties: List<MqttProperty>? = null,
     ) : V5Packet,
         IPublishRelease {
         constructor(
@@ -541,7 +541,7 @@ sealed interface V5Packet : ControlPacketV5 {
     data class PubComp(
         val packetId: UShort,
         @WhenRemaining(1) val reasonCode: UByte? = null,
-        @WhenRemaining(1) @MqttProperties val properties: Collection<MqttProperty>? = null,
+        @WhenRemaining(1) @LengthPrefixed(LengthPrefix.Varint, maxBytes = 4) val properties: List<MqttProperty>? = null,
     ) : V5Packet,
         IPublishComplete {
         constructor(packetIdentifier: UShort, reasonCode: ReasonCode = SUCCESS) :
@@ -603,7 +603,7 @@ sealed interface V5Packet : ControlPacketV5 {
     @ProtocolMessage
     data class Disconnect(
         @WhenRemaining(1) val reasonCode: UByte? = null,
-        @WhenRemaining(1) @MqttProperties val properties: Collection<MqttProperty>? = null,
+        @WhenRemaining(1) @LengthPrefixed(LengthPrefix.Varint, maxBytes = 4) val properties: List<MqttProperty>? = null,
     ) : V5Packet,
         IDisconnectNotification {
         constructor(
@@ -652,7 +652,7 @@ sealed interface V5Packet : ControlPacketV5 {
     @ProtocolMessage
     data class Auth(
         @WhenRemaining(1) val reasonCode: UByte? = null,
-        @WhenRemaining(1) @MqttProperties val properties: Collection<MqttProperty>? = null,
+        @WhenRemaining(1) @LengthPrefixed(LengthPrefix.Varint, maxBytes = 4) val properties: List<MqttProperty>? = null,
     ) : V5Packet {
         constructor(
             reasonCode: ReasonCode = SUCCESS,
@@ -690,7 +690,7 @@ sealed interface V5Packet : ControlPacketV5 {
     @ProtocolMessage
     data class Subscribe(
         val packetId: UShort,
-        @MqttProperties val properties: Collection<MqttProperty>?,
+        @LengthPrefixed(LengthPrefix.Varint, maxBytes = 4) val properties: List<MqttProperty> = emptyList(),
         @RemainingBytes val subscriptionEntries: List<SubscriptionV5Entry>,
     ) : V5Packet,
         ISubscribeRequest {
@@ -717,7 +717,7 @@ sealed interface V5Packet : ControlPacketV5 {
             userProperty: List<Pair<String, String>> = emptyList(),
         ) : this(
             packetId = packetIdentifier,
-            properties = ackProps(reasonString, userProperty),
+            properties = ackProps(reasonString, userProperty) ?: emptyList(),
             subscriptionEntries = subscriptions.map(::toSubscriptionEntry),
         )
 
@@ -779,7 +779,7 @@ sealed interface V5Packet : ControlPacketV5 {
     @ProtocolMessage
     data class SubAck(
         val packetId: UShort,
-        @MqttProperties val properties: Collection<MqttProperty>?,
+        @LengthPrefixed(LengthPrefix.Varint, maxBytes = 4) val properties: List<MqttProperty> = emptyList(),
         @RemainingBytes val reasonCodeEntries: List<SubAckReasonCodeV5>,
     ) : V5Packet,
         ISubscribeAcknowledgement {
@@ -797,7 +797,7 @@ sealed interface V5Packet : ControlPacketV5 {
             userProperty: List<Pair<String, String>> = emptyList(),
         ) : this(
             packetId = packetIdentifier,
-            properties = ackProps(reasonString, userProperty),
+            properties = ackProps(reasonString, userProperty) ?: emptyList(),
             reasonCodeEntries = reasonCodes.map { SubAckReasonCodeV5(it.byte) },
         )
 
@@ -837,7 +837,7 @@ sealed interface V5Packet : ControlPacketV5 {
     @ProtocolMessage
     data class Unsubscribe(
         val packetId: UShort,
-        @MqttProperties val properties: Collection<MqttProperty>?,
+        @LengthPrefixed(LengthPrefix.Varint, maxBytes = 4) val properties: List<MqttProperty> = emptyList(),
         @RemainingBytes val topicEntries: List<TopicFilterV5Entry>,
     ) : V5Packet,
         IUnsubscribeRequest {
@@ -847,7 +847,7 @@ sealed interface V5Packet : ControlPacketV5 {
             userProperty: List<Pair<String, String>> = emptyList(),
         ) : this(
             packetId = packetIdentifier,
-            properties = ackProps(reasonString = null, userProperty = userProperty),
+            properties = ackProps(reasonString = null, userProperty = userProperty) ?: emptyList(),
             topicEntries = topics.map { TopicFilterV5Entry(it.toString()) },
         )
 
@@ -891,7 +891,7 @@ sealed interface V5Packet : ControlPacketV5 {
     @ProtocolMessage
     data class UnsubAck(
         val packetId: UShort,
-        @MqttProperties val properties: Collection<MqttProperty>?,
+        @LengthPrefixed(LengthPrefix.Varint, maxBytes = 4) val properties: List<MqttProperty> = emptyList(),
         @RemainingBytes val reasonCodeEntries: List<UnsubAckReasonCodeV5>,
     ) : V5Packet,
         IUnsubscribeAcknowledgment {
@@ -902,7 +902,7 @@ sealed interface V5Packet : ControlPacketV5 {
             reasonCodes: List<ReasonCode> = listOf(SUCCESS),
         ) : this(
             packetId = packetIdentifier.toUShort(),
-            properties = ackProps(reasonString, userProperty),
+            properties = ackProps(reasonString, userProperty) ?: emptyList(),
             reasonCodeEntries = reasonCodes.map { UnsubAckReasonCodeV5(it.byte) },
         )
 
@@ -987,7 +987,7 @@ internal fun ackProps(
     reasonString: String?,
     userProperty: List<Pair<String, String>>,
     forceEmpty: Boolean = false,
-): Collection<MqttProperty>? {
+): List<MqttProperty>? {
     if (!forceEmpty && reasonString == null && userProperty.isEmpty()) return null
     return buildList {
         if (reasonString != null) add(ReasonString(reasonString))
@@ -1001,7 +1001,7 @@ internal fun disconnectProps(
     userProperty: List<Pair<String, String>>,
     serverReference: String?,
     forceEmpty: Boolean = false,
-): Collection<MqttProperty>? {
+): List<MqttProperty>? {
     if (!forceEmpty &&
         sessionExpiryIntervalSeconds == null &&
         reasonString == null &&

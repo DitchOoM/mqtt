@@ -1,10 +1,10 @@
 package com.ditchoom.mqtt5.controlpacket
 
+import com.ditchoom.buffer.codec.annotations.LengthPrefix
 import com.ditchoom.buffer.codec.annotations.LengthPrefixed
 import com.ditchoom.buffer.codec.annotations.Payload
 import com.ditchoom.buffer.codec.annotations.ProtocolMessage
 import com.ditchoom.buffer.codec.annotations.RemainingBytes
-import com.ditchoom.mqtt.codec.annotations.MqttProperties
 import com.ditchoom.mqtt5.controlpacket.properties.MqttProperty
 
 /**
@@ -17,7 +17,7 @@ import com.ditchoom.mqtt5.controlpacket.properties.MqttProperty
 @ProtocolMessage
 data class PublishBodyV5Qos0<@Payload P>(
     @LengthPrefixed val topic: String,
-    @MqttProperties val properties: Collection<MqttProperty>?,
+    @LengthPrefixed(LengthPrefix.Varint, maxBytes = 4) val properties: List<MqttProperty> = emptyList(),
     @RemainingBytes val payload: P,
 )
 
@@ -28,6 +28,6 @@ data class PublishBodyV5Qos0<@Payload P>(
 data class PublishBodyV5QosNonZero<@Payload P>(
     @LengthPrefixed val topic: String,
     val packetIdentifier: UShort,
-    @MqttProperties val properties: Collection<MqttProperty>?,
+    @LengthPrefixed(LengthPrefix.Varint, maxBytes = 4) val properties: List<MqttProperty> = emptyList(),
     @RemainingBytes val payload: P,
 )

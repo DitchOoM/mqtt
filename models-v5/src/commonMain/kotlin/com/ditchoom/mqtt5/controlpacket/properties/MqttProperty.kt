@@ -7,7 +7,7 @@ import com.ditchoom.buffer.codec.annotations.LengthPrefixed
 import com.ditchoom.buffer.codec.annotations.PacketType
 import com.ditchoom.buffer.codec.annotations.Payload
 import com.ditchoom.buffer.codec.annotations.ProtocolMessage
-import com.ditchoom.mqtt.codec.annotations.MqttVariableByteInteger
+import com.ditchoom.buffer.codec.annotations.UseCodec
 import kotlin.jvm.JvmInline
 
 /**
@@ -220,7 +220,7 @@ data class UserProperty(
 @ProtocolMessage
 @JvmInline
 value class SubscriptionIdentifier(
-    @MqttVariableByteInteger val value: Int,
+    @UseCodec(VariableByteIntegerCodec::class) val value: Int,
 ) : MqttProperty
 
 // ── Binary data properties (consumer-defined type via @Payload) ─────────

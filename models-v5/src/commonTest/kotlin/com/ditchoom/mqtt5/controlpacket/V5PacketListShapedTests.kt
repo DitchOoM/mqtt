@@ -112,7 +112,7 @@ class V5PacketListShapedTests {
         assertFailsWith<IllegalArgumentException> {
             V5Packet.Subscribe(
                 packetId = 1.toUShort(),
-                properties = null,
+                properties = emptyList(),
                 subscriptionEntries = listOf(SubscriptionV5Entry("a", 0x30u)), // rh=3
             )
         }
@@ -123,7 +123,7 @@ class V5PacketListShapedTests {
         assertFailsWith<IllegalArgumentException> {
             V5Packet.Subscribe(
                 packetId = 1.toUShort(),
-                properties = null,
+                properties = emptyList(),
                 subscriptionEntries = listOf(SubscriptionV5Entry("a", 0x03u)), // qos=3
             )
         }
@@ -132,7 +132,7 @@ class V5PacketListShapedTests {
     @Test
     fun subscribeEmptyPayloadRejected() {
         assertFailsWith<IllegalArgumentException> {
-            V5Packet.Subscribe(packetId = 1.toUShort(), properties = null, subscriptionEntries = emptyList())
+            V5Packet.Subscribe(packetId = 1.toUShort(), properties = emptyList(), subscriptionEntries = emptyList())
         }
     }
 
@@ -181,7 +181,7 @@ class V5PacketListShapedTests {
     @Test
     fun subAckEmptyPayloadRejected() {
         assertFailsWith<IllegalArgumentException> {
-            V5Packet.SubAck(packetId = 1.toUShort(), properties = null, reasonCodeEntries = emptyList())
+            V5Packet.SubAck(packetId = 1.toUShort(), properties = emptyList(), reasonCodeEntries = emptyList())
         }
     }
 
@@ -239,7 +239,7 @@ class V5PacketListShapedTests {
     @Test
     fun unsubscribeEmptyPayloadRejected() {
         assertFailsWith<ProtocolError> {
-            V5Packet.Unsubscribe(packetId = 1.toUShort(), properties = null, topicEntries = emptyList())
+            V5Packet.Unsubscribe(packetId = 1.toUShort(), properties = emptyList(), topicEntries = emptyList())
         }
     }
 
@@ -292,7 +292,7 @@ class V5PacketListShapedTests {
     @Test
     fun unsubAckEmptyPayloadRejected() {
         assertFailsWith<ProtocolError> {
-            V5Packet.UnsubAck(packetId = 1.toUShort(), properties = null, reasonCodeEntries = emptyList())
+            V5Packet.UnsubAck(packetId = 1.toUShort(), properties = emptyList(), reasonCodeEntries = emptyList())
         }
     }
 

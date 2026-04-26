@@ -38,7 +38,7 @@ class V5PacketConnAckTests {
         val decoded = ControlPacketV5.from(buf) as ConnectionAcknowledgment
         assertFalse(decoded.sessionPresent)
         assertEquals(ReasonCode.SUCCESS, decoded.connectReason)
-        assertNull(decoded.properties)
+        assertTrue(decoded.properties.isEmpty())
     }
 
     @Test
@@ -118,7 +118,7 @@ class V5PacketConnAckTests {
             V5Packet.ConnAck(
                 acknowledgeFlags = 0x02u,
                 connectReasonCode = ReasonCode.SUCCESS.byte,
-                properties = null,
+                properties = emptyList(),
             )
         }
     }
@@ -142,7 +142,7 @@ class V5PacketConnAckTests {
             V5Packet.ConnAck(
                 acknowledgeFlags = 0x00u,
                 connectReasonCode = 0x02u,
-                properties = null,
+                properties = emptyList(),
             )
         }
     }

@@ -2,7 +2,7 @@ package com.ditchoom.mqtt5.controlpacket
 
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
-import com.ditchoom.buffer.utf8Length
+import com.ditchoom.buffer.codec.EncodeContext
 import com.ditchoom.buffer.codec.Encoder
 import com.ditchoom.buffer.codec.annotations.DispatchOn
 import com.ditchoom.buffer.codec.annotations.LengthPrefix
@@ -13,13 +13,10 @@ import com.ditchoom.buffer.codec.annotations.ProtocolMessage
 import com.ditchoom.buffer.codec.annotations.RemainingBytes
 import com.ditchoom.buffer.codec.annotations.WhenRemaining
 import com.ditchoom.buffer.codec.annotations.WhenTrue
-import com.ditchoom.buffer.codec.EncodeContext
 import com.ditchoom.buffer.codec.encodeToBuffer
+import com.ditchoom.buffer.utf8Length
 import com.ditchoom.buffer.writeLengthPrefixedUtf8String
 import com.ditchoom.buffer.writeVariableByteIntegerLengthPrefixed
-import com.ditchoom.mqtt5.controlpacket.properties.AuthenticationDataCodec
-import com.ditchoom.mqtt5.controlpacket.properties.CorrelationDataCodec
-import com.ditchoom.mqtt5.controlpacket.properties.MqttPropertyCodec
 import com.ditchoom.mqtt.MalformedPacketException
 import com.ditchoom.mqtt.MqttWarning
 import com.ditchoom.mqtt.ProtocolError
@@ -30,8 +27,6 @@ import com.ditchoom.mqtt.controlpacket.IDisconnectNotification
 import com.ditchoom.mqtt.controlpacket.IPingRequest
 import com.ditchoom.mqtt.controlpacket.IPingResponse
 import com.ditchoom.mqtt.controlpacket.IPublishAcknowledgment
-import com.ditchoom.mqtt.controlpacket.NO_PACKET_ID
-import com.ditchoom.mqtt.controlpacket.PublishMessage
 import com.ditchoom.mqtt.controlpacket.IPublishComplete
 import com.ditchoom.mqtt.controlpacket.IPublishReceived
 import com.ditchoom.mqtt.controlpacket.IPublishRelease
@@ -44,6 +39,8 @@ import com.ditchoom.mqtt.controlpacket.ISubscription.RetainHandling.SEND_RETAINE
 import com.ditchoom.mqtt.controlpacket.ISubscription.RetainHandling.SEND_RETAINED_MESSAGES_AT_TIME_OF_SUBSCRIBE
 import com.ditchoom.mqtt.controlpacket.IUnsubscribeAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IUnsubscribeRequest
+import com.ditchoom.mqtt.controlpacket.NO_PACKET_ID
+import com.ditchoom.mqtt.controlpacket.PublishMessage
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.TopicName
@@ -85,7 +82,10 @@ import com.ditchoom.mqtt.controlpacket.format.ReasonCode.UNSPECIFIED_ERROR
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.USE_ANOTHER_SERVER
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.WILDCARD_SUBSCRIPTIONS_NOT_SUPPORTED
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
+import com.ditchoom.mqtt5.controlpacket.properties.AuthenticationDataCodec
+import com.ditchoom.mqtt5.controlpacket.properties.CorrelationDataCodec
 import com.ditchoom.mqtt5.controlpacket.properties.MqttProperty
+import com.ditchoom.mqtt5.controlpacket.properties.MqttPropertyCodec
 import com.ditchoom.mqtt5.controlpacket.properties.ReasonString
 import com.ditchoom.mqtt5.controlpacket.properties.ServerReference
 import com.ditchoom.mqtt5.controlpacket.properties.SessionExpiryInterval
@@ -237,9 +237,10 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
                 com.ditchoom.buffer.codec.DecodeContext.Empty
                     .with(ControlPacketV5Codec.DiscriminatorKey, MqttFixedHeader(byte1))
             return when (packetValue) {
-                1 -> ControlPacketV5ConnectCodec.decode<ReadBuffer?>(buffer) { slice ->
-                    if (slice.remaining() > 0) slice else null
-                }
+                1 ->
+                    ControlPacketV5ConnectCodec.decode<ReadBuffer?>(buffer) { slice ->
+                        if (slice.remaining() > 0) slice else null
+                    }
                 2 -> ControlPacketV5ConnAckCodec.decode(buffer, ctx)
                 4 -> ControlPacketV5PubAckCodec.decode(buffer, ctx)
                 5 -> ControlPacketV5PubRecCodec.decode(buffer, ctx)
@@ -249,20 +250,22 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
                 9 -> ControlPacketV5SubAckCodec.decode(buffer, ctx)
                 10 -> ControlPacketV5UnsubscribeCodec.decode(buffer, ctx)
                 11 -> ControlPacketV5UnsubAckCodec.decode(buffer, ctx)
-                12 -> if (remainingLength != 0) {
-                    throw MalformedPacketException(
-                        "PINGREQ remaining length must be 0, got $remainingLength",
-                    )
-                } else {
-                    PingReq
-                }
-                13 -> if (remainingLength != 0) {
-                    throw MalformedPacketException(
-                        "PINGRESP remaining length must be 0, got $remainingLength",
-                    )
-                } else {
-                    PingResp
-                }
+                12 ->
+                    if (remainingLength != 0) {
+                        throw MalformedPacketException(
+                            "PINGREQ remaining length must be 0, got $remainingLength",
+                        )
+                    } else {
+                        PingReq
+                    }
+                13 ->
+                    if (remainingLength != 0) {
+                        throw MalformedPacketException(
+                            "PINGRESP remaining length must be 0, got $remainingLength",
+                        )
+                    } else {
+                        PingResp
+                    }
                 14 -> ControlPacketV5DisconnectCodec.decode(buffer, ctx)
                 15 -> ControlPacketV5AuthCodec.decode(buffer, ctx)
                 else -> throw IllegalStateException("Unreachable: $packetValue not in migratedPacketTypes")
@@ -279,7 +282,9 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
         val keepAlive: UShort,
         @LengthPrefixed(LengthPrefix.Varint, maxBytes = 4) val properties: List<MqttProperty> = emptyList(),
         @LengthPrefixed val clientId: String,
-        @WhenTrue("connectFlags.willFlag") @LengthPrefixed(LengthPrefix.Varint, maxBytes = 4) val willProperties: List<MqttProperty>? = null,
+        @WhenTrue(
+            "connectFlags.willFlag",
+        ) @LengthPrefixed(LengthPrefix.Varint, maxBytes = 4) val willProperties: List<MqttProperty>? = null,
         // Wire-shape will fields. Names are distinct from IConnectionRequest's typed
         // accessors (willTopic: TopicName?, willPayload: ReadBuffer?) which are derived
         // via `will: WillConfig`. The codec processor uses these names verbatim for the
@@ -335,20 +340,21 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
         override val userProperty: List<Pair<String, String>> get() = typedProperties.userProperty
 
         override val will: WillConfig
-            get() = if (
-                connectFlags.willFlag &&
-                willTopicString != null &&
-                willPayloadValue is ReadBuffer
-            ) {
-                WillConfig.Enabled(
-                    TopicName.fromOrThrow(willTopicString),
-                    willPayloadValue as ReadBuffer,
-                    QualityOfService.fromBooleans(connectFlags.willQosBit2, connectFlags.willQosBit1),
-                    connectFlags.willRetain,
-                )
-            } else {
-                WillConfig.Disabled
-            }
+            get() =
+                if (
+                    connectFlags.willFlag &&
+                    willTopicString != null &&
+                    willPayloadValue is ReadBuffer
+                ) {
+                    WillConfig.Enabled(
+                        TopicName.fromOrThrow(willTopicString),
+                        willPayloadValue as ReadBuffer,
+                        QualityOfService.fromBooleans(connectFlags.willQosBit2, connectFlags.willQosBit1),
+                        connectFlags.willRetain,
+                    )
+                } else {
+                    WillConfig.Disabled
+                }
 
         override val payloadFormatIndicator: Boolean
             get() = typedWillProperties?.payloadFormatIndicator ?: false
@@ -384,32 +390,11 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
             }
         }
 
-        override fun remainingLength(): Int {
-            // Variable header
-            var size = UShort.SIZE_BYTES + protocolName.utf8Length()
-            size += UByte.SIZE_BYTES // protocolLevel
-            size += UByte.SIZE_BYTES // connectFlags
-            size += UShort.SIZE_BYTES // keepAlive
-            val propsList = properties?.toList() ?: emptyList()
-            val propsSize = mqttPropertiesSize(propsList)
-            size += variableByteSize(propsSize) + propsSize
-            // Payload
-            size += UShort.SIZE_BYTES + clientId.utf8Length()
-            if (connectFlags.willFlag) {
-                val willPropsList = willProperties?.toList() ?: emptyList()
-                val willPropsSize = mqttPropertiesSize(willPropsList)
-                size += variableByteSize(willPropsSize) + willPropsSize
-                size += UShort.SIZE_BYTES + (willTopicString?.let { it.utf8Length() } ?: 0)
-                size += UShort.SIZE_BYTES + ((willPayloadValue as? ReadBuffer)?.remaining() ?: 0)
+        @Suppress("UNCHECKED_CAST")
+        override fun remainingLength(): Int =
+            ControlPacketV5ConnectCodec.wireSize(this as Connect<ReadBuffer?>) { wp ->
+                (wp as? ReadBuffer)?.remaining() ?: 0
             }
-            if (connectFlags.usernameFlag) {
-                size += UShort.SIZE_BYTES + (username?.let { it.utf8Length() } ?: 0)
-            }
-            if (connectFlags.passwordFlag) {
-                size += UShort.SIZE_BYTES + (password?.let { it.utf8Length() } ?: 0)
-            }
-            return size
-        }
 
         companion object {
             /** High-level convenience factory taking typed shapes. */
@@ -427,14 +412,15 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
                     if (will is WillConfig.Enabled) ConnectWillProperties() else null,
             ): Connect<ReadBuffer?> {
                 val willEnabled = will as? WillConfig.Enabled
-                val flags = ConnectFlagsV5.from(
-                    cleanStart = cleanStart,
-                    willFlag = will is WillConfig.Enabled,
-                    willQos = willEnabled?.qos ?: QualityOfService.AT_MOST_ONCE,
-                    willRetain = willEnabled?.retain ?: false,
-                    hasPassword = password != null,
-                    hasUserName = userName != null,
-                )
+                val flags =
+                    ConnectFlagsV5.from(
+                        cleanStart = cleanStart,
+                        willFlag = will is WillConfig.Enabled,
+                        willQos = willEnabled?.qos ?: QualityOfService.AT_MOST_ONCE,
+                        willRetain = willEnabled?.retain ?: false,
+                        hasPassword = password != null,
+                        hasUserName = userName != null,
+                    )
                 return Connect(
                     protocolName = protocolName,
                     protocolLevel = protocolVersion,
@@ -442,11 +428,12 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
                     keepAlive = keepAliveSeconds.toUShort(),
                     properties = props.props,
                     clientId = clientId,
-                    willProperties = if (will is WillConfig.Enabled) {
-                        (willProperties ?: ConnectWillProperties()).props
-                    } else {
-                        null
-                    },
+                    willProperties =
+                        if (will is WillConfig.Enabled) {
+                            (willProperties ?: ConnectWillProperties()).props
+                        } else {
+                            null
+                        },
                     willTopicString = willEnabled?.topic?.toString(),
                     willPayloadValue = willEnabled?.payload,
                     username = userName,
@@ -509,14 +496,9 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
         override val receiveMaximum: Int get() = typedProperties.receiveMaximum
         override val serverKeepAlive: Int get() = typedProperties.serverKeepAlive ?: -1
 
-        override fun encodeBody(writeBuffer: WriteBuffer) =
-            ControlPacketV5ConnAckCodec.encode(writeBuffer, this)
+        override fun encodeBody(writeBuffer: WriteBuffer) = ControlPacketV5ConnAckCodec.encode(writeBuffer, this)
 
-        override fun remainingLength(): Int {
-            val propsList = properties?.toList() ?: emptyList()
-            val propsSize = mqttPropertiesSize(propsList)
-            return 2 + variableByteSize(propsSize) + propsSize
-        }
+        override fun remainingLength(): Int = ControlPacketV5ConnAckCodec.wireSize(this)
     }
 
     /**
@@ -652,8 +634,11 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
             ): Publish<ReadBuffer> {
                 val header = MqttFixedHeader(makePublishHeaderByte(dup, qos, retain))
                 val pid =
-                    if (qos == QualityOfService.AT_MOST_ONCE || packetIdentifier == NO_PACKET_ID) null
-                    else packetIdentifier.toUShort()
+                    if (qos == QualityOfService.AT_MOST_ONCE || packetIdentifier == NO_PACKET_ID) {
+                        null
+                    } else {
+                        packetIdentifier.toUShort()
+                    }
                 return Publish(
                     header = header,
                     topicName = topic.toString(),
@@ -742,10 +727,9 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
         override val direction: DirectionOfFlow get() = DirectionOfFlow.BIDIRECTIONAL
         override val packetIdentifier: Int get() = packetId.toInt()
 
-        override fun encodeBody(writeBuffer: WriteBuffer) =
-            ControlPacketV5PubAckCodec.encode(writeBuffer, this)
+        override fun encodeBody(writeBuffer: WriteBuffer) = ControlPacketV5PubAckCodec.encode(writeBuffer, this)
 
-        override fun remainingLength() = ackBodySize(reasonCode, properties)
+        override fun remainingLength() = ControlPacketV5PubAckCodec.wireSize(this)
     }
 
     @PacketType(value = 5, wire = 0x50)
@@ -781,10 +765,9 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
         override val direction: DirectionOfFlow get() = DirectionOfFlow.BIDIRECTIONAL
         override val packetIdentifier: Int get() = packetId.toInt()
 
-        override fun encodeBody(writeBuffer: WriteBuffer) =
-            ControlPacketV5PubRecCodec.encode(writeBuffer, this)
+        override fun encodeBody(writeBuffer: WriteBuffer) = ControlPacketV5PubRecCodec.encode(writeBuffer, this)
 
-        override fun remainingLength() = ackBodySize(reasonCode, properties)
+        override fun remainingLength() = ControlPacketV5PubRecCodec.wireSize(this)
 
         override fun expectedResponse(
             reasonCode: ReasonCode,
@@ -827,10 +810,9 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
         override val flags: Byte get() = 0b10
         override val packetIdentifier: Int get() = packetId.toInt()
 
-        override fun encodeBody(writeBuffer: WriteBuffer) =
-            ControlPacketV5PubRelCodec.encode(writeBuffer, this)
+        override fun encodeBody(writeBuffer: WriteBuffer) = ControlPacketV5PubRelCodec.encode(writeBuffer, this)
 
-        override fun remainingLength() = ackBodySize(reasonCode, properties)
+        override fun remainingLength() = ControlPacketV5PubRelCodec.wireSize(this)
 
         override fun expectedResponse(
             reasonCode: ReasonCode,
@@ -878,10 +860,9 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
         override val direction: DirectionOfFlow get() = DirectionOfFlow.BIDIRECTIONAL
         override val packetIdentifier: Int get() = packetId.toInt()
 
-        override fun encodeBody(writeBuffer: WriteBuffer) =
-            ControlPacketV5PubCompCodec.encode(writeBuffer, this)
+        override fun encodeBody(writeBuffer: WriteBuffer) = ControlPacketV5PubCompCodec.encode(writeBuffer, this)
 
-        override fun remainingLength() = ackBodySize(reasonCode, properties)
+        override fun remainingLength() = ControlPacketV5PubCompCodec.wireSize(this)
     }
 
     @PacketType(value = 12, wire = 0xC0)
@@ -916,20 +897,22 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
             userProperty: List<Pair<String, String>> = emptyList(),
             serverReference: String? = null,
         ) : this(
-            reasonCode = collapseDisconnectReasonCode(
-                reasonCode,
-                sessionExpiryIntervalSeconds,
-                reasonString,
-                userProperty,
-                serverReference,
-            ),
-            properties = disconnectProps(
-                sessionExpiryIntervalSeconds,
-                reasonString,
-                userProperty,
-                serverReference,
-                forceEmpty = reasonCode != NORMAL_DISCONNECTION,
-            ),
+            reasonCode =
+                collapseDisconnectReasonCode(
+                    reasonCode,
+                    sessionExpiryIntervalSeconds,
+                    reasonString,
+                    userProperty,
+                    serverReference,
+                ),
+            properties =
+                disconnectProps(
+                    sessionExpiryIntervalSeconds,
+                    reasonString,
+                    userProperty,
+                    serverReference,
+                    forceEmpty = reasonCode != NORMAL_DISCONNECTION,
+                ),
         )
 
         init {
@@ -945,10 +928,9 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
         override val controlPacketValue: Byte get() = 14
         override val direction: DirectionOfFlow get() = DirectionOfFlow.BIDIRECTIONAL
 
-        override fun encodeBody(writeBuffer: WriteBuffer) =
-            ControlPacketV5DisconnectCodec.encode(writeBuffer, this)
+        override fun encodeBody(writeBuffer: WriteBuffer) = ControlPacketV5DisconnectCodec.encode(writeBuffer, this)
 
-        override fun remainingLength() = trailingOptionalsBodySize(reasonCode, properties)
+        override fun remainingLength() = ControlPacketV5DisconnectCodec.wireSize(this)
     }
 
     @PacketType(value = 15, wire = 0xF0)
@@ -962,11 +944,12 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
             reasonString: String? = null,
             userProperty: List<Pair<String, String>> = emptyList(),
         ) : this(
-            reasonCode = if (reasonCode == SUCCESS && reasonString == null && userProperty.isEmpty()) {
-                null
-            } else {
-                reasonCode.byte
-            },
+            reasonCode =
+                if (reasonCode == SUCCESS && reasonString == null && userProperty.isEmpty()) {
+                    null
+                } else {
+                    reasonCode.byte
+                },
             properties = ackProps(reasonString, userProperty, forceEmpty = reasonCode != SUCCESS),
         )
 
@@ -983,10 +966,9 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
         override val controlPacketValue: Byte get() = 15
         override val direction: DirectionOfFlow get() = DirectionOfFlow.BIDIRECTIONAL
 
-        override fun encodeBody(writeBuffer: WriteBuffer) =
-            ControlPacketV5AuthCodec.encode(writeBuffer, this)
+        override fun encodeBody(writeBuffer: WriteBuffer) = ControlPacketV5AuthCodec.encode(writeBuffer, this)
 
-        override fun remainingLength() = trailingOptionalsBodySize(reasonCode, properties)
+        override fun remainingLength() = ControlPacketV5AuthCodec.wireSize(this)
     }
 
     @PacketType(value = 8, wire = 0x82)
@@ -1066,16 +1048,11 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
 
         override fun expectedResponse(): ISubscribeAcknowledgement = SubAck(packetId, ReasonCode.SUCCESS)
 
-        override fun copyWithNewPacketIdentifier(packetIdentifier: Int): ISubscribeRequest =
-            copy(packetId = packetIdentifier.toUShort())
+        override fun copyWithNewPacketIdentifier(packetIdentifier: Int): ISubscribeRequest = copy(packetId = packetIdentifier.toUShort())
 
-        override fun encodeBody(writeBuffer: WriteBuffer) =
-            ControlPacketV5SubscribeCodec.encode(writeBuffer, this)
+        override fun encodeBody(writeBuffer: WriteBuffer) = ControlPacketV5SubscribeCodec.encode(writeBuffer, this)
 
-        override fun remainingLength(): Int =
-            UShort.SIZE_BYTES +
-                propertiesSectionSize(properties) +
-                subscriptionEntries.sumOf { 2 + it.topicFilter.length + 1 } // length-prefix + utf8 + options byte
+        override fun remainingLength(): Int = ControlPacketV5SubscribeCodec.wireSize(this)
     }
 
     @PacketType(value = 9, wire = 0x90)
@@ -1129,11 +1106,9 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
         val payload: List<ReasonCode>
             get() = reasonCodeEntries.map { decodeSubAckReasonCode(it.raw) }
 
-        override fun encodeBody(writeBuffer: WriteBuffer) =
-            ControlPacketV5SubAckCodec.encode(writeBuffer, this)
+        override fun encodeBody(writeBuffer: WriteBuffer) = ControlPacketV5SubAckCodec.encode(writeBuffer, this)
 
-        override fun remainingLength(): Int =
-            UShort.SIZE_BYTES + propertiesSectionSize(properties) + reasonCodeEntries.size
+        override fun remainingLength(): Int = ControlPacketV5SubAckCodec.wireSize(this)
     }
 
     @PacketType(value = 10, wire = 0xA2)
@@ -1178,16 +1153,11 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
         override val topics: Set<TopicFilter>
             get() = topicEntries.mapTo(linkedSetOf()) { TopicFilter.fromOrThrow(it.topicFilter) }
 
-        override fun copyWithNewPacketIdentifier(packetIdentifier: Int): IUnsubscribeRequest =
-            copy(packetId = packetIdentifier.toUShort())
+        override fun copyWithNewPacketIdentifier(packetIdentifier: Int): IUnsubscribeRequest = copy(packetId = packetIdentifier.toUShort())
 
-        override fun encodeBody(writeBuffer: WriteBuffer) =
-            ControlPacketV5UnsubscribeCodec.encode(writeBuffer, this)
+        override fun encodeBody(writeBuffer: WriteBuffer) = ControlPacketV5UnsubscribeCodec.encode(writeBuffer, this)
 
-        override fun remainingLength(): Int =
-            UShort.SIZE_BYTES +
-                propertiesSectionSize(properties) +
-                topicEntries.sumOf { 2 + it.topicFilter.length }
+        override fun remainingLength(): Int = ControlPacketV5UnsubscribeCodec.wireSize(this)
     }
 
     @PacketType(value = 11, wire = 0xB0)
@@ -1227,11 +1197,9 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
         val reasonCodes: List<ReasonCode>
             get() = reasonCodeEntries.map { decodeUnsubAckReasonCode(it.raw) }
 
-        override fun encodeBody(writeBuffer: WriteBuffer) =
-            ControlPacketV5UnsubAckCodec.encode(writeBuffer, this)
+        override fun encodeBody(writeBuffer: WriteBuffer) = ControlPacketV5UnsubAckCodec.encode(writeBuffer, this)
 
-        override fun remainingLength(): Int =
-            UShort.SIZE_BYTES + propertiesSectionSize(properties) + reasonCodeEntries.size
+        override fun remainingLength(): Int = ControlPacketV5UnsubAckCodec.wireSize(this)
     }
 }
 
@@ -1265,10 +1233,19 @@ fun ConnectionRequest(
     props: ConnectProperties = ConnectProperties(),
     willProperties: ConnectWillProperties? =
         if (will is WillConfig.Enabled) ConnectWillProperties() else null,
-): ConnectionRequest = ControlPacketV5.Connect.create(
-    clientId, keepAliveSeconds, cleanStart, userName, password, will,
-    protocolName, protocolVersion, props, willProperties,
-)
+): ConnectionRequest =
+    ControlPacketV5.Connect.create(
+        clientId,
+        keepAliveSeconds,
+        cleanStart,
+        userName,
+        password,
+        will,
+        protocolName,
+        protocolVersion,
+        props,
+        willProperties,
+    )
 typealias SubscribeRequest = ControlPacketV5.Subscribe
 typealias SubscribeAcknowledgement = ControlPacketV5.SubAck
 typealias UnsubscribeRequest = ControlPacketV5.Unsubscribe
@@ -1280,8 +1257,7 @@ typealias UnsubscribeAcknowledgment = ControlPacketV5.UnsubAck
 // fields and want them back. Returning empty/null when the bag is missing the property keeps
 // callers terse.
 
-fun Collection<MqttProperty>?.reasonStringValue(): String? =
-    this?.firstNotNullOfOrNull { (it as? ReasonString)?.value }
+fun Collection<MqttProperty>?.reasonStringValue(): String? = this?.firstNotNullOfOrNull { (it as? ReasonString)?.value }
 
 fun Collection<MqttProperty>?.userProperties(): List<Pair<String, String>> =
     this?.filterIsInstance<UserProperty>()?.map { it.key to it.value } ?: emptyList()
@@ -1330,11 +1306,12 @@ internal fun collapseDisconnectReasonCode(
     userProperty: List<Pair<String, String>>,
     serverReference: String?,
 ): UByte? {
-    val canOmit = reasonCode == NORMAL_DISCONNECTION &&
-        sessionExpiryIntervalSeconds == null &&
-        reasonString == null &&
-        userProperty.isEmpty() &&
-        serverReference == null
+    val canOmit =
+        reasonCode == NORMAL_DISCONNECTION &&
+            sessionExpiryIntervalSeconds == null &&
+            reasonString == null &&
+            userProperty.isEmpty() &&
+            serverReference == null
     return if (canOmit) null else reasonCode.byte
 }
 
@@ -1347,111 +1324,73 @@ internal fun collapseReasonCode(
     return if (canOmit) null else reasonCode.byte
 }
 
-internal fun ackBodySize(
-    reasonCode: UByte?,
-    properties: Collection<MqttProperty>?,
-): Int {
-    var size = UShort.SIZE_BYTES
-    if (reasonCode == null) return size
-    size += UByte.SIZE_BYTES
-    if (properties == null) return size
-    val propsSize = mqttPropertiesSize(properties.toList())
-    size += variableByteSize(propsSize) + propsSize
-    return size
-}
-
-internal fun trailingOptionalsBodySize(
-    reasonCode: UByte?,
-    properties: Collection<MqttProperty>?,
-): Int {
-    if (reasonCode == null) return 0
-    var size = UByte.SIZE_BYTES
-    if (properties == null) return size
-    val propsSize = mqttPropertiesSize(properties.toList())
-    size += variableByteSize(propsSize) + propsSize
-    return size
-}
-
 // Spec reason-code validation sets, by byte (the wire representation).
 
-private val pubAckValidReasonCodes: Set<UByte> = setOf(
-    SUCCESS.byte,
-    NO_MATCHING_SUBSCRIBERS.byte,
-    UNSPECIFIED_ERROR.byte,
-    IMPLEMENTATION_SPECIFIC_ERROR.byte,
-    NOT_AUTHORIZED.byte,
-    TOPIC_NAME_INVALID.byte,
-    PACKET_IDENTIFIER_IN_USE.byte,
-    QUOTA_EXCEEDED.byte,
-    PAYLOAD_FORMAT_INVALID.byte,
-)
+private val pubAckValidReasonCodes: Set<UByte> =
+    setOf(
+        SUCCESS.byte,
+        NO_MATCHING_SUBSCRIBERS.byte,
+        UNSPECIFIED_ERROR.byte,
+        IMPLEMENTATION_SPECIFIC_ERROR.byte,
+        NOT_AUTHORIZED.byte,
+        TOPIC_NAME_INVALID.byte,
+        PACKET_IDENTIFIER_IN_USE.byte,
+        QUOTA_EXCEEDED.byte,
+        PAYLOAD_FORMAT_INVALID.byte,
+    )
 
 private val pubRecValidReasonCodes: Set<UByte> = pubAckValidReasonCodes
 
-private val pubRelValidReasonCodes: Set<UByte> = setOf(
-    SUCCESS.byte,
-    PACKET_IDENTIFIER_NOT_FOUND.byte,
-    UNSPECIFIED_ERROR.byte,
-    IMPLEMENTATION_SPECIFIC_ERROR.byte,
-    NOT_AUTHORIZED.byte,
-)
+private val pubRelValidReasonCodes: Set<UByte> =
+    setOf(
+        SUCCESS.byte,
+        PACKET_IDENTIFIER_NOT_FOUND.byte,
+        UNSPECIFIED_ERROR.byte,
+        IMPLEMENTATION_SPECIFIC_ERROR.byte,
+        NOT_AUTHORIZED.byte,
+    )
 
 private val pubCompValidReasonCodes: Set<UByte> = pubRelValidReasonCodes
 
-private val disconnectValidReasonCodes: Set<UByte> = setOf(
-    NORMAL_DISCONNECTION.byte,
-    DISCONNECT_WITH_WILL_MESSAGE.byte,
-    UNSPECIFIED_ERROR.byte,
-    MALFORMED_PACKET.byte,
-    PROTOCOL_ERROR.byte,
-    IMPLEMENTATION_SPECIFIC_ERROR.byte,
-    NOT_AUTHORIZED.byte,
-    SERVER_BUSY.byte,
-    SERVER_SHUTTING_DOWN.byte,
-    KEEP_ALIVE_TIMEOUT.byte,
-    SESSION_TAKE_OVER.byte,
-    TOPIC_FILTER_INVALID.byte,
-    TOPIC_NAME_INVALID.byte,
-    RECEIVE_MAXIMUM_EXCEEDED.byte,
-    TOPIC_ALIAS_INVALID.byte,
-    PACKET_TOO_LARGE.byte,
-    MESSAGE_RATE_TOO_HIGH.byte,
-    QUOTA_EXCEEDED.byte,
-    ADMINISTRATIVE_ACTION.byte,
-    PAYLOAD_FORMAT_INVALID.byte,
-    RETAIN_NOT_SUPPORTED.byte,
-    QOS_NOT_SUPPORTED.byte,
-    USE_ANOTHER_SERVER.byte,
-    SERVER_MOVED.byte,
-    SHARED_SUBSCRIPTIONS_NOT_SUPPORTED.byte,
-    CONNECTION_RATE_EXCEEDED.byte,
-    MAXIMUM_CONNECTION_TIME.byte,
-    SUBSCRIPTION_IDENTIFIERS_NOT_SUPPORTED.byte,
-    WILDCARD_SUBSCRIPTIONS_NOT_SUPPORTED.byte,
-)
+private val disconnectValidReasonCodes: Set<UByte> =
+    setOf(
+        NORMAL_DISCONNECTION.byte,
+        DISCONNECT_WITH_WILL_MESSAGE.byte,
+        UNSPECIFIED_ERROR.byte,
+        MALFORMED_PACKET.byte,
+        PROTOCOL_ERROR.byte,
+        IMPLEMENTATION_SPECIFIC_ERROR.byte,
+        NOT_AUTHORIZED.byte,
+        SERVER_BUSY.byte,
+        SERVER_SHUTTING_DOWN.byte,
+        KEEP_ALIVE_TIMEOUT.byte,
+        SESSION_TAKE_OVER.byte,
+        TOPIC_FILTER_INVALID.byte,
+        TOPIC_NAME_INVALID.byte,
+        RECEIVE_MAXIMUM_EXCEEDED.byte,
+        TOPIC_ALIAS_INVALID.byte,
+        PACKET_TOO_LARGE.byte,
+        MESSAGE_RATE_TOO_HIGH.byte,
+        QUOTA_EXCEEDED.byte,
+        ADMINISTRATIVE_ACTION.byte,
+        PAYLOAD_FORMAT_INVALID.byte,
+        RETAIN_NOT_SUPPORTED.byte,
+        QOS_NOT_SUPPORTED.byte,
+        USE_ANOTHER_SERVER.byte,
+        SERVER_MOVED.byte,
+        SHARED_SUBSCRIPTIONS_NOT_SUPPORTED.byte,
+        CONNECTION_RATE_EXCEEDED.byte,
+        MAXIMUM_CONNECTION_TIME.byte,
+        SUBSCRIPTION_IDENTIFIERS_NOT_SUPPORTED.byte,
+        WILDCARD_SUBSCRIPTIONS_NOT_SUPPORTED.byte,
+    )
 
-private val authValidReasonCodes: Set<UByte> = setOf(
-    SUCCESS.byte,
-    CONTINUE_AUTHENTICATION.byte,
-    REAUTHENTICATE.byte,
-)
-
-// ── List-shaped (slice 3) helpers ─────────────────────────────────────────
-
-internal fun propertiesSectionSize(properties: Collection<MqttProperty>?): Int {
-    if (properties == null) {
-        // No property section on the wire — but for SUBSCRIBE/UNSUBSCRIBE/SUBACK/UNSUBACK,
-        // the property-length VBI is mandatory (§3.8.2.1, §3.10.2.1, §3.9.2.1, §3.11.2.1) —
-        // so callers must always supply at least an empty Collection, never null. The
-        // generated codec writes nothing when properties is null, which violates the spec.
-        // The convenience constructors here force at least empty via `ackProps(...)` which
-        // returns null only when the user explicitly passes none. To stay spec-correct,
-        // size the section as VBI(0) = 1 byte even when null.
-        return 1
-    }
-    val propsSize = mqttPropertiesSize(properties.toList())
-    return variableByteSize(propsSize) + propsSize
-}
+private val authValidReasonCodes: Set<UByte> =
+    setOf(
+        SUCCESS.byte,
+        CONTINUE_AUTHENTICATION.byte,
+        REAUTHENTICATE.byte,
+    )
 
 internal fun toSubscriptionEntry(sub: ISubscription): SubscriptionV5Entry {
     val qos = sub.maximumQos.integerValue.toInt()
@@ -1467,12 +1406,13 @@ internal fun fromSubscriptionEntry(entry: SubscriptionV5Entry): Subscription {
         "Subscription Options reserved bits 6-7 must be 0"
     }
     val rh = (opts shr 4) and 0x3
-    val retainHandling = when (rh) {
-        0 -> SEND_RETAINED_MESSAGES_AT_TIME_OF_SUBSCRIBE
-        1 -> SEND_RETAINED_MESSAGES_AT_SUBSCRIBE_ONLY_IF_SUBSCRIBE_DOESNT_EXISTS
-        2 -> DO_NOT_SEND_RETAINED_MESSAGES
-        else -> throw ProtocolError("Retain Handling Value cannot be set to 3")
-    }
+    val retainHandling =
+        when (rh) {
+            0 -> SEND_RETAINED_MESSAGES_AT_TIME_OF_SUBSCRIBE
+            1 -> SEND_RETAINED_MESSAGES_AT_SUBSCRIBE_ONLY_IF_SUBSCRIBE_DOESNT_EXISTS
+            2 -> DO_NOT_SEND_RETAINED_MESSAGES
+            else -> throw ProtocolError("Retain Handling Value cannot be set to 3")
+        }
     val rap = (opts shr 3) and 0x1 == 1
     val nl = (opts shr 2) and 0x1 == 1
     val qos = QualityOfService.fromBooleans((opts shr 1) and 0x1 == 1, opts and 0x1 == 1)
@@ -1508,30 +1448,32 @@ internal fun decodeUnsubAckReasonCode(byte: UByte): ReasonCode =
         else -> throw com.ditchoom.mqtt.MalformedPacketException("Invalid UNSUBACK reason code $byte")
     }
 
-private val subAckValidReasonCodes: Set<UByte> = setOf(
-    ReasonCode.GRANTED_QOS_0.byte, // shares 0x00 with SUCCESS
-    ReasonCode.GRANTED_QOS_1.byte,
-    ReasonCode.GRANTED_QOS_2.byte,
-    UNSPECIFIED_ERROR.byte,
-    IMPLEMENTATION_SPECIFIC_ERROR.byte,
-    NOT_AUTHORIZED.byte,
-    TOPIC_FILTER_INVALID.byte,
-    PACKET_IDENTIFIER_IN_USE.byte,
-    QUOTA_EXCEEDED.byte,
-    SHARED_SUBSCRIPTIONS_NOT_SUPPORTED.byte,
-    SUBSCRIPTION_IDENTIFIERS_NOT_SUPPORTED.byte,
-    WILDCARD_SUBSCRIPTIONS_NOT_SUPPORTED.byte,
-)
+private val subAckValidReasonCodes: Set<UByte> =
+    setOf(
+        ReasonCode.GRANTED_QOS_0.byte, // shares 0x00 with SUCCESS
+        ReasonCode.GRANTED_QOS_1.byte,
+        ReasonCode.GRANTED_QOS_2.byte,
+        UNSPECIFIED_ERROR.byte,
+        IMPLEMENTATION_SPECIFIC_ERROR.byte,
+        NOT_AUTHORIZED.byte,
+        TOPIC_FILTER_INVALID.byte,
+        PACKET_IDENTIFIER_IN_USE.byte,
+        QUOTA_EXCEEDED.byte,
+        SHARED_SUBSCRIPTIONS_NOT_SUPPORTED.byte,
+        SUBSCRIPTION_IDENTIFIERS_NOT_SUPPORTED.byte,
+        WILDCARD_SUBSCRIPTIONS_NOT_SUPPORTED.byte,
+    )
 
-private val unsubAckValidReasonCodes: Set<UByte> = setOf(
-    SUCCESS.byte,
-    ReasonCode.NO_SUBSCRIPTIONS_EXISTED.byte,
-    UNSPECIFIED_ERROR.byte,
-    IMPLEMENTATION_SPECIFIC_ERROR.byte,
-    NOT_AUTHORIZED.byte,
-    TOPIC_FILTER_INVALID.byte,
-    PACKET_IDENTIFIER_IN_USE.byte,
-)
+private val unsubAckValidReasonCodes: Set<UByte> =
+    setOf(
+        SUCCESS.byte,
+        ReasonCode.NO_SUBSCRIPTIONS_EXISTED.byte,
+        UNSPECIFIED_ERROR.byte,
+        IMPLEMENTATION_SPECIFIC_ERROR.byte,
+        NOT_AUTHORIZED.byte,
+        TOPIC_FILTER_INVALID.byte,
+        PACKET_IDENTIFIER_IN_USE.byte,
+    )
 
 /**
  * Encode context for the two MQTT v5 binary-data property variants — the codec dispatcher

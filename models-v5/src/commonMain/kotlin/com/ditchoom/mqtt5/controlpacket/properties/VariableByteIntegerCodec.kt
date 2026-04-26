@@ -6,11 +6,10 @@ import com.ditchoom.buffer.codec.Codec
 import com.ditchoom.buffer.codec.DecodeContext
 import com.ditchoom.buffer.codec.EncodeContext
 import com.ditchoom.buffer.readVariableByteInteger
+import com.ditchoom.buffer.variableByteSizeInt
 import com.ditchoom.buffer.writeVariableByteInteger
 
 object VariableByteIntegerCodec : Codec<Int> {
-    override val wireSizeHint: Int get() = 1
-
     override fun encode(
         buffer: WriteBuffer,
         value: Int,
@@ -23,4 +22,6 @@ object VariableByteIntegerCodec : Codec<Int> {
         buffer: ReadBuffer,
         context: DecodeContext,
     ): Int = buffer.readVariableByteInteger()
+
+    override fun wireSize(value: Int): Int = variableByteSizeInt(value)
 }

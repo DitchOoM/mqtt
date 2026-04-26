@@ -4,9 +4,6 @@ import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
-import com.ditchoom.buffer.codec.Encoder
-import com.ditchoom.buffer.codec.encodeToBuffer
-import com.ditchoom.buffer.utf8Length
 import com.ditchoom.mqtt.MalformedPacketException
 import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.NO_PACKET_ID
@@ -45,28 +42,31 @@ class PublishMessageV4 internal constructor(
 
     override fun rawPayload(): ReadBuffer = payload
 
-    private fun topicEncodedSize(): Int = UShort.SIZE_BYTES + topic.toString().utf8Length()
-
-    override fun remainingLength(): Int {
-        var size = topicEncodedSize()
-        if (packetIdentifier in validControlPacketIdentifierRange) size += UShort.SIZE_BYTES
-        size += payload.remaining()
-        return size
-    }
+    override fun remainingLength(): Int =
+        if (qualityOfService == AT_MOST_ONCE) {
+            PublishBodyV4Qos0Codec.wireSize(qos0WireBody()) { v -> v.remaining() }
+        } else {
+            PublishBodyV4QosNonZeroCodec.wireSize(qosNonZeroWireBody()) { v -> v.remaining() }
+        }
 
     override fun encodeBody(writeBuffer: WriteBuffer) {
         if (qualityOfService == AT_MOST_ONCE) {
             PublishBodyV4Qos0Codec.encode(
                 writeBuffer,
-                PublishBodyV4Qos0(topic.toString(), payload),
+                qos0WireBody(),
             ) { buf, v -> buf.write(v) }
         } else {
             PublishBodyV4QosNonZeroCodec.encode(
                 writeBuffer,
-                PublishBodyV4QosNonZero(topic.toString(), packetIdentifier.toUShort(), payload),
+                qosNonZeroWireBody(),
             ) { buf, v -> buf.write(v) }
         }
     }
+
+    private fun qos0WireBody(): PublishBodyV4Qos0<ReadBuffer> = PublishBodyV4Qos0(topic.toString(), payload)
+
+    private fun qosNonZeroWireBody(): PublishBodyV4QosNonZero<ReadBuffer> =
+        PublishBodyV4QosNonZero(topic.toString(), packetIdentifier.toUShort(), payload)
 
     override fun expectedResponse(
         reasonCode: ReasonCode,
@@ -225,18 +225,7 @@ class PublishMessageV4 internal constructor(
         private fun <P> eagerEncode(
             value: P,
             encodePayload: WriteBuffer.(P) -> Unit,
-        ): ReadBuffer {
-            val encoder =
-                object : Encoder<P> {
-                    override fun encode(
-                        buffer: WriteBuffer,
-                        value: P,
-                    ) {
-                        buffer.encodePayload(value)
-                    }
-                }
-            return encoder.encodeToBuffer(value)
-        }
+        ): ReadBuffer = com.ditchoom.buffer.codec.encodeWithGrowth { it.encodePayload(value) }
 
         private fun readFullPayload(slice: ReadBuffer): ReadBuffer = slice
     }

@@ -3,7 +3,6 @@ package com.ditchoom.mqtt5.controlpacket
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
 import com.ditchoom.buffer.codec.EncodeContext
-import com.ditchoom.buffer.codec.Encoder
 import com.ditchoom.buffer.codec.annotations.DispatchOn
 import com.ditchoom.buffer.codec.annotations.LengthPrefix
 import com.ditchoom.buffer.codec.annotations.LengthPrefixed
@@ -13,7 +12,6 @@ import com.ditchoom.buffer.codec.annotations.ProtocolMessage
 import com.ditchoom.buffer.codec.annotations.RemainingBytes
 import com.ditchoom.buffer.codec.annotations.WhenRemaining
 import com.ditchoom.buffer.codec.annotations.WhenTrue
-import com.ditchoom.buffer.codec.encodeToBuffer
 import com.ditchoom.buffer.utf8Length
 import com.ditchoom.buffer.writeLengthPrefixedUtf8String
 import com.ditchoom.buffer.writeVariableByteIntegerLengthPrefixed
@@ -667,18 +665,7 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
             private fun <P> eagerEncode(
                 value: P,
                 encodePayload: WriteBuffer.(P) -> Unit,
-            ): ReadBuffer {
-                val encoder =
-                    object : Encoder<P> {
-                        override fun encode(
-                            buffer: WriteBuffer,
-                            value: P,
-                        ) {
-                            buffer.encodePayload(value)
-                        }
-                    }
-                return encoder.encodeToBuffer(value)
-            }
+            ): ReadBuffer = com.ditchoom.buffer.codec.encodeWithGrowth { it.encodePayload(value) }
 
             private fun makePublishHeaderByte(
                 dup: Boolean,

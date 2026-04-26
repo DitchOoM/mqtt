@@ -41,7 +41,7 @@ data class SubscribeAcknowledgement(
     override val controlPacketValue: Byte get() = ISubscribeAcknowledgement.CONTROL_PACKET_VALUE
     override val direction: DirectionOfFlow get() = DirectionOfFlow.SERVER_TO_CLIENT
 
-    override fun remainingLength() = UShort.SIZE_BYTES + returnCodes.size
+    override fun remainingLength() = SubscribeAcknowledgementCodec.wireSize(this)
 
     /**
      * Convenience constructor from domain-level [ReasonCode] list.

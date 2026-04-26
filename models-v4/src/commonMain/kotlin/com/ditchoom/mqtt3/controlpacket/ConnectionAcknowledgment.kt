@@ -43,17 +43,15 @@ data class ConnectionAcknowledgment(
     override val isSuccessful: Boolean = header.connectReason == CONNECTION_ACCEPTED
     override val connectionReason: String = header.connectReason.name
 
-    override fun encodeBody(writeBuffer: WriteBuffer) {
-        ConnAckBodyCodec.encode(
-            writeBuffer,
-            ConnAckBody(
-                (if (header.sessionPresent) 1u else 0u).toUByte(),
-                header.connectReason.value,
-            ),
-        )
-    }
+    override fun encodeBody(writeBuffer: WriteBuffer) = ConnAckBodyCodec.encode(writeBuffer, toWireBody())
 
-    override fun remainingLength() = 2
+    override fun remainingLength() = ConnAckBodyCodec.wireSize(toWireBody())
+
+    private fun toWireBody(): ConnAckBody =
+        ConnAckBody(
+            (if (header.sessionPresent) 1u else 0u).toUByte(),
+            header.connectReason.value,
+        )
 
     data class VariableHeader(
         val sessionPresent: Boolean = false,

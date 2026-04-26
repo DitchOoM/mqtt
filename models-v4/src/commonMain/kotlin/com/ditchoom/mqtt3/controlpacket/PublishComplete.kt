@@ -24,7 +24,7 @@ value class PublishComplete(
 
     override fun encodeBody(writeBuffer: WriteBuffer) = PublishCompleteCodec.encode(writeBuffer, this)
 
-    override fun remainingLength() = UShort.SIZE_BYTES
+    override fun remainingLength() = PublishCompleteCodec.wireSize(this)
 
     companion object {
         fun from(buffer: ReadBuffer) = PublishCompleteCodec.decode(buffer)

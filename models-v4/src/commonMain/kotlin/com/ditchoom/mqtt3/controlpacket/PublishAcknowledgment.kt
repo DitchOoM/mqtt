@@ -24,7 +24,7 @@ value class PublishAcknowledgment(
 
     override fun encodeBody(writeBuffer: WriteBuffer) = PublishAcknowledgmentCodec.encode(writeBuffer, this)
 
-    override fun remainingLength() = UShort.SIZE_BYTES
+    override fun remainingLength() = PublishAcknowledgmentCodec.wireSize(this)
 
     companion object {
         fun from(buffer: ReadBuffer) = PublishAcknowledgmentCodec.decode(buffer)

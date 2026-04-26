@@ -6,7 +6,6 @@ import com.ditchoom.buffer.codec.annotations.LengthPrefixed
 import com.ditchoom.buffer.codec.annotations.Payload
 import com.ditchoom.buffer.codec.annotations.ProtocolMessage
 import com.ditchoom.buffer.codec.annotations.WhenTrue
-import com.ditchoom.buffer.utf8Length
 import com.ditchoom.mqtt.MalformedPacketException
 import com.ditchoom.mqtt.MqttWarning
 import com.ditchoom.mqtt.controlpacket.IConnectionRequest
@@ -111,7 +110,12 @@ data class ConnectionRequest(
             WillConfig.Disabled
         }
 
-    override fun encodeBody(writeBuffer: WriteBuffer) {
+    override fun encodeBody(writeBuffer: WriteBuffer) =
+        ConnectV4BodyCodec.encode(writeBuffer, toWireBody()) { buf, wp -> buf.write(wp) }
+
+    override fun remainingLength() = ConnectV4BodyCodec.wireSize(toWireBody()) { wp -> wp.remaining() }
+
+    private fun toWireBody(): ConnectV4Body<ReadBuffer> {
         val vh = variableHeader
         val usernameFlag = if (vh.hasUserName) 0b10000000 else 0
         val passwordFlag = if (vh.hasPassword) 0b1000000 else 0
@@ -123,23 +127,18 @@ data class ConnectionRequest(
         val wFlag = if (vh.willFlag) 0b100 else 0
         val cleanStart = if (vh.cleanSession) 0b10 else 0
         val flags = ConnectV4Flags((usernameFlag or passwordFlag or wRetain or qos or wFlag or cleanStart).toUByte())
-        ConnectV4BodyCodec.encode(
-            writeBuffer,
-            ConnectV4Body<ReadBuffer>(
-                vh.protocolName,
-                vh.protocolLevel,
-                flags,
-                vh.keepAliveSeconds.toUShort(),
-                payload.clientId,
-                payload.willTopic?.toString(),
-                payload.willPayload,
-                payload.userName,
-                payload.password,
-            ),
-        ) { buf, wp -> buf.write(wp) }
+        return ConnectV4Body(
+            vh.protocolName,
+            vh.protocolLevel,
+            flags,
+            vh.keepAliveSeconds.toUShort(),
+            payload.clientId,
+            payload.willTopic?.toString(),
+            payload.willPayload,
+            payload.userName,
+            payload.password,
+        )
     }
-
-    override fun remainingLength() = variableHeader.size() + payload.size()
 
     override val keepAliveTimeoutSeconds: UShort = variableHeader.keepAliveSeconds.toUShort()
 
@@ -427,7 +426,6 @@ data class ConnectionRequest(
             return null
         }
 
-        fun size() = protocolName.utf8Length() + 6
     }
 
     /**
@@ -512,24 +510,7 @@ data class ConnectionRequest(
          * used by the binary data (it does not include the two bytes taken up by the length field itself).
          */
         val password: String? = null,
-    ) {
-        fun size(): Int {
-            var size = 2 + clientId.utf8Length()
-            if (willTopic != null) {
-                size += 2 + willTopic.toString().utf8Length()
-            }
-            if (willPayload != null) {
-                size += UShort.SIZE_BYTES + willPayload.remaining()
-            }
-            if (userName != null) {
-                size += 2 + userName.utf8Length()
-            }
-            if (password != null) {
-                size += 2 + password.utf8Length()
-            }
-            return size
-        }
-    }
+    )
 
     companion object {
         fun from(buffer: ReadBuffer): ConnectionRequest {

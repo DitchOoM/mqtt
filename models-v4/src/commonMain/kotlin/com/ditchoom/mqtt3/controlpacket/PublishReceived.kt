@@ -25,7 +25,7 @@ value class PublishReceived(
 
     override fun encodeBody(writeBuffer: WriteBuffer) = PublishReceivedCodec.encode(writeBuffer, this)
 
-    override fun remainingLength() = UShort.SIZE_BYTES
+    override fun remainingLength() = PublishReceivedCodec.wireSize(this)
 
     override fun expectedResponse(
         reasonCode: ReasonCode,

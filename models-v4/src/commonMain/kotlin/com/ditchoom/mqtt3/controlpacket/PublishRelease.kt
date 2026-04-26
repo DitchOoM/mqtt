@@ -26,7 +26,7 @@ value class PublishRelease(
 
     override fun encodeBody(writeBuffer: WriteBuffer) = PublishReleaseCodec.encode(writeBuffer, this)
 
-    override fun remainingLength() = UShort.SIZE_BYTES
+    override fun remainingLength() = PublishReleaseCodec.wireSize(this)
 
     override fun expectedResponse(
         reasonCode: ReasonCode,

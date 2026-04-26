@@ -19,7 +19,7 @@ value class UnsubscribeAcknowledgment(
 
     override fun encodeBody(writeBuffer: WriteBuffer) = UnsubscribeAcknowledgmentCodec.encode(writeBuffer, this)
 
-    override fun remainingLength() = UShort.SIZE_BYTES
+    override fun remainingLength() = UnsubscribeAcknowledgmentCodec.wireSize(this)
 
     companion object {
         fun from(buffer: ReadBuffer) = UnsubscribeAcknowledgmentCodec.decode(buffer)

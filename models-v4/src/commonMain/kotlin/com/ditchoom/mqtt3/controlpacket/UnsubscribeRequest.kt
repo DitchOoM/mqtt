@@ -5,7 +5,6 @@ import com.ditchoom.buffer.WriteBuffer
 import com.ditchoom.buffer.codec.annotations.LengthPrefixed
 import com.ditchoom.buffer.codec.annotations.ProtocolMessage
 import com.ditchoom.buffer.codec.annotations.RemainingBytes
-import com.ditchoom.buffer.utf8Length
 import com.ditchoom.mqtt.ProtocolError
 import com.ditchoom.mqtt.controlpacket.IUnsubscribeRequest
 import com.ditchoom.mqtt.controlpacket.TopicFilter
@@ -47,7 +46,7 @@ data class UnsubscribeRequest(
         }
     }
 
-    override fun remainingLength() = UShort.SIZE_BYTES + topicEntries.sumOf { it.filter.utf8Length() + UShort.SIZE_BYTES }
+    override fun remainingLength() = UnsubscribeRequestCodec.wireSize(this)
 
     override fun encodeBody(writeBuffer: WriteBuffer) = UnsubscribeRequestCodec.encode(writeBuffer, this)
 

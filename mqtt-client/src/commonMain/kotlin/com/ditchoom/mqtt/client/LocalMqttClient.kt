@@ -2,8 +2,6 @@ package com.ditchoom.mqtt.client
 
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
-import com.ditchoom.buffer.codec.Encoder
-import com.ditchoom.buffer.codec.encodeToBuffer
 import com.ditchoom.buffer.flow.Connection
 import com.ditchoom.buffer.freeIfNeeded
 import com.ditchoom.mqtt.Persistence
@@ -233,18 +231,7 @@ class LocalMqttClient(
     private fun <P> eagerEncode(
         value: P,
         encodePayload: WriteBuffer.(P) -> Unit,
-    ): ReadBuffer {
-        val encoder =
-            object : Encoder<P> {
-                override fun encode(
-                    buffer: WriteBuffer,
-                    value: P,
-                ) {
-                    buffer.encodePayload(value)
-                }
-            }
-        return encoder.encodeToBuffer(value)
-    }
+    ): ReadBuffer = com.ditchoom.buffer.codec.encodeWithGrowth { it.encodePayload(value) }
 
     override suspend fun pendingPublishes(): List<PublishResult> {
         val results = mutableListOf<PublishResult>()

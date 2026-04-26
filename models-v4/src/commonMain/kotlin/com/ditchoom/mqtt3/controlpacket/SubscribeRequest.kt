@@ -5,7 +5,6 @@ import com.ditchoom.buffer.WriteBuffer
 import com.ditchoom.buffer.codec.annotations.LengthPrefixed
 import com.ditchoom.buffer.codec.annotations.ProtocolMessage
 import com.ditchoom.buffer.codec.annotations.RemainingBytes
-import com.ditchoom.buffer.utf8Length
 import com.ditchoom.mqtt.ProtocolError
 import com.ditchoom.mqtt.controlpacket.ISubscribeRequest
 import com.ditchoom.mqtt.controlpacket.ISubscription
@@ -93,7 +92,7 @@ data class SubscribeRequest(
 
     override fun encodeBody(writeBuffer: WriteBuffer) = SubscribeRequestCodec.encode(writeBuffer, this)
 
-    override fun remainingLength() = UShort.SIZE_BYTES + entries.sumOf { it.filter.utf8Length() + UShort.SIZE_BYTES + Byte.SIZE_BYTES }
+    override fun remainingLength() = SubscribeRequestCodec.wireSize(this)
 
     override fun expectedResponse(): SubscribeAcknowledgement {
         val returnCodes =

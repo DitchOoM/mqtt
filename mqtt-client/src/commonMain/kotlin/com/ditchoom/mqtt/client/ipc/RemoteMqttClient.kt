@@ -3,8 +3,6 @@ package com.ditchoom.mqtt.client.ipc
 import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
-import com.ditchoom.buffer.codec.Encoder
-import com.ditchoom.buffer.codec.encodeToBuffer
 import com.ditchoom.buffer.freeIfNeeded
 import com.ditchoom.mqtt.Persistence
 import com.ditchoom.mqtt.client.ConnectionState
@@ -185,18 +183,7 @@ abstract class RemoteMqttClient(
     private fun <P> eagerEncode(
         value: P,
         encodePayload: WriteBuffer.(P) -> Unit,
-    ): ReadBuffer {
-        val encoder =
-            object : Encoder<P> {
-                override fun encode(
-                    buffer: WriteBuffer,
-                    value: P,
-                ) {
-                    buffer.encodePayload(value)
-                }
-            }
-        return encoder.encodeToBuffer(value)
-    }
+    ): ReadBuffer = com.ditchoom.buffer.codec.encodeWithGrowth { it.encodePayload(value) }
 
     override suspend fun unsubscribe(unsub: IUnsubscribeRequest): UnsubscribeOperation {
         val packetId = persistence.writeUnsubGetPacketId(broker, unsub)

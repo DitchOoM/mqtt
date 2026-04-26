@@ -550,8 +550,8 @@ class PropertyRoundTripTests {
         val decoded =
             MqttPropertyCodec.decode<ReadBuffer, ReadBuffer>(
                 buffer,
-                decodeAuthenticationDataData = { reader -> reader.copyToBuffer() },
-                decodeCorrelationDataData = { reader -> reader.copyToBuffer() },
+                decodeAuthenticationDataData = { slice -> slice },
+                decodeCorrelationDataData = { slice -> slice },
             )
         return Pair(rawBytes, decoded)
     }

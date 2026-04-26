@@ -81,8 +81,8 @@ sealed interface ControlPacketV5 : ControlPacket {
             // it migrates).
             val ctx = DecodeContext.Empty.with(V5PacketCodec.DiscriminatorKey, MqttFixedHeader(byte1))
             return when (packetValue) {
-                1 -> V5PacketConnectCodec.decode<com.ditchoom.buffer.ReadBuffer?>(buffer) { pr ->
-                    if (pr.remaining() > 0) pr.copyToBuffer() else null
+                1 -> V5PacketConnectCodec.decode<com.ditchoom.buffer.ReadBuffer?>(buffer) { slice ->
+                    if (slice.remaining() > 0) slice else null
                 }
                 2 -> V5PacketConnAckCodec.decode(buffer, ctx)
                 4 -> V5PacketPubAckCodec.decode(buffer, ctx)

@@ -23,8 +23,8 @@ import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.writeVariableByte
  * everything else is handled by the generated codec.
  */
 fun <AD, CD> ReadBuffer.decodeMqttProperties(
-    decodeAuthenticationData: AuthenticationDataContext.(com.ditchoom.buffer.codec.payload.PayloadReader) -> AD,
-    decodeCorrelationData: CorrelationDataContext.(com.ditchoom.buffer.codec.payload.PayloadReader) -> CD,
+    decodeAuthenticationData: AuthenticationDataContext.(ReadBuffer) -> AD,
+    decodeCorrelationData: CorrelationDataContext.(ReadBuffer) -> CD,
 ): List<MqttProperty> {
     val propertyLength = readVariableByteInteger()
     if (propertyLength < 1) return emptyList()

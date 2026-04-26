@@ -9,7 +9,7 @@ import com.ditchoom.buffer.codec.annotations.RemainingBytes
  * MQTT 3.1.1 PUBLISH body (post fixed-header byte1 + VBI remaining-length) for QoS 0.
  * No packet identifier field per [MQTT-2.3.1-5].
  *
- * Codec delivers [payload] via a caller-supplied `(PayloadReader) -> P` lambda on decode
+ * Codec delivers [payload] via a caller-supplied `(ReadBuffer) -> P` lambda on decode
  * and a `(WriteBuffer, P) -> Unit` lambda on encode.
  */
 @ProtocolMessage

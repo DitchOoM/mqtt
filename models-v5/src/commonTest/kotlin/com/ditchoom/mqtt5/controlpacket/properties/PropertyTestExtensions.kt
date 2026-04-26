@@ -9,15 +9,15 @@ import com.ditchoom.buffer.WriteBuffer
  * the generated codec dispatcher (with an EncodeContext/DecodeContext supplied by
  * the surrounding control packet).
  *
- * Binary-data variants (CorrelationData / AuthenticationData) materialize their
- * `data` field as a copied `ReadBuffer` slice, matching the wire-payload semantics
- * the generated codec uses when no caller-supplied lambda overrides the default.
+ * Binary-data variants (CorrelationData / AuthenticationData) take the `ReadBuffer`
+ * slice handed to them by the codec — identity passthrough; no allocation. The slice
+ * remains readable for as long as the source buffer is alive.
  */
 fun ReadBuffer.readProperties(): Collection<MqttProperty>? {
     val result =
         decodeMqttProperties<ReadBuffer, ReadBuffer>(
-            decodeAuthenticationData = { reader -> reader.copyToBuffer() },
-            decodeCorrelationData = { reader -> reader.copyToBuffer() },
+            decodeAuthenticationData = { slice -> slice },
+            decodeCorrelationData = { slice -> slice },
         )
     return result.ifEmpty { null }
 }

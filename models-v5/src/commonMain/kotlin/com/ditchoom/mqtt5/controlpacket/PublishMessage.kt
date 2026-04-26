@@ -6,7 +6,6 @@ import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
 import com.ditchoom.buffer.codec.DecodeContext
 import com.ditchoom.buffer.codec.EncodeContext
-import com.ditchoom.buffer.codec.payload.PayloadReader
 import com.ditchoom.buffer.utf8Length
 import com.ditchoom.mqtt.MalformedPacketException
 import com.ditchoom.mqtt.ProtocolError
@@ -376,7 +375,7 @@ class PublishMessageV5<P> internal constructor(
             properties: Properties = Properties(),
         ): PublishMessageV5<P> = PublishMessageV5(topic, qos, dup, retain, packetIdentifier, properties, payload, codec)
 
-        private fun readFullPayload(pr: PayloadReader): ReadBuffer = pr.copyToBuffer()
+        private fun readFullPayload(slice: ReadBuffer): ReadBuffer = slice
     }
 }
 
@@ -401,10 +400,11 @@ private fun publishPropertyEncodeContext(): EncodeContext =
         }
 
 /**
- * Default decode context — payload `data` is materialized as a `ReadBuffer` slice via
- * `PayloadReader.copyToBuffer()`. Mirrors the legacy `MqttPropertyCodecExt.readProperties`.
+ * Default decode context — payload `data` is the `ReadBuffer` slice handed to the lambda
+ * by the codec. Identity passthrough; no allocation. Slice lifetime is the codec's decode
+ * scope; callers retaining the data past that scope must copy explicitly.
  */
 private fun publishPropertyDecodeContext(): DecodeContext =
     DecodeContext.Empty
-        .with(CorrelationDataCodec.DataDecodeKey) { reader -> reader.copyToBuffer() }
-        .with(AuthenticationDataCodec.DataDecodeKey) { reader -> reader.copyToBuffer() }
+        .with(CorrelationDataCodec.DataDecodeKey) { slice -> slice }
+        .with(AuthenticationDataCodec.DataDecodeKey) { slice -> slice }

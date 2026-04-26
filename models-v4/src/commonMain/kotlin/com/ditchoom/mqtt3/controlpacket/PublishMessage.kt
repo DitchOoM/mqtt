@@ -4,7 +4,6 @@ import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
-import com.ditchoom.buffer.codec.payload.PayloadReader
 import com.ditchoom.buffer.utf8Length
 import com.ditchoom.mqtt.MalformedPacketException
 import com.ditchoom.mqtt.codec.IdentityBufferCodec
@@ -231,11 +230,7 @@ class PublishMessageV4<P> internal constructor(
             packetIdentifier: Int = NO_PACKET_ID,
         ): PublishMessageV4<P> = PublishMessageV4(topic, qos, dup, retain, packetIdentifier, payload, codec)
 
-        private fun readFullPayload(pr: PayloadReader): ReadBuffer {
-            // PayloadReader is a scoped view; materialize into a caller-owned ReadBuffer so the
-            // resulting message remains usable after the codec releases the reader.
-            return pr.copyToBuffer()
-        }
+        private fun readFullPayload(slice: ReadBuffer): ReadBuffer = slice
     }
 
     data class FixedHeader(

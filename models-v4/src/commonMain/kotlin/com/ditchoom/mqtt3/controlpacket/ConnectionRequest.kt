@@ -534,9 +534,7 @@ data class ConnectionRequest(
     companion object {
         fun from(buffer: ReadBuffer): ConnectionRequest {
             val wire =
-                ConnectV4BodyCodec.decode<ReadBuffer>(buffer) { pr ->
-                    pr.copyToBuffer()
-                }
+                ConnectV4BodyCodec.decode<ReadBuffer>(buffer) { slice -> slice }
             val flags = wire.connectFlags
             if (flags.reserved) {
                 throw MalformedPacketException(

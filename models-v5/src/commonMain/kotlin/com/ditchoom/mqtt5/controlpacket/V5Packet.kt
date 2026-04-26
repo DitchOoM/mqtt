@@ -22,6 +22,8 @@ import com.ditchoom.mqtt.controlpacket.IDisconnectNotification
 import com.ditchoom.mqtt.controlpacket.IPingRequest
 import com.ditchoom.mqtt.controlpacket.IPingResponse
 import com.ditchoom.mqtt.controlpacket.IPublishAcknowledgment
+import com.ditchoom.mqtt.controlpacket.NO_PACKET_ID
+import com.ditchoom.mqtt.controlpacket.PublishMessage
 import com.ditchoom.mqtt.controlpacket.IPublishComplete
 import com.ditchoom.mqtt.controlpacket.IPublishReceived
 import com.ditchoom.mqtt.controlpacket.IPublishRelease
@@ -403,6 +405,156 @@ sealed interface V5Packet : ControlPacketV5 {
             val propsList = properties?.toList() ?: emptyList()
             val propsSize = mqttPropertiesSize(propsList)
             return 2 + variableByteSize(propsSize) + propsSize
+        }
+    }
+
+    /**
+     * MQTT 5.0 PUBLISH (§3.3). Wire-shape data class; typed accessors on the [PublishMessage]
+     * interface delegate to fields decoded from the fixed-header byte (`header.publishDup`,
+     * `.publishQos`, `.publishRetain`, `.publishHasPacketIdentifier`).
+     *
+     * The `<@Payload P>` type parameter enables zero-copy slice forwarding on decode and
+     * caller-supplied encoding on encode. Production callers use `Publish<ReadBuffer>`;
+     * higher-level helpers eagerly encode typed payloads to a `ReadBuffer` at the API
+     * boundary so the wire-encoding side is monomorphic.
+     */
+    @PacketType(value = 3)
+    @ProtocolMessage
+    data class Publish<@Payload P>(
+        val header: MqttFixedHeader,
+        @LengthPrefixed val topicName: String,
+        @WhenTrue("header.publishHasPacketIdentifier") val packetId: UShort? = null,
+        @LengthPrefixed(LengthPrefix.Varint, maxBytes = 4) val properties: List<MqttProperty> = emptyList(),
+        @RemainingBytes val payload: P,
+    ) : V5Packet,
+        PublishMessage {
+        init {
+            // §3.3.1-2: Reserved QoS = 3 is malformed.
+            if (header.publishQos == 3) {
+                throw MalformedPacketException(
+                    "[MQTT-3.3.1-4] PUBLISH MUST NOT have both QoS bits set to 1.",
+                )
+            }
+        }
+
+        override val controlPacketValue: Byte get() = 3
+        override val direction: DirectionOfFlow get() = DirectionOfFlow.BIDIRECTIONAL
+        override val flags: Byte get() = (header.raw.toInt() and 0x0F).toByte()
+
+        // ── PublishMessage typed accessors (derived from `header`) ──
+        override val topic: TopicName get() = TopicName.fromOrThrow(topicName)
+        override val qualityOfService: QualityOfService
+            get() =
+                QualityOfService.fromBooleans(
+                    bit2 = header.publishQos and 0b10 == 0b10,
+                    bit1 = header.publishQos and 0b01 == 0b01,
+                )
+        override val dup: Boolean get() = header.publishDup
+        override val retain: Boolean get() = header.publishRetain
+        override val packetIdentifier: Int get() = packetId?.toInt() ?: NO_PACKET_ID
+
+        /** Typed view of the variable-header properties (§3.3.2.3). */
+        val typedProperties: PublishProperties get() = PublishProperties.from(properties)
+
+        override fun encodeBody(writeBuffer: WriteBuffer) {
+            // V5PacketPublishCodec.encode is generic; production always uses ReadBuffer payloads.
+            @Suppress("UNCHECKED_CAST")
+            V5PacketPublishCodec.encode(writeBuffer, this as Publish<ReadBuffer>) { buf, p ->
+                buf.write(p)
+            }
+        }
+
+        override fun remainingLength(): Int {
+            var size = UShort.SIZE_BYTES + topicName.utf8Length()
+            if (header.publishHasPacketIdentifier) size += UShort.SIZE_BYTES
+            val propsSize = mqttPropertiesSize(properties)
+            size += variableByteSize(propsSize) + propsSize
+            size += (payload as? ReadBuffer)?.remaining() ?: 0
+            return size
+        }
+
+        override fun expectedResponse(
+            reasonCode: ReasonCode,
+            reasonString: String?,
+            userProperty: List<Pair<String, String>>,
+        ): com.ditchoom.mqtt.controlpacket.ControlPacket? =
+            when (qualityOfService) {
+                QualityOfService.AT_LEAST_ONCE ->
+                    PubAck(packetIdentifier, reasonCode, reasonString, userProperty)
+                QualityOfService.EXACTLY_ONCE ->
+                    PubRec(packetIdentifier, reasonCode, reasonString, userProperty)
+                else -> null
+            }
+
+        override fun setDupFlagNewPubMessage(): PublishMessage {
+            val rawByte = header.raw.toInt()
+            return if (qualityOfService == QualityOfService.AT_MOST_ONCE && dup) {
+                copy(header = MqttFixedHeader((rawByte and 0xF7).toUByte())) // clear DUP
+            } else if (qualityOfService != QualityOfService.AT_MOST_ONCE && !dup) {
+                copy(header = MqttFixedHeader((rawByte or 0x08).toUByte())) // set DUP
+            } else {
+                this
+            }
+        }
+
+        override fun maybeCopyWithNewPacketIdentifier(packetIdentifier: Int): PublishMessage =
+            when (qualityOfService) {
+                QualityOfService.AT_MOST_ONCE -> this
+                else -> copy(packetId = packetIdentifier.toUShort())
+            }
+
+        override fun validate(): MalformedPacketException? {
+            val hasPid = packetId != null
+            if (qualityOfService == QualityOfService.AT_MOST_ONCE && hasPid) {
+                return MalformedPacketException(
+                    "[MQTT-2.3.1-1] PUBLISH at QoS 0 MUST NOT contain a Packet Identifier.",
+                )
+            } else if (qualityOfService.isGreaterThan(QualityOfService.AT_MOST_ONCE) && !hasPid) {
+                return MalformedPacketException(
+                    "[MQTT-2.3.1-5] PUBLISH at QoS > 0 MUST contain a Packet Identifier.",
+                )
+            }
+            return null
+        }
+
+        companion object {
+            /**
+             * Zero-copy raw-payload factory. Returns `Publish<ReadBuffer>` matching the
+             * wire-decode shape; pair with [V5PacketPublishCodec.encode] for sending.
+             */
+            fun ofRaw(
+                topic: TopicName,
+                qos: QualityOfService = QualityOfService.AT_MOST_ONCE,
+                payload: ReadBuffer? = null,
+                dup: Boolean = false,
+                retain: Boolean = false,
+                packetIdentifier: Int = NO_PACKET_ID,
+                properties: PublishProperties = PublishProperties(),
+            ): Publish<ReadBuffer> {
+                val header = MqttFixedHeader(makePublishHeaderByte(dup, qos, retain))
+                val pid =
+                    if (qos == QualityOfService.AT_MOST_ONCE || packetIdentifier == NO_PACKET_ID) null
+                    else packetIdentifier.toUShort()
+                return Publish(
+                    header = header,
+                    topicName = topic.toString(),
+                    packetId = pid,
+                    properties = properties.props,
+                    payload = payload ?: ReadBuffer.EMPTY_BUFFER,
+                )
+            }
+
+            private fun makePublishHeaderByte(
+                dup: Boolean,
+                qos: QualityOfService,
+                retain: Boolean,
+            ): UByte {
+                val type = 3 shl 4
+                val dupBit = if (dup) 0x08 else 0
+                val qosBits = qos.integerValue.toInt() shl 1
+                val retainBit = if (retain) 0x01 else 0
+                return (type or dupBit or qosBits or retainBit).toUByte()
+            }
         }
     }
 

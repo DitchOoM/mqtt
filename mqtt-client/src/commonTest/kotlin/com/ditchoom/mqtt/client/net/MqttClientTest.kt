@@ -17,8 +17,10 @@ import com.ditchoom.mqtt.controlpacket.PublishMessage
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.TopicName
+import com.ditchoom.mqtt.controlpacket.WillConfig
 import com.ditchoom.mqtt.controlpacket.rawPayload
 import com.ditchoom.mqtt3.controlpacket.ConnectionRequest
+import com.ditchoom.mqtt5.controlpacket.ConnectWillProperties
 import com.ditchoom.socket.NetworkCapabilities
 import com.ditchoom.socket.getNetworkCapabilities
 import kotlinx.coroutines.CoroutineScope
@@ -73,14 +75,9 @@ class MqttClientTest {
         )
     private val connectionRequestMqtt5 =
         com.ditchoom.mqtt5.controlpacket.ConnectionRequest(
-            variableHeader =
-                com.ditchoom.mqtt5.controlpacket.ConnectionRequest.VariableHeader(
-                    cleanStart = true,
-                    keepAliveSeconds = 1,
-                ),
-            payload =
-                com.ditchoom.mqtt5.controlpacket.ConnectionRequest
-                    .Payload(clientId = "taco123-" + Random.nextUInt()),
+            clientId = "taco123-" + Random.nextUInt(),
+            keepAliveSeconds = 1,
+            cleanStart = true,
         )
     private val connectionRequestResumeSessionMqtt4 =
         ConnectionRequest(
@@ -89,14 +86,9 @@ class MqttClientTest {
         )
     private val connectionRequestResumeSessionMqtt5 =
         com.ditchoom.mqtt5.controlpacket.ConnectionRequest(
-            variableHeader =
-                com.ditchoom.mqtt5.controlpacket.ConnectionRequest.VariableHeader(
-                    cleanStart = false,
-                    keepAliveSeconds = 1,
-                ),
-            payload =
-                com.ditchoom.mqtt5.controlpacket.ConnectionRequest
-                    .Payload(clientId = "taco123-" + Random.nextUInt()),
+            clientId = "taco123-" + Random.nextUInt(),
+            keepAliveSeconds = 1,
+            cleanStart = false,
         )
     private val topic = TopicName.fromOrThrow("hello123")
     private val willTopic4 = TopicName.fromOrThrow("willTopicMqtt4")
@@ -294,22 +286,19 @@ class MqttClientTest {
             buffer.writeString("yolo", Charset.UTF8)
             buffer.resetForRead()
             val lwtConnectionRequest =
-                connectionRequestMqtt5
-                    .copy(
-                        connectionRequestMqtt5.variableHeader.copy(
-                            cleanStart = false,
-                            willRetain = true,
-                            willFlag = true,
-                            willQos = QualityOfService.AT_MOST_ONCE,
-                        ),
-                        connectionRequestMqtt5.payload.copy(
-                            clientId = "taco321-${Random.nextUInt()}",
-                            willTopic = willTopic5,
-                            willPayload = buffer,
-                            willProperties =
-                                com.ditchoom.mqtt5.controlpacket.ConnectionRequest.Payload
-                                    .WillProperties(),
-                        ),
+                com.ditchoom.mqtt5.controlpacket
+                    .ConnectionRequest(
+                        clientId = "taco321-${Random.nextUInt()}",
+                        keepAliveSeconds = 1,
+                        cleanStart = false,
+                        will =
+                            WillConfig.Enabled(
+                                topic = willTopic5,
+                                payload = buffer,
+                                qos = QualityOfService.AT_MOST_ONCE,
+                                retain = true,
+                            ),
+                        willProperties = ConnectWillProperties(),
                     ).validateOrThrow() as IConnectionRequest
 
             lastWillTestamentInternal(this, willTopic5, lwtConnectionRequest, connectionRequestMqtt5)

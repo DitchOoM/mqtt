@@ -18,8 +18,6 @@ import com.ditchoom.mqtt.controlpacket.PublishMessage
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
-import com.ditchoom.mqtt5.controlpacket.AckProperties
-import com.ditchoom.mqtt5.controlpacket.AckVariableHeader
 import com.ditchoom.mqtt5.controlpacket.ConnectionRequest
 import com.ditchoom.mqtt5.controlpacket.PublishComplete
 import com.ditchoom.mqtt5.controlpacket.PublishMessageV5
@@ -28,6 +26,8 @@ import com.ditchoom.mqtt5.controlpacket.PublishRelease
 import com.ditchoom.mqtt5.controlpacket.SubscribeRequest
 import com.ditchoom.mqtt5.controlpacket.Subscription
 import com.ditchoom.mqtt5.controlpacket.UnsubscribeRequest
+import com.ditchoom.mqtt5.controlpacket.reasonStringValue
+import com.ditchoom.mqtt5.controlpacket.userProperties
 import js.array.ReadonlyArray
 import kotlinx.coroutines.suspendCancellableCoroutine
 import web.events.EventHandler
@@ -185,12 +185,11 @@ class IDBPersistence(
                     p.packetIdentifier,
                     p.controlPacketValue,
                     1,
-                    p.variable.reasonCode.byte
-                        .toInt(),
-                    p.variable.properties.reasonString,
+                    (p.reasonCode ?: ReasonCode.SUCCESS.byte).toInt(),
+                    p.properties.reasonStringValue(),
                 ),
             )
-            for ((key, value) in p.variable.properties.userProperty) {
+            for ((key, value) in p.properties.userProperties()) {
                 propStore.put(PersistableUserProperty(broker.identifier, 1, p.packetIdentifier, key, value))
             }
             null
@@ -213,12 +212,11 @@ class IDBPersistence(
                     p.packetIdentifier,
                     p.controlPacketValue,
                     0,
-                    p.variable.reasonCode.byte
-                        .toInt(),
-                    p.variable.properties.reasonString,
+                    (p.reasonCode ?: ReasonCode.SUCCESS.byte).toInt(),
+                    p.properties.reasonStringValue(),
                 ),
             )
-            for ((key, value) in p.variable.properties.userProperty) {
+            for ((key, value) in p.properties.userProperties()) {
                 propStore.put(PersistableUserProperty(broker.identifier, 0, p.packetIdentifier, key, value))
             }
             null
@@ -336,10 +334,10 @@ class IDBPersistence(
                         val countOp = storeCountRequest.result.unsafeCast<Int>()
                         val broker = PersistableBroker(countOp, connections, persistableRequest)
                         store.put(broker)
-                        for ((key, value) in connectionRequest.variableHeader.properties.userProperty) {
+                        for ((key, value) in connectionRequest.typedProperties.userProperty) {
                             propStore.put(PersistableUserProperty(countOp, 0, -1, key, value))
                         }
-                        val willProps = connectionRequest.payload.willProperties?.userProperty
+                        val willProps = connectionRequest.typedWillProperties?.userProperty
                         if (!willProps.isNullOrEmpty()) {
                             for ((key, value) in willProps) {
                                 propStore.put(PersistableUserProperty(countOp, 0, -2, key, value))
@@ -624,17 +622,14 @@ class IDBPersistence(
                         .filter { sub.brokerId == it.brokerId && sub.packetId == it.packetId }
                         .map { Pair(it.key, it.value) }
                 SubscribeRequest(
-                    SubscribeRequest.VariableHeader(
-                        sub.packetId,
-                        SubscribeRequest.VariableHeader.Properties(
-                            sub.reasonString,
-                            userProperties,
-                        ),
-                    ),
-                    allSubscriptions
-                        .filter { it.brokerId == sub.brokerId && it.subscribeId == sub.packetId }
-                        .map { toSubscription(it) }
-                        .toSet(),
+                    packetIdentifier = sub.packetId.toUShort(),
+                    subscriptions =
+                        allSubscriptions
+                            .filter { it.brokerId == sub.brokerId && it.subscribeId == sub.packetId }
+                            .map { toSubscription(it) }
+                            .toSet(),
+                    reasonString = sub.reasonString,
+                    userProperty = userProperties,
                 )
             }
 
@@ -654,11 +649,9 @@ class IDBPersistence(
                             .filter { brokerId == it.brokerId && packetId == it.packetId }
                             .map { Pair(it.key, it.value) }
                     UnsubscribeRequest(
-                        UnsubscribeRequest.VariableHeader(
-                            packetId,
-                            UnsubscribeRequest.VariableHeader.Properties(userProperties),
-                        ),
-                        topics.map { TopicFilter.fromOrThrow(it) }.toSet(),
+                        packetIdentifier = packetId.toUShort(),
+                        topics = topics.map { TopicFilter.fromOrThrow(it) }.toSet(),
+                        userProperty = userProperties,
                     )
                 }
         await(qos2PersistableRequest)
@@ -682,11 +675,10 @@ class IDBPersistence(
                                     .filter { broker.identifier == it.brokerId && msg.packetId == it.packetId && it.incoming == 0 }
                                     .map { Pair(it.key, it.value) }
                             PublishReceived(
-                                AckVariableHeader(
-                                    msg.packetId,
-                                    pubRelOrPubCompReasonCode(msg.reasonCode),
-                                    AckProperties(msg.reasonString, userProperties),
-                                ),
+                                packetIdentifier = msg.packetId,
+                                reasonCode = pubRelOrPubCompReasonCode(msg.reasonCode),
+                                reasonString = msg.reasonString,
+                                userProperty = userProperties,
                             )
                         }
 
@@ -696,11 +688,10 @@ class IDBPersistence(
                                     .filter { broker.identifier == it.brokerId && msg.packetId == it.packetId && it.incoming == 1 }
                                     .map { Pair(it.key, it.value) }
                             PublishRelease(
-                                AckVariableHeader(
-                                    msg.packetId,
-                                    pubRelOrPubCompReasonCode(msg.reasonCode),
-                                    AckProperties(msg.reasonString, userProperties),
-                                ),
+                                packetIdentifier = msg.packetId,
+                                reasonCode = pubRelOrPubCompReasonCode(msg.reasonCode),
+                                reasonString = msg.reasonString,
+                                userProperty = userProperties,
                             )
                         }
 
@@ -710,11 +701,10 @@ class IDBPersistence(
                                     .filter { broker.identifier == it.brokerId && msg.packetId == it.packetId && it.incoming == 0 }
                                     .map { Pair(it.key, it.value) }
                             PublishComplete(
-                                AckVariableHeader(
-                                    msg.packetId,
-                                    pubRecvReasonCode(msg.reasonCode),
-                                    AckProperties(msg.reasonString, userProperties),
-                                ),
+                                packetIdentifier = msg.packetId,
+                                reasonCode = pubRecvReasonCode(msg.reasonCode),
+                                reasonString = msg.reasonString,
+                                userProperty = userProperties,
                             )
                         }
 
@@ -895,14 +885,14 @@ class IDBPersistence(
         val subMsgStore = tx.objectStore(SUB_MSG)
         val newSub = sub.copyWithNewPacketIdentifier(newPacketId) as SubscribeRequest
         val persistableSubscribe =
-            PersistableSubscribe(broker.identifier, newSub.packetIdentifier, s.variable.properties.reasonString)
+            PersistableSubscribe(broker.identifier, newSub.packetIdentifier, s.properties.reasonStringValue())
         subMsgStore.add(persistableSubscribe)
         val subStore = tx.objectStore(SUBSCRIPTION)
         for (subscription in newSub.subscriptions) {
             subStore.add(PersistableSubscription(broker.identifier, newPacketId, subscription as Subscription))
         }
         val propStore = tx.objectStore(USER_PROPERTIES)
-        for ((key, value) in newSub.variable.properties.userProperty) {
+        for ((key, value) in newSub.properties.userProperties()) {
             propStore.put(PersistableUserProperty(broker.identifier, 0, newPacketId, key, value))
         }
         commitTransaction(tx, "writeSubUpdatePacketIdAndSimplifySubscriptions")
@@ -952,14 +942,10 @@ class IDBPersistence(
             userPropertiesRequest.result
                 .map { Pair(it.asDynamic().key as String, it.asDynamic().value as String) }
         return SubscribeRequest(
-            SubscribeRequest.VariableHeader(
-                persistableSubscribe.packetId,
-                SubscribeRequest.VariableHeader.Properties(
-                    persistableSubscribe.reasonString,
-                    userProperties,
-                ),
-            ),
-            subscriptions.toSet(),
+            packetIdentifier = persistableSubscribe.packetId.toUShort(),
+            subscriptions = subscriptions.toSet(),
+            reasonString = persistableSubscribe.reasonString,
+            userProperty = userProperties,
         )
     }
 
@@ -980,7 +966,7 @@ class IDBPersistence(
             val allTopics = HashSet(unsub.topics)
 
             val propStore = tx.objectStore(USER_PROPERTIES)
-            for ((key, value) in newUnsub.variable.properties.userProperty) {
+            for ((key, value) in newUnsub.properties.userProperties()) {
                 propStore.put(PersistableUserProperty(broker.identifier, 0, newPacketId, key, value))
             }
             unsub.topics.map { topic ->
@@ -1075,11 +1061,9 @@ class IDBPersistence(
             userPropertiesRequest.result
                 .map { Pair(it.asDynamic().key as String, it.asDynamic().value as String) }
         return UnsubscribeRequest(
-            UnsubscribeRequest.VariableHeader(
-                packetId,
-                UnsubscribeRequest.VariableHeader.Properties(userProperties),
-            ),
-            topics.map { TopicFilter.fromOrThrow(it) }.toSet(),
+            packetIdentifier = packetId.toUShort(),
+            topics = topics.map { TopicFilter.fromOrThrow(it) }.toSet(),
+            userProperty = userProperties,
         )
     }
 

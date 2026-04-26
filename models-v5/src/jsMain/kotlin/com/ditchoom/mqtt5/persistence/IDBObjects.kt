@@ -12,6 +12,9 @@ import com.ditchoom.mqtt.controlpacket.payloadAsByteArrayOrNull
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.TopicName
+import com.ditchoom.mqtt.controlpacket.WillConfig
+import com.ditchoom.mqtt5.controlpacket.ConnectProperties
+import com.ditchoom.mqtt5.controlpacket.ConnectWillProperties
 import com.ditchoom.mqtt5.controlpacket.ConnectionRequest
 import com.ditchoom.mqtt5.controlpacket.PublishMessageV5
 import com.ditchoom.mqtt5.controlpacket.Subscription
@@ -372,40 +375,38 @@ data class PersistableConnectionRequest(
 ) {
     companion object {
         fun from(connectionRequest: ConnectionRequest): PersistableConnectionRequest {
-            val props = connectionRequest.payload.willProperties
+            val flags = connectionRequest.connectFlags
+            val typedProps = connectionRequest.typedProperties
+            val typedWillProps = connectionRequest.typedWillProperties
+            val willEnabled = connectionRequest.will as? WillConfig.Enabled
             return PersistableConnectionRequest(
-                connectionRequest.variableHeader.protocolName,
-                connectionRequest.variableHeader.protocolVersion.toInt(),
-                connectionRequest.variableHeader.willRetain,
-                connectionRequest.variableHeader.willQos.integerValue,
-                connectionRequest.variableHeader.willFlag,
-                connectionRequest.variableHeader.cleanStart,
-                connectionRequest.variableHeader.keepAliveSeconds,
-                connectionRequest.variableHeader.properties.sessionExpiryIntervalSeconds
-                    ?.toString(),
-                connectionRequest.variableHeader.properties.receiveMaximum,
-                connectionRequest.variableHeader.properties.maximumPacketSize
-                    ?.toString(),
-                connectionRequest.variableHeader.properties.topicAliasMaximum,
-                connectionRequest.variableHeader.properties.requestResponseInformation,
-                connectionRequest.variableHeader.properties.requestProblemInformation,
-                connectionRequest.variableHeader.properties.authentication
-                    ?.method,
-                connectionRequest.variableHeader.properties.authentication
-                    ?.data
-                    ?.let { (it as JsBuffer).buffer },
-                connectionRequest.payload.clientId,
-                props != null,
-                connectionRequest.payload.willTopic?.toString(),
-                (connectionRequest.payload.willPayload as? JsBuffer)?.buffer,
-                connectionRequest.payload.userName,
-                connectionRequest.payload.password,
-                props?.willDelayIntervalSeconds?.toInt() ?: 0,
-                props?.payloadFormatIndicator ?: false,
-                props?.messageExpiryIntervalSeconds?.toString(),
-                props?.contentType,
-                props?.responseTopic?.toString(),
-                props?.correlationData?.let { (it as JsBuffer).buffer },
+                connectionRequest.protocolName,
+                connectionRequest.protocolLevel.toInt(),
+                flags.willRetain,
+                willEnabled?.qos?.integerValue ?: 0,
+                flags.willFlag,
+                flags.cleanStart,
+                connectionRequest.keepAlive.toInt(),
+                typedProps.sessionExpiryIntervalSeconds?.toString(),
+                typedProps.receiveMaximum,
+                typedProps.maximumPacketSize?.toString(),
+                typedProps.topicAliasMaximum,
+                typedProps.requestResponseInformation,
+                typedProps.requestProblemInformation,
+                typedProps.authentication?.method,
+                typedProps.authentication?.data?.let { (it as JsBuffer).buffer },
+                connectionRequest.clientId,
+                typedWillProps != null,
+                willEnabled?.topic?.toString(),
+                (willEnabled?.payload as? JsBuffer)?.buffer,
+                connectionRequest.userName,
+                connectionRequest.password,
+                typedWillProps?.willDelayIntervalSeconds?.toInt() ?: 0,
+                typedWillProps?.payloadFormatIndicator ?: false,
+                typedWillProps?.messageExpiryIntervalSeconds?.toString(),
+                typedWillProps?.contentType,
+                typedWillProps?.responseTopic?.toString(),
+                typedWillProps?.correlationData?.let { (it as JsBuffer).buffer },
             )
         }
     }
@@ -431,61 +432,67 @@ fun toConnectionRequest(
         } else {
             null
         }
+    val willPayloadBuffer =
+        p.willPayload
+            ?.unsafeCast<Int8Array>()
+            ?.let {
+                JsBuffer(it).also { buf ->
+                    buf.position(it.length)
+                    buf.setLimit(it.length)
+                }
+            }
+    val willTopic = (p.willTopic as? String)?.let { TopicName.fromOrThrow(it) }
+    val willFlag = p.willFlag as Boolean
+    val will: WillConfig =
+        if (willFlag && willTopic != null && willPayloadBuffer != null) {
+            WillConfig.Enabled(
+                topic = willTopic,
+                payload = willPayloadBuffer,
+                qos = (p.willQos as Byte).toQos(),
+                retain = p.willRetain as Boolean,
+            )
+        } else {
+            WillConfig.Disabled
+        }
     val willProps =
         if (p.hasWillProperties as Boolean) {
-            ConnectionRequest.Payload.WillProperties(
-                (p.willPropertyWillDelayIntervalSeconds as Int).toLong(),
-                p.willPropertyPayloadFormatIndicator as Boolean,
-                (p.willPropertyMessageExpiryIntervalSeconds as String?)?.toLong(),
-                p.willPropertyContentType as String?,
-                (p.willPropertyResponseTopic as String?)?.let { TopicName.fromOrThrow(it) },
-                p.willPropertyCorrelationData
-                    ?.unsafeCast<Int8Array>()
-                    ?.let { JsBuffer(it).also { buf -> buf.setLimit(it.length) } },
-                willUserProperty,
+            ConnectWillProperties(
+                willDelayIntervalSeconds = (p.willPropertyWillDelayIntervalSeconds as Int).toLong(),
+                payloadFormatIndicator = p.willPropertyPayloadFormatIndicator as Boolean,
+                messageExpiryIntervalSeconds = (p.willPropertyMessageExpiryIntervalSeconds as String?)?.toLong(),
+                contentType = p.willPropertyContentType as String?,
+                responseTopic = (p.willPropertyResponseTopic as String?)?.let { TopicName.fromOrThrow(it) },
+                correlationData =
+                    p.willPropertyCorrelationData
+                        ?.unsafeCast<Int8Array>()
+                        ?.let { JsBuffer(it).also { buf -> buf.setLimit(it.length) } },
+                userProperty = willUserProperty,
             )
         } else {
             null
         }
     val variableHeaderProps =
-        ConnectionRequest.VariableHeader.Properties(
-            (p.sessionExpiryIntervalSeconds as String?)?.toULong(),
-            p.receiveMaximum as Int?,
-            (p.maximumPacketSize as String?)?.toULong(),
-            p.topicAliasMaximum as Int?,
-            p.requestResponseInformation as Boolean?,
-            p.requestProblemInformation as Boolean?,
-            userProperty,
-            auth,
+        ConnectProperties(
+            sessionExpiryIntervalSeconds = (p.sessionExpiryIntervalSeconds as String?)?.toULong(),
+            receiveMaximum = p.receiveMaximum as Int?,
+            maximumPacketSize = (p.maximumPacketSize as String?)?.toULong(),
+            topicAliasMaximum = p.topicAliasMaximum as Int?,
+            requestResponseInformation = p.requestResponseInformation as Boolean?,
+            requestProblemInformation = p.requestProblemInformation as Boolean?,
+            userProperty = userProperty,
+            authentication = auth,
         )
     return ConnectionRequest(
-        ConnectionRequest.VariableHeader(
-            p.protocolName as String,
-            (p.protocolLevel as Int).toUByte(),
-            p.username != null,
-            p.password != null,
-            p.willRetain as Boolean,
-            (p.willQos as Byte).toQos(),
-            p.willFlag as Boolean,
-            p.cleanSession as Boolean,
-            p.keepAliveSeconds as Int,
-            variableHeaderProps,
-        ),
-        ConnectionRequest.Payload(
-            p.clientId as String,
-            willProps,
-            (p.willTopic as? String)?.let { TopicName.fromOrThrow(it) },
-            p.willPayload
-                ?.unsafeCast<Int8Array>()
-                ?.let {
-                    JsBuffer(it).also { buf ->
-                        buf.position(it.length)
-                        buf.setLimit(it.length)
-                    }
-                },
-            p.username as? String,
-            p.password as? String,
-        ),
+        clientId = p.clientId as String,
+        keepAliveSeconds = p.keepAliveSeconds as Int,
+        cleanStart = p.cleanSession as Boolean,
+        userName = p.username as? String,
+        password = p.password as? String,
+        will = will,
+        protocolName = p.protocolName as String,
+        protocolVersion = (p.protocolLevel as Int).toUByte(),
+        props = variableHeaderProps,
+        willProperties = willProps,
     )
 }
 

@@ -168,63 +168,21 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
         /**
          * Decode a full v5 control-packet wire (`[byte1][VBI(remainingLength)][body]`).
          *
-         * Reads byte1 + VBI, validates the per-type body-length contract, then directly
-         * dispatches to the matching variant codec with the fixed header pre-supplied via
-         * [ControlPacketV5Codec.DiscriminatorKey]. Variant codecs read the header from
-         * context (no extra buffer read) and consume the body bytes left in [buffer].
-         *
-         * Zero-copy: the dispatcher does NOT reframe `[byte1][body]` into a fresh buffer.
-         * The slice passed in is consumed directly — body bytes are read in place.
-         *
-         * Reserved-flag validation and reason-code validation live in the variant `init {}`
-         * blocks; PUBLISH QoS=3 rejection lives in [MqttFixedHeader]'s `init {}`;
-         * PINGREQ/PINGRESP body-overrun rejection happens here ahead of the dispatch
-         * (the sealed dispatcher does not body-frame at the top level so a non-zero
-         * remainingLength would otherwise leave trailing bytes in [buffer]). Reserved
-         * packet type 0 is rejected by the sealed dispatcher's `onUnknownDiscriminator`.
+         * Delegates to the generated [ControlPacketV5Codec.decode], whose sealed dispatcher
+         * consumes the fixed header via [MqttFixedHeader]'s [com.ditchoom.buffer.codec.DispatchFraming]
+         * companion (auto-discovered by the buffer-codec processor) and routes to the matching
+         * variant codec. Body-overrun and PUBLISH QoS=3 rejections are handled by the generated
+         * dispatcher's body-length guard and [MqttFixedHeader]'s `init {}`. The decode context
+         * registers identity-slice readers for the Connect Will payload and Publish payload.
          */
-        fun from(buffer: ReadBuffer): ControlPacketV5 {
-            val byte1 = buffer.readUnsignedByte()
-            val remainingLength = with(com.ditchoom.mqtt.controlpacket.ControlPacket.Companion) { buffer.readVariableByteInteger() }
-            val packetType = (byte1.toUInt() shr 4).toInt()
-            if ((packetType == 12 || packetType == 13) && remainingLength != 0) {
-                throw MalformedPacketException(
-                    "Reserved fixed-header flags or non-zero remaining length for packet type " +
-                        "$packetType (expected 0, got $remainingLength)",
-                )
-            }
-            // Validate the fixed header byte itself (e.g. PUBLISH QoS=3 → MalformedPacketException)
-            // before any variant codec reads body bytes.
-            val header = MqttFixedHeader(byte1)
-            val ctx =
+        fun from(buffer: ReadBuffer): ControlPacketV5 =
+            ControlPacketV5Codec.decode(
+                buffer,
                 publishPropertyDecodeContext()
-                    .with(ControlPacketV5Codec.DiscriminatorKey, header)
                     .with(ControlPacketV5ConnectCodec.WillPayloadValueDecodeKey) { slice ->
                         if (slice.remaining() > 0) slice else null
-                    }.with(ControlPacketV5PublishCodec.PayloadDecodeKey) { slice -> slice }
-            // PUBLISH dispatches by raw byte (top nibble 3, low nibble = dup/qos/retain).
-            val rawByte = byte1.toInt() and 0xFF
-            return when {
-                rawByte in 0x30..0x3F -> ControlPacketV5PublishCodec.decodeFromContext(buffer, ctx)
-                packetType == 1 -> ControlPacketV5ConnectCodec.decodeFromContext(buffer, ctx)
-                packetType == 2 -> ControlPacketV5ConnAckCodec.decode(buffer, ctx)
-                packetType == 4 -> ControlPacketV5PubAckCodec.decode(buffer, ctx)
-                packetType == 5 -> ControlPacketV5PubRecCodec.decode(buffer, ctx)
-                packetType == 6 -> ControlPacketV5PubRelCodec.decode(buffer, ctx)
-                packetType == 7 -> ControlPacketV5PubCompCodec.decode(buffer, ctx)
-                packetType == 8 -> ControlPacketV5SubscribeCodec.decode(buffer, ctx)
-                packetType == 9 -> ControlPacketV5SubAckCodec.decode(buffer, ctx)
-                packetType == 10 -> ControlPacketV5UnsubscribeCodec.decode(buffer, ctx)
-                packetType == 11 -> ControlPacketV5UnsubAckCodec.decode(buffer, ctx)
-                packetType == 12 -> ControlPacketV5PingReqCodec.decode(buffer, ctx)
-                packetType == 13 -> ControlPacketV5PingRespCodec.decode(buffer, ctx)
-                packetType == 14 -> ControlPacketV5DisconnectCodec.decode(buffer, ctx)
-                packetType == 15 -> ControlPacketV5AuthCodec.decode(buffer, ctx)
-                else -> throw MalformedPacketException(
-                    "Unknown discriminator: 0x${rawByte.toString(16)}",
-                )
-            }
-        }
+                    }.with(ControlPacketV5PublishCodec.PayloadDecodeKey) { slice -> slice },
+            )
     }
 
     @PacketType(wire = 1)

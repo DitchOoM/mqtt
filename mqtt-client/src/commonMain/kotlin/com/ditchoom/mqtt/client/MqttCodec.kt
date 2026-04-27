@@ -9,6 +9,8 @@ import com.ditchoom.buffer.stream.PeekResult
 import com.ditchoom.buffer.stream.StreamProcessor
 import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.ControlPacketFactory
+import com.ditchoom.mqtt3.controlpacket.ControlPacketV4Codec
+import com.ditchoom.mqtt5.controlpacket.ControlPacketV5Codec
 
 class MqttCodec(
     private val factory: ControlPacketFactory,
@@ -24,40 +26,19 @@ class MqttCodec(
         context: EncodeContext,
     ) = value.serialize(buffer)
 
+    /**
+     * Delegates to the per-version generated codec's `peekFrameSize`, which itself
+     * delegates to [com.ditchoom.mqtt.controlpacket.MqttFixedHeader]'s
+     * [com.ditchoom.buffer.codec.DispatchFraming] companion. The framing is
+     * `[byte1][VBI(remainingLength)][body]` for both v4 and v5.
+     */
     override fun peekFrameSize(
         stream: StreamProcessor,
         baseOffset: Int,
-    ): PeekResult {
-        val size = mqttPeekFrameSize(stream, baseOffset) ?: return PeekResult.NeedsMoreData
-        return PeekResult.Size(size)
-    }
-}
-
-/**
- * MQTT frame boundary detection for [com.ditchoom.socket.transport.CodecConnection].
- *
- * Peeks at the fixed header (byte1 + variable-byte-integer remaining length)
- * to determine the total frame size without consuming any bytes.
- *
- * @return total frame size in bytes, or `null` if not enough data is buffered yet.
- */
-fun mqttPeekFrameSize(
-    stream: StreamProcessor,
-    baseOffset: Int,
-): Int? {
-    if (stream.available() < baseOffset + 2) return null // need at least byte1 + 1 VBI byte
-    var offset = baseOffset + 1 // skip byte1
-    var multiplier = 1
-    var value = 0
-    for (i in 0 until 4) {
-        if (stream.available() <= offset) return null
-        val byte = stream.peekByte(offset).toInt() and 0xFF
-        offset++
-        value += (byte and 0x7F) * multiplier
-        multiplier *= 128
-        if (byte and 0x80 == 0) {
-            return offset - baseOffset + value // 1 (byte1) + VBI bytes + remaining length
+    ): PeekResult =
+        when (factory.protocolVersion) {
+            4 -> ControlPacketV4Codec.peekFrameSize(stream, baseOffset)
+            5 -> ControlPacketV5Codec.peekFrameSize(stream, baseOffset)
+            else -> error("Unsupported MQTT protocol version: ${factory.protocolVersion}")
         }
-    }
-    return null // malformed VBI (>4 continuation bytes)
 }

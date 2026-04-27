@@ -6,16 +6,18 @@ import com.ditchoom.buffer.PlatformBuffer
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.deterministic
 import com.ditchoom.buffer.pool.BufferPool
+import com.ditchoom.buffer.stream.PeekResult
 import com.ditchoom.buffer.stream.StreamProcessor
 import com.ditchoom.buffer.stream.builder
 import com.ditchoom.buffer.withPooling
-import com.ditchoom.mqtt.client.mqttPeekFrameSize
 import com.ditchoom.mqtt.client.toBuffer
 import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt3.controlpacket.ControlPacketV4
+import com.ditchoom.mqtt3.controlpacket.ControlPacketV4Codec
 import com.ditchoom.mqtt5.controlpacket.ControlPacketV5
+import com.ditchoom.mqtt5.controlpacket.ControlPacketV5Codec
 import com.ditchoom.mqtt5.controlpacket.ControlPacketV5Factory
 import java.io.File
 import java.lang.management.ManagementFactory
@@ -143,6 +145,7 @@ class MemoryPressureTest {
     private fun roundTripWithPool(
         packets: List<ControlPacket>,
         iterations: Int,
+        peek: (StreamProcessor, Int) -> PeekResult,
         decode: (ReadBuffer) -> ControlPacket,
     ) {
         val pool = BufferPool()
@@ -153,8 +156,10 @@ class MemoryPressureTest {
                 val serialized = packet.serialize()
                 stream.append(serialized)
                 val frameSize =
-                    mqttPeekFrameSize(stream, 0)
-                        ?: error("frame underflow")
+                    when (val r = peek(stream, 0)) {
+                        is PeekResult.Size -> r.bytes
+                        PeekResult.NeedsMoreData -> error("frame underflow")
+                    }
                 stream.readBufferScoped(frameSize) { decode(this) }
             }
         }
@@ -224,9 +229,9 @@ class MemoryPressureTest {
         val packets = listOf(buildV4Connect(), buildV4Publish(1), buildV4Publish(2), buildV4Subscribe())
         val iterations = 50_000
 
-        roundTripWithPool(packets, 1000) { ControlPacketV4.from(it) }
+        roundTripWithPool(packets, 1000, ControlPacketV4Codec::peekFrameSize) { ControlPacketV4.from(it) }
         val before = snapshot()
-        roundTripWithPool(packets, iterations) { ControlPacketV4.from(it) }
+        roundTripWithPool(packets, iterations, ControlPacketV4Codec::peekFrameSize) { ControlPacketV4.from(it) }
         val after = snapshot()
 
         assertNoLeak("v4-pooled ${iterations * packets.size} packets", before, after)
@@ -237,9 +242,9 @@ class MemoryPressureTest {
         val packets = listOf(buildV5Connect(), buildV5Publish(1), buildV5Publish(2), buildV5Subscribe())
         val iterations = 50_000
 
-        roundTripWithPool(packets, 1000) { ControlPacketV5Factory.from(it) }
+        roundTripWithPool(packets, 1000, ControlPacketV5Codec::peekFrameSize) { ControlPacketV5Factory.from(it) }
         val before = snapshot()
-        roundTripWithPool(packets, iterations) { ControlPacketV5Factory.from(it) }
+        roundTripWithPool(packets, iterations, ControlPacketV5Codec::peekFrameSize) { ControlPacketV5Factory.from(it) }
         val after = snapshot()
 
         assertNoLeak("v5-pooled ${iterations * packets.size} packets", before, after)

@@ -6,12 +6,13 @@ import com.ditchoom.buffer.pool.BufferPool
 import com.ditchoom.buffer.stream.PeekResult
 import com.ditchoom.buffer.stream.StreamProcessor
 import com.ditchoom.buffer.stream.builder
-import com.ditchoom.mqtt.client.mqttPeekFrameSize
 import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt3.controlpacket.ControlPacketV4
+import com.ditchoom.mqtt3.controlpacket.ControlPacketV4Codec
 import com.ditchoom.mqtt5.controlpacket.ControlPacketV5
+import com.ditchoom.mqtt5.controlpacket.ControlPacketV5Codec
 import java.io.File
 import java.lang.management.ManagementFactory
 import javax.management.ObjectName
@@ -194,7 +195,7 @@ class BeforeAfterBenchmark {
                     val serialized = p.serialize()
                     stream.append(serialized)
                     val frameSize =
-                        when (val r = mqttPeekFrameSize(stream, 0)?.let { PeekResult.Size(it) } ?: PeekResult.NeedsMoreData) {
+                        when (val r = ControlPacketV5Codec.peekFrameSize(stream, 0)) {
                             is PeekResult.Size -> r.bytes
                             PeekResult.NeedsMoreData -> error("frame underflow")
                         }
@@ -237,7 +238,7 @@ class BeforeAfterBenchmark {
                     val serialized = p.serialize()
                     stream.append(serialized)
                     val frameSize =
-                        when (val r = mqttPeekFrameSize(stream, 0)?.let { PeekResult.Size(it) } ?: PeekResult.NeedsMoreData) {
+                        when (val r = ControlPacketV4Codec.peekFrameSize(stream, 0)) {
                             is PeekResult.Size -> r.bytes
                             PeekResult.NeedsMoreData -> error("frame underflow")
                         }
@@ -306,5 +307,4 @@ class BeforeAfterBenchmark {
             ),
         )
     }
-
 }

@@ -2,7 +2,7 @@ package com.ditchoom.mqtt.controlpacket
 
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
-import com.ditchoom.buffer.codec.BodyLengthFraming
+import com.ditchoom.buffer.codec.DispatchFraming
 import com.ditchoom.buffer.codec.annotations.DispatchValue
 import com.ditchoom.buffer.codec.annotations.ProtocolMessage
 import com.ditchoom.buffer.readVariableByteInteger
@@ -22,7 +22,7 @@ import kotlin.jvm.JvmInline
  * other packet types pin it to `0000`. The processor enforces those reserved values via
  * each variant's `@PacketType(wire = …)` literal.
  *
- * The companion implements [BodyLengthFraming]: every MQTT control packet is framed
+ * The companion implements [DispatchFraming]: every MQTT control packet is framed
  * `[byte1][VBI(remainingLength)][body]`. The generated dispatcher consumes the framing
  * via the companion's `readBodyLength` / `writeBodyLength` / `peekFrameSize` /
  * `bodyLengthSize` calls.
@@ -50,7 +50,7 @@ value class MqttFixedHeader(
     val publishRetain: Boolean get() = raw.toInt() and 1 == 1
     val publishHasPacketIdentifier: Boolean get() = publishQos > 0
 
-    companion object : BodyLengthFraming<MqttFixedHeader> {
+    companion object : DispatchFraming<MqttFixedHeader> {
         override fun peekFrameSize(
             stream: StreamProcessor,
             baseOffset: Int,

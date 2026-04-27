@@ -292,10 +292,10 @@ class FlagTests {
         )
 
     @Test
-    fun controlPacketFlagsMatchSpecForPINGREQ() = assertEquals(PingRequest.flags, 0b0, controlPacketSpectMatchError)
+    fun controlPacketFlagsMatchSpecForPINGREQ() = assertEquals(PingRequest().flags, 0b0, controlPacketSpectMatchError)
 
     @Test
-    fun controlPacketFlagsMatchSpecForPINGRESP() = assertEquals(PingResponse.flags, 0b0, controlPacketSpectMatchError)
+    fun controlPacketFlagsMatchSpecForPINGRESP() = assertEquals(PingResponse().flags, 0b0, controlPacketSpectMatchError)
 
     @Test
     fun controlPacketFlagsMatchSpecForDISCONNECT() =

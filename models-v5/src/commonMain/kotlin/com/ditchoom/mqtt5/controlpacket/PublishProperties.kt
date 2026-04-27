@@ -60,14 +60,17 @@ data class PublishProperties(
             val payloadFormatIndicator = p.single<PayloadFormatIndicator>()?.isUtf8 ?: false
             val messageExpiryInterval = p.single<MessageExpiryInterval>()?.seconds?.toLong()
             val topicAlias =
-                p.single<TopicAlias>()?.also {
-                    if (it.value == 0.toUShort()) {
-                        throw ProtocolError(
-                            "Topic Alias not permitted to be set to 0:" +
-                                "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477413",
-                        )
-                    }
-                }?.value?.toInt()
+                p
+                    .single<TopicAlias>()
+                    ?.also {
+                        if (it.value == 0.toUShort()) {
+                            throw ProtocolError(
+                                "Topic Alias not permitted to be set to 0:" +
+                                    "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477413",
+                            )
+                        }
+                    }?.value
+                    ?.toInt()
             val responseTopic = p.single<ResponseTopic>()?.let { TopicName.fromOrThrow(it.value) }
             val correlationData = p.single<CorrelationData<*>>()?.data as? ReadBuffer
             val userProperty = p.list<UserProperty>().map { it.key to it.value }

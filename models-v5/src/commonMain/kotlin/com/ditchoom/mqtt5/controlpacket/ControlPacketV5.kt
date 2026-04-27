@@ -1,5 +1,7 @@
 package com.ditchoom.mqtt5.controlpacket
 
+import com.ditchoom.buffer.BufferFactory
+import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
 import com.ditchoom.buffer.codec.EncodeContext
@@ -7,6 +9,7 @@ import com.ditchoom.buffer.codec.annotations.DispatchOn
 import com.ditchoom.buffer.codec.annotations.LengthPrefix
 import com.ditchoom.buffer.codec.annotations.LengthPrefixed
 import com.ditchoom.buffer.codec.annotations.PacketType
+import com.ditchoom.buffer.codec.annotations.PacketTypeRange
 import com.ditchoom.buffer.codec.annotations.Payload
 import com.ditchoom.buffer.codec.annotations.ProtocolMessage
 import com.ditchoom.buffer.codec.annotations.RemainingBytes
@@ -157,117 +160,59 @@ value class ConnectFlagsV5(
 // un-migrated direct members are invisible to the processor.
 
 @DispatchOn(MqttFixedHeader::class)
-@ProtocolMessage
+@ProtocolMessage(onUnknownDiscriminator = "com.ditchoom.mqtt.MalformedPacketException")
 sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket {
     override val mqttVersion: Byte get() = 5
     override val controlPacketFactory: com.ditchoom.mqtt.controlpacket.ControlPacketFactory get() = ControlPacketV5Factory
 
     companion object {
+        /**
+         * Decode a full v5 control-packet wire (`[byte1][VBI(remainingLength)][body]`).
+         *
+         * Reads byte1 + remainingLength, then splices `[byte1][body]` into a single buffer
+         * for the dispatcher (variant codecs assume their slice contains exactly the body
+         * bytes after byte1). Reserved-flag validation and reason-code validation live in
+         * the variant `init {}` blocks; PUBLISH QoS=3 rejection lives in
+         * [MqttFixedHeader]'s `init {}`; PINGREQ/PINGRESP body-overrun rejection comes
+         * from the sealed dispatcher's body-overrun check (throws the configured
+         * [MalformedPacketException]); reserved packet type 0 is rejected by the sealed
+         * dispatcher's `onUnknownDiscriminator`.
+         */
         fun from(buffer: ReadBuffer): ControlPacketV5 {
             val byte1 = buffer.readUnsignedByte()
             val remainingLength = with(com.ditchoom.mqtt.controlpacket.ControlPacket.Companion) { buffer.readVariableByteInteger() }
-            val remainingBuffer =
-                if (remainingLength > 0) {
-                    buffer.readBytes(remainingLength)
-                } else {
-                    ReadBuffer.EMPTY_BUFFER
-                }
-            return from(remainingBuffer, byte1, remainingLength)
-        }
-
-        /**
-         * Decode a v5 control packet from the body buffer (after byte1 + RL have been
-         * stripped). For PUBLISH (type 3) the routing populates the discriminator + binary-data
-         * decode keys before delegating to [ControlPacketV5PublishCodec]; other packet types route
-         * directly to their generated codec.
-         */
-        fun from(
-            buffer: ReadBuffer,
-            byte1: UByte,
-            remainingLength: Int,
-        ): ControlPacketV5 {
-            val packetValue = (byte1.toUInt() shr 4).toInt()
-            return when (packetValue) {
-                0 -> throw MalformedPacketException("Reserved packet type 0 is not permitted")
-                3 -> {
-                    val header = MqttFixedHeader(byte1)
-                    if (header.publishQos == 3) {
-                        throw MalformedPacketException(
-                            "[MQTT-3.3.1-4] PUBLISH MUST NOT have both QoS bits set to 1.",
-                        )
-                    }
-                    val ctx =
-                        publishPropertyDecodeContext()
-                            .with(ControlPacketV5Codec.DiscriminatorKey, header)
-                    ControlPacketV5PublishCodec.decode(buffer, ctx) { slice -> slice }
-                }
-                in migratedPacketTypes -> decodeMigrated(buffer, byte1, packetValue, remainingLength)
-                else -> throw MalformedPacketException(
-                    "Invalid MQTT Control Packet Type: $packetValue Should be in range between 0 and 15 inclusive",
-                )
-            }
-        }
-
-        private val migratedPacketTypes = setOf(1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)
-
-        private fun decodeMigrated(
-            buffer: ReadBuffer,
-            byte1: UByte,
-            packetValue: Int,
-            remainingLength: Int,
-        ): ControlPacketV5 {
-            val flags = byte1.toInt() and 0x0F
-            val expectedFlags = if (packetValue == 6 || packetValue == 8 || packetValue == 10) 0x02 else 0x00
-            if (flags != expectedFlags) {
+            val packetType = (byte1.toUInt() shr 4).toInt()
+            // PINGREQ / PINGRESP have no body — variant codecs read zero bytes, and the
+            // dispatcher does not currently body-frame at the top level (no `bodyLength`
+            // on `@DispatchOn(MqttFixedHeader::class)`), so a non-zero remainingLength
+            // would silently leave trailing bytes in the buffer. Validate up-front.
+            if ((packetType == 12 || packetType == 13) && remainingLength != 0) {
                 throw MalformedPacketException(
-                    "Reserved fixed-header flags for packet type $packetValue must be 0x${
-                        expectedFlags.toString(16)
-                    }, got 0x${flags.toString(16)}",
+                    "Reserved fixed-header flags or non-zero remaining length for packet type " +
+                        "$packetType (expected 0, got $remainingLength)",
                 )
             }
-            val ctx =
-                com.ditchoom.buffer.codec.DecodeContext.Empty
-                    .with(ControlPacketV5Codec.DiscriminatorKey, MqttFixedHeader(byte1))
-            return when (packetValue) {
-                1 ->
-                    ControlPacketV5ConnectCodec.decode<ReadBuffer?>(buffer) { slice ->
-                        if (slice.remaining() > 0) slice else null
-                    }
-                2 -> ControlPacketV5ConnAckCodec.decode(buffer, ctx)
-                4 -> ControlPacketV5PubAckCodec.decode(buffer, ctx)
-                5 -> ControlPacketV5PubRecCodec.decode(buffer, ctx)
-                6 -> ControlPacketV5PubRelCodec.decode(buffer, ctx)
-                7 -> ControlPacketV5PubCompCodec.decode(buffer, ctx)
-                8 -> ControlPacketV5SubscribeCodec.decode(buffer, ctx)
-                9 -> ControlPacketV5SubAckCodec.decode(buffer, ctx)
-                10 -> ControlPacketV5UnsubscribeCodec.decode(buffer, ctx)
-                11 -> ControlPacketV5UnsubAckCodec.decode(buffer, ctx)
-                12 ->
-                    if (remainingLength != 0) {
-                        throw MalformedPacketException(
-                            "PINGREQ remaining length must be 0, got $remainingLength",
-                        )
-                    } else {
-                        PingReq
-                    }
-                13 ->
-                    if (remainingLength != 0) {
-                        throw MalformedPacketException(
-                            "PINGRESP remaining length must be 0, got $remainingLength",
-                        )
-                    } else {
-                        PingResp
-                    }
-                14 -> ControlPacketV5DisconnectCodec.decode(buffer, ctx)
-                15 -> ControlPacketV5AuthCodec.decode(buffer, ctx)
-                else -> throw IllegalStateException("Unreachable: $packetValue not in migratedPacketTypes")
+            val splice =
+                com.ditchoom.buffer.BufferFactory.Default
+                    .allocate(1 + remainingLength)
+            splice.writeUByte(byte1)
+            if (remainingLength > 0) {
+                splice.write(buffer.readBytes(remainingLength))
             }
+            splice.resetForRead()
+            val ctx =
+                publishPropertyDecodeContext()
+                    .with(ControlPacketV5ConnectCodec.WillPayloadValueDecodeKey) { slice ->
+                        if (slice.remaining() > 0) slice else null
+                    }.with(ControlPacketV5PublishCodec.PayloadDecodeKey) { slice -> slice }
+            return ControlPacketV5Codec.decode(splice, ctx)
         }
     }
 
-    @PacketType(value = 1, wire = 0x10)
+    @PacketType(wire = 1)
     @ProtocolMessage
     data class Connect<@Payload WP>(
+        val header: MqttFixedHeader = MqttFixedHeader(0x10u),
         @LengthPrefixed override val protocolName: String,
         val protocolLevel: UByte,
         val connectFlags: ConnectFlagsV5,
@@ -288,6 +233,11 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
     ) : ControlPacketV5,
         IConnectionRequest {
         init {
+            if (header.flags != 0) {
+                throw MalformedPacketException(
+                    "Reserved fixed-header flags for CONNECT must be 0x0, got 0x${header.flags.toString(16)}",
+                )
+            }
             if (connectFlags.reserved) {
                 throw MalformedPacketException(
                     "Reserved flag in CONNECT Variable Header is set incorrectly to 1 (§3.1.2.3)",
@@ -375,16 +325,17 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
         }
 
         override fun encodeBody(writeBuffer: WriteBuffer) {
-            // ControlPacketV5ConnectCodec.encode is generic; production always uses ReadBuffer payloads.
+            // ControlPacketV5ConnectCodec.encodeBody writes the body only (without the fixed
+            // header byte); production always uses ReadBuffer payloads.
             @Suppress("UNCHECKED_CAST")
-            ControlPacketV5ConnectCodec.encode(writeBuffer, this as Connect<ReadBuffer?>) { buf, wp ->
+            ControlPacketV5ConnectCodec.encodeBody(writeBuffer, this as Connect<ReadBuffer?>) { buf, wp ->
                 if (wp != null) buf.write(wp)
             }
         }
 
         @Suppress("UNCHECKED_CAST")
         override fun remainingLength(): Int =
-            ControlPacketV5ConnectCodec.wireSize(this as Connect<ReadBuffer?>) { wp ->
+            ControlPacketV5ConnectCodec.wireSizeBody(this as Connect<ReadBuffer?>) { wp ->
                 (wp as? ReadBuffer)?.remaining() ?: 0
             }
 
@@ -435,9 +386,10 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
         }
     }
 
-    @PacketType(value = 2, wire = 0x20)
+    @PacketType(wire = 2)
     @ProtocolMessage
     data class ConnAck(
+        val header: MqttFixedHeader = MqttFixedHeader(0x20u),
         val acknowledgeFlags: UByte,
         val connectReasonCode: UByte,
         @LengthPrefixed(LengthPrefix.Varint, maxBytes = 4) val properties: List<MqttProperty> = emptyList(),
@@ -448,12 +400,18 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
             connectReason: ReasonCode = SUCCESS,
             properties: ConnAckProperties = ConnAckProperties(),
         ) : this(
+            header = MqttFixedHeader(0x20u),
             acknowledgeFlags = (if (sessionPresent) 1u else 0u).toUByte(),
             connectReasonCode = connectReason.byte,
             properties = properties.props,
         )
 
         init {
+            if (header.flags != 0) {
+                throw MalformedPacketException(
+                    "Reserved fixed-header flags for CONNACK must be 0x0, got 0x${header.flags.toString(16)}",
+                )
+            }
             require((acknowledgeFlags.toInt() and 0xFE) == 0) {
                 "CONNACK Acknowledge Flags reserved bits 1-7 must be 0 (§3.2.2.1), got 0x${acknowledgeFlags.toString(16)}"
             }
@@ -488,9 +446,9 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
         override val receiveMaximum: Int get() = typedProperties.receiveMaximum
         override val serverKeepAlive: Int get() = typedProperties.serverKeepAlive ?: -1
 
-        override fun encodeBody(writeBuffer: WriteBuffer) = ControlPacketV5ConnAckCodec.encode(writeBuffer, this)
+        override fun encodeBody(writeBuffer: WriteBuffer) = ControlPacketV5ConnAckCodec.encodeBody(writeBuffer, this)
 
-        override fun remainingLength(): Int = ControlPacketV5ConnAckCodec.wireSize(this)
+        override fun remainingLength(): Int = ControlPacketV5ConnAckCodec.wireSizeBody(this)
     }
 
     /**
@@ -503,7 +461,7 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
      * higher-level helpers eagerly encode typed payloads to a `ReadBuffer` at the API
      * boundary so the wire-encoding side is monomorphic.
      */
-    @PacketType(value = 3)
+    @PacketTypeRange(0x30, 0x3F)
     @ProtocolMessage
     data class Publish<@Payload P>(
         val header: MqttFixedHeader,
@@ -657,7 +615,9 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
             private fun <P> eagerEncode(
                 value: P,
                 encodePayload: WriteBuffer.(P) -> Unit,
-            ): ReadBuffer = com.ditchoom.buffer.codec.encodeWithGrowth { it.encodePayload(value) }
+            ): ReadBuffer =
+                com.ditchoom.buffer.codec
+                    .encodeWithGrowth { it.encodePayload(value) }
 
             private fun makePublishHeaderByte(
                 dup: Boolean,
@@ -673,9 +633,10 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
         }
     }
 
-    @PacketType(value = 4, wire = 0x40)
+    @PacketType(wire = 4)
     @ProtocolMessage
     data class PubAck(
+        val header: MqttFixedHeader = MqttFixedHeader(0x40u),
         val packetId: UShort,
         @WhenRemaining(1) val reasonCode: UByte? = null,
         @WhenRemaining(1) @LengthPrefixed(LengthPrefix.Varint, maxBytes = 4) val properties: List<MqttProperty>? = null,
@@ -687,12 +648,18 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
             reasonString: String? = null,
             userProperty: List<Pair<String, String>> = emptyList(),
         ) : this(
+            header = MqttFixedHeader(0x40u),
             packetId = packetIdentifier.toUShort(),
             reasonCode = collapseReasonCode(reasonCode, reasonString, userProperty),
             properties = ackProps(reasonString, userProperty, forceEmpty = reasonCode != SUCCESS),
         )
 
         init {
+            if (header.flags != 0) {
+                throw MalformedPacketException(
+                    "Reserved fixed-header flags for PUBACK must be 0x0, got 0x${header.flags.toString(16)}",
+                )
+            }
             require(properties == null || reasonCode != null) {
                 "PUBACK properties cannot be present without a reason code"
             }
@@ -706,14 +673,15 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
         override val direction: DirectionOfFlow get() = DirectionOfFlow.BIDIRECTIONAL
         override val packetIdentifier: Int get() = packetId.toInt()
 
-        override fun encodeBody(writeBuffer: WriteBuffer) = ControlPacketV5PubAckCodec.encode(writeBuffer, this)
+        override fun encodeBody(writeBuffer: WriteBuffer) = ControlPacketV5PubAckCodec.encodeBody(writeBuffer, this)
 
-        override fun remainingLength() = ControlPacketV5PubAckCodec.wireSize(this)
+        override fun remainingLength() = ControlPacketV5PubAckCodec.wireSizeBody(this)
     }
 
-    @PacketType(value = 5, wire = 0x50)
+    @PacketType(wire = 5)
     @ProtocolMessage
     data class PubRec(
+        val header: MqttFixedHeader = MqttFixedHeader(0x50u),
         val packetId: UShort,
         @WhenRemaining(1) val reasonCode: UByte? = null,
         @WhenRemaining(1) @LengthPrefixed(LengthPrefix.Varint, maxBytes = 4) val properties: List<MqttProperty>? = null,
@@ -725,12 +693,18 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
             reasonString: String? = null,
             userProperty: List<Pair<String, String>> = emptyList(),
         ) : this(
+            header = MqttFixedHeader(0x50u),
             packetId = packetIdentifier.toUShort(),
             reasonCode = collapseReasonCode(reasonCode, reasonString, userProperty),
             properties = ackProps(reasonString, userProperty, forceEmpty = reasonCode != SUCCESS),
         )
 
         init {
+            if (header.flags != 0) {
+                throw MalformedPacketException(
+                    "Reserved fixed-header flags for PUBREC must be 0x0, got 0x${header.flags.toString(16)}",
+                )
+            }
             require(properties == null || reasonCode != null) {
                 "PUBREC properties cannot be present without a reason code"
             }
@@ -744,9 +718,9 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
         override val direction: DirectionOfFlow get() = DirectionOfFlow.BIDIRECTIONAL
         override val packetIdentifier: Int get() = packetId.toInt()
 
-        override fun encodeBody(writeBuffer: WriteBuffer) = ControlPacketV5PubRecCodec.encode(writeBuffer, this)
+        override fun encodeBody(writeBuffer: WriteBuffer) = ControlPacketV5PubRecCodec.encodeBody(writeBuffer, this)
 
-        override fun remainingLength() = ControlPacketV5PubRecCodec.wireSize(this)
+        override fun remainingLength() = ControlPacketV5PubRecCodec.wireSizeBody(this)
 
         override fun expectedResponse(
             reasonCode: ReasonCode,
@@ -755,9 +729,10 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
         ): IPublishRelease = PubRel(packetIdentifier, reasonCode, reasonString, userProperty)
     }
 
-    @PacketType(value = 6, wire = 0x62)
+    @PacketType(wire = 6)
     @ProtocolMessage
     data class PubRel(
+        val header: MqttFixedHeader = MqttFixedHeader(0x62u),
         val packetId: UShort,
         @WhenRemaining(1) val reasonCode: UByte? = null,
         @WhenRemaining(1) @LengthPrefixed(LengthPrefix.Varint, maxBytes = 4) val properties: List<MqttProperty>? = null,
@@ -769,12 +744,19 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
             reasonString: String? = null,
             userProperty: List<Pair<String, String>> = emptyList(),
         ) : this(
+            header = MqttFixedHeader(0x62u),
             packetId = packetIdentifier.toUShort(),
             reasonCode = collapseReasonCode(reasonCode, reasonString, userProperty),
             properties = ackProps(reasonString, userProperty, forceEmpty = reasonCode != SUCCESS),
         )
 
         init {
+            // §3.6.1: reserved low-nibble bits MUST be 0010.
+            if (header.flags != 0b10) {
+                throw MalformedPacketException(
+                    "Reserved fixed-header flags for PUBREL must be 0x2, got 0x${header.flags.toString(16)}",
+                )
+            }
             require(properties == null || reasonCode != null) {
                 "PUBREL properties cannot be present without a reason code"
             }
@@ -789,9 +771,9 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
         override val flags: Byte get() = 0b10
         override val packetIdentifier: Int get() = packetId.toInt()
 
-        override fun encodeBody(writeBuffer: WriteBuffer) = ControlPacketV5PubRelCodec.encode(writeBuffer, this)
+        override fun encodeBody(writeBuffer: WriteBuffer) = ControlPacketV5PubRelCodec.encodeBody(writeBuffer, this)
 
-        override fun remainingLength() = ControlPacketV5PubRelCodec.wireSize(this)
+        override fun remainingLength() = ControlPacketV5PubRelCodec.wireSizeBody(this)
 
         override fun expectedResponse(
             reasonCode: ReasonCode,
@@ -800,9 +782,10 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
         ): IPublishComplete = PubComp(packetIdentifier, reasonCode, reasonString, userProperty)
     }
 
-    @PacketType(value = 7, wire = 0x70)
+    @PacketType(wire = 7)
     @ProtocolMessage
     data class PubComp(
+        val header: MqttFixedHeader = MqttFixedHeader(0x70u),
         val packetId: UShort,
         @WhenRemaining(1) val reasonCode: UByte? = null,
         @WhenRemaining(1) @LengthPrefixed(LengthPrefix.Varint, maxBytes = 4) val properties: List<MqttProperty>? = null,
@@ -810,6 +793,7 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
         IPublishComplete {
         constructor(packetIdentifier: UShort, reasonCode: ReasonCode = SUCCESS) :
             this(
+                header = MqttFixedHeader(0x70u),
                 packetId = packetIdentifier,
                 reasonCode = if (reasonCode == SUCCESS) null else reasonCode.byte,
                 properties = null,
@@ -820,12 +804,18 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
             reasonString: String? = null,
             userProperty: List<Pair<String, String>> = emptyList(),
         ) : this(
+            header = MqttFixedHeader(0x70u),
             packetId = packetIdentifier.toUShort(),
             reasonCode = collapseReasonCode(reasonCode, reasonString, userProperty),
             properties = ackProps(reasonString, userProperty, forceEmpty = reasonCode != SUCCESS),
         )
 
         init {
+            if (header.flags != 0) {
+                throw MalformedPacketException(
+                    "Reserved fixed-header flags for PUBCOMP must be 0x0, got 0x${header.flags.toString(16)}",
+                )
+            }
             require(properties == null || reasonCode != null) {
                 "PUBCOMP properties cannot be present without a reason code"
             }
@@ -839,32 +829,53 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
         override val direction: DirectionOfFlow get() = DirectionOfFlow.BIDIRECTIONAL
         override val packetIdentifier: Int get() = packetId.toInt()
 
-        override fun encodeBody(writeBuffer: WriteBuffer) = ControlPacketV5PubCompCodec.encode(writeBuffer, this)
+        override fun encodeBody(writeBuffer: WriteBuffer) = ControlPacketV5PubCompCodec.encodeBody(writeBuffer, this)
 
-        override fun remainingLength() = ControlPacketV5PubCompCodec.wireSize(this)
+        override fun remainingLength() = ControlPacketV5PubCompCodec.wireSizeBody(this)
     }
 
-    @PacketType(value = 12, wire = 0xC0)
+    @PacketType(wire = 12)
     @ProtocolMessage
-    data object PingReq :
-        ControlPacketV5,
+    data class PingReq(
+        val header: MqttFixedHeader = MqttFixedHeader(0xC0u),
+    ) : ControlPacketV5,
         IPingRequest {
+        init {
+            if (header.flags != 0) {
+                throw MalformedPacketException(
+                    "Reserved fixed-header flags for PINGREQ must be 0x0, got 0x${header.flags.toString(16)}",
+                )
+            }
+        }
+
         override val controlPacketValue: Byte get() = 12
         override val direction: DirectionOfFlow get() = DirectionOfFlow.CLIENT_TO_SERVER
     }
 
-    @PacketType(value = 13, wire = 0xD0)
+    @PacketType(wire = 13)
     @ProtocolMessage
-    data object PingResp :
-        ControlPacketV5,
+    data class PingResp(
+        val header: MqttFixedHeader = MqttFixedHeader(0xD0u),
+    ) : ControlPacketV5,
         IPingResponse {
+        init {
+            if (header.flags != 0) {
+                throw MalformedPacketException(
+                    "Reserved fixed-header flags for PINGRESP must be 0x0, got 0x${header.flags.toString(16)}",
+                )
+            }
+        }
+
         override val controlPacketValue: Byte get() = 13
         override val direction: DirectionOfFlow get() = DirectionOfFlow.SERVER_TO_CLIENT
     }
 
-    @PacketType(value = 14, wire = 0xE0)
+    @PacketType(wire = 14)
     @ProtocolMessage
     data class Disconnect(
+        // No default on `header` so the no-arg form resolves unambiguously to the typed
+        // secondary constructor below; codec-generated decode always passes header anyway.
+        val header: MqttFixedHeader,
         @WhenRemaining(1) val reasonCode: UByte? = null,
         @WhenRemaining(1) @LengthPrefixed(LengthPrefix.Varint, maxBytes = 4) val properties: List<MqttProperty>? = null,
     ) : ControlPacketV5,
@@ -876,6 +887,7 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
             userProperty: List<Pair<String, String>> = emptyList(),
             serverReference: String? = null,
         ) : this(
+            header = MqttFixedHeader(0xE0u),
             reasonCode =
                 collapseDisconnectReasonCode(
                     reasonCode,
@@ -895,6 +907,11 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
         )
 
         init {
+            if (header.flags != 0) {
+                throw MalformedPacketException(
+                    "Reserved fixed-header flags for DISCONNECT must be 0x0, got 0x${header.flags.toString(16)}",
+                )
+            }
             require(properties == null || reasonCode != null) {
                 "DISCONNECT properties cannot be present without a reason code"
             }
@@ -907,14 +924,17 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
         override val controlPacketValue: Byte get() = 14
         override val direction: DirectionOfFlow get() = DirectionOfFlow.BIDIRECTIONAL
 
-        override fun encodeBody(writeBuffer: WriteBuffer) = ControlPacketV5DisconnectCodec.encode(writeBuffer, this)
+        override fun encodeBody(writeBuffer: WriteBuffer) = ControlPacketV5DisconnectCodec.encodeBody(writeBuffer, this)
 
-        override fun remainingLength() = ControlPacketV5DisconnectCodec.wireSize(this)
+        override fun remainingLength() = ControlPacketV5DisconnectCodec.wireSizeBody(this)
     }
 
-    @PacketType(value = 15, wire = 0xF0)
+    @PacketType(wire = 15)
     @ProtocolMessage
     data class Auth(
+        // No default on `header` so the no-arg form resolves unambiguously to the typed
+        // secondary constructor below; codec-generated decode always passes header anyway.
+        val header: MqttFixedHeader,
         @WhenRemaining(1) val reasonCode: UByte? = null,
         @WhenRemaining(1) @LengthPrefixed(LengthPrefix.Varint, maxBytes = 4) val properties: List<MqttProperty>? = null,
     ) : ControlPacketV5 {
@@ -923,6 +943,7 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
             reasonString: String? = null,
             userProperty: List<Pair<String, String>> = emptyList(),
         ) : this(
+            header = MqttFixedHeader(0xF0u),
             reasonCode =
                 if (reasonCode == SUCCESS && reasonString == null && userProperty.isEmpty()) {
                     null
@@ -933,6 +954,11 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
         )
 
         init {
+            if (header.flags != 0) {
+                throw MalformedPacketException(
+                    "Reserved fixed-header flags for AUTH must be 0x0, got 0x${header.flags.toString(16)}",
+                )
+            }
             require(properties == null || reasonCode != null) {
                 "AUTH properties cannot be present without a reason code"
             }
@@ -945,14 +971,15 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
         override val controlPacketValue: Byte get() = 15
         override val direction: DirectionOfFlow get() = DirectionOfFlow.BIDIRECTIONAL
 
-        override fun encodeBody(writeBuffer: WriteBuffer) = ControlPacketV5AuthCodec.encode(writeBuffer, this)
+        override fun encodeBody(writeBuffer: WriteBuffer) = ControlPacketV5AuthCodec.encodeBody(writeBuffer, this)
 
-        override fun remainingLength() = ControlPacketV5AuthCodec.wireSize(this)
+        override fun remainingLength() = ControlPacketV5AuthCodec.wireSizeBody(this)
     }
 
-    @PacketType(value = 8, wire = 0x82)
+    @PacketType(wire = 8)
     @ProtocolMessage
     data class Subscribe(
+        val header: MqttFixedHeader = MqttFixedHeader(0x82u),
         val packetId: UShort,
         @LengthPrefixed(LengthPrefix.Varint, maxBytes = 4) val properties: List<MqttProperty> = emptyList(),
         @RemainingBytes val subscriptionEntries: List<SubscriptionV5Entry>,
@@ -980,6 +1007,7 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
             reasonString: String? = null,
             userProperty: List<Pair<String, String>> = emptyList(),
         ) : this(
+            header = MqttFixedHeader(0x82u),
             packetId = packetIdentifier,
             properties = ackProps(reasonString, userProperty) ?: emptyList(),
             subscriptionEntries = subscriptions.map(::toSubscriptionEntry),
@@ -1002,6 +1030,12 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
         )
 
         init {
+            // §3.8.1: reserved low-nibble bits MUST be 0010.
+            if (header.flags != 0b10) {
+                throw MalformedPacketException(
+                    "Reserved fixed-header flags for SUBSCRIBE must be 0x2, got 0x${header.flags.toString(16)}",
+                )
+            }
             require(subscriptionEntries.isNotEmpty()) {
                 "SUBSCRIBE payload must contain at least one Topic Filter (Protocol Error §3.8.3)"
             }
@@ -1029,14 +1063,15 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
 
         override fun copyWithNewPacketIdentifier(packetIdentifier: Int): ISubscribeRequest = copy(packetId = packetIdentifier.toUShort())
 
-        override fun encodeBody(writeBuffer: WriteBuffer) = ControlPacketV5SubscribeCodec.encode(writeBuffer, this)
+        override fun encodeBody(writeBuffer: WriteBuffer) = ControlPacketV5SubscribeCodec.encodeBody(writeBuffer, this)
 
-        override fun remainingLength(): Int = ControlPacketV5SubscribeCodec.wireSize(this)
+        override fun remainingLength(): Int = ControlPacketV5SubscribeCodec.wireSizeBody(this)
     }
 
-    @PacketType(value = 9, wire = 0x90)
+    @PacketType(wire = 9)
     @ProtocolMessage
     data class SubAck(
+        val header: MqttFixedHeader = MqttFixedHeader(0x90u),
         val packetId: UShort,
         @LengthPrefixed(LengthPrefix.Varint, maxBytes = 4) val properties: List<MqttProperty> = emptyList(),
         @RemainingBytes val reasonCodeEntries: List<SubAckReasonCodeV5>,
@@ -1055,6 +1090,7 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
             reasonString: String? = null,
             userProperty: List<Pair<String, String>> = emptyList(),
         ) : this(
+            header = MqttFixedHeader(0x90u),
             packetId = packetIdentifier,
             properties = ackProps(reasonString, userProperty) ?: emptyList(),
             reasonCodeEntries = reasonCodes.map { SubAckReasonCodeV5(it.byte) },
@@ -1068,6 +1104,11 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
         ) : this(packetIdentifier.toUShort(), payload, reasonString, userProperty)
 
         init {
+            if (header.flags != 0) {
+                throw MalformedPacketException(
+                    "Reserved fixed-header flags for SUBACK must be 0x0, got 0x${header.flags.toString(16)}",
+                )
+            }
             require(reasonCodeEntries.isNotEmpty()) {
                 "SUBACK payload must contain at least one Reason Code (Protocol Error §3.9.3)"
             }
@@ -1085,14 +1126,15 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
         val payload: List<ReasonCode>
             get() = reasonCodeEntries.map { decodeSubAckReasonCode(it.raw) }
 
-        override fun encodeBody(writeBuffer: WriteBuffer) = ControlPacketV5SubAckCodec.encode(writeBuffer, this)
+        override fun encodeBody(writeBuffer: WriteBuffer) = ControlPacketV5SubAckCodec.encodeBody(writeBuffer, this)
 
-        override fun remainingLength(): Int = ControlPacketV5SubAckCodec.wireSize(this)
+        override fun remainingLength(): Int = ControlPacketV5SubAckCodec.wireSizeBody(this)
     }
 
-    @PacketType(value = 10, wire = 0xA2)
+    @PacketType(wire = 10)
     @ProtocolMessage
     data class Unsubscribe(
+        val header: MqttFixedHeader = MqttFixedHeader(0xA2u),
         val packetId: UShort,
         @LengthPrefixed(LengthPrefix.Varint, maxBytes = 4) val properties: List<MqttProperty> = emptyList(),
         @RemainingBytes val topicEntries: List<TopicFilterV5Entry>,
@@ -1103,6 +1145,7 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
             topics: Set<TopicFilter>,
             userProperty: List<Pair<String, String>> = emptyList(),
         ) : this(
+            header = MqttFixedHeader(0xA2u),
             packetId = packetIdentifier,
             properties = ackProps(reasonString = null, userProperty = userProperty) ?: emptyList(),
             topicEntries = topics.map { TopicFilterV5Entry(it.toString()) },
@@ -1119,6 +1162,12 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
         ) : this(setOf(TopicFilter.fromOrThrow(topic)), userProperty)
 
         init {
+            // §3.10.1: reserved low-nibble bits MUST be 0010.
+            if (header.flags != 0b10) {
+                throw MalformedPacketException(
+                    "Reserved fixed-header flags for UNSUBSCRIBE must be 0x2, got 0x${header.flags.toString(16)}",
+                )
+            }
             if (topicEntries.isEmpty()) {
                 throw ProtocolError("UNSUBSCRIBE payload must contain at least one Topic Filter (§3.10.3)")
             }
@@ -1134,14 +1183,15 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
 
         override fun copyWithNewPacketIdentifier(packetIdentifier: Int): IUnsubscribeRequest = copy(packetId = packetIdentifier.toUShort())
 
-        override fun encodeBody(writeBuffer: WriteBuffer) = ControlPacketV5UnsubscribeCodec.encode(writeBuffer, this)
+        override fun encodeBody(writeBuffer: WriteBuffer) = ControlPacketV5UnsubscribeCodec.encodeBody(writeBuffer, this)
 
-        override fun remainingLength(): Int = ControlPacketV5UnsubscribeCodec.wireSize(this)
+        override fun remainingLength(): Int = ControlPacketV5UnsubscribeCodec.wireSizeBody(this)
     }
 
-    @PacketType(value = 11, wire = 0xB0)
+    @PacketType(wire = 11)
     @ProtocolMessage
     data class UnsubAck(
+        val header: MqttFixedHeader = MqttFixedHeader(0xB0u),
         val packetId: UShort,
         @LengthPrefixed(LengthPrefix.Varint, maxBytes = 4) val properties: List<MqttProperty> = emptyList(),
         @RemainingBytes val reasonCodeEntries: List<UnsubAckReasonCodeV5>,
@@ -1153,12 +1203,18 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
             userProperty: List<Pair<String, String>> = emptyList(),
             reasonCodes: List<ReasonCode> = listOf(SUCCESS),
         ) : this(
+            header = MqttFixedHeader(0xB0u),
             packetId = packetIdentifier.toUShort(),
             properties = ackProps(reasonString, userProperty) ?: emptyList(),
             reasonCodeEntries = reasonCodes.map { UnsubAckReasonCodeV5(it.byte) },
         )
 
         init {
+            if (header.flags != 0) {
+                throw MalformedPacketException(
+                    "Reserved fixed-header flags for UNSUBACK must be 0x0, got 0x${header.flags.toString(16)}",
+                )
+            }
             if (reasonCodeEntries.isEmpty()) {
                 throw ProtocolError("UNSUBACK must contain at least one reason code (§3.11.3)")
             }
@@ -1176,9 +1232,9 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
         val reasonCodes: List<ReasonCode>
             get() = reasonCodeEntries.map { decodeUnsubAckReasonCode(it.raw) }
 
-        override fun encodeBody(writeBuffer: WriteBuffer) = ControlPacketV5UnsubAckCodec.encode(writeBuffer, this)
+        override fun encodeBody(writeBuffer: WriteBuffer) = ControlPacketV5UnsubAckCodec.encodeBody(writeBuffer, this)
 
-        override fun remainingLength(): Int = ControlPacketV5UnsubAckCodec.wireSize(this)
+        override fun remainingLength(): Int = ControlPacketV5UnsubAckCodec.wireSizeBody(this)
     }
 }
 

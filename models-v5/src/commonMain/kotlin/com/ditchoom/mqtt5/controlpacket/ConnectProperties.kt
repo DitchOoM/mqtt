@@ -36,20 +36,21 @@ data class ConnectProperties(
     val userProperty: List<Pair<String, String>> = emptyList(),
     val authentication: Authentication? = null,
 ) {
-    val props: List<MqttProperty> = buildList {
-        if (sessionExpiryIntervalSeconds != null) add(SessionExpiryInterval(sessionExpiryIntervalSeconds.toUInt()))
-        if (receiveMaximum != null) add(ReceiveMaximum(receiveMaximum.toUShort()))
-        if (maximumPacketSize != null) add(MaximumPacketSize(maximumPacketSize.toUInt()))
-        if (topicAliasMaximum != null) add(TopicAliasMaximum(topicAliasMaximum.toUShort()))
-        if (requestResponseInformation != null) add(RequestResponseInformation(requestResponseInformation))
-        if (requestProblemInformation != null) add(RequestProblemInformation(requestProblemInformation))
-        for ((k, v) in userProperty) add(UserProperty(k, v))
-        if (authentication != null) {
-            add(AuthenticationMethod(authentication.method))
-            authentication.data.position(0)
-            add(AuthenticationData(authentication.data.remaining().toUShort(), authentication.data))
+    val props: List<MqttProperty> =
+        buildList {
+            if (sessionExpiryIntervalSeconds != null) add(SessionExpiryInterval(sessionExpiryIntervalSeconds.toUInt()))
+            if (receiveMaximum != null) add(ReceiveMaximum(receiveMaximum.toUShort()))
+            if (maximumPacketSize != null) add(MaximumPacketSize(maximumPacketSize.toUInt()))
+            if (topicAliasMaximum != null) add(TopicAliasMaximum(topicAliasMaximum.toUShort()))
+            if (requestResponseInformation != null) add(RequestResponseInformation(requestResponseInformation))
+            if (requestProblemInformation != null) add(RequestProblemInformation(requestProblemInformation))
+            for ((k, v) in userProperty) add(UserProperty(k, v))
+            if (authentication != null) {
+                add(AuthenticationMethod(authentication.method))
+                authentication.data.position(0)
+                add(AuthenticationData(authentication.data.remaining().toUShort(), authentication.data))
+            }
         }
-    }
 
     fun size(): Int = mqttPropertiesSize(props)
 
@@ -58,23 +59,29 @@ data class ConnectProperties(
             val p = PropertyExtractor(keyValuePairs, "CONNECT")
             val sessionExpiry = p.single<SessionExpiryInterval>()?.seconds?.toULong()
             val receiveMax =
-                p.single<ReceiveMaximum>()?.also {
-                    if (it.max == 0.toUShort()) {
-                        throw ProtocolError(
-                            "Receive Maximum cannot be set to 0 see: " +
-                                "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477349",
-                        )
-                    }
-                }?.max?.toInt()
+                p
+                    .single<ReceiveMaximum>()
+                    ?.also {
+                        if (it.max == 0.toUShort()) {
+                            throw ProtocolError(
+                                "Receive Maximum cannot be set to 0 see: " +
+                                    "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477349",
+                            )
+                        }
+                    }?.max
+                    ?.toInt()
             val maximumPacketSize =
-                p.single<MaximumPacketSize>()?.also {
-                    if (it.bytes == 0u) {
-                        throw ProtocolError(
-                            "Maximum Packet Size cannot be set to 0 see: " +
-                                "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477350",
-                        )
-                    }
-                }?.bytes?.toULong()
+                p
+                    .single<MaximumPacketSize>()
+                    ?.also {
+                        if (it.bytes == 0u) {
+                            throw ProtocolError(
+                                "Maximum Packet Size cannot be set to 0 see: " +
+                                    "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477350",
+                            )
+                        }
+                    }?.bytes
+                    ?.toULong()
             val topicAliasMaximum = p.single<TopicAliasMaximum>()?.max?.toInt()
             val requestResponseInformation = p.single<RequestResponseInformation>()?.enabled
             val requestProblemInformation = p.single<RequestProblemInformation>()?.enabled
@@ -114,18 +121,19 @@ data class ConnectWillProperties(
     val correlationData: ReadBuffer? = null,
     val userProperty: List<Pair<String, String>> = emptyList(),
 ) {
-    val props: List<MqttProperty> = buildList {
-        if (willDelayIntervalSeconds != 0L) add(WillDelayInterval(willDelayIntervalSeconds.toUInt()))
-        if (payloadFormatIndicator) add(PayloadFormatIndicator(payloadFormatIndicator))
-        if (messageExpiryIntervalSeconds != null) add(MessageExpiryInterval(messageExpiryIntervalSeconds.toUInt()))
-        if (contentType != null) add(ContentType(contentType))
-        if (responseTopic != null) add(ResponseTopic(responseTopic.toString()))
-        if (correlationData != null) {
-            correlationData.position(0)
-            add(CorrelationData(correlationData.remaining().toUShort(), correlationData))
+    val props: List<MqttProperty> =
+        buildList {
+            if (willDelayIntervalSeconds != 0L) add(WillDelayInterval(willDelayIntervalSeconds.toUInt()))
+            if (payloadFormatIndicator) add(PayloadFormatIndicator(payloadFormatIndicator))
+            if (messageExpiryIntervalSeconds != null) add(MessageExpiryInterval(messageExpiryIntervalSeconds.toUInt()))
+            if (contentType != null) add(ContentType(contentType))
+            if (responseTopic != null) add(ResponseTopic(responseTopic.toString()))
+            if (correlationData != null) {
+                correlationData.position(0)
+                add(CorrelationData(correlationData.remaining().toUShort(), correlationData))
+            }
+            for ((k, v) in userProperty) add(UserProperty(k, v))
         }
-        for ((k, v) in userProperty) add(UserProperty(k, v))
-    }
 
     fun size(): Int = mqttPropertiesSize(props)
 

@@ -29,20 +29,20 @@ class V5PacketAckShapedTests {
 
     @Test
     fun pingReqRoundTripFullWire() {
-        val buf = PingRequest.serialize()
+        val buf = PingRequest().serialize()
         assertEquals(0xC0.toByte(), buf.readByte()) // type=12, flags=0000
         assertEquals(0x00.toByte(), buf.readByte()) // RL=0
         buf.position(0)
-        assertSame(PingRequest, ControlPacketV5.from(buf))
+        assertEquals(PingRequest(), ControlPacketV5.from(buf))
     }
 
     @Test
     fun pingRespRoundTripFullWire() {
-        val buf = PingResponse.serialize()
+        val buf = PingResponse().serialize()
         assertEquals(0xD0.toByte(), buf.readByte()) // type=13, flags=0000
         assertEquals(0x00.toByte(), buf.readByte()) // RL=0
         buf.position(0)
-        assertSame(PingResponse, ControlPacketV5.from(buf))
+        assertEquals(PingResponse(), ControlPacketV5.from(buf))
     }
 
     @Test

@@ -26,12 +26,12 @@ import com.ditchoom.mqtt.controlpacket.payloadAsReadBufferOrNull
 import com.ditchoom.mqtt5.controlpacket.ConnectProperties
 import com.ditchoom.mqtt5.controlpacket.ConnectWillProperties
 import com.ditchoom.mqtt5.controlpacket.ConnectionRequest
+import com.ditchoom.mqtt5.controlpacket.ControlPacketV5
 import com.ditchoom.mqtt5.controlpacket.PublishComplete
 import com.ditchoom.mqtt5.controlpacket.PublishProperties
 import com.ditchoom.mqtt5.controlpacket.PublishReceived
 import com.ditchoom.mqtt5.controlpacket.PublishRelease
 import com.ditchoom.mqtt5.controlpacket.SubscribeRequest
-import com.ditchoom.mqtt5.controlpacket.ControlPacketV5
 import com.ditchoom.mqtt5.controlpacket.Subscription
 import com.ditchoom.mqtt5.controlpacket.UnsubscribeRequest
 import com.ditchoom.mqtt5.controlpacket.properties.Authentication
@@ -315,16 +315,17 @@ class SqlDatabasePersistence(
                 .allProps(id, 0L, -2) { k, v ->
                     Pair(k, v)
                 }.executeAsList()
-        val typedProps = ConnectProperties(
-            sessionExpiryIntervalSeconds = connectionRequestDatabaseRecord.session_expiry_interval_seconds?.toULong(),
-            receiveMaximum = connectionRequestDatabaseRecord.receive_maximum?.toInt(),
-            maximumPacketSize = connectionRequestDatabaseRecord.maximum_packet_size?.toULong(),
-            topicAliasMaximum = connectionRequestDatabaseRecord.topic_alias_maximum?.toInt(),
-            requestResponseInformation = connectionRequestDatabaseRecord.request_response_information.toNullableBoolean(),
-            requestProblemInformation = connectionRequestDatabaseRecord.request_problem_information.toNullableBoolean(),
-            userProperty = userProps,
-            authentication = auth,
-        )
+        val typedProps =
+            ConnectProperties(
+                sessionExpiryIntervalSeconds = connectionRequestDatabaseRecord.session_expiry_interval_seconds?.toULong(),
+                receiveMaximum = connectionRequestDatabaseRecord.receive_maximum?.toInt(),
+                maximumPacketSize = connectionRequestDatabaseRecord.maximum_packet_size?.toULong(),
+                topicAliasMaximum = connectionRequestDatabaseRecord.topic_alias_maximum?.toInt(),
+                requestResponseInformation = connectionRequestDatabaseRecord.request_response_information.toNullableBoolean(),
+                requestProblemInformation = connectionRequestDatabaseRecord.request_problem_information.toNullableBoolean(),
+                userProperty = userProps,
+                authentication = auth,
+            )
         val typedWillProps =
             if (connectionRequestDatabaseRecord.has_will_properties == 1L) {
                 ConnectWillProperties(
@@ -332,9 +333,10 @@ class SqlDatabasePersistence(
                     payloadFormatIndicator = connectionRequestDatabaseRecord.will_property_payload_format_indicator == 1L,
                     messageExpiryIntervalSeconds = connectionRequestDatabaseRecord.will_property_message_expiry_interval_seconds,
                     contentType = connectionRequestDatabaseRecord.will_property_content_type,
-                    responseTopic = connectionRequestDatabaseRecord.will_property_response_topic?.let {
-                        TopicName.fromOrThrow(it)
-                    },
+                    responseTopic =
+                        connectionRequestDatabaseRecord.will_property_response_topic?.let {
+                            TopicName.fromOrThrow(it)
+                        },
                     correlationData = connectionRequestDatabaseRecord.will_property_correlation_data,
                     userProperty = willUserProps,
                 )
@@ -355,18 +357,19 @@ class SqlDatabasePersistence(
             } else {
                 com.ditchoom.mqtt.controlpacket.WillConfig.Disabled
             }
-        val connectionRequest = ControlPacketV5.Connect.create(
-            clientId = connectionRequestDatabaseRecord.client_id,
-            keepAliveSeconds = connectionRequestDatabaseRecord.keep_alive_seconds.toInt(),
-            cleanStart = connectionRequestDatabaseRecord.clean_start == 1L,
-            userName = connectionRequestDatabaseRecord.username,
-            password = connectionRequestDatabaseRecord.password,
-            will = will,
-            protocolName = connectionRequestDatabaseRecord.protocol_name,
-            protocolVersion = connectionRequestDatabaseRecord.protocol_version.toUByte(),
-            props = typedProps,
-            willProperties = typedWillProps,
-        )
+        val connectionRequest =
+            ControlPacketV5.Connect.create(
+                clientId = connectionRequestDatabaseRecord.client_id,
+                keepAliveSeconds = connectionRequestDatabaseRecord.keep_alive_seconds.toInt(),
+                cleanStart = connectionRequestDatabaseRecord.clean_start == 1L,
+                userName = connectionRequestDatabaseRecord.username,
+                password = connectionRequestDatabaseRecord.password,
+                will = will,
+                protocolName = connectionRequestDatabaseRecord.protocol_name,
+                protocolVersion = connectionRequestDatabaseRecord.protocol_version.toUByte(),
+                props = typedProps,
+                willProperties = typedWillProps,
+            )
         val socketConnections = socketConnectionQueries.connectionsByBrokerId(id)
         val connectionOps =
             socketConnections
@@ -588,18 +591,19 @@ class SqlDatabasePersistence(
                     5L ->
                         PublishReceived(
                             packetIdentifier = it.packet_id.toInt(),
-                            reasonCode = when (it.reason_code.toUByte()) {
-                                ReasonCode.SUCCESS.byte -> ReasonCode.SUCCESS
-                                ReasonCode.NO_MATCHING_SUBSCRIBERS.byte -> ReasonCode.NO_MATCHING_SUBSCRIBERS
-                                ReasonCode.UNSPECIFIED_ERROR.byte -> ReasonCode.UNSPECIFIED_ERROR
-                                ReasonCode.IMPLEMENTATION_SPECIFIC_ERROR.byte -> ReasonCode.IMPLEMENTATION_SPECIFIC_ERROR
-                                ReasonCode.NOT_AUTHORIZED.byte -> ReasonCode.NOT_AUTHORIZED
-                                ReasonCode.TOPIC_NAME_INVALID.byte -> ReasonCode.TOPIC_NAME_INVALID
-                                ReasonCode.PACKET_IDENTIFIER_IN_USE.byte -> ReasonCode.PACKET_IDENTIFIER_IN_USE
-                                ReasonCode.QUOTA_EXCEEDED.byte -> ReasonCode.QUOTA_EXCEEDED
-                                ReasonCode.PAYLOAD_FORMAT_INVALID.byte -> ReasonCode.PAYLOAD_FORMAT_INVALID
-                                else -> error("Invalid PublishReceived QOS Reason code ${it.reason_code}")
-                            },
+                            reasonCode =
+                                when (it.reason_code.toUByte()) {
+                                    ReasonCode.SUCCESS.byte -> ReasonCode.SUCCESS
+                                    ReasonCode.NO_MATCHING_SUBSCRIBERS.byte -> ReasonCode.NO_MATCHING_SUBSCRIBERS
+                                    ReasonCode.UNSPECIFIED_ERROR.byte -> ReasonCode.UNSPECIFIED_ERROR
+                                    ReasonCode.IMPLEMENTATION_SPECIFIC_ERROR.byte -> ReasonCode.IMPLEMENTATION_SPECIFIC_ERROR
+                                    ReasonCode.NOT_AUTHORIZED.byte -> ReasonCode.NOT_AUTHORIZED
+                                    ReasonCode.TOPIC_NAME_INVALID.byte -> ReasonCode.TOPIC_NAME_INVALID
+                                    ReasonCode.PACKET_IDENTIFIER_IN_USE.byte -> ReasonCode.PACKET_IDENTIFIER_IN_USE
+                                    ReasonCode.QUOTA_EXCEEDED.byte -> ReasonCode.QUOTA_EXCEEDED
+                                    ReasonCode.PAYLOAD_FORMAT_INVALID.byte -> ReasonCode.PAYLOAD_FORMAT_INVALID
+                                    else -> error("Invalid PublishReceived QOS Reason code ${it.reason_code}")
+                                },
                             reasonString = it.reason_string,
                             userProperty = userProps,
                         )

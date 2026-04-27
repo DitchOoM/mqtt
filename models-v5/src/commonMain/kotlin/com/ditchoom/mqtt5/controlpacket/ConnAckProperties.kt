@@ -72,58 +72,65 @@ data class ConnAckProperties(
     val serverReference: String? = null,
     val authentication: Authentication? = null,
 ) {
-    val props: List<MqttProperty> = buildList {
-        if (sessionExpiryIntervalSeconds != null) add(SessionExpiryInterval(sessionExpiryIntervalSeconds.toUInt()))
-        if (receiveMaximum != UShort.MAX_VALUE.toInt()) add(ReceiveMaximum(receiveMaximum.toUShort()))
-        if (maximumQos != QualityOfService.EXACTLY_ONCE) {
-            add(MaximumQos(maximumQos != QualityOfService.AT_MOST_ONCE))
+    val props: List<MqttProperty> =
+        buildList {
+            if (sessionExpiryIntervalSeconds != null) add(SessionExpiryInterval(sessionExpiryIntervalSeconds.toUInt()))
+            if (receiveMaximum != UShort.MAX_VALUE.toInt()) add(ReceiveMaximum(receiveMaximum.toUShort()))
+            if (maximumQos != QualityOfService.EXACTLY_ONCE) {
+                add(MaximumQos(maximumQos != QualityOfService.AT_MOST_ONCE))
+            }
+            if (!retainAvailable) add(RetainAvailable(retainAvailable))
+            if (maximumPacketSize != null) add(MaximumPacketSize(maximumPacketSize.toUInt()))
+            if (assignedClientIdentifier != null) add(AssignedClientIdentifier(assignedClientIdentifier))
+            if (topicAliasMaximum != 0) add(TopicAliasMaximum(topicAliasMaximum.toUShort()))
+            if (reasonString != null) add(ReasonString(reasonString))
+            for ((k, v) in userProperty) add(UserProperty(k, v))
+            if (!supportsWildcardSubscriptions) add(WildcardSubscriptionAvailable(supportsWildcardSubscriptions))
+            if (!subscriptionIdentifiersAvailable) add(SubscriptionIdentifierAvailable(subscriptionIdentifiersAvailable))
+            if (!sharedSubscriptionAvailable) add(SharedSubscriptionAvailable(sharedSubscriptionAvailable))
+            if (serverKeepAlive != null) add(ServerKeepAlive(serverKeepAlive.toUShort()))
+            if (responseInformation != null) add(ResponseInformation(responseInformation))
+            if (serverReference != null) add(ServerReference(serverReference))
+            if (authentication != null) {
+                add(AuthenticationMethod(authentication.method))
+                authentication.data.position(0)
+                add(AuthenticationData(authentication.data.remaining().toUShort(), authentication.data))
+            }
         }
-        if (!retainAvailable) add(RetainAvailable(retainAvailable))
-        if (maximumPacketSize != null) add(MaximumPacketSize(maximumPacketSize.toUInt()))
-        if (assignedClientIdentifier != null) add(AssignedClientIdentifier(assignedClientIdentifier))
-        if (topicAliasMaximum != 0) add(TopicAliasMaximum(topicAliasMaximum.toUShort()))
-        if (reasonString != null) add(ReasonString(reasonString))
-        for ((k, v) in userProperty) add(UserProperty(k, v))
-        if (!supportsWildcardSubscriptions) add(WildcardSubscriptionAvailable(supportsWildcardSubscriptions))
-        if (!subscriptionIdentifiersAvailable) add(SubscriptionIdentifierAvailable(subscriptionIdentifiersAvailable))
-        if (!sharedSubscriptionAvailable) add(SharedSubscriptionAvailable(sharedSubscriptionAvailable))
-        if (serverKeepAlive != null) add(ServerKeepAlive(serverKeepAlive.toUShort()))
-        if (responseInformation != null) add(ResponseInformation(responseInformation))
-        if (serverReference != null) add(ServerReference(serverReference))
-        if (authentication != null) {
-            add(AuthenticationMethod(authentication.method))
-            authentication.data.position(0)
-            add(AuthenticationData(authentication.data.remaining().toUShort(), authentication.data))
-        }
-    }
 
     companion object {
         fun from(keyValuePairs: Collection<MqttProperty>?): ConnAckProperties {
             val p = PropertyExtractor(keyValuePairs, "CONNACK")
             val sessionExpiry = p.single<SessionExpiryInterval>()?.seconds?.toULong()
             val receiveMax =
-                p.single<ReceiveMaximum>()?.also {
-                    if (it.max == 0.toUShort()) {
-                        throw ProtocolError(
-                            "Receive Maximum cannot be set to 0 see: " +
-                                "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477383",
-                        )
-                    }
-                }?.max?.toInt()
+                p
+                    .single<ReceiveMaximum>()
+                    ?.also {
+                        if (it.max == 0.toUShort()) {
+                            throw ProtocolError(
+                                "Receive Maximum cannot be set to 0 see: " +
+                                    "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477383",
+                            )
+                        }
+                    }?.max
+                    ?.toInt()
             val maximumQos =
                 p.single<MaximumQos>()?.let {
                     if (it.qos1Allowed) QualityOfService.AT_LEAST_ONCE else QualityOfService.AT_MOST_ONCE
                 }
             val retainAvailable = p.single<RetainAvailable>()?.supported
             val maximumPacketSize =
-                p.single<MaximumPacketSize>()?.also {
-                    if (it.bytes == 0u) {
-                        throw ProtocolError(
-                            "Maximum Packet Size cannot be set to 0 see: " +
-                                "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477350",
-                        )
-                    }
-                }?.bytes?.toULong()
+                p
+                    .single<MaximumPacketSize>()
+                    ?.also {
+                        if (it.bytes == 0u) {
+                            throw ProtocolError(
+                                "Maximum Packet Size cannot be set to 0 see: " +
+                                    "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477350",
+                            )
+                        }
+                    }?.bytes
+                    ?.toULong()
             val assignedClientId = p.single<AssignedClientIdentifier>()?.value
             val topicAlias = (p.single<TopicAliasMaximum>()?.max ?: p.single<TopicAlias>()?.value)?.toInt()
             val reasonString = p.single<ReasonString>()?.value

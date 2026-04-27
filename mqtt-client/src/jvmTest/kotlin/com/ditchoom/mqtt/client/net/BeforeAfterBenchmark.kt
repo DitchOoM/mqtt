@@ -11,6 +11,7 @@ import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt3.controlpacket.ControlPacketV4
 import com.ditchoom.mqtt5.controlpacket.ControlPacketV5
+import com.ditchoom.mqtt5.controlpacket.ControlPacketV5Factory
 import java.io.File
 import java.lang.management.ManagementFactory
 import javax.management.ObjectName
@@ -195,7 +196,7 @@ class BeforeAfterBenchmark {
                     val byte1 = stream.readUnsignedByte().toUByte()
                     val remainingLength = readVarInt(stream)
                     val body = if (remainingLength > 0) stream.readBuffer(remainingLength) else ReadBuffer.EMPTY_BUFFER
-                    ControlPacketV5.from(body, byte1, remainingLength)
+                    ControlPacketV5Factory.from(body, byte1, remainingLength)
                 }
             }
             stream.release()

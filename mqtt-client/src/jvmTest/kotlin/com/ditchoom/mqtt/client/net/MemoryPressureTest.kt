@@ -15,6 +15,7 @@ import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt3.controlpacket.ControlPacketV4
 import com.ditchoom.mqtt5.controlpacket.ControlPacketV5
+import com.ditchoom.mqtt5.controlpacket.ControlPacketV5Factory
 import java.io.File
 import java.lang.management.ManagementFactory
 import javax.management.ObjectName
@@ -249,9 +250,9 @@ class MemoryPressureTest {
         val packets = listOf(buildV5Connect(), buildV5Publish(1), buildV5Publish(2), buildV5Subscribe())
         val iterations = 50_000
 
-        roundTripWithPool(packets, 1000) { buf, b1, rem -> ControlPacketV5.from(buf, b1, rem) }
+        roundTripWithPool(packets, 1000) { buf, b1, rem -> ControlPacketV5Factory.from(buf, b1, rem) }
         val before = snapshot()
-        roundTripWithPool(packets, iterations) { buf, b1, rem -> ControlPacketV5.from(buf, b1, rem) }
+        roundTripWithPool(packets, iterations) { buf, b1, rem -> ControlPacketV5Factory.from(buf, b1, rem) }
         val after = snapshot()
 
         assertNoLeak("v5-pooled ${iterations * packets.size} packets", before, after)

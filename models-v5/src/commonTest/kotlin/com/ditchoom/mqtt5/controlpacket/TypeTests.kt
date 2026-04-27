@@ -101,10 +101,10 @@ UnsubscribeAcknowledgment(packetIdentifier, reasonCodes = listOf(SUCCESS)).contr
         )
 
     @Test
-    fun controlPacketTypeValueMatchesSpecForPINGREQ() = assertEquals(12, PingRequest.controlPacketValue, controlPacketSpectMatchError)
+    fun controlPacketTypeValueMatchesSpecForPINGREQ() = assertEquals(12, PingRequest().controlPacketValue, controlPacketSpectMatchError)
 
     @Test
-    fun controlPacketTypeValueMatchesSpecForPINGRESP() = assertEquals(13, PingResponse.controlPacketValue, controlPacketSpectMatchError)
+    fun controlPacketTypeValueMatchesSpecForPINGRESP() = assertEquals(13, PingResponse().controlPacketValue, controlPacketSpectMatchError)
 
     @Test
     fun controlPacketTypeValueMatchesSpecForDISCONNECT() =
@@ -209,10 +209,10 @@ UnsubscribeAcknowledgment(packetIdentifier, reasonCodes = listOf(SUCCESS)).direc
         )
 
     @Test
-    fun controlPacketTypeDirectionOfFlowPINGREQ() = assertEquals(CLIENT_TO_SERVER, PingRequest.direction, controlPacketSpectMatchError)
+    fun controlPacketTypeDirectionOfFlowPINGREQ() = assertEquals(CLIENT_TO_SERVER, PingRequest().direction, controlPacketSpectMatchError)
 
     @Test
-    fun controlPacketTypeDirectionOfFlowPINGRESP() = assertEquals(SERVER_TO_CLIENT, PingResponse.direction, controlPacketSpectMatchError)
+    fun controlPacketTypeDirectionOfFlowPINGRESP() = assertEquals(SERVER_TO_CLIENT, PingResponse().direction, controlPacketSpectMatchError)
 
     @Test
     fun controlPacketTypeDirectionOfFlowDISCONNECT() =

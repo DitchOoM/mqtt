@@ -38,7 +38,7 @@ class SpecByteTests {
 
     @Test
     fun pingreqExactBytes() {
-        val buf = packetBuffer { PingRequest }
+        val buf = packetBuffer { PingRequest() }
         assertEquals(2, buf.remaining())
         assertEquals(0xC0u, buf.readUnsignedByte()) // type=12, flags=0000
         assertEquals(0x00u, buf.readUnsignedByte()) // remaining length = 0
@@ -46,7 +46,7 @@ class SpecByteTests {
 
     @Test
     fun pingrespExactBytes() {
-        val buf = packetBuffer { PingResponse }
+        val buf = packetBuffer { PingResponse() }
         assertEquals(2, buf.remaining())
         assertEquals(0xD0u, buf.readUnsignedByte()) // type=13, flags=0000
         assertEquals(0x00u, buf.readUnsignedByte()) // remaining length = 0
@@ -403,7 +403,7 @@ class SpecByteTests {
     @Test
     fun pubackPacketId10SuccessExactBytes() {
         // SUCCESS → omit reason code + properties
-        val buf = packetBuffer { PublishAcknowledgment(10.toUShort()) }
+        val buf = packetBuffer { PublishAcknowledgment(packetIdentifier = 10) }
         assertEquals(4, buf.remaining())
         assertEquals(0x40u, buf.readUnsignedByte()) // type=4
         assertEquals(0x02u, buf.readUnsignedByte()) // RL=2

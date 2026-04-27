@@ -2,6 +2,7 @@ package com.ditchoom.mqtt5.controlpacket
 
 import com.ditchoom.buffer.codec.annotations.DispatchValue
 import com.ditchoom.buffer.codec.annotations.ProtocolMessage
+import com.ditchoom.mqtt.MalformedPacketException
 import kotlin.jvm.JvmInline
 
 // TODO relocate to models-base when v4 production migration moves off the hand-written
@@ -22,6 +23,14 @@ import kotlin.jvm.JvmInline
 value class MqttFixedHeader(
     val raw: UByte,
 ) {
+    init {
+        if (packetType == 3 && (raw.toInt() and 0b110) == 0b110) {
+            throw MalformedPacketException(
+                "PUBLISH QoS = 3 is malformed (both QoS bits set); only QoS 0/1/2 are valid.",
+            )
+        }
+    }
+
     @DispatchValue
     val packetType: Int get() = (raw.toInt() shr 4) and 0x0F
 

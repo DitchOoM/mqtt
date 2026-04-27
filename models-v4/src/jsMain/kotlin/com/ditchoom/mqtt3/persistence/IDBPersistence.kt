@@ -220,7 +220,7 @@ class IDBPersistence(
         val tx = db.transaction(BROKER, IDBTransactionMode.readwrite)
         val store = tx.objectStore(BROKER)
         val connections = PersistableSocketConnection.from(connectionOps)
-        val persistableRequest = PersistableConnectionRequest.from(connectionRequest as ConnectionRequest)
+        val persistableRequest = PersistableConnectionRequest.from(connectionRequest as ConnectionRequest<*>)
         val storeCountRequest = store.count()
         val countOp =
             suspendCoroutine { cont ->

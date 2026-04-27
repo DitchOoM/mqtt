@@ -262,7 +262,7 @@ data class PersistableConnectionRequest(
     val password: String?,
 ) {
     companion object {
-        fun from(connectionRequest: ConnectionRequest): PersistableConnectionRequest =
+        fun from(connectionRequest: ConnectionRequest<*>): PersistableConnectionRequest =
             PersistableConnectionRequest(
                 connectionRequest.variableHeader.protocolName,
                 connectionRequest.variableHeader.protocolLevel.toInt(),
@@ -280,7 +280,7 @@ data class PersistableConnectionRequest(
     }
 }
 
-fun toConnectionRequest(a: Any?): ConnectionRequest {
+fun toConnectionRequest(a: Any?): ConnectionRequest<ReadBuffer?> {
     val p = a.asDynamic()
     return ConnectionRequest(
         ConnectionRequest.VariableHeader(

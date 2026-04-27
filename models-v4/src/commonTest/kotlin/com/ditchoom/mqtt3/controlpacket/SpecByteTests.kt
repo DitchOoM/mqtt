@@ -243,9 +243,9 @@ class SpecByteTests {
         buf.writeUByte(0x61u) // "a"
         buf.resetForRead()
         val decoded = ControlPacketV4.from(buf)
-        assertIs<PublishMessageV4>(decoded)
+        assertIs<PublishMessageV4<*>>(decoded)
         @Suppress("UNCHECKED_CAST")
-        val packet = decoded as PublishMessageV4
+        val packet = decoded as PublishMessageV4<ReadBuffer>
         assertEquals("a", packet.topic.toString())
         assertEquals(AT_MOST_ONCE, packet.qualityOfService)
         assertEquals(0, packet.payload.remaining())
@@ -264,9 +264,9 @@ class SpecByteTests {
         buf.writeUByte(0x01u) // packet ID=1
         buf.resetForRead()
         val decoded = ControlPacketV4.from(buf)
-        assertIs<PublishMessageV4>(decoded)
+        assertIs<PublishMessageV4<*>>(decoded)
         @Suppress("UNCHECKED_CAST")
-        val packet = decoded as PublishMessageV4
+        val packet = decoded as PublishMessageV4<ReadBuffer>
         assertEquals("a", packet.topic.toString())
         assertEquals(AT_LEAST_ONCE, packet.qualityOfService)
         assertEquals(1, packet.packetIdentifier)
@@ -512,7 +512,7 @@ class SpecByteTests {
         buf.writeUByte(0x74u) // "test"
         buf.resetForRead()
         val packet = ControlPacketV4.from(buf)
-        assertIs<ConnectionRequest>(packet)
+        assertIs<ConnectionRequest<*>>(packet)
         assertEquals("MQTT", packet.protocolName)
         assertEquals(4, packet.protocolVersion)
         assertTrue(packet.cleanStart)

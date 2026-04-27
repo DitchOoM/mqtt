@@ -22,6 +22,7 @@ import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt.controlpacket.WillConfig
+import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.mqtt.controlpacket.payloadAsReadBufferOrNull
 import com.ditchoom.mqtt3.controlpacket.ConnectionRequest
 import com.ditchoom.mqtt3.controlpacket.PublishComplete
@@ -146,7 +147,7 @@ class SqlDatabasePersistence(
         connectionOps: Collection<MqttConnectionOptions>,
         connectionRequest: IConnectionRequest,
     ): MqttBroker {
-        val connect = connectionRequest as ConnectionRequest
+        val connect = connectionRequest as ConnectionRequest<*>
         val brokerId =
             brokerQueries.transactionWithResult {
                 brokerQueries.insertBroker()
@@ -237,7 +238,7 @@ class SqlDatabasePersistence(
                 WillConfig.Disabled
             }
         val connectionRequest =
-            ConnectionRequest(
+            ConnectionRequest<ReadBuffer?>(
                 connectionRequestDatabaseRecord.client_id,
                 connectionRequestDatabaseRecord.keep_alive_seconds.toInt(),
                 connectionRequestDatabaseRecord.clean_session == 1L,

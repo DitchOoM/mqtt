@@ -862,7 +862,7 @@ class ConnectionRequestTests {
         val buffer = BufferFactory.Default.allocate(request.packetSize())
         request.serialize(buffer)
         buffer.resetForRead()
-        val decoded = ControlPacketV4.from(buffer) as ConnectionRequest
+        val decoded = ControlPacketV4.from(buffer) as ConnectionRequest<*>
         assertFalse(decoded.willFlag)
         assertEquals(null, decoded.willTopic)
         assertEquals(null, decoded.willPayload)
@@ -891,7 +891,7 @@ class ConnectionRequestTests {
         val buffer = BufferFactory.Default.allocate(request.packetSize())
         request.serialize(buffer)
         buffer.resetForRead()
-        val decoded = ControlPacketV4.from(buffer) as ConnectionRequest
+        val decoded = ControlPacketV4.from(buffer) as ConnectionRequest<*>
         assertEquals("test-client", decoded.clientIdentifier)
         assertTrue(decoded.willFlag)
         assertTrue(decoded.willRetain)

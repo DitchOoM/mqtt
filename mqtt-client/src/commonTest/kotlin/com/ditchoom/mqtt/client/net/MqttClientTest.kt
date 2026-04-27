@@ -260,20 +260,19 @@ class MqttClientTest {
             buffer.writeString("yolo", Charset.UTF8)
             buffer.resetForRead()
             val lwtConnectionRequest =
-                connectionRequestMqtt4
-                    .copy(
-                        connectionRequestMqtt4.variableHeader.copy(
-                            cleanSession = false,
-                            willRetain = true,
-                            willFlag = true,
-                            willQos = QualityOfService.AT_MOST_ONCE,
-                        ),
-                        connectionRequestMqtt4.payload.copy(
-                            clientId = "taco321-${Random.nextUInt()}",
-                            willTopic = willTopic4,
-                            willPayload = buffer,
-                        ),
-                    ).validateOrThrow() as IConnectionRequest
+                ConnectionRequest(
+                    connectionRequestMqtt4.variableHeader.copy(
+                        cleanSession = false,
+                        willRetain = true,
+                        willFlag = true,
+                        willQos = QualityOfService.AT_MOST_ONCE,
+                    ),
+                    connectionRequestMqtt4.payload.copy(
+                        clientId = "taco321-${Random.nextUInt()}",
+                        willTopic = willTopic4,
+                        willPayload = buffer,
+                    ),
+                ).validateOrThrow() as IConnectionRequest
 
             lastWillTestamentInternal(this, willTopic4, lwtConnectionRequest, connectionRequestMqtt4)
         }

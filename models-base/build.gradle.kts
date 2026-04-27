@@ -4,6 +4,7 @@ plugins {
     id("org.jlleitschuh.gradle.ktlint")
     id("com.vanniktech.maven.publish")
     id("org.jetbrains.dokka")
+    alias(libs.plugins.ksp)
     signing
     id("com.ditchoom.version")
     id("com.ditchoom.module")
@@ -50,6 +51,23 @@ kotlin {
         commonTest.dependencies {
             implementation(kotlin("test"))
         }
+    }
+}
+
+// KSP: generate codecs for commonMain (visible to all targets)
+dependencies {
+    add("kspCommonMainMetadata", libs.buffer.codec.processor)
+}
+
+// Wire KSP commonMain output into each target's source set
+kotlin.sourceSets.commonMain {
+    kotlin.srcDir("build/generated/ksp/metadata/commonMain/kotlin")
+}
+
+// Ensure KSP runs before compilation for all targets
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask<*>>().configureEach {
+    if (name != "kspCommonMainKotlinMetadata") {
+        dependsOn("kspCommonMainKotlinMetadata")
     }
 }
 

@@ -36,6 +36,7 @@ import com.ditchoom.mqtt.controlpacket.ISubscription.RetainHandling.SEND_RETAINE
 import com.ditchoom.mqtt.controlpacket.ISubscription.RetainHandling.SEND_RETAINED_MESSAGES_AT_TIME_OF_SUBSCRIBE
 import com.ditchoom.mqtt.controlpacket.IUnsubscribeAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IUnsubscribeRequest
+import com.ditchoom.mqtt.controlpacket.MqttFixedHeader
 import com.ditchoom.mqtt.controlpacket.NO_PACKET_ID
 import com.ditchoom.mqtt.controlpacket.PublishMessage
 import com.ditchoom.mqtt.controlpacket.QualityOfService

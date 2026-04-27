@@ -1,13 +1,9 @@
-package com.ditchoom.mqtt5.controlpacket
+package com.ditchoom.mqtt.controlpacket
 
 import com.ditchoom.buffer.codec.annotations.DispatchValue
 import com.ditchoom.buffer.codec.annotations.ProtocolMessage
 import com.ditchoom.mqtt.MalformedPacketException
 import kotlin.jvm.JvmInline
-
-// TODO relocate to models-base when v4 production migration moves off the hand-written
-// `ControlPacketV4Factory.from(...)` dispatcher. Both v4 and v5 dispatch on the identical
-// fixed-header byte; co-locating the type avoids duplication.
 
 /**
  * MQTT fixed-header byte: top nibble = packet type, bottom nibble = packet-specific flags.

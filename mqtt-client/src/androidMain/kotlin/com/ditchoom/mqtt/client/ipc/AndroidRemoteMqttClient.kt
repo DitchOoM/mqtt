@@ -45,12 +45,8 @@ class AndroidRemoteMqttClient(
                 onControlPacketSent(packet)
             }
 
-            override fun onControlPacketReceived(
-                byte1: Byte,
-                remainingLength: Int,
-                controlPacket: JvmBuffer,
-            ) {
-                val packet = packetFactory.from(controlPacket, byte1.toUByte(), remainingLength)
+            override fun onControlPacketReceived(controlPacket: JvmBuffer) {
+                val packet = packetFactory.from(controlPacket)
                 Log.i("RAHUL", "IPCIN :  $packet")
                 onIncomingControlPacket(packet)
             }

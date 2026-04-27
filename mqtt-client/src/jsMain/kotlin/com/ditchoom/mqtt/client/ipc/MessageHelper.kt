@@ -10,8 +10,6 @@ import org.w3c.dom.MessageEvent
 
 internal const val MESSAGE_TYPE_KEY = "mqtt-message-type"
 private const val MESSAGE_TYPE_CONTROL_PACKET = "mqtt-message-type-control-packet"
-internal const val MESSAGE_BYTE_1_KEY = "mqtt-byte-1-key"
-internal const val MESSAGE_REMAINING_LENGTH_KEY = "mqtt-remaining-length-key"
 internal const val MESSAGE_TYPE_SERVICE_START_ALL = "mqtt-message-service-start-all"
 internal const val MESSAGE_TYPE_SERVICE_START_ALL_RESPONSE = "mqtt-message-service-start-all-response"
 internal const val MESSAGE_TYPE_SERVICE_START = "mqtt-message-service-start"
@@ -203,16 +201,10 @@ fun buildOutgoingControlPacketMessage(jsBuffer: JsBuffer): dynamic {
     return obj
 }
 
-fun sendIncomingControlPacketMessage(
-    byte1: UByte,
-    remainingLength: Int,
-    jsBuffer: JsBuffer,
-): dynamic {
+fun sendIncomingControlPacketMessage(jsBuffer: JsBuffer): dynamic {
     val obj = js("({})")
     obj[MESSAGE_TYPE_KEY] = MESSAGE_TYPE_CONTROL_PACKET
     obj[MESSAGE_INCOMING_KEY] = true
-    obj[MESSAGE_BYTE_1_KEY] = byte1.toInt()
-    obj[MESSAGE_REMAINING_LENGTH_KEY] = remainingLength
     writeBufferInMessage(obj, jsBuffer)
     return obj
 }
@@ -284,13 +276,8 @@ fun sendControlPacketFromMessageEvent(
             return null
         }
     buffer.resetForRead()
-    val packet =
-        if (incoming) {
-            val byte1 = obj[MESSAGE_BYTE_1_KEY] as Int
-            val remainingLength = obj[MESSAGE_REMAINING_LENGTH_KEY] as Int
-            factory.from(buffer, byte1.toUByte(), remainingLength)
-        } else {
-            factory.from(buffer)
-        }
+    // Both incoming and outgoing use the full wire (`[byte1][VBI][body]`); the codec
+    // dispatches zero-copy on a single slice.
+    val packet = factory.from(buffer)
     return Pair(incoming, packet)
 }

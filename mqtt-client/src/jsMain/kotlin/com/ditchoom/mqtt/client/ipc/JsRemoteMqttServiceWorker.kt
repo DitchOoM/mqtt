@@ -70,7 +70,7 @@ class JsRemoteMqttServiceWorker(
                 val buffer = packet.serialize(BufferFactory.shared()) as JsBuffer
                 val packetMessage =
                     if (incoming) {
-                        sendIncomingControlPacketMessage(packet.byte1, packet.remainingLength(), buffer)
+                        sendIncomingControlPacketMessage(buffer)
                     } else {
                         buildOutgoingControlPacketMessage(buffer)
                     }

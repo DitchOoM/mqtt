@@ -2,16 +2,16 @@ package com.ditchoom.mqtt.client.net
 
 import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Default
-import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.pool.BufferPool
+import com.ditchoom.buffer.stream.PeekResult
 import com.ditchoom.buffer.stream.StreamProcessor
 import com.ditchoom.buffer.stream.builder
+import com.ditchoom.mqtt.client.mqttPeekFrameSize
 import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt3.controlpacket.ControlPacketV4
 import com.ditchoom.mqtt5.controlpacket.ControlPacketV5
-import com.ditchoom.mqtt5.controlpacket.ControlPacketV5Factory
 import java.io.File
 import java.lang.management.ManagementFactory
 import javax.management.ObjectName
@@ -193,10 +193,12 @@ class BeforeAfterBenchmark {
                 for (p in packets) {
                     val serialized = p.serialize()
                     stream.append(serialized)
-                    val byte1 = stream.readUnsignedByte().toUByte()
-                    val remainingLength = readVarInt(stream)
-                    val body = if (remainingLength > 0) stream.readBuffer(remainingLength) else ReadBuffer.EMPTY_BUFFER
-                    ControlPacketV5Factory.from(body, byte1, remainingLength)
+                    val frameSize =
+                        when (val r = mqttPeekFrameSize(stream, 0)?.let { PeekResult.Size(it) } ?: PeekResult.NeedsMoreData) {
+                            is PeekResult.Size -> r.bytes
+                            PeekResult.NeedsMoreData -> error("frame underflow")
+                        }
+                    stream.readBufferScoped(frameSize) { ControlPacketV5.from(this) }
                 }
             }
             stream.release()
@@ -234,10 +236,12 @@ class BeforeAfterBenchmark {
                 for (p in packets) {
                     val serialized = p.serialize()
                     stream.append(serialized)
-                    val byte1 = stream.readUnsignedByte().toUByte()
-                    val remainingLength = readVarInt(stream)
-                    val body = if (remainingLength > 0) stream.readBuffer(remainingLength) else ReadBuffer.EMPTY_BUFFER
-                    ControlPacketV4.from(body, byte1, remainingLength)
+                    val frameSize =
+                        when (val r = mqttPeekFrameSize(stream, 0)?.let { PeekResult.Size(it) } ?: PeekResult.NeedsMoreData) {
+                            is PeekResult.Size -> r.bytes
+                            PeekResult.NeedsMoreData -> error("frame underflow")
+                        }
+                    stream.readBufferScoped(frameSize) { ControlPacketV4.from(this) }
                 }
             }
             stream.release()
@@ -303,15 +307,4 @@ class BeforeAfterBenchmark {
         )
     }
 
-    private fun readVarInt(stream: StreamProcessor): Int {
-        var value = 0
-        var multiplier = 1
-        var digit: Byte
-        do {
-            digit = stream.readByte()
-            value += (digit.toInt() and 0x7F) * multiplier
-            multiplier *= 128
-        } while ((digit.toInt() and 0x80) != 0)
-        return value
-    }
 }

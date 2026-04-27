@@ -3,7 +3,6 @@ package com.ditchoom.mqtt.client.ipc
 import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.JvmBuffer
 import com.ditchoom.buffer.shared
-import com.ditchoom.mqtt.controlpacket.encoding.readVariableByteInteger
 import kotlinx.coroutines.launch
 
 class AndroidMqttClientIPCServer(
@@ -24,22 +23,12 @@ class AndroidMqttClientIPCServer(
                 // flips it back to read-ready for the next observer.
                 val buffer = packet.serialize(BufferFactory.shared()) as JvmBuffer
                 observers.values.forEach { cb ->
+                    // Both incoming and outgoing now hand the whole wire buffer
+                    // (`[byte1][VBI][body]`) across IPC; client-side
+                    // `packetFactory.from(buffer)` decodes zero-copy from the slice.
                     if (incoming) {
-                        // AIDL contract: onControlPacketReceived takes (byte1,
-                        // remainingLength, bodyBuffer). packetFactory.from(buffer,
-                        // byte1, remainingLength) does not re-read the fixed header,
-                        // so advance past it first.
-                        buffer.readUnsignedByte()
-                        buffer.readVariableByteInteger()
-                        cb.onControlPacketReceived(
-                            packet.byte1.toByte(),
-                            packet.remainingLength(),
-                            buffer,
-                        )
+                        cb.onControlPacketReceived(buffer)
                     } else {
-                        // onControlPacketSent takes the whole wire buffer; the
-                        // client-side packetFactory.from(buffer) re-reads byte1 +
-                        // remainingLength.
                         cb.onControlPacketSent(buffer)
                     }
                     buffer.resetForRead()

@@ -143,21 +143,23 @@ sealed interface ControlPacketV4 : ControlPacket {
     companion object {
         /**
          * Decode a full v4 control-packet wire (`[byte1][VBI(remainingLength)][body]`).
+         *
+         * Reads byte1 + VBI, validates the per-type body-length contract, then directly
+         * dispatches to the matching variant codec with the fixed header pre-supplied via
+         * [ControlPacketV4Codec.DiscriminatorKey]. Variant codecs read the header from
+         * context (no extra buffer read) and consume the body bytes left in [buffer].
+         *
+         * Zero-copy: the dispatcher does NOT reframe `[byte1][body]` into a fresh buffer.
+         * The slice passed in is consumed directly — body bytes are read in place.
          */
         fun from(buffer: ReadBuffer): ControlPacketV4 {
             val byte1 = buffer.readUnsignedByte()
             val remainingLength = buffer.readVariableByteInteger()
-            return from(buffer, byte1, remainingLength)
-        }
-
-        fun from(
-            buffer: ReadBuffer,
-            byte1: UByte,
-            remainingLength: Int,
-        ): ControlPacketV4 {
             val packetType = (byte1.toUInt() shr 4).toInt()
-            // PINGREQ / PINGRESP / DISCONNECT have no body — the dispatcher does not body-frame
-            // at the top level, so a non-zero remainingLength would silently leave trailing bytes.
+            // PINGREQ / PINGRESP / DISCONNECT have no body — variant codecs read zero bytes,
+            // and the dispatcher does not body-frame at the top level (no `bodyLength` on
+            // `@DispatchOn(MqttFixedHeader::class)`), so a non-zero remainingLength would
+            // silently leave trailing bytes in the buffer. Validate up-front.
             if ((packetType == 12 || packetType == 13 || packetType == 14) && remainingLength != 0) {
                 throw MalformedPacketException(
                     "Reserved fixed-header flags or non-zero remaining length for packet type " +
@@ -165,23 +167,36 @@ sealed interface ControlPacketV4 : ControlPacket {
                 )
             }
             // Validate the fixed header byte itself (e.g. PUBLISH QoS=3 → MalformedPacketException)
-            // before consuming any body bytes — matches pre-migration behavior where the byte1
-            // check happened ahead of any reads from the body.
-            MqttFixedHeader(byte1)
-            val splice =
-                BufferFactory.Default
-                    .allocate(1 + remainingLength)
-            splice.writeUByte(byte1)
-            if (remainingLength > 0) {
-                splice.write(buffer.readBytes(remainingLength))
-            }
-            splice.resetForRead()
+            // before any variant codec reads body bytes.
+            val header = MqttFixedHeader(byte1)
             val ctx =
                 com.ditchoom.buffer.codec.DecodeContext.Empty
+                    .with(ControlPacketV4Codec.DiscriminatorKey, header)
                     .with(ConnectionRequestCodec.WillPayloadValueDecodeKey) { slice ->
                         if (slice.remaining() > 0) slice else null
                     }.with(PublishMessageV4Codec.PayloadDecodeKey) { slice -> slice }
-            return ControlPacketV4Codec.decode(splice, ctx)
+            // PUBLISH dispatches by raw byte (top nibble 3, low nibble = dup/qos/retain).
+            val rawByte = byte1.toInt() and 0xFF
+            return when {
+                rawByte in 0x30..0x3F -> PublishMessageV4Codec.decodeFromContext(buffer, ctx)
+                packetType == 0 -> ReservedCodec.decode(buffer, ctx)
+                packetType == 1 -> ConnectionRequestCodec.decodeFromContext(buffer, ctx)
+                packetType == 2 -> ConnectionAcknowledgmentCodec.decode(buffer, ctx)
+                packetType == 4 -> PublishAcknowledgmentCodec.decode(buffer, ctx)
+                packetType == 5 -> PublishReceivedCodec.decode(buffer, ctx)
+                packetType == 6 -> PublishReleaseCodec.decode(buffer, ctx)
+                packetType == 7 -> PublishCompleteCodec.decode(buffer, ctx)
+                packetType == 8 -> SubscribeRequestCodec.decode(buffer, ctx)
+                packetType == 9 -> SubscribeAcknowledgementCodec.decode(buffer, ctx)
+                packetType == 10 -> UnsubscribeRequestCodec.decode(buffer, ctx)
+                packetType == 11 -> UnsubscribeAcknowledgmentCodec.decode(buffer, ctx)
+                packetType == 12 -> PingRequestCodec.decode(buffer, ctx)
+                packetType == 13 -> PingResponseCodec.decode(buffer, ctx)
+                packetType == 14 -> DisconnectNotificationCodec.decode(buffer, ctx)
+                else -> throw MalformedPacketException(
+                    "Unknown discriminator: 0x${rawByte.toString(16)}",
+                )
+            }
         }
     }
 }
@@ -672,27 +687,6 @@ data class PublishMessageV4<@Payload P>(
     }
 
     companion object {
-        /**
-         * Decode an incoming v4 PUBLISH from its fixed-header byte1 and VBI remaining-length.
-         */
-        fun from(
-            buffer: ReadBuffer,
-            byte1: UByte,
-            remainingLength: Int,
-        ): PublishMessageV4<ReadBuffer> {
-            val splice = BufferFactory.Default.allocate(1 + remainingLength)
-            splice.writeUByte(byte1)
-            if (remainingLength > 0) {
-                splice.write(buffer.readBytes(remainingLength))
-            }
-            splice.resetForRead()
-            val ctx =
-                com.ditchoom.buffer.codec.DecodeContext.Empty
-                    .with(PublishMessageV4Codec.PayloadDecodeKey) { slice -> slice }
-            @Suppress("UNCHECKED_CAST")
-            return PublishMessageV4Codec.decodeFromContext(splice, ctx) as PublishMessageV4<ReadBuffer>
-        }
-
         /**
          * Create a v4 PUBLISH with a raw-bytes payload. Null falls back to an empty buffer.
          */

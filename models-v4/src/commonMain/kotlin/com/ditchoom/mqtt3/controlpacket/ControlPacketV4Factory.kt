@@ -22,11 +22,7 @@ object ControlPacketV4Factory : ControlPacketFactory {
         inMemory: Boolean,
     ): Persistence = newDefaultPersistence(androidContext, name, inMemory)
 
-    override fun from(
-        buffer: ReadBuffer,
-        byte1: UByte,
-        remainingLength: Int,
-    ) = ControlPacketV4.from(buffer, byte1, remainingLength)
+    override fun from(buffer: ReadBuffer) = ControlPacketV4.from(buffer)
 
     override fun pingRequest() = PingRequest
 

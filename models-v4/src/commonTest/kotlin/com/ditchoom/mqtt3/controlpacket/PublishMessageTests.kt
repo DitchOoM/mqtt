@@ -119,9 +119,7 @@ class PublishMessageTests {
             assertEquals(8u, buffer.readUnsignedShort(), "topic name length")
             assertEquals("user/log", buffer.readString(8, Charset.UTF8), "topic name value")
             buffer.resetForRead()
-            val byte1 = buffer.readUnsignedByte()
-            val remainingLength = buffer.readVariableByteInteger()
-            val result = PublishMessageV4.from(buffer, byte1, remainingLength)
+            val result = ControlPacketV4.from(buffer) as PublishMessageV4<*>
             assertMessageIsSame(publishMessage, result)
         }
 
@@ -161,9 +159,8 @@ class PublishMessageTests {
         }
         assertEquals("yolo", buffer.readString(4, Charset.UTF8), "payload value")
         buffer.resetForRead()
-        val byte1 = buffer.readUnsignedByte()
-        val remainingLength = buffer.readVariableByteInteger()
-        val result = PublishMessageV4.from(buffer, byte1, remainingLength)
+        @Suppress("UNCHECKED_CAST")
+        val result = ControlPacketV4.from(buffer) as PublishMessageV4<com.ditchoom.buffer.ReadBuffer>
         assertEquals(topic, result.topic.toString())
         assertEquals(qos, result.qualityOfService)
         assertEquals(dup, result.dup)

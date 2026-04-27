@@ -1,7 +1,5 @@
 package com.ditchoom.mqtt5.controlpacket
 
-import com.ditchoom.buffer.BufferFactory
-import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.mqtt.Persistence
 import com.ditchoom.mqtt.controlpacket.ControlPacket
@@ -14,35 +12,13 @@ import com.ditchoom.mqtt.controlpacket.PublishMessage
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.TopicName
-import com.ditchoom.mqtt.controlpacket.encoding.variableByteSize
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
 import com.ditchoom.mqtt5.persistence.newDefaultPersistence
 
 object ControlPacketV5Factory : ControlPacketFactory {
     override val protocolVersion: Int = 5
 
-    /**
-     * Thin shim required by [ControlPacketFactory]. The dispatcher
-     * ([ControlPacketV5Codec]) and the per-variant `init {}` blocks now own all
-     * spec-validation logic. Reconstruct the wire framing
-     * ([byte1][VBI(remainingLength)][body]) and delegate to
-     * [ControlPacketV5.from] which feeds the dispatcher.
-     */
-    override fun from(
-        buffer: ReadBuffer,
-        byte1: UByte,
-        remainingLength: Int,
-    ): ControlPacket {
-        val vbiSize = variableByteSize(remainingLength).toInt()
-        val splice = BufferFactory.Default.allocate(1 + vbiSize + remainingLength)
-        splice.writeUByte(byte1)
-        with(ControlPacket.Companion) { splice.writeVariableByteInteger(remainingLength) }
-        if (remainingLength > 0) {
-            splice.write(buffer.readBytes(remainingLength))
-        }
-        splice.resetForRead()
-        return ControlPacketV5.from(splice)
-    }
+    override fun from(buffer: ReadBuffer): ControlPacket = ControlPacketV5.from(buffer)
 
     override fun pingRequest() = PingRequest()
 

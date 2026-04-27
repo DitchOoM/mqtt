@@ -2,24 +2,18 @@ package com.ditchoom.mqtt.controlpacket
 
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.mqtt.Persistence
-import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readVariableByteInteger
 import com.ditchoom.mqtt.controlpacket.ISubscription.RetainHandling
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
 
 interface ControlPacketFactory {
     val protocolVersion: Int
 
-    fun from(buffer: ReadBuffer): ControlPacket {
-        val byte1 = buffer.readUnsignedByte()
-        val remainingLength = buffer.readVariableByteInteger()
-        return from(buffer, byte1, remainingLength)
-    }
-
-    fun from(
-        buffer: ReadBuffer,
-        byte1: UByte,
-        remainingLength: Int,
-    ): ControlPacket
+    /**
+     * Decode a full MQTT control-packet wire (`[byte1][VBI(remainingLength)][body]`) from
+     * [buffer]. Implementations dispatch directly to the version-specific generated codec
+     * with zero per-frame body memcpy: the slice's body bytes are read in place.
+     */
+    fun from(buffer: ReadBuffer): ControlPacket
 
     fun pingRequest(): IPingRequest
 

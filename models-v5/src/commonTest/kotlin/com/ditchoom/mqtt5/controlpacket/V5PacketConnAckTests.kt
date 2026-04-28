@@ -2,7 +2,6 @@ package com.ditchoom.mqtt5.controlpacket
 
 import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Default
-import com.ditchoom.mqtt.MalformedPacketException
 import com.ditchoom.mqtt.ProtocolError
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
@@ -10,8 +9,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
-import kotlin.test.assertIs
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -64,23 +61,24 @@ class V5PacketConnAckTests {
 
     @Test
     fun connackWithRichPropertiesRoundTrip() {
-        val typed = ConnAckProperties(
-            sessionExpiryIntervalSeconds = 300uL,
-            receiveMaximum = 100,
-            maximumQos = QualityOfService.AT_LEAST_ONCE,
-            retainAvailable = false,
-            maximumPacketSize = 1024uL,
-            assignedClientIdentifier = "client-99",
-            topicAliasMaximum = 16,
-            reasonString = "ok",
-            userProperty = listOf("k" to "v"),
-            supportsWildcardSubscriptions = false,
-            subscriptionIdentifiersAvailable = false,
-            sharedSubscriptionAvailable = false,
-            serverKeepAlive = 60,
-            responseInformation = "/response/topic",
-            serverReference = "mqtt://other.example",
-        )
+        val typed =
+            ConnAckProperties(
+                sessionExpiryIntervalSeconds = 300uL,
+                receiveMaximum = 100,
+                maximumQos = QualityOfService.AT_LEAST_ONCE,
+                retainAvailable = false,
+                maximumPacketSize = 1024uL,
+                assignedClientIdentifier = "client-99",
+                topicAliasMaximum = 16,
+                reasonString = "ok",
+                userProperty = listOf("k" to "v"),
+                supportsWildcardSubscriptions = false,
+                subscriptionIdentifiersAvailable = false,
+                sharedSubscriptionAvailable = false,
+                serverKeepAlive = 60,
+                responseInformation = "/response/topic",
+                serverReference = "mqtt://other.example",
+            )
         val pkt = ConnectionAcknowledgment(properties = typed)
         val buf = pkt.serialize()
         buf.position(0)
@@ -194,15 +192,17 @@ class V5PacketConnAckTests {
 
     @Test
     fun connackTypedAccessorsDelegateToProperties() {
-        val pkt = ConnectionAcknowledgment(
-            properties = ConnAckProperties(
-                sessionExpiryIntervalSeconds = 60uL,
-                receiveMaximum = 50,
-                maximumPacketSize = 2048uL,
-                assignedClientIdentifier = "id",
-                serverKeepAlive = 30,
-            ),
-        )
+        val pkt =
+            ConnectionAcknowledgment(
+                properties =
+                    ConnAckProperties(
+                        sessionExpiryIntervalSeconds = 60uL,
+                        receiveMaximum = 50,
+                        maximumPacketSize = 2048uL,
+                        assignedClientIdentifier = "id",
+                        serverKeepAlive = 30,
+                    ),
+            )
         // IConnectionAcknowledgment interface accessors all delegate to typedProperties.
         assertEquals(60uL, pkt.sessionExpiryInterval)
         assertEquals(50, pkt.receiveMaximum)

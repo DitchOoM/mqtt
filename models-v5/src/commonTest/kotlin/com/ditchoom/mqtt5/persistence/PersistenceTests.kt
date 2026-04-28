@@ -12,6 +12,7 @@ import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
 import com.ditchoom.mqtt5.controlpacket.ConnectionRequest
+import com.ditchoom.mqtt5.controlpacket.ControlPacketV5
 import com.ditchoom.mqtt5.controlpacket.PublishAcknowledgment
 import com.ditchoom.mqtt5.controlpacket.PublishComplete
 import com.ditchoom.mqtt5.controlpacket.PublishProperties
@@ -22,7 +23,6 @@ import com.ditchoom.mqtt5.controlpacket.SubscribeRequest
 import com.ditchoom.mqtt5.controlpacket.Subscription
 import com.ditchoom.mqtt5.controlpacket.UnsubscribeAcknowledgment
 import com.ditchoom.mqtt5.controlpacket.UnsubscribeRequest
-import com.ditchoom.mqtt5.controlpacket.ControlPacketV5
 import kotlinx.coroutines.test.runTest
 import kotlin.random.Random
 import kotlin.random.nextUInt
@@ -320,25 +320,28 @@ class PersistenceTests {
                 clientId = "taco123-" + Random.nextUInt(),
                 keepAliveSeconds = 1,
                 cleanStart = true,
-                will = com.ditchoom.mqtt.controlpacket.WillConfig.Enabled(
-                    topic = TopicName.fromOrThrow("testWill"),
-                    payload = BufferFactory.Default.allocate(0),
-                    qos = com.ditchoom.mqtt.controlpacket.QualityOfService.AT_MOST_ONCE,
-                    retain = false,
-                ),
-                props = com.ditchoom.mqtt5.controlpacket.ConnectProperties(
-                    sessionExpiryIntervalSeconds = 1u,
-                    receiveMaximum = 500,
-                    maximumPacketSize = 10_000_000uL,
-                    topicAliasMaximum = 40,
-                    requestProblemInformation = true,
-                    userProperty = listOf(Pair("Rahul", "Behera"), Pair("yolo", "swag")),
-                ),
-                willProperties = com.ditchoom.mqtt5.controlpacket.ConnectWillProperties(
-                    willDelayIntervalSeconds = 1,
-                    correlationData = BufferFactory.Default.wrap(byteArrayOf(1, 2, 3, 4)).also { it.position(0) },
-                    userProperty = listOf(Pair("will", "test"), Pair("test", "will")),
-                ),
+                will =
+                    com.ditchoom.mqtt.controlpacket.WillConfig.Enabled(
+                        topic = TopicName.fromOrThrow("testWill"),
+                        payload = BufferFactory.Default.allocate(0),
+                        qos = com.ditchoom.mqtt.controlpacket.QualityOfService.AT_MOST_ONCE,
+                        retain = false,
+                    ),
+                props =
+                    com.ditchoom.mqtt5.controlpacket.ConnectProperties(
+                        sessionExpiryIntervalSeconds = 1u,
+                        receiveMaximum = 500,
+                        maximumPacketSize = 10_000_000uL,
+                        topicAliasMaximum = 40,
+                        requestProblemInformation = true,
+                        userProperty = listOf(Pair("Rahul", "Behera"), Pair("yolo", "swag")),
+                    ),
+                willProperties =
+                    com.ditchoom.mqtt5.controlpacket.ConnectWillProperties(
+                        willDelayIntervalSeconds = 1,
+                        correlationData = BufferFactory.Default.wrap(byteArrayOf(1, 2, 3, 4)).also { it.position(0) },
+                        userProperty = listOf(Pair("will", "test"), Pair("test", "will")),
+                    ),
             )
     }
 }

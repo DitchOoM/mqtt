@@ -19,8 +19,8 @@ import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
 import com.ditchoom.mqtt5.controlpacket.ConnectionRequest
-import com.ditchoom.mqtt5.controlpacket.PublishComplete
 import com.ditchoom.mqtt5.controlpacket.ControlPacketV5
+import com.ditchoom.mqtt5.controlpacket.PublishComplete
 import com.ditchoom.mqtt5.controlpacket.PublishReceived
 import com.ditchoom.mqtt5.controlpacket.PublishRelease
 import com.ditchoom.mqtt5.controlpacket.SubscribeRequest
@@ -520,9 +520,7 @@ class IDBPersistence(
         commitTransaction(writeTx, "incomingHandlerComplete.write")
     }
 
-    override suspend fun incomingMessagesToRedispatch(
-        broker: MqttBroker,
-    ): Collection<com.ditchoom.mqtt.IncomingPublishRecord> {
+    override suspend fun incomingMessagesToRedispatch(broker: MqttBroker): Collection<com.ditchoom.mqtt.IncomingPublishRecord> {
         val tx = db.transaction(arrayOf(PUB_MSG, USER_PROPERTIES), IDBTransactionMode.readonly)
         val propStore = tx.objectStore(USER_PROPERTIES)
         val allPropsReq = propStore.index(BROKER_INDEX).getAll(IDBValidKey(broker.identifier))
@@ -1093,7 +1091,11 @@ class IDBPersistence(
         )
     }
 
-    override suspend fun updatePublishState(broker: MqttBroker, packetId: Int, state: Int) {
+    override suspend fun updatePublishState(
+        broker: MqttBroker,
+        packetId: Int,
+        state: Int,
+    ) {
         // IDB persistence doesn't track QoS2 state separately
     }
 

@@ -7,7 +7,6 @@ import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.toReadBuffer
 import com.ditchoom.mqtt.controlpacket.MqttFixedHeader
 import com.ditchoom.mqtt.controlpacket.NO_PACKET_ID
-import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.QualityOfService.AT_LEAST_ONCE
 import com.ditchoom.mqtt.controlpacket.QualityOfService.AT_MOST_ONCE
 import com.ditchoom.mqtt.controlpacket.QualityOfService.EXACTLY_ONCE
@@ -44,7 +43,9 @@ class V5PacketPublishTests {
         ControlPacketV5PublishCodec.encode(buf, value) { wbuf, p -> wbuf.write(p) }
         buf.resetForRead()
         val byte1 = MqttFixedHeader(buf.readUnsignedByte())
-        val ctx = com.ditchoom.buffer.codec.DecodeContext.Empty.with(ControlPacketV5Codec.DiscriminatorKey, byte1)
+        val ctx =
+            com.ditchoom.buffer.codec.DecodeContext.Empty
+                .with(ControlPacketV5Codec.DiscriminatorKey, byte1)
         return ControlPacketV5PublishCodec.decode<ReadBuffer>(buf, ctx) { slice ->
             slice.readBytes(slice.remaining())
         }

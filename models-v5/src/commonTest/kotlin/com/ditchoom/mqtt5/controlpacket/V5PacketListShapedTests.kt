@@ -46,16 +46,17 @@ class V5PacketListShapedTests {
 
     @Test
     fun subscribeAllOptionsBitsRoundTrip() {
-        val pkt = SubscribeRequest(
-            packetIdentifier = 99.toUShort(),
-            topic = "test",
-            qos = QualityOfService.EXACTLY_ONCE,
-            noLocal = true,
-            retainAsPublished = true,
-            retainHandling = DO_NOT_SEND_RETAINED_MESSAGES,
-            reasonString = "diag",
-            userProperty = listOf("k" to "v"),
-        )
+        val pkt =
+            SubscribeRequest(
+                packetIdentifier = 99.toUShort(),
+                topic = "test",
+                qos = QualityOfService.EXACTLY_ONCE,
+                noLocal = true,
+                retainAsPublished = true,
+                retainHandling = DO_NOT_SEND_RETAINED_MESSAGES,
+                reasonString = "diag",
+                userProperty = listOf("k" to "v"),
+            )
         val buf = pkt.serialize()
         val decoded = ControlPacketV5.from(buf) as SubscribeRequest
         val sub = decoded.subscriptions.first()
@@ -69,19 +70,22 @@ class V5PacketListShapedTests {
 
     @Test
     fun subscribeMultipleTopicsRoundTrip() {
-        val pkt = SubscribeRequest(
-            packetIdentifier = 5,
-            topics = listOf(
-                TopicFilter.fromOrThrow("topic1"),
-                TopicFilter.fromOrThrow("topic2"),
-                TopicFilter.fromOrThrow("topic3"),
-            ),
-            qos = listOf(
-                QualityOfService.AT_MOST_ONCE,
-                QualityOfService.AT_LEAST_ONCE,
-                QualityOfService.EXACTLY_ONCE,
-            ),
-        )
+        val pkt =
+            SubscribeRequest(
+                packetIdentifier = 5,
+                topics =
+                    listOf(
+                        TopicFilter.fromOrThrow("topic1"),
+                        TopicFilter.fromOrThrow("topic2"),
+                        TopicFilter.fromOrThrow("topic3"),
+                    ),
+                qos =
+                    listOf(
+                        QualityOfService.AT_MOST_ONCE,
+                        QualityOfService.AT_LEAST_ONCE,
+                        QualityOfService.EXACTLY_ONCE,
+                    ),
+            )
         val buf = pkt.serialize()
         val decoded = ControlPacketV5.from(buf) as SubscribeRequest
         assertEquals(3, decoded.subscriptions.size)
@@ -166,12 +170,13 @@ class V5PacketListShapedTests {
 
     @Test
     fun subAckMultipleReasonCodesRoundTrip() {
-        val codes = listOf(
-            ReasonCode.GRANTED_QOS_0,
-            ReasonCode.GRANTED_QOS_2,
-            ReasonCode.UNSPECIFIED_ERROR,
-            ReasonCode.NOT_AUTHORIZED,
-        )
+        val codes =
+            listOf(
+                ReasonCode.GRANTED_QOS_0,
+                ReasonCode.GRANTED_QOS_2,
+                ReasonCode.UNSPECIFIED_ERROR,
+                ReasonCode.NOT_AUTHORIZED,
+            )
         val pkt = SubscribeAcknowledgement(packetIdentifier = 1.toUShort(), reasonCodes = codes)
         val buf = pkt.serialize()
         val decoded = ControlPacketV5.from(buf) as SubscribeAcknowledgement
@@ -224,11 +229,12 @@ class V5PacketListShapedTests {
 
     @Test
     fun unsubscribeMultipleTopicsRoundTrip() {
-        val pkt = UnsubscribeRequest(
-            packetIdentifier = 10.toUShort(),
-            topics = setOf(TopicFilter.fromOrThrow("a/b"), TopicFilter.fromOrThrow("c/d")),
-            userProperty = listOf("trace" to "abc"),
-        )
+        val pkt =
+            UnsubscribeRequest(
+                packetIdentifier = 10.toUShort(),
+                topics = setOf(TopicFilter.fromOrThrow("a/b"), TopicFilter.fromOrThrow("c/d")),
+                userProperty = listOf("trace" to "abc"),
+            )
         val buf = pkt.serialize()
         val decoded = ControlPacketV5.from(buf) as UnsubscribeRequest
         assertEquals(10, decoded.packetIdentifier)
@@ -272,17 +278,19 @@ class V5PacketListShapedTests {
 
     @Test
     fun unsubAckMultipleReasonCodesRoundTrip() {
-        val codes = listOf(
-            ReasonCode.SUCCESS,
-            ReasonCode.NO_SUBSCRIPTIONS_EXISTED,
-            ReasonCode.NOT_AUTHORIZED,
-        )
-        val pkt = UnsubscribeAcknowledgment(
-            packetIdentifier = 7,
-            reasonString = "partial",
-            userProperty = listOf("k" to "v"),
-            reasonCodes = codes,
-        )
+        val codes =
+            listOf(
+                ReasonCode.SUCCESS,
+                ReasonCode.NO_SUBSCRIPTIONS_EXISTED,
+                ReasonCode.NOT_AUTHORIZED,
+            )
+        val pkt =
+            UnsubscribeAcknowledgment(
+                packetIdentifier = 7,
+                reasonString = "partial",
+                userProperty = listOf("k" to "v"),
+                reasonCodes = codes,
+            )
         val buf = pkt.serialize()
         val decoded = ControlPacketV5.from(buf) as UnsubscribeAcknowledgment
         assertEquals(codes, decoded.reasonCodes)

@@ -54,11 +54,12 @@ class V5PacketConnectTests {
 
     @Test
     fun connectWithCredentialsRoundTrip() {
-        val pkt = ConnectionRequest(
-            clientId = "c",
-            userName = "alice",
-            password = "secret",
-        )
+        val pkt =
+            ConnectionRequest(
+                clientId = "c",
+                userName = "alice",
+                password = "secret",
+            )
         val buf = pkt.serialize()
         buf.position(0)
         val decoded = ControlPacketV5.from(buf) as ConnectionRequest
@@ -70,15 +71,16 @@ class V5PacketConnectTests {
 
     @Test
     fun connectWithRichPropertiesRoundTrip() {
-        val typed = ConnectProperties(
-            sessionExpiryIntervalSeconds = 3600uL,
-            receiveMaximum = 100,
-            maximumPacketSize = 65536uL,
-            topicAliasMaximum = 16,
-            requestResponseInformation = true,
-            requestProblemInformation = false,
-            userProperty = listOf("trace" to "abc"),
-        )
+        val typed =
+            ConnectProperties(
+                sessionExpiryIntervalSeconds = 3600uL,
+                receiveMaximum = 100,
+                maximumPacketSize = 65536uL,
+                topicAliasMaximum = 16,
+                requestResponseInformation = true,
+                requestProblemInformation = false,
+                userProperty = listOf("trace" to "abc"),
+            )
         val pkt = ConnectionRequest(clientId = "c", props = typed)
         val buf = pkt.serialize()
         buf.position(0)
@@ -95,27 +97,31 @@ class V5PacketConnectTests {
 
     @Test
     fun connectWithWillRoundTrip() {
-        val payload = BufferFactory.Default.allocate(4).apply {
-            writeByte(0x01)
-            writeByte(0x02)
-            writeByte(0x03)
-            writeByte(0x04)
-            resetForRead()
-        }
-        val pkt = ConnectionRequest(
-            clientId = "c",
-            will = WillConfig.Enabled(
-                topic = TopicName.fromOrThrow("will/topic"),
-                payload = payload,
-                qos = QualityOfService.AT_LEAST_ONCE,
-                retain = true,
-            ),
-            willProperties = ConnectWillProperties(
-                willDelayIntervalSeconds = 30,
-                payloadFormatIndicator = true,
-                contentType = "text/plain",
-            ),
-        )
+        val payload =
+            BufferFactory.Default.allocate(4).apply {
+                writeByte(0x01)
+                writeByte(0x02)
+                writeByte(0x03)
+                writeByte(0x04)
+                resetForRead()
+            }
+        val pkt =
+            ConnectionRequest(
+                clientId = "c",
+                will =
+                    WillConfig.Enabled(
+                        topic = TopicName.fromOrThrow("will/topic"),
+                        payload = payload,
+                        qos = QualityOfService.AT_LEAST_ONCE,
+                        retain = true,
+                    ),
+                willProperties =
+                    ConnectWillProperties(
+                        willDelayIntervalSeconds = 30,
+                        payloadFormatIndicator = true,
+                        contentType = "text/plain",
+                    ),
+            )
         val buf = pkt.serialize()
         buf.position(0)
         val decoded = ControlPacketV5.from(buf) as ConnectionRequest
@@ -235,12 +241,14 @@ class V5PacketConnectTests {
 
     @Test
     fun connectWithUserPropertyRoundTrip() {
-        val pkt = ConnectionRequest(
-            clientId = "c",
-            props = ConnectProperties(
-                userProperty = listOf("k1" to "v1", "k2" to "v2"),
-            ),
-        )
+        val pkt =
+            ConnectionRequest(
+                clientId = "c",
+                props =
+                    ConnectProperties(
+                        userProperty = listOf("k1" to "v1", "k2" to "v2"),
+                    ),
+            )
         val buf = pkt.serialize()
         buf.position(0)
         val decoded = ControlPacketV5.from(buf) as ConnectionRequest

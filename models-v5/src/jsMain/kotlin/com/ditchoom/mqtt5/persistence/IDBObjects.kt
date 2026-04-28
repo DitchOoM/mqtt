@@ -4,21 +4,20 @@
 package com.ditchoom.mqtt5.persistence
 
 import com.ditchoom.buffer.JsBuffer
-import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.ISubscription
 import com.ditchoom.mqtt.controlpacket.PublishMessage
-import com.ditchoom.mqtt.controlpacket.payloadAsByteArrayOrNull
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt.controlpacket.WillConfig
+import com.ditchoom.mqtt.controlpacket.payloadAsByteArrayOrNull
 import com.ditchoom.mqtt5.controlpacket.ConnectProperties
 import com.ditchoom.mqtt5.controlpacket.ConnectWillProperties
 import com.ditchoom.mqtt5.controlpacket.ConnectionRequest
+import com.ditchoom.mqtt5.controlpacket.ControlPacketV5
 import com.ditchoom.mqtt5.controlpacket.PublishProperties
 import com.ditchoom.mqtt5.controlpacket.Subscription
-import com.ditchoom.mqtt5.controlpacket.ControlPacketV5
 import com.ditchoom.mqtt5.controlpacket.UnsubscribeRequest
 import com.ditchoom.mqtt5.controlpacket.properties.Authentication
 import org.khronos.webgl.Int8Array
@@ -169,7 +168,9 @@ data class PersistablePublishMessage(
         pub.retain,
         pub.topic.toString(),
         pub.packetIdentifier,
-        pub.typedProperties.payloadFormatIndicator.toLong().toInt(),
+        pub.typedProperties.payloadFormatIndicator
+            .toLong()
+            .toInt(),
         pub.typedProperties.messageExpiryInterval?.toString(),
         pub.typedProperties.topicAlias,
         pub.typedProperties.responseTopic?.toString(),
@@ -193,12 +194,13 @@ fun toPub(
         topic = TopicName.fromOrThrow(p.topicName),
         qos = p.qos.toQos(),
         payload =
-            p.payload?.let {
-                JsBuffer(it).also { buf ->
-                    buf.position(it.length)
-                    buf.setLimit(it.length)
-                }
-            }?.also { it.resetForRead() },
+            p.payload
+                ?.let {
+                    JsBuffer(it).also { buf ->
+                        buf.position(it.length)
+                        buf.setLimit(it.length)
+                    }
+                }?.also { it.resetForRead() },
         dup = p.dup,
         retain = p.retain,
         packetIdentifier = p.packetId,

@@ -183,7 +183,9 @@ abstract class RemoteMqttClient(
     private fun <P> eagerEncode(
         value: P,
         encodePayload: WriteBuffer.(P) -> Unit,
-    ): ReadBuffer = com.ditchoom.buffer.codec.encodeWithGrowth { it.encodePayload(value) }
+    ): ReadBuffer =
+        com.ditchoom.buffer.codec
+            .encodeWithGrowth { it.encodePayload(value) }
 
     override suspend fun unsubscribe(unsub: IUnsubscribeRequest): UnsubscribeOperation {
         val packetId = persistence.writeUnsubGetPacketId(broker, unsub)

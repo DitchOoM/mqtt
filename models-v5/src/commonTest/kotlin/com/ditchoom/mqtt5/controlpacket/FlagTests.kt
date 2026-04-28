@@ -5,13 +5,11 @@ import com.ditchoom.buffer.Default
 import com.ditchoom.mqtt.controlpacket.QualityOfService.AT_LEAST_ONCE
 import com.ditchoom.mqtt.controlpacket.QualityOfService.AT_MOST_ONCE
 import com.ditchoom.mqtt.controlpacket.QualityOfService.EXACTLY_ONCE
-import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.GRANTED_QOS_0
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.NORMAL_DISCONNECTION
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.SUCCESS
 import com.ditchoom.mqtt.controlpacket.format.fixed.get
-import com.ditchoom.mqtt5.controlpacket.properties.Authentication
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

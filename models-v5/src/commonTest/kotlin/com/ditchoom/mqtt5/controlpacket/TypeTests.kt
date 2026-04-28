@@ -72,7 +72,7 @@ class TypeTests {
     fun controlPacketTypeValueMatchesSpecForSUBSCRIBE() =
         assertEquals(
             8,
-SubscribeRequest(packetIdentifier.toUShort(), "yolo", QualityOfService.AT_LEAST_ONCE).controlPacketValue,
+            SubscribeRequest(packetIdentifier.toUShort(), "yolo", QualityOfService.AT_LEAST_ONCE).controlPacketValue,
             controlPacketSpectMatchError,
         )
 
@@ -88,7 +88,7 @@ SubscribeRequest(packetIdentifier.toUShort(), "yolo", QualityOfService.AT_LEAST_
     fun controlPacketTypeValueMatchesSpecForUNSUBSCRIBE() =
         assertEquals(
             10,
-UnsubscribeRequest("yolo").controlPacketValue,
+            UnsubscribeRequest("yolo").controlPacketValue,
             controlPacketSpectMatchError,
         )
 
@@ -96,7 +96,7 @@ UnsubscribeRequest("yolo").controlPacketValue,
     fun controlPacketTypeValueMatchesSpecForUNSUBACK() =
         assertEquals(
             11,
-UnsubscribeAcknowledgment(packetIdentifier, reasonCodes = listOf(SUCCESS)).controlPacketValue,
+            UnsubscribeAcknowledgment(packetIdentifier, reasonCodes = listOf(SUCCESS)).controlPacketValue,
             controlPacketSpectMatchError,
         )
 
@@ -180,7 +180,7 @@ UnsubscribeAcknowledgment(packetIdentifier, reasonCodes = listOf(SUCCESS)).contr
     fun controlPacketTypeDirectionOfFlowSUBSCRIBE() =
         assertEquals(
             CLIENT_TO_SERVER,
-SubscribeRequest(packetIdentifier.toUShort(), "yolo", QualityOfService.AT_LEAST_ONCE).direction,
+            SubscribeRequest(packetIdentifier.toUShort(), "yolo", QualityOfService.AT_LEAST_ONCE).direction,
             controlPacketSpectMatchError,
         )
 
@@ -196,7 +196,7 @@ SubscribeRequest(packetIdentifier.toUShort(), "yolo", QualityOfService.AT_LEAST_
     fun controlPacketTypeDirectionOfFlowUNSUBSCRIBE() =
         assertEquals(
             CLIENT_TO_SERVER,
-UnsubscribeRequest("yolo").direction,
+            UnsubscribeRequest("yolo").direction,
             controlPacketSpectMatchError,
         )
 
@@ -204,7 +204,7 @@ UnsubscribeRequest("yolo").direction,
     fun controlPacketTypeDirectionOfFlowUNSUBACK() =
         assertEquals(
             SERVER_TO_CLIENT,
-UnsubscribeAcknowledgment(packetIdentifier, reasonCodes = listOf(SUCCESS)).direction,
+            UnsubscribeAcknowledgment(packetIdentifier, reasonCodes = listOf(SUCCESS)).direction,
             controlPacketSpectMatchError,
         )
 

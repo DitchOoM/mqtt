@@ -9,7 +9,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlin.test.assertNull
-import kotlin.test.assertSame
 
 /**
  * Spec-edge-case round-trip tests for the six ack-shaped packets migrated to `ControlPacketV5`:
@@ -92,12 +91,13 @@ class V5PacketAckShapedTests {
 
     @Test
     fun pubAckWithPropertiesRoundTrip() {
-        val pkt = PublishAcknowledgment(
-            packetIdentifier = 99,
-            reasonCode = ReasonCode.QUOTA_EXCEEDED,
-            reasonString = "rate limited",
-            userProperty = listOf("retry-after" to "60"),
-        )
+        val pkt =
+            PublishAcknowledgment(
+                packetIdentifier = 99,
+                reasonCode = ReasonCode.QUOTA_EXCEEDED,
+                reasonString = "rate limited",
+                userProperty = listOf("retry-after" to "60"),
+            )
         val buf = pkt.serialize()
         val decoded = ControlPacketV5.from(buf)
         assertIs<PublishAcknowledgment>(decoded)
@@ -230,13 +230,14 @@ class V5PacketAckShapedTests {
 
     @Test
     fun disconnectWithPropertiesRoundTrip() {
-        val pkt = DisconnectNotification(
-            reasonCode = ReasonCode.SERVER_SHUTTING_DOWN,
-            sessionExpiryIntervalSeconds = 60u,
-            reasonString = "graceful shutdown",
-            userProperty = listOf("admin" to "alice"),
-            serverReference = "mqtt://backup.example",
-        )
+        val pkt =
+            DisconnectNotification(
+                reasonCode = ReasonCode.SERVER_SHUTTING_DOWN,
+                sessionExpiryIntervalSeconds = 60u,
+                reasonString = "graceful shutdown",
+                userProperty = listOf("admin" to "alice"),
+                serverReference = "mqtt://backup.example",
+            )
         val buf = pkt.serialize()
         val decoded = ControlPacketV5.from(buf)
         assertIs<DisconnectNotification>(decoded)

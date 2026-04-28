@@ -4,6 +4,7 @@ import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
+import com.ditchoom.buffer.codec.annotations.DiscriminatorField
 import com.ditchoom.buffer.codec.annotations.DispatchOn
 import com.ditchoom.buffer.codec.annotations.LengthPrefixed
 import com.ditchoom.buffer.codec.annotations.PacketType
@@ -11,7 +12,7 @@ import com.ditchoom.buffer.codec.annotations.PacketTypeRange
 import com.ditchoom.buffer.codec.annotations.Payload
 import com.ditchoom.buffer.codec.annotations.ProtocolMessage
 import com.ditchoom.buffer.codec.annotations.RemainingBytes
-import com.ditchoom.buffer.codec.annotations.WhenTrue
+import com.ditchoom.buffer.codec.annotations.When
 import com.ditchoom.mqtt.MalformedPacketException
 import com.ditchoom.mqtt.MqttWarning
 import com.ditchoom.mqtt.ProtocolError
@@ -182,16 +183,16 @@ data object Reserved : ControlPacketV4 {
 @PacketType(wire = 1)
 @ProtocolMessage
 data class ConnectionRequest<@Payload WP>(
-    val fixedHeader: MqttFixedHeader = MqttFixedHeader(0x10u),
+    @DiscriminatorField val fixedHeader: MqttFixedHeader = MqttFixedHeader(0x10u),
     @LengthPrefixed override val protocolName: String = "MQTT",
     val protocolLevel: UByte = 4u,
     val connectFlags: ConnectV4Flags = ConnectV4Flags(0u),
     val keepAlive: UShort = UShort.MAX_VALUE,
     @LengthPrefixed val clientId: String = "",
-    @WhenTrue("connectFlags.willFlag") @LengthPrefixed val willTopicString: String? = null,
-    @WhenTrue("connectFlags.willFlag") @LengthPrefixed val willPayloadValue: WP? = null,
-    @WhenTrue("connectFlags.usernameFlag") @LengthPrefixed val username: String? = null,
-    @WhenTrue("connectFlags.passwordFlag") @LengthPrefixed override val password: String? = null,
+    @When("connectFlags.willFlag") @LengthPrefixed val willTopicString: String? = null,
+    @When("connectFlags.willFlag") @LengthPrefixed val willPayloadValue: WP? = null,
+    @When("connectFlags.usernameFlag") @LengthPrefixed val username: String? = null,
+    @When("connectFlags.passwordFlag") @LengthPrefixed override val password: String? = null,
 ) : ControlPacketV4,
     IConnectionRequest {
     init {
@@ -436,7 +437,7 @@ data class ConnectionRequest<@Payload WP>(
 @PacketType(wire = 2)
 @ProtocolMessage
 data class ConnectionAcknowledgment(
-    val fixedHeader: MqttFixedHeader = MqttFixedHeader(0x20u),
+    @DiscriminatorField val fixedHeader: MqttFixedHeader = MqttFixedHeader(0x20u),
     val acknowledgeFlags: UByte = 0u,
     val returnCode: UByte = 0u,
 ) : ControlPacketV4,
@@ -554,9 +555,9 @@ fun ConnectionRequest(
 @PacketTypeRange(0x30, 0x3F)
 @ProtocolMessage
 data class PublishMessageV4<@Payload P>(
-    val header: MqttFixedHeader,
+    @DiscriminatorField val header: MqttFixedHeader,
     @LengthPrefixed val topicName: String,
-    @WhenTrue("header.publishHasPacketIdentifier") val packetId: UShort? = null,
+    @When("header.publishHasPacketIdentifier") val packetId: UShort? = null,
     @RemainingBytes val payload: P,
 ) : ControlPacketV4,
     PublishMessage {
@@ -712,7 +713,7 @@ data class PublishMessageV4<@Payload P>(
 @PacketType(wire = 4)
 @ProtocolMessage
 data class PublishAcknowledgment(
-    val header: MqttFixedHeader = MqttFixedHeader(0x40u),
+    @DiscriminatorField val header: MqttFixedHeader = MqttFixedHeader(0x40u),
     val packetId: UShort,
 ) : ControlPacketV4,
     IPublishAcknowledgment {
@@ -741,7 +742,7 @@ data class PublishAcknowledgment(
 @PacketType(wire = 5)
 @ProtocolMessage
 data class PublishReceived(
-    val header: MqttFixedHeader = MqttFixedHeader(0x50u),
+    @DiscriminatorField val header: MqttFixedHeader = MqttFixedHeader(0x50u),
     val packetId: UShort,
 ) : ControlPacketV4,
     IPublishReceived {
@@ -776,7 +777,7 @@ data class PublishReceived(
 @PacketType(wire = 6)
 @ProtocolMessage
 data class PublishRelease(
-    val header: MqttFixedHeader = MqttFixedHeader(0x62u),
+    @DiscriminatorField val header: MqttFixedHeader = MqttFixedHeader(0x62u),
     val packetId: UShort,
 ) : ControlPacketV4,
     IPublishRelease {
@@ -813,7 +814,7 @@ data class PublishRelease(
 @PacketType(wire = 7)
 @ProtocolMessage
 data class PublishComplete(
-    val header: MqttFixedHeader = MqttFixedHeader(0x70u),
+    @DiscriminatorField val header: MqttFixedHeader = MqttFixedHeader(0x70u),
     val packetId: UShort,
 ) : ControlPacketV4,
     IPublishComplete {
@@ -842,7 +843,7 @@ data class PublishComplete(
 @PacketType(wire = 8)
 @ProtocolMessage
 data class SubscribeRequest(
-    val header: MqttFixedHeader = MqttFixedHeader(0x82u),
+    @DiscriminatorField val header: MqttFixedHeader = MqttFixedHeader(0x82u),
     val packetId: UShort,
     @RemainingBytes val entries: List<SubscriptionEntry>,
 ) : ControlPacketV4,
@@ -926,7 +927,7 @@ data class SubscribeRequest(
 @PacketType(wire = 9)
 @ProtocolMessage
 data class SubscribeAcknowledgement(
-    val header: MqttFixedHeader = MqttFixedHeader(0x90u),
+    @DiscriminatorField val header: MqttFixedHeader = MqttFixedHeader(0x90u),
     val packetId: UShort,
     @RemainingBytes val returnCodes: List<SubAckReturnCode>,
 ) : ControlPacketV4,
@@ -977,7 +978,7 @@ data class SubscribeAcknowledgement(
 @PacketType(wire = 10)
 @ProtocolMessage
 data class UnsubscribeRequest(
-    val header: MqttFixedHeader = MqttFixedHeader(0xA2u),
+    @DiscriminatorField val header: MqttFixedHeader = MqttFixedHeader(0xA2u),
     val packetId: UShort,
     @RemainingBytes val topicEntries: List<TopicFilterEntry>,
 ) : ControlPacketV4,
@@ -1023,7 +1024,7 @@ data class UnsubscribeRequest(
 @PacketType(wire = 11)
 @ProtocolMessage
 data class UnsubscribeAcknowledgment(
-    val header: MqttFixedHeader = MqttFixedHeader(0xB0u),
+    @DiscriminatorField val header: MqttFixedHeader = MqttFixedHeader(0xB0u),
     val packetId: UShort,
 ) : ControlPacketV4,
     IUnsubscribeAcknowledgment {

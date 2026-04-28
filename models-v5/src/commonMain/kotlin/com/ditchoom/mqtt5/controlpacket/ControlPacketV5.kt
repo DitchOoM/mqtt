@@ -3,6 +3,7 @@ package com.ditchoom.mqtt5.controlpacket
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
 import com.ditchoom.buffer.codec.EncodeContext
+import com.ditchoom.buffer.codec.annotations.DiscriminatorField
 import com.ditchoom.buffer.codec.annotations.DispatchOn
 import com.ditchoom.buffer.codec.annotations.LengthPrefix
 import com.ditchoom.buffer.codec.annotations.LengthPrefixed
@@ -11,8 +12,7 @@ import com.ditchoom.buffer.codec.annotations.PacketTypeRange
 import com.ditchoom.buffer.codec.annotations.Payload
 import com.ditchoom.buffer.codec.annotations.ProtocolMessage
 import com.ditchoom.buffer.codec.annotations.RemainingBytes
-import com.ditchoom.buffer.codec.annotations.WhenRemaining
-import com.ditchoom.buffer.codec.annotations.WhenTrue
+import com.ditchoom.buffer.codec.annotations.When
 import com.ditchoom.mqtt.MalformedPacketException
 import com.ditchoom.mqtt.MqttWarning
 import com.ditchoom.mqtt.ProtocolError
@@ -188,24 +188,24 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
     @PacketType(wire = 1)
     @ProtocolMessage
     data class Connect<@Payload WP>(
-        val header: MqttFixedHeader = MqttFixedHeader(0x10u),
+        @DiscriminatorField val header: MqttFixedHeader = MqttFixedHeader(0x10u),
         @LengthPrefixed override val protocolName: String,
         val protocolLevel: UByte,
         val connectFlags: ConnectFlagsV5,
         val keepAlive: UShort,
         @LengthPrefixed(LengthPrefix.Varint, maxBytes = 4) val properties: List<MqttProperty> = emptyList(),
         @LengthPrefixed val clientId: String,
-        @WhenTrue(
+        @When(
             "connectFlags.willFlag",
         ) @LengthPrefixed(LengthPrefix.Varint, maxBytes = 4) val willProperties: List<MqttProperty>? = null,
         // Wire-shape will fields. Names are distinct from IConnectionRequest's typed
         // accessors (willTopic: TopicName?, willPayload: ReadBuffer?) which are derived
         // via `will: WillConfig`. The codec processor uses these names verbatim for the
         // wire serialization; the typed accessors below convert at the API boundary.
-        @WhenTrue("connectFlags.willFlag") @LengthPrefixed val willTopicString: String? = null,
-        @WhenTrue("connectFlags.willFlag") @LengthPrefixed val willPayloadValue: WP? = null,
-        @WhenTrue("connectFlags.usernameFlag") @LengthPrefixed val username: String? = null,
-        @WhenTrue("connectFlags.passwordFlag") @LengthPrefixed override val password: String? = null,
+        @When("connectFlags.willFlag") @LengthPrefixed val willTopicString: String? = null,
+        @When("connectFlags.willFlag") @LengthPrefixed val willPayloadValue: WP? = null,
+        @When("connectFlags.usernameFlag") @LengthPrefixed val username: String? = null,
+        @When("connectFlags.passwordFlag") @LengthPrefixed override val password: String? = null,
     ) : ControlPacketV5,
         IConnectionRequest {
         init {
@@ -365,7 +365,7 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
     @PacketType(wire = 2)
     @ProtocolMessage
     data class ConnAck(
-        val header: MqttFixedHeader = MqttFixedHeader(0x20u),
+        @DiscriminatorField val header: MqttFixedHeader = MqttFixedHeader(0x20u),
         val acknowledgeFlags: UByte,
         val connectReasonCode: UByte,
         @LengthPrefixed(LengthPrefix.Varint, maxBytes = 4) val properties: List<MqttProperty> = emptyList(),
@@ -440,9 +440,9 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
     @PacketTypeRange(0x30, 0x3F)
     @ProtocolMessage
     data class Publish<@Payload P>(
-        val header: MqttFixedHeader,
+        @DiscriminatorField val header: MqttFixedHeader,
         @LengthPrefixed val topicName: String,
-        @WhenTrue("header.publishHasPacketIdentifier") val packetId: UShort? = null,
+        @When("header.publishHasPacketIdentifier") val packetId: UShort? = null,
         @LengthPrefixed(LengthPrefix.Varint, maxBytes = 4) val properties: List<MqttProperty> = emptyList(),
         @RemainingBytes val payload: P,
     ) : ControlPacketV5,
@@ -612,10 +612,10 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
     @PacketType(wire = 4)
     @ProtocolMessage
     data class PubAck(
-        val header: MqttFixedHeader = MqttFixedHeader(0x40u),
+        @DiscriminatorField val header: MqttFixedHeader = MqttFixedHeader(0x40u),
         val packetId: UShort,
-        @WhenRemaining(1) val reasonCode: UByte? = null,
-        @WhenRemaining(1) @LengthPrefixed(LengthPrefix.Varint, maxBytes = 4) val properties: List<MqttProperty>? = null,
+        @When("remaining >= 1") val reasonCode: UByte? = null,
+        @When("remaining >= 1") @LengthPrefixed(LengthPrefix.Varint, maxBytes = 4) val properties: List<MqttProperty>? = null,
     ) : ControlPacketV5,
         IPublishAcknowledgment {
         constructor(
@@ -657,10 +657,10 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
     @PacketType(wire = 5)
     @ProtocolMessage
     data class PubRec(
-        val header: MqttFixedHeader = MqttFixedHeader(0x50u),
+        @DiscriminatorField val header: MqttFixedHeader = MqttFixedHeader(0x50u),
         val packetId: UShort,
-        @WhenRemaining(1) val reasonCode: UByte? = null,
-        @WhenRemaining(1) @LengthPrefixed(LengthPrefix.Varint, maxBytes = 4) val properties: List<MqttProperty>? = null,
+        @When("remaining >= 1") val reasonCode: UByte? = null,
+        @When("remaining >= 1") @LengthPrefixed(LengthPrefix.Varint, maxBytes = 4) val properties: List<MqttProperty>? = null,
     ) : ControlPacketV5,
         IPublishReceived {
         constructor(
@@ -708,10 +708,10 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
     @PacketType(wire = 6)
     @ProtocolMessage
     data class PubRel(
-        val header: MqttFixedHeader = MqttFixedHeader(0x62u),
+        @DiscriminatorField val header: MqttFixedHeader = MqttFixedHeader(0x62u),
         val packetId: UShort,
-        @WhenRemaining(1) val reasonCode: UByte? = null,
-        @WhenRemaining(1) @LengthPrefixed(LengthPrefix.Varint, maxBytes = 4) val properties: List<MqttProperty>? = null,
+        @When("remaining >= 1") val reasonCode: UByte? = null,
+        @When("remaining >= 1") @LengthPrefixed(LengthPrefix.Varint, maxBytes = 4) val properties: List<MqttProperty>? = null,
     ) : ControlPacketV5,
         IPublishRelease {
         constructor(
@@ -761,10 +761,10 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
     @PacketType(wire = 7)
     @ProtocolMessage
     data class PubComp(
-        val header: MqttFixedHeader = MqttFixedHeader(0x70u),
+        @DiscriminatorField val header: MqttFixedHeader = MqttFixedHeader(0x70u),
         val packetId: UShort,
-        @WhenRemaining(1) val reasonCode: UByte? = null,
-        @WhenRemaining(1) @LengthPrefixed(LengthPrefix.Varint, maxBytes = 4) val properties: List<MqttProperty>? = null,
+        @When("remaining >= 1") val reasonCode: UByte? = null,
+        @When("remaining >= 1") @LengthPrefixed(LengthPrefix.Varint, maxBytes = 4) val properties: List<MqttProperty>? = null,
     ) : ControlPacketV5,
         IPublishComplete {
         constructor(packetIdentifier: UShort, reasonCode: ReasonCode = SUCCESS) :
@@ -813,7 +813,7 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
     @PacketType(wire = 12)
     @ProtocolMessage
     data class PingReq(
-        val header: MqttFixedHeader = MqttFixedHeader(0xC0u),
+        @DiscriminatorField val header: MqttFixedHeader = MqttFixedHeader(0xC0u),
     ) : ControlPacketV5,
         IPingRequest {
         init {
@@ -831,7 +831,7 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
     @PacketType(wire = 13)
     @ProtocolMessage
     data class PingResp(
-        val header: MqttFixedHeader = MqttFixedHeader(0xD0u),
+        @DiscriminatorField val header: MqttFixedHeader = MqttFixedHeader(0xD0u),
     ) : ControlPacketV5,
         IPingResponse {
         init {
@@ -851,9 +851,9 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
     data class Disconnect(
         // No default on `header` so the no-arg form resolves unambiguously to the typed
         // secondary constructor below; codec-generated decode always passes header anyway.
-        val header: MqttFixedHeader,
-        @WhenRemaining(1) val reasonCode: UByte? = null,
-        @WhenRemaining(1) @LengthPrefixed(LengthPrefix.Varint, maxBytes = 4) val properties: List<MqttProperty>? = null,
+        @DiscriminatorField val header: MqttFixedHeader,
+        @When("remaining >= 1") val reasonCode: UByte? = null,
+        @When("remaining >= 1") @LengthPrefixed(LengthPrefix.Varint, maxBytes = 4) val properties: List<MqttProperty>? = null,
     ) : ControlPacketV5,
         IDisconnectNotification {
         constructor(
@@ -910,9 +910,9 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
     data class Auth(
         // No default on `header` so the no-arg form resolves unambiguously to the typed
         // secondary constructor below; codec-generated decode always passes header anyway.
-        val header: MqttFixedHeader,
-        @WhenRemaining(1) val reasonCode: UByte? = null,
-        @WhenRemaining(1) @LengthPrefixed(LengthPrefix.Varint, maxBytes = 4) val properties: List<MqttProperty>? = null,
+        @DiscriminatorField val header: MqttFixedHeader,
+        @When("remaining >= 1") val reasonCode: UByte? = null,
+        @When("remaining >= 1") @LengthPrefixed(LengthPrefix.Varint, maxBytes = 4) val properties: List<MqttProperty>? = null,
     ) : ControlPacketV5 {
         constructor(
             reasonCode: ReasonCode = SUCCESS,
@@ -955,7 +955,7 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
     @PacketType(wire = 8)
     @ProtocolMessage
     data class Subscribe(
-        val header: MqttFixedHeader = MqttFixedHeader(0x82u),
+        @DiscriminatorField val header: MqttFixedHeader = MqttFixedHeader(0x82u),
         val packetId: UShort,
         @LengthPrefixed(LengthPrefix.Varint, maxBytes = 4) val properties: List<MqttProperty> = emptyList(),
         @RemainingBytes val subscriptionEntries: List<SubscriptionV5Entry>,
@@ -1047,7 +1047,7 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
     @PacketType(wire = 9)
     @ProtocolMessage
     data class SubAck(
-        val header: MqttFixedHeader = MqttFixedHeader(0x90u),
+        @DiscriminatorField val header: MqttFixedHeader = MqttFixedHeader(0x90u),
         val packetId: UShort,
         @LengthPrefixed(LengthPrefix.Varint, maxBytes = 4) val properties: List<MqttProperty> = emptyList(),
         @RemainingBytes val reasonCodeEntries: List<SubAckReasonCodeV5>,
@@ -1110,7 +1110,7 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
     @PacketType(wire = 10)
     @ProtocolMessage
     data class Unsubscribe(
-        val header: MqttFixedHeader = MqttFixedHeader(0xA2u),
+        @DiscriminatorField val header: MqttFixedHeader = MqttFixedHeader(0xA2u),
         val packetId: UShort,
         @LengthPrefixed(LengthPrefix.Varint, maxBytes = 4) val properties: List<MqttProperty> = emptyList(),
         @RemainingBytes val topicEntries: List<TopicFilterV5Entry>,
@@ -1167,7 +1167,7 @@ sealed interface ControlPacketV5 : com.ditchoom.mqtt.controlpacket.ControlPacket
     @PacketType(wire = 11)
     @ProtocolMessage
     data class UnsubAck(
-        val header: MqttFixedHeader = MqttFixedHeader(0xB0u),
+        @DiscriminatorField val header: MqttFixedHeader = MqttFixedHeader(0xB0u),
         val packetId: UShort,
         @LengthPrefixed(LengthPrefix.Varint, maxBytes = 4) val properties: List<MqttProperty> = emptyList(),
         @RemainingBytes val reasonCodeEntries: List<UnsubAckReasonCodeV5>,

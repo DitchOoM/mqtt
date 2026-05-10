@@ -147,7 +147,7 @@ class SqlDatabasePersistence(
         connectionOps: Collection<MqttConnectionOptions>,
         connectionRequest: IConnectionRequest,
     ): MqttBroker {
-        val connect = connectionRequest as ConnectionRequest<*>
+        val connect = connectionRequest as ConnectionRequest
         val brokerId =
             brokerQueries.transactionWithResult {
                 brokerQueries.insertBroker()
@@ -238,7 +238,7 @@ class SqlDatabasePersistence(
                 WillConfig.Disabled
             }
         val connectionRequest =
-            ConnectionRequest<ReadBuffer?>(
+            ConnectionRequest(
                 connectionRequestDatabaseRecord.client_id,
                 connectionRequestDatabaseRecord.keep_alive_seconds.toInt(),
                 connectionRequestDatabaseRecord.clean_session == 1L,

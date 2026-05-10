@@ -24,9 +24,9 @@ object ControlPacketV4Factory : ControlPacketFactory {
 
     override fun from(buffer: ReadBuffer) = ControlPacketV4.from(buffer)
 
-    override fun pingRequest() = PingRequest
+    override fun pingRequest() = PingRequest()
 
-    override fun pingResponse() = PingResponse
+    override fun pingResponse() = PingResponse()
 
     override fun publish(
         dup: Boolean,
@@ -86,5 +86,5 @@ object ControlPacketV4Factory : ControlPacketFactory {
         sessionExpiryIntervalSeconds: ULong?,
         reasonString: String?,
         userProperty: List<Pair<String, String>>,
-    ) = DisconnectNotification
+    ) = DisconnectNotification()
 }

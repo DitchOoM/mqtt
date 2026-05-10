@@ -3,17 +3,20 @@ package com.ditchoom.mqtt3.controlpacket
 import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.ReadBuffer
-import com.ditchoom.buffer.WriteBuffer
-import com.ditchoom.buffer.codec.annotations.DiscriminatorField
+import com.ditchoom.buffer.codec.DecodeContext
+import com.ditchoom.buffer.codec.Payload
 import com.ditchoom.buffer.codec.annotations.DispatchOn
+import com.ditchoom.buffer.codec.annotations.FramedBy
 import com.ditchoom.buffer.codec.annotations.LengthPrefixed
 import com.ditchoom.buffer.codec.annotations.PacketType
-import com.ditchoom.buffer.codec.annotations.PacketTypeRange
-import com.ditchoom.buffer.codec.annotations.Payload
 import com.ditchoom.buffer.codec.annotations.ProtocolMessage
 import com.ditchoom.buffer.codec.annotations.RemainingBytes
+import com.ditchoom.buffer.codec.annotations.UseCodec
 import com.ditchoom.buffer.codec.annotations.When
 import com.ditchoom.mqtt.MalformedPacketException
+import com.ditchoom.mqtt.controlpacket.BufferPayload
+import com.ditchoom.mqtt.controlpacket.BufferPayloadCodec
+import com.ditchoom.mqtt.controlpacket.MqttRemainingLengthCodec
 import com.ditchoom.mqtt.MqttWarning
 import com.ditchoom.mqtt.ProtocolError
 import com.ditchoom.mqtt.controlpacket.ControlPacket
@@ -71,13 +74,60 @@ data class SubscriptionEntry(
 }
 
 /**
- * Wire model for a single SUBACK return code byte.
+ * Discriminator byte for [SubAckReturnCode] sealed-tree dispatch.
+ * SUBACK §3.9.3 enumerates exactly four legal values (0x00 / 0x01 / 0x02 / 0x80);
+ * the dispatcher routes the wire byte to one of [SubAckReturnCode]'s `data object`
+ * variants, eliminating per-element heap allocation when reassembling the list.
  */
-@ProtocolMessage
 @JvmInline
-value class SubAckReturnCode(
+@ProtocolMessage
+value class SubAckReturnCodeRaw(
     val raw: UByte,
-)
+) {
+    @com.ditchoom.buffer.codec.annotations.DispatchValue
+    val id: Int get() = raw.toInt()
+}
+
+/**
+ * Typed return code for MQTT v3.1.1 SUBACK (§3.9.3). Sealed-tree dispatch over
+ * [SubAckReturnCodeRaw] folds the byte-value-space into the type system; the
+ * codec layer reuses the same four singleton instances regardless of list length.
+ */
+@DispatchOn(SubAckReturnCodeRaw::class)
+@ProtocolMessage
+sealed interface SubAckReturnCode {
+    /** §3.9.3 — `0x00` Success - Maximum QoS 0. */
+    @PacketType(value = 0x00)
+    @ProtocolMessage
+    data object SuccessMaximumQoS0 : SubAckReturnCode
+
+    /** §3.9.3 — `0x01` Success - Maximum QoS 1. */
+    @PacketType(value = 0x01)
+    @ProtocolMessage
+    data object SuccessMaximumQoS1 : SubAckReturnCode
+
+    /** §3.9.3 — `0x02` Success - Maximum QoS 2. */
+    @PacketType(value = 0x02)
+    @ProtocolMessage
+    data object SuccessMaximumQoS2 : SubAckReturnCode
+
+    /** §3.9.3 — `0x80` Failure. */
+    @PacketType(value = 0x80)
+    @ProtocolMessage
+    data object Failure : SubAckReturnCode
+
+    companion object {
+        /** Map a domain-level [com.ditchoom.mqtt.controlpacket.format.ReasonCode] byte to its sealed [SubAckReturnCode] variant. */
+        fun fromByte(byte: UByte): SubAckReturnCode =
+            when (byte) {
+                0x00.toUByte() -> SuccessMaximumQoS0
+                0x01.toUByte() -> SuccessMaximumQoS1
+                0x02.toUByte() -> SuccessMaximumQoS2
+                0x80.toUByte() -> Failure
+                else -> throw MalformedPacketException("Invalid SUBACK return code 0x${byte.toString(16)}")
+            }
+    }
+}
 
 /**
  * Wire model for a single UNSUBSCRIBE topic filter entry (length-prefixed string).
@@ -135,38 +185,48 @@ value class ConnectV4Flags(
  * @see https://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html
  */
 @DispatchOn(MqttFixedHeader::class)
-@ProtocolMessage(onUnknownDiscriminator = "com.ditchoom.mqtt.MalformedPacketException")
-sealed interface ControlPacketV4 : ControlPacket {
+@FramedBy(MqttRemainingLengthCodec::class, after = "header")
+@ProtocolMessage
+sealed interface ControlPacketV4<out P : Payload> : ControlPacket {
     override val mqttVersion: Byte get() = 4
     override val controlPacketFactory: ControlPacketFactory get() = ControlPacketV4Factory
 
     companion object {
         /**
-         * Decode a full v4 control-packet wire (`[byte1][VBI(remainingLength)][body]`).
+         * Decode a full v4 control-packet wire (`[byte1][VBI(remainingLength)][body]`),
+         * routing PUBLISH application bytes through [payloadCodec]. The sealed dispatcher
+         * consumes the fixed-header byte via [MqttFixedHeader]'s `@DispatchValue` packetType
+         * nibble, applies the `@FramedBy(MqttRemainingLengthCodec)` VBI body-length bound,
+         * and routes to the matching variant codec. Body-overrun and PUBLISH QoS=3
+         * rejections are handled by the generated dispatcher's body-length guard and
+         * [MqttFixedHeader]'s `init {}`.
          *
-         * Delegates to the generated [ControlPacketV4Codec.decode], whose sealed dispatcher
-         * consumes the fixed header via [MqttFixedHeader]'s [com.ditchoom.buffer.codec.DispatchFraming]
-         * companion (auto-discovered by the buffer-codec processor) and routes to the matching
-         * variant codec. Body-overrun and PUBLISH QoS=3 rejections are handled by the generated
-         * dispatcher's body-length guard and [MqttFixedHeader]'s `init {}`. The decode context
-         * registers identity-slice readers for the Connect Will payload and Publish payload.
+         * Construct the codec once and reuse on hot paths — the `mqtt-client` connection
+         * layer holds a single instance per connection. This convenience constructs on
+         * each call for one-off / test decode sites.
          */
-        fun from(buffer: ReadBuffer): ControlPacketV4 =
-            ControlPacketV4Codec.decode(
-                buffer,
-                com.ditchoom.buffer.codec.DecodeContext.Empty
-                    .with(ConnectionRequestCodec.WillPayloadValueDecodeKey) { slice ->
-                        if (slice.remaining() > 0) slice else null
-                    }.with(PublishMessageV4Codec.PayloadDecodeKey) { slice -> slice },
-            )
+        fun <P : Payload> from(
+            buffer: ReadBuffer,
+            payloadCodec: com.ditchoom.buffer.codec.Codec<P>,
+        ): ControlPacketV4<P> = ControlPacketV4Codec(payloadCodec).decode(buffer, DecodeContext.Empty)
+
+        /**
+         * Default zero-copy decode: aliases the PUBLISH payload slice as [BufferPayload].
+         * Consumers wanting a typed payload supply their own [com.ditchoom.buffer.codec.Codec]
+         * via the [from] overload above to decode directly into their domain type without
+         * an intermediate buffer copy.
+         */
+        fun from(buffer: ReadBuffer): ControlPacketV4<BufferPayload> = from(buffer, BufferPayloadCodec)
     }
 }
 
 // ── Reserved (wire 0x00) ───────────────────────────────────────────────────
 
-@PacketType(wire = 0)
+@PacketType(value = 0)
 @ProtocolMessage
-data object Reserved : ControlPacketV4 {
+data class Reserved(
+    val header: MqttFixedHeader = MqttFixedHeader(0x00u),
+) : ControlPacketV4<Nothing> {
     override val controlPacketValue: Byte get() = 0
     override val direction: DirectionOfFlow get() = DirectionOfFlow.BIDIRECTIONAL
 }
@@ -180,25 +240,28 @@ data object Reserved : ControlPacketV4 {
  * constructors are preserved as secondary constructors that delegate to the wire primary;
  * the legacy `variableHeader` and `payload` typed views are derived getters.
  */
-@PacketType(wire = 1)
+@PacketType(value = 1, wire = 0x10)
 @ProtocolMessage
-data class ConnectionRequest<@Payload WP>(
-    @DiscriminatorField val fixedHeader: MqttFixedHeader = MqttFixedHeader(0x10u),
+data class ConnectionRequest(
+    val header: MqttFixedHeader = MqttFixedHeader(0x10u),
     @LengthPrefixed override val protocolName: String = "MQTT",
     val protocolLevel: UByte = 4u,
     val connectFlags: ConnectV4Flags = ConnectV4Flags(0u),
     val keepAlive: UShort = UShort.MAX_VALUE,
     @LengthPrefixed val clientId: String = "",
     @When("connectFlags.willFlag") @LengthPrefixed val willTopicString: String? = null,
-    @When("connectFlags.willFlag") @LengthPrefixed val willPayloadValue: WP? = null,
+    @When("connectFlags.willFlag")
+    @LengthPrefixed
+    @UseCodec(BufferPayloadCodec::class)
+    val willPayloadValue: BufferPayload? = null,
     @When("connectFlags.usernameFlag") @LengthPrefixed val username: String? = null,
     @When("connectFlags.passwordFlag") @LengthPrefixed override val password: String? = null,
-) : ControlPacketV4,
+) : ControlPacketV4<Nothing>,
     IConnectionRequest {
     init {
-        if (fixedHeader.flags != 0) {
+        if (header.flags != 0) {
             throw MalformedPacketException(
-                "Reserved fixed-header flags for CONNECT must be 0x0, got 0x${fixedHeader.flags.toString(16)}",
+                "Reserved fixed-header flags for CONNECT must be 0x0, got 0x${header.flags.toString(16)}",
             )
         }
         if (connectFlags.reserved) {
@@ -225,15 +288,15 @@ data class ConnectionRequest<@Payload WP>(
 
     override val will: WillConfig
         get() {
-            val payload = willPayloadValue
+            val payload = willPayloadValue?.buffer
             return if (
                 connectFlags.willFlag &&
                 willTopicString != null &&
-                payload is ReadBuffer
+                payload != null
             ) {
                 WillConfig.Enabled(
                     TopicName.fromOrThrow(willTopicString),
-                    payload as ReadBuffer,
+                    payload,
                     QualityOfService.fromBooleans(
                         (connectFlags.willQos shr 1) and 1 == 1,
                         connectFlags.willQos and 1 == 1,
@@ -270,7 +333,7 @@ data class ConnectionRequest<@Payload WP>(
             Payload(
                 clientId = clientId,
                 willTopic = willTopicString?.let { TopicName.fromOrThrow(it) },
-                willPayload = willPayloadValue as? ReadBuffer,
+                willPayload = willPayloadValue?.buffer,
                 userName = username,
                 password = password,
             )
@@ -317,27 +380,13 @@ data class ConnectionRequest<@Payload WP>(
         return variableHeader.validateOrGetWarning()
     }
 
-    override fun encodeBody(writeBuffer: WriteBuffer) {
-        @Suppress("UNCHECKED_CAST")
-        ConnectionRequestCodec.encodeBody(writeBuffer, this as ConnectionRequest<ReadBuffer?>) { buf, wp ->
-            if (wp != null) buf.write(wp)
-        }
-    }
-
-    @Suppress("UNCHECKED_CAST")
-    override fun remainingLength(): Int =
-        ConnectionRequestCodec.wireSizeBody(this as ConnectionRequest<ReadBuffer?>) { wp ->
-            (wp as? ReadBuffer)?.remaining() ?: 0
-        }
-
     // ── Legacy convenience constructors ──
 
-    @Suppress("UNCHECKED_CAST")
     constructor(
         variableHeader: VariableHeader,
         payload: Payload = Payload(),
     ) : this(
-        fixedHeader = MqttFixedHeader(0x10u),
+        header = MqttFixedHeader(0x10u),
         protocolName = variableHeader.protocolName,
         protocolLevel = variableHeader.protocolLevel,
         connectFlags =
@@ -352,7 +401,7 @@ data class ConnectionRequest<@Payload WP>(
         keepAlive = variableHeader.keepAliveSeconds.toUShort(),
         clientId = payload.clientId,
         willTopicString = payload.willTopic?.toString(),
-        willPayloadValue = payload.willPayload as WP?,
+        willPayloadValue = payload.willPayload?.let { BufferPayload(it) },
         username = payload.userName,
         password = payload.password,
     )
@@ -431,21 +480,21 @@ data class ConnectionRequest<@Payload WP>(
 /**
  * The CONNACK packet is the packet sent by the Server in response to a CONNECT packet.
  *
- * Wire-shape data class. The wire `MqttFixedHeader` is named `fixedHeader` so the legacy
+ * Wire-shape data class. The wire `MqttFixedHeader` is named `header` so the legacy
  * `header: VariableHeader` accessor (used by tests) is preserved.
  */
-@PacketType(wire = 2)
+@PacketType(value = 2, wire = 0x20)
 @ProtocolMessage
 data class ConnectionAcknowledgment(
-    @DiscriminatorField val fixedHeader: MqttFixedHeader = MqttFixedHeader(0x20u),
+    val header: MqttFixedHeader = MqttFixedHeader(0x20u),
     val acknowledgeFlags: UByte = 0u,
     val returnCode: UByte = 0u,
-) : ControlPacketV4,
+) : ControlPacketV4<Nothing>,
     IConnectionAcknowledgment {
     init {
-        if (fixedHeader.flags != 0) {
+        if (header.flags != 0) {
             throw MalformedPacketException(
-                "Reserved fixed-header flags for CONNACK must be 0x0, got 0x${fixedHeader.flags.toString(16)}",
+                "Reserved fixed-header flags for CONNACK must be 0x0, got 0x${header.flags.toString(16)}",
             )
         }
         if ((acknowledgeFlags.toInt() and 0xFE) != 0) {
@@ -460,11 +509,11 @@ data class ConnectionAcknowledgment(
     override val direction: DirectionOfFlow get() = DirectionOfFlow.SERVER_TO_CLIENT
 
     override val sessionPresent: Boolean get() = (acknowledgeFlags.toInt() and 0x01) == 1
-    override val isSuccessful: Boolean get() = header.connectReason == VariableHeader.ReturnCode.CONNECTION_ACCEPTED
-    override val connectionReason: String get() = header.connectReason.name
+    override val isSuccessful: Boolean get() = variableHeader.connectReason == VariableHeader.ReturnCode.CONNECTION_ACCEPTED
+    override val connectionReason: String get() = variableHeader.connectReason.name
 
-    /** Legacy `header: VariableHeader` accessor (preserves the pre-migration API). */
-    val header: VariableHeader
+    /** Legacy [VariableHeader]-typed view preserving the pre-migration API. */
+    val variableHeader: VariableHeader
         get() {
             val normalized =
                 if (returnCode > 5.toUByte()) VariableHeader.ReturnCode.RESERVED.value else returnCode
@@ -476,19 +525,14 @@ data class ConnectionAcknowledgment(
             return VariableHeader(sessionPresent, rc)
         }
 
-    constructor(header: VariableHeader = VariableHeader()) : this(
-        fixedHeader = MqttFixedHeader(0x20u),
-        acknowledgeFlags = (if (header.sessionPresent) 1u else 0u).toUByte(),
-        returnCode = header.connectReason.value,
+    constructor(variableHeader: VariableHeader = VariableHeader()) : this(
+        header = MqttFixedHeader(0x20u),
+        acknowledgeFlags = (if (variableHeader.sessionPresent) 1u else 0u).toUByte(),
+        returnCode = variableHeader.connectReason.value,
     )
 
     constructor(sessionPresent: Boolean, connectReason: VariableHeader.ReturnCode) :
         this(VariableHeader(sessionPresent, connectReason))
-
-    override fun encodeBody(writeBuffer: WriteBuffer) =
-        ConnectionAcknowledgmentCodec.encodeBody(writeBuffer, this)
-
-    override fun remainingLength(): Int = ConnectionAcknowledgmentCodec.wireSizeBody(this)
 
     data class VariableHeader(
         val sessionPresent: Boolean = false,
@@ -510,38 +554,10 @@ data class ConnectionAcknowledgment(
 
 typealias CONNACK = ConnectionAcknowledgment
 
-// Factory functions matching legacy `ConnectionRequest(...)` call shapes. The class itself
-// is generic over the will-payload type `<@Payload WP>` (codec processor requirement for
-// embedding ReadBuffer); these factories bind `WP = ReadBuffer?` so test/production call
-// sites that don't supply a type argument keep compiling.
-
-@Suppress("FunctionName")
-fun ConnectionRequest(
-    variableHeader: ConnectionRequest.VariableHeader = ConnectionRequest.VariableHeader(),
-    payload: ConnectionRequest.Payload = ConnectionRequest.Payload(),
-): ConnectionRequest<ReadBuffer?> = ConnectionRequest<ReadBuffer?>(variableHeader, payload)
-
-@Suppress("FunctionName")
-fun ConnectionRequest(
-    clientId: String,
-    keepAliveSeconds: Int = 3600,
-    cleanSession: Boolean = false,
-    userName: String? = null,
-    password: String? = null,
-    will: WillConfig = WillConfig.Disabled,
-    protocolName: String = "MQTT",
-    protocolLevel: UByte = 4u,
-): ConnectionRequest<ReadBuffer?> =
-    ConnectionRequest<ReadBuffer?>(
-        clientId,
-        keepAliveSeconds,
-        cleanSession,
-        userName,
-        password,
-        will,
-        protocolName,
-        protocolLevel,
-    )
+// Factory functions matching legacy `ConnectionRequest(...)` call shapes were retained
+// while the class was generic over `<@Payload WP>`. After the directional-codec migration
+// the will payload routes through `@UseCodec(BufferPayloadCodec)` and the class is no
+// longer generic, so these factories are unnecessary — call the class directly.
 
 // ── PUBLISH (§3.3) ────────────────────────────────────────────────────────
 
@@ -552,14 +568,14 @@ fun ConnectionRequest(
  * The `<@Payload P>` type parameter enables zero-copy slice forwarding on decode and
  * caller-supplied encoding on encode. Production callers use `PublishMessageV4<ReadBuffer>`.
  */
-@PacketTypeRange(0x30, 0x3F)
+@PacketType(value = 3)
 @ProtocolMessage
-data class PublishMessageV4<@Payload P>(
-    @DiscriminatorField val header: MqttFixedHeader,
+data class PublishMessageV4<P : Payload>(
+    val header: MqttFixedHeader,
     @LengthPrefixed val topicName: String,
     @When("header.publishHasPacketIdentifier") val packetId: UShort? = null,
     @RemainingBytes val payload: P,
-) : ControlPacketV4,
+) : ControlPacketV4<P>,
     PublishMessage {
     init {
         // §3.3.1-4: Reserved QoS = 3 is malformed.
@@ -585,19 +601,7 @@ data class PublishMessageV4<@Payload P>(
     override val retain: Boolean get() = header.publishRetain
     override val packetIdentifier: Int get() = packetId?.toInt() ?: NO_PACKET_ID
 
-    override fun rawPayload(): ReadBuffer = (payload as? ReadBuffer) ?: BufferFactory.Default.allocate(0)
-
-    override fun encodeBody(writeBuffer: WriteBuffer) {
-        @Suppress("UNCHECKED_CAST")
-        PublishMessageV4Codec.encodeBody(
-            writeBuffer,
-            this as PublishMessageV4<ReadBuffer>,
-        ) { buf, p -> buf.write(p) }
-    }
-
-    @Suppress("UNCHECKED_CAST")
-    override fun remainingLength(): Int =
-        PublishMessageV4Codec.wireSizeBody(this as PublishMessageV4<ReadBuffer>) { p -> p.remaining() }
+    override fun rawPayload(): ReadBuffer = (payload as? BufferPayload)?.buffer ?: BufferFactory.Default.allocate(0)
 
     override fun expectedResponse(
         reasonCode: ReasonCode,
@@ -658,7 +662,7 @@ data class PublishMessageV4<@Payload P>(
             dup: Boolean = false,
             retain: Boolean = false,
             packetIdentifier: Int = NO_PACKET_ID,
-        ): PublishMessageV4<ReadBuffer> {
+        ): PublishMessageV4<BufferPayload> {
             val header = MqttFixedHeader(makePublishHeaderByte(dup, qos, retain))
             // Preserve the user-supplied packetIdentifier even when qos=0 / packetIdentifier=NO_PACKET_ID
             // so `validate()` can detect malformed combinations (qos=0 + non-zero pid;
@@ -669,30 +673,9 @@ data class PublishMessageV4<@Payload P>(
                 header = header,
                 topicName = topic.toString(),
                 packetId = pid,
-                payload = payload ?: BufferFactory.Default.allocate(0),
+                payload = BufferPayload(payload ?: BufferFactory.Default.allocate(0)),
             )
         }
-
-        /**
-         * Create a v4 PUBLISH with a typed payload. Eagerly encodes [payload] via
-         * [encodePayload] into a `ReadBuffer`; the message carries the encoded bytes.
-         */
-        fun <P> ofTyped(
-            topic: TopicName,
-            qos: QualityOfService,
-            payload: P,
-            encodePayload: WriteBuffer.(P) -> Unit,
-            dup: Boolean = false,
-            retain: Boolean = false,
-            packetIdentifier: Int = NO_PACKET_ID,
-        ): PublishMessageV4<ReadBuffer> = ofRaw(topic, qos, eagerEncode(payload, encodePayload), dup, retain, packetIdentifier)
-
-        private fun <P> eagerEncode(
-            value: P,
-            encodePayload: WriteBuffer.(P) -> Unit,
-        ): ReadBuffer =
-            com.ditchoom.buffer.codec
-                .encodeWithGrowth { it.encodePayload(value) }
 
         private fun makePublishHeaderByte(
             dup: Boolean,
@@ -710,12 +693,12 @@ data class PublishMessageV4<@Payload P>(
 
 // ── PUBACK (§3.4) ─────────────────────────────────────────────────────────
 
-@PacketType(wire = 4)
+@PacketType(value = 4, wire = 0x40)
 @ProtocolMessage
 data class PublishAcknowledgment(
-    @DiscriminatorField val header: MqttFixedHeader = MqttFixedHeader(0x40u),
+    val header: MqttFixedHeader = MqttFixedHeader(0x40u),
     val packetId: UShort,
-) : ControlPacketV4,
+) : ControlPacketV4<Nothing>,
     IPublishAcknowledgment {
     constructor(packetId: UShort) : this(MqttFixedHeader(0x40u), packetId)
 
@@ -730,21 +713,16 @@ data class PublishAcknowledgment(
     override val packetIdentifier: Int get() = packetId.toInt()
     override val controlPacketValue: Byte get() = IPublishAcknowledgment.CONTROL_PACKET_VALUE
     override val direction: DirectionOfFlow get() = DirectionOfFlow.BIDIRECTIONAL
-
-    override fun encodeBody(writeBuffer: WriteBuffer) =
-        PublishAcknowledgmentCodec.encodeBody(writeBuffer, this)
-
-    override fun remainingLength() = PublishAcknowledgmentCodec.wireSizeBody(this)
 }
 
 // ── PUBREC (§3.5) ─────────────────────────────────────────────────────────
 
-@PacketType(wire = 5)
+@PacketType(value = 5, wire = 0x50)
 @ProtocolMessage
 data class PublishReceived(
-    @DiscriminatorField val header: MqttFixedHeader = MqttFixedHeader(0x50u),
+    val header: MqttFixedHeader = MqttFixedHeader(0x50u),
     val packetId: UShort,
-) : ControlPacketV4,
+) : ControlPacketV4<Nothing>,
     IPublishReceived {
     constructor(packetId: UShort) : this(MqttFixedHeader(0x50u), packetId)
 
@@ -760,11 +738,6 @@ data class PublishReceived(
     override val controlPacketValue: Byte get() = IPublishReceived.CONTROL_PACKET_VALUE
     override val direction: DirectionOfFlow get() = DirectionOfFlow.BIDIRECTIONAL
 
-    override fun encodeBody(writeBuffer: WriteBuffer) =
-        PublishReceivedCodec.encodeBody(writeBuffer, this)
-
-    override fun remainingLength() = PublishReceivedCodec.wireSizeBody(this)
-
     override fun expectedResponse(
         reasonCode: ReasonCode,
         reasonString: String?,
@@ -774,12 +747,12 @@ data class PublishReceived(
 
 // ── PUBREL (§3.6) ─────────────────────────────────────────────────────────
 
-@PacketType(wire = 6)
+@PacketType(value = 6, wire = 0x62)
 @ProtocolMessage
 data class PublishRelease(
-    @DiscriminatorField val header: MqttFixedHeader = MqttFixedHeader(0x62u),
+    val header: MqttFixedHeader = MqttFixedHeader(0x62u),
     val packetId: UShort,
-) : ControlPacketV4,
+) : ControlPacketV4<Nothing>,
     IPublishRelease {
     constructor(packetId: UShort) : this(MqttFixedHeader(0x62u), packetId)
 
@@ -797,11 +770,6 @@ data class PublishRelease(
     override val direction: DirectionOfFlow get() = DirectionOfFlow.BIDIRECTIONAL
     override val flags: Byte get() = 0b10
 
-    override fun encodeBody(writeBuffer: WriteBuffer) =
-        PublishReleaseCodec.encodeBody(writeBuffer, this)
-
-    override fun remainingLength() = PublishReleaseCodec.wireSizeBody(this)
-
     override fun expectedResponse(
         reasonCode: ReasonCode,
         reasonString: String?,
@@ -811,12 +779,12 @@ data class PublishRelease(
 
 // ── PUBCOMP (§3.7) ────────────────────────────────────────────────────────
 
-@PacketType(wire = 7)
+@PacketType(value = 7, wire = 0x70)
 @ProtocolMessage
 data class PublishComplete(
-    @DiscriminatorField val header: MqttFixedHeader = MqttFixedHeader(0x70u),
+    val header: MqttFixedHeader = MqttFixedHeader(0x70u),
     val packetId: UShort,
-) : ControlPacketV4,
+) : ControlPacketV4<Nothing>,
     IPublishComplete {
     constructor(packetId: UShort) : this(MqttFixedHeader(0x70u), packetId)
 
@@ -831,22 +799,17 @@ data class PublishComplete(
     override val packetIdentifier: Int get() = packetId.toInt()
     override val controlPacketValue: Byte get() = IPublishComplete.CONTROL_PACKET_VALUE
     override val direction: DirectionOfFlow get() = DirectionOfFlow.BIDIRECTIONAL
-
-    override fun encodeBody(writeBuffer: WriteBuffer) =
-        PublishCompleteCodec.encodeBody(writeBuffer, this)
-
-    override fun remainingLength() = PublishCompleteCodec.wireSizeBody(this)
 }
 
 // ── SUBSCRIBE (§3.8) ──────────────────────────────────────────────────────
 
-@PacketType(wire = 8)
+@PacketType(value = 8, wire = 0x82)
 @ProtocolMessage
 data class SubscribeRequest(
-    @DiscriminatorField val header: MqttFixedHeader = MqttFixedHeader(0x82u),
+    val header: MqttFixedHeader = MqttFixedHeader(0x82u),
     val packetId: UShort,
     @RemainingBytes val entries: List<SubscriptionEntry>,
-) : ControlPacketV4,
+) : ControlPacketV4<Nothing>,
     ISubscribeRequest {
     init {
         // §3.8.1: reserved low-nibble bits MUST be 0010.
@@ -904,11 +867,6 @@ data class SubscribeRequest(
     override fun copyWithNewPacketIdentifier(packetIdentifier: Int): ISubscribeRequest =
         copy(packetId = packetIdentifier.toUShort())
 
-    override fun encodeBody(writeBuffer: WriteBuffer) =
-        SubscribeRequestCodec.encodeBody(writeBuffer, this)
-
-    override fun remainingLength() = SubscribeRequestCodec.wireSizeBody(this)
-
     override fun expectedResponse(): SubscribeAcknowledgement {
         val returnCodes =
             entries.map {
@@ -924,13 +882,13 @@ data class SubscribeRequest(
 
 // ── SUBACK (§3.9) ─────────────────────────────────────────────────────────
 
-@PacketType(wire = 9)
+@PacketType(value = 9, wire = 0x90)
 @ProtocolMessage
 data class SubscribeAcknowledgement(
-    @DiscriminatorField val header: MqttFixedHeader = MqttFixedHeader(0x90u),
+    val header: MqttFixedHeader = MqttFixedHeader(0x90u),
     val packetId: UShort,
     @RemainingBytes val returnCodes: List<SubAckReturnCode>,
-) : ControlPacketV4,
+) : ControlPacketV4<Nothing>,
     ISubscribeAcknowledgement {
     init {
         if (header.flags != 0) {
@@ -952,36 +910,30 @@ data class SubscribeAcknowledgement(
         this(
             MqttFixedHeader(0x90u),
             packetIdentifier.toUShort(),
-            payload.map { SubAckReturnCode(it.byte) },
+            payload.map { SubAckReturnCode.fromByte(it.byte) },
         )
 
     val payload: List<ReasonCode>
         get() =
             returnCodes.map { rc ->
-                when (rc.raw) {
-                    GRANTED_QOS_0.byte -> GRANTED_QOS_0
-                    GRANTED_QOS_1.byte -> GRANTED_QOS_1
-                    GRANTED_QOS_2.byte -> GRANTED_QOS_2
-                    UNSPECIFIED_ERROR.byte -> UNSPECIFIED_ERROR
-                    else -> throw MalformedPacketException("Invalid return code ${rc.raw}")
+                when (rc) {
+                    SubAckReturnCode.SuccessMaximumQoS0 -> GRANTED_QOS_0
+                    SubAckReturnCode.SuccessMaximumQoS1 -> GRANTED_QOS_1
+                    SubAckReturnCode.SuccessMaximumQoS2 -> GRANTED_QOS_2
+                    SubAckReturnCode.Failure -> UNSPECIFIED_ERROR
                 }
             }
-
-    override fun encodeBody(writeBuffer: WriteBuffer) =
-        SubscribeAcknowledgementCodec.encodeBody(writeBuffer, this)
-
-    override fun remainingLength() = SubscribeAcknowledgementCodec.wireSizeBody(this)
 }
 
 // ── UNSUBSCRIBE (§3.10) ───────────────────────────────────────────────────
 
-@PacketType(wire = 10)
+@PacketType(value = 10, wire = 0xA2)
 @ProtocolMessage
 data class UnsubscribeRequest(
-    @DiscriminatorField val header: MqttFixedHeader = MqttFixedHeader(0xA2u),
+    val header: MqttFixedHeader = MqttFixedHeader(0xA2u),
     val packetId: UShort,
     @RemainingBytes val topicEntries: List<TopicFilterEntry>,
-) : ControlPacketV4,
+) : ControlPacketV4<Nothing>,
     IUnsubscribeRequest {
     init {
         // §3.10.1: reserved low-nibble bits MUST be 0010.
@@ -1010,23 +962,18 @@ data class UnsubscribeRequest(
     constructor(packetIdentifier: Int, topicString: Collection<String>) :
         this(MqttFixedHeader(0xA2u), packetIdentifier.toUShort(), topicString.map { TopicFilterEntry(it) })
 
-    override fun encodeBody(writeBuffer: WriteBuffer) =
-        UnsubscribeRequestCodec.encodeBody(writeBuffer, this)
-
-    override fun remainingLength() = UnsubscribeRequestCodec.wireSizeBody(this)
-
     override fun copyWithNewPacketIdentifier(packetIdentifier: Int): IUnsubscribeRequest =
         copy(packetId = packetIdentifier.toUShort())
 }
 
 // ── UNSUBACK (§3.11) ──────────────────────────────────────────────────────
 
-@PacketType(wire = 11)
+@PacketType(value = 11, wire = 0xB0)
 @ProtocolMessage
 data class UnsubscribeAcknowledgment(
-    @DiscriminatorField val header: MqttFixedHeader = MqttFixedHeader(0xB0u),
+    val header: MqttFixedHeader = MqttFixedHeader(0xB0u),
     val packetId: UShort,
-) : ControlPacketV4,
+) : ControlPacketV4<Nothing>,
     IUnsubscribeAcknowledgment {
     constructor(packetId: UShort) : this(MqttFixedHeader(0xB0u), packetId)
 
@@ -1041,44 +988,41 @@ data class UnsubscribeAcknowledgment(
     override val packetIdentifier: Int get() = packetId.toInt()
     override val controlPacketValue: Byte get() = IUnsubscribeAcknowledgment.CONTROL_PACKET_VALUE
     override val direction: DirectionOfFlow get() = DirectionOfFlow.SERVER_TO_CLIENT
-
-    override fun encodeBody(writeBuffer: WriteBuffer) =
-        UnsubscribeAcknowledgmentCodec.encodeBody(writeBuffer, this)
-
-    override fun remainingLength() = UnsubscribeAcknowledgmentCodec.wireSizeBody(this)
 }
 
 // ── PINGREQ / PINGRESP / DISCONNECT (no body) ─────────────────────────────
 
 /**
- * 3.12 PINGREQ — PING request. No body. Kept as `data object` so legacy expression-style
- * references (`PingRequest`, `packetBuffer { PingRequest }`) keep compiling unchanged.
+ * 3.12 PINGREQ — PING request. No body on the wire (`0xC0 0x00`). Modeled as a `data class`
+ * with a defaulted [header] so the dispatcher's variant-codec path treats it like every
+ * other variant (carries the discriminator field, encodes via the @FramedBy parent).
  */
-@PacketType(wire = 12)
+@PacketType(value = 12, wire = 0xC0)
 @ProtocolMessage
-data object PingRequest : ControlPacketV4, IPingRequest {
+data class PingRequest(
+    val header: MqttFixedHeader = MqttFixedHeader(0xC0u),
+) : ControlPacketV4<Nothing>,
+    IPingRequest {
     override val controlPacketValue: Byte get() = 12
     override val direction: DirectionOfFlow get() = DirectionOfFlow.CLIENT_TO_SERVER
-
-    override fun serialize(writeBuffer: WriteBuffer) {
-        writeBuffer.writeShort(0xC000.toShort())
-    }
 }
 
-@PacketType(wire = 13)
+@PacketType(value = 13, wire = 0xD0)
 @ProtocolMessage
-data object PingResponse : ControlPacketV4, IPingResponse {
+data class PingResponse(
+    val header: MqttFixedHeader = MqttFixedHeader(0xD0u),
+) : ControlPacketV4<Nothing>,
+    IPingResponse {
     override val controlPacketValue: Byte get() = 13
     override val direction: DirectionOfFlow get() = DirectionOfFlow.SERVER_TO_CLIENT
-
-    override fun serialize(writeBuffer: WriteBuffer) {
-        writeBuffer.writeShort(0xD000.toShort())
-    }
 }
 
-@PacketType(wire = 14)
+@PacketType(value = 14, wire = 0xE0)
 @ProtocolMessage
-data object DisconnectNotification : ControlPacketV4, IDisconnectNotification {
+data class DisconnectNotification(
+    val header: MqttFixedHeader = MqttFixedHeader(0xE0u),
+) : ControlPacketV4<Nothing>,
+    IDisconnectNotification {
     override val controlPacketValue: Byte get() = 14
     override val direction: DirectionOfFlow get() = DirectionOfFlow.BIDIRECTIONAL
 }

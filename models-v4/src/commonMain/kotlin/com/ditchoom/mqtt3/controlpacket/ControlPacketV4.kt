@@ -54,6 +54,21 @@ import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
 import com.ditchoom.mqtt.controlpacket.validControlPacketIdentifierRange
 import kotlin.jvm.JvmInline
 
+/**
+ * UTF-8 encode [s] into a fresh [BufferPayload] for the legacy String-typed convenience
+ * constructor on [ConnectionRequest] (the wire field is [BufferPayload] per §3.1.3.5;
+ * passwords are bytes, not strings). Allocates a worst-case-sized buffer (4 bytes per
+ * char), writes UTF-8, slices to the actual byte count.
+ */
+private fun utf8BufferPayload(s: String): BufferPayload {
+    val buf = BufferFactory.Default.allocate(s.length * 4)
+    buf.writeString(s, com.ditchoom.buffer.Charset.UTF8)
+    val written = buf.position()
+    buf.position(0)
+    buf.setLimit(written)
+    return BufferPayload(buf.slice())
+}
+
 // ── Wire-shape element types for list-payload packets ─────────────────────
 
 /**
@@ -255,7 +270,10 @@ data class ConnectionRequest(
     @UseCodec(BufferPayloadCodec::class)
     val willPayloadValue: BufferPayload? = null,
     @When("connectFlags.usernameFlag") @LengthPrefixed val username: String? = null,
-    @When("connectFlags.passwordFlag") @LengthPrefixed override val password: String? = null,
+    @When("connectFlags.passwordFlag")
+    @LengthPrefixed
+    @UseCodec(BufferPayloadCodec::class)
+    val passwordValue: BufferPayload? = null,
 ) : ControlPacketV4<Nothing>,
     IConnectionRequest {
     init {
@@ -285,6 +303,18 @@ data class ConnectionRequest(
     override val hasUserName: Boolean get() = connectFlags.usernameFlag
     override val hasPassword: Boolean get() = connectFlags.passwordFlag
     override val userName: String? get() = username
+
+    /**
+     * Legacy String accessor for the password field. Per MQTT v3.1.1 §3.1.3.5 the password
+     * is arbitrary bytes, not UTF-8; the wire-shape field is [passwordValue] (BufferPayload).
+     * This getter decodes the buffer as UTF-8 for backward compatibility — callers carrying
+     * non-UTF-8 password bytes must read [passwordValue] directly to avoid lossy conversion.
+     */
+    override val password: String?
+        get() = passwordValue?.buffer?.let { buf ->
+            val slice = buf.slice()
+            slice.readString(slice.remaining(), com.ditchoom.buffer.Charset.UTF8)
+        }
 
     override val will: WillConfig
         get() {
@@ -403,7 +433,7 @@ data class ConnectionRequest(
         willTopicString = payload.willTopic?.toString(),
         willPayloadValue = payload.willPayload?.let { BufferPayload(it) },
         username = payload.userName,
-        password = payload.password,
+        passwordValue = payload.password?.let { utf8BufferPayload(it) },
     )
 
     constructor(

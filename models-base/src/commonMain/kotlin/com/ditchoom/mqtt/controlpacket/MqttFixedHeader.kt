@@ -1,15 +1,7 @@
 package com.ditchoom.mqtt.controlpacket
 
-import com.ditchoom.buffer.ReadBuffer
-import com.ditchoom.buffer.WriteBuffer
-import com.ditchoom.buffer.codec.BodyLengthFraming
 import com.ditchoom.buffer.codec.annotations.DispatchValue
 import com.ditchoom.buffer.codec.annotations.ProtocolMessage
-import com.ditchoom.buffer.readVariableByteInteger
-import com.ditchoom.buffer.stream.PeekResult
-import com.ditchoom.buffer.stream.StreamProcessor
-import com.ditchoom.buffer.variableByteSizeInt
-import com.ditchoom.buffer.writeVariableByteInteger
 import com.ditchoom.mqtt.MalformedPacketException
 import kotlin.jvm.JvmInline
 
@@ -22,10 +14,9 @@ import kotlin.jvm.JvmInline
  * other packet types pin it to `0000`. The processor enforces those reserved values via
  * each variant's `@PacketType(wire = …)` literal.
  *
- * The companion implements [BodyLengthFraming]: every MQTT control packet is framed
- * `[byte1][VBI(remainingLength)][body]`. The generated dispatcher consumes the framing
- * via the companion's `readBodyLength` / `writeBodyLength` / `peekFrameSize` /
- * `bodyLengthSize` calls.
+ * Body-length framing is supplied at the sealed-parent level via
+ * `@FramedBy(MqttRemainingLengthCodec::class, after = "header")`, so this class carries
+ * no companion-level framing implementation.
  */
 @JvmInline
 @ProtocolMessage
@@ -49,37 +40,4 @@ value class MqttFixedHeader(
     val publishQos: Int get() = (raw.toInt() shr 1) and 0x3
     val publishRetain: Boolean get() = raw.toInt() and 1 == 1
     val publishHasPacketIdentifier: Boolean get() = publishQos > 0
-
-    companion object : BodyLengthFraming<MqttFixedHeader> {
-        override fun peekFrameSize(
-            stream: StreamProcessor,
-            baseOffset: Int,
-        ): PeekResult {
-            // Need at least byte1 + 1 VBI byte to compute frame size.
-            if (stream.available() < baseOffset + 2) return PeekResult.NeedsMoreData
-            var width = 0
-            var len = 0
-            var multiplier = 1
-            while (width < 4) {
-                if (stream.available() < baseOffset + 1 + width + 1) return PeekResult.NeedsMoreData
-                val byte = stream.peekByte(baseOffset + 1 + width).toInt() and 0xFF
-                len += (byte and 0x7F) * multiplier
-                multiplier *= 128
-                width += 1
-                if ((byte and 0x80) == 0) return PeekResult.Size(1 + width + len)
-            }
-            return PeekResult.NeedsMoreData
-        }
-
-        override fun readBodyLength(buffer: ReadBuffer): Int = buffer.readVariableByteInteger()
-
-        override fun writeBodyLength(
-            buffer: WriteBuffer,
-            n: Int,
-        ) {
-            buffer.writeVariableByteInteger(n)
-        }
-
-        override fun bodyLengthSize(n: Int): Int = variableByteSizeInt(n)
-    }
 }

@@ -6,7 +6,7 @@ import com.ditchoom.buffer.managed
 import com.ditchoom.buffer.pool.BufferPool
 import com.ditchoom.buffer.withPooling
 import com.ditchoom.mqtt.InMemoryPersistence
-import com.ditchoom.mqtt.client.LocalMqttClient
+import com.ditchoom.mqtt.client.MqttClient
 import com.ditchoom.mqtt.client.SubscriptionHandler
 import com.ditchoom.mqtt.connection.MqttBroker
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
@@ -68,11 +68,11 @@ class EndToEndBenchmark {
         broker: MqttBroker,
         persistence: InMemoryPersistence,
         maxAttempts: Int = 3,
-    ): LocalMqttClient {
+    ): MqttClient {
         var lastException: Exception? = null
         for (attempt in 1..maxAttempts) {
             try {
-                return LocalMqttClient.start(scope, broker, persistence, createConnectFactory(broker))
+                return MqttClient.start(scope, broker, persistence, createConnectFactory(broker))
             } catch (e: Exception) {
                 lastException = e
                 if (attempt < maxAttempts) {

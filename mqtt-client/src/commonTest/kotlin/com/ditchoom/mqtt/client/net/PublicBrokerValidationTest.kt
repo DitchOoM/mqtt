@@ -345,7 +345,7 @@ class PublicBrokerValidationTest {
     /**
      * Opens a [Connection] for the given [MqttConnectionOptions]. Delegates to the production
      * [defaultSingleConnection] factory so tests exercise the same TCP / WebSocket code paths
-     * that [LocalMqttClient] uses — no parallel test-only transport adapter to maintain.
+     * that [MqttClient] uses — no parallel test-only transport adapter to maintain.
      */
     private suspend fun openConnection(
         connectionOptions: MqttConnectionOptions,

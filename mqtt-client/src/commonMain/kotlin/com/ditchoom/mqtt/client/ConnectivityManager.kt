@@ -29,7 +29,7 @@ import kotlin.time.Duration.Companion.seconds
  * Owns a single MQTT broker connection: iterates [MqttBroker.connectionOps] for failover,
  * performs the CONNECT/CONNACK handshake, runs read/write loops, and surfaces session state.
  *
- * The caller — [LocalMqttClient] — is responsible for re-invoking [run] when the underlying
+ * The caller — [MqttClient] — is responsible for re-invoking [run] when the underlying
  * connection ends (session-resume / "stay connected" pattern). That outer loop keeps the
  * reconnection policy in one place; [run] itself is a single-session body.
  *
@@ -56,15 +56,12 @@ class ConnectivityManager(
 
     /**
      * Completes after the first full pass of [connectAndHandshake] (success OR all options
-     * exhausted). Lets [LocalMqttClient.start] suspend until observable counters are accurate
+     * exhausted). Lets [MqttClient.start] suspend until observable counters are accurate
      * — tests asserting `connectionAttempts == 2` immediately after `start()` relied on this
      * invariant in v1 and would race against the launched coroutine without it.
      */
     internal val firstAttemptComplete = CompletableDeferred<Unit>()
 
-    // Eagerly constructed so IPC worker wiring (RemoteMqttClientWorker.init) can subscribe
-    // to processor.readChannel / sentPackets before run() starts — otherwise the worker
-    // races against run() and crashes with UninitializedPropertyAccessException.
     val processor: ControlPacketProcessor =
         ControlPacketProcessor(broker, readChannel, writeChannel, persistence)
 
@@ -74,7 +71,7 @@ class ConnectivityManager(
 
     /**
      * Connects, performs the MQTT handshake, then runs read/write loops until the connection
-     * ends or the coroutine is cancelled. Caller ([LocalMqttClient]) decides whether to loop.
+     * ends or the coroutine is cancelled. Caller ([MqttClient]) decides whether to loop.
      */
     suspend fun run() {
         val conn =
@@ -91,7 +88,7 @@ class ConnectivityManager(
                 // them explicitly when the main receive flow exits (clean EOF after server
                 // closes, or our own sendDisconnect → server FIN) so `coroutineScope` can
                 // actually return — otherwise it waits forever for the infinite children and
-                // the outer reconnect loop in LocalMqttClient never gets to re-invoke run().
+                // the outer reconnect loop in MqttClient never gets to re-invoke run().
                 val children =
                     listOf(
                         launch { processor.processIncomingMessages() },

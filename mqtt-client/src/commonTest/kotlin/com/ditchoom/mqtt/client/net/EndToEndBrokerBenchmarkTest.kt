@@ -5,7 +5,7 @@ import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.pool.BufferPool
 import com.ditchoom.buffer.withPooling
 import com.ditchoom.mqtt.InMemoryPersistence
-import com.ditchoom.mqtt.client.LocalMqttClient
+import com.ditchoom.mqtt.client.MqttClient
 import com.ditchoom.mqtt.client.SubscriptionHandler
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.QualityOfService
@@ -80,7 +80,7 @@ class EndToEndBrokerBenchmarkTest {
             val connReq = connectionRequest()
             val broker = persistence.addBroker(listOf(connectionOptions()), connReq)
             val client =
-                LocalMqttClient.start(
+                MqttClient.start(
                     CoroutineScope(Dispatchers.Default),
                     broker,
                     persistence,

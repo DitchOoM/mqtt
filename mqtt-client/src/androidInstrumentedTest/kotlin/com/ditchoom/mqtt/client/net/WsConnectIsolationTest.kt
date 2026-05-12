@@ -3,7 +3,7 @@ package com.ditchoom.mqtt.client.net
 import androidx.test.filters.MediumTest
 import androidx.test.runner.AndroidJUnit4
 import com.ditchoom.mqtt.InMemoryPersistence
-import com.ditchoom.mqtt.client.LocalMqttClient
+import com.ditchoom.mqtt.client.MqttClient
 import com.ditchoom.mqtt.client.net.defaultSingleConnection
 import com.ditchoom.mqtt.connection.MqttBroker
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
@@ -101,7 +101,7 @@ class WsConnectIsolationTest {
      *      mqttService.shutdownAndCleanup() → scope.cancel().
      *   2. Test 2 starts → MqttServiceInitializer (cached via AppInitializer) returns the
      *      SAME LocalMqttService instance — but its scope is now dead.
-     *   3. service.start(broker) → LocalMqttClient.start(scope, ...) → scope.launch { cm.run() }
+     *   3. service.start(broker) → MqttClient.start(scope, ...) → scope.launch { cm.run() }
      *      on a cancelled scope is a no-op. cm.run() never executes. CONNACK never arrives.
      *      awaitConnectivity() hangs forever.
      *
@@ -158,13 +158,13 @@ class WsConnectIsolationTest {
 
     /**
      * Bisects between the raw-WS path (proven to work in [wsConnectAndReceiveConnack]) and
-     * the IPC test (hangs). This goes through `LocalMqttClient` + `ConnectivityManager` —
+     * the IPC test (hangs). This goes through `MqttClient` + `ConnectivityManager` —
      * exactly what the server-process side of the IPC service does — but runs in-process
-     * with no AIDL boundary. If this hangs, the bug is in CM/LocalMqttClient for WS.
+     * with no AIDL boundary. If this hangs, the bug is in CM/MqttClient for WS.
      * If it passes, the bug isolates to the IPC layer (AIDL/persistence/observer wiring).
      */
     @Test
-    fun wsLocalMqttClientAwaitConnectivity() =
+    fun wsMqttClientAwaitConnectivity() =
         runBlocking(Dispatchers.Default) {
             withTimeout(15.seconds) {
                 val options =
@@ -179,7 +179,7 @@ class WsConnectIsolationTest {
                 val broker = MqttBroker(0, listOf(options), connectionRequest)
                 val scope = CoroutineScope(Dispatchers.Default + CoroutineName("ws-isolation"))
                 val client =
-                    LocalMqttClient.start(
+                    MqttClient.start(
                         scope = scope,
                         broker = broker,
                         persistence = InMemoryPersistence(),

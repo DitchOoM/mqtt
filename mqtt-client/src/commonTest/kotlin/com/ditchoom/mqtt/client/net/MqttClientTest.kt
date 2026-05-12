@@ -6,7 +6,6 @@ import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.ReadBuffer.Companion.EMPTY_BUFFER
 import com.ditchoom.buffer.toReadBuffer
 import com.ditchoom.mqtt.InMemoryPersistence
-import com.ditchoom.mqtt.client.LocalMqttClient
 import com.ditchoom.mqtt.client.MqttClient
 import com.ditchoom.mqtt.client.PublishResult
 import com.ditchoom.mqtt.client.QoS1State
@@ -177,7 +176,7 @@ class MqttClientTest {
         val persistence = connectionRequest.controlPacketFactory.defaultPersistence(inMemory)
         val connections = listOf(wsBadPort, goodOptions)
         val broker = persistence.addBroker(connections, connectionRequest)
-        val client = LocalMqttClient.start(scope, broker, persistence, createConnectFactory(broker))
+        val client = MqttClient.start(scope, broker, persistence, createConnectFactory(broker))
         assertEquals(2L, client.connectionAttempts())
         assertEquals(1L, client.connectionCount())
         client.shutdown()
@@ -214,7 +213,7 @@ class MqttClientTest {
         val connections = listOf(wsBadPort, goodOptions)
         val persistence = connectionRequest.controlPacketFactory.defaultPersistence(inMemory)
         val broker = persistence.addBroker(connections, connectionRequest)
-        val client = LocalMqttClient.start(scope, broker, persistence, createConnectFactory(broker))
+        val client = MqttClient.start(scope, broker, persistence, createConnectFactory(broker))
         client.awaitConnectivity()
         assertEquals(2L, client.connectionAttempts())
         assertEquals(1L, client.connectionCount())
@@ -241,7 +240,7 @@ class MqttClientTest {
         val persistence = InMemoryPersistence()
         val broker = persistence.addBroker(connectionOptions, connectionRequest)
         val expectedPingCount = 2
-        val client = LocalMqttClient.start(scope, broker, persistence, createConnectFactory(broker))
+        val client = MqttClient.start(scope, broker, persistence, createConnectFactory(broker))
         // Wait long enough for keepAlive pings to be exchanged
         withTimeout((connectionRequestMqtt4.variableHeader.keepAliveSeconds * expectedPingCount + 5).seconds) {
             while (client.pingResponseCount() < expectedPingCount) {
@@ -312,9 +311,9 @@ class MqttClientTest {
         val wsOptions = if (isMqtt5) testWsMqtt5ConnectionOptions else testWsMqttConnectionOptions
         val persistence = connectionRequest.controlPacketFactory.defaultPersistence(inMemory)
         val brokerLwt = persistence.addBroker(wsOptions, lwtConnectionRequest)
-        val clientLwt = LocalMqttClient.start(scope, brokerLwt, persistence, createConnectFactory(brokerLwt))
+        val clientLwt = MqttClient.start(scope, brokerLwt, persistence, createConnectFactory(brokerLwt))
         val broker = persistence.addBroker(wsOptions, connectionRequest)
-        val clientOther = LocalMqttClient.start(scope, broker, persistence, createConnectFactory(broker))
+        val clientOther = MqttClient.start(scope, broker, persistence, createConnectFactory(broker))
 
         val willTopicFilter = TopicFilter.fromOrThrow(willTopic.toString())
         val receivedLwt =
@@ -346,7 +345,7 @@ class MqttClientTest {
         Mutex(true)
         val persistence = connectionRequest.controlPacketFactory.defaultPersistence(inMemory)
         val broker = persistence.addBroker(connectionOptions, connectionRequest)
-        val client = LocalMqttClient.start(scope, broker, persistence, createConnectFactory(broker))
+        val client = MqttClient.start(scope, broker, persistence, createConnectFactory(broker))
         client.awaitConnectivity()
         sendAllMessageTypes2(client)
         client.sendDisconnect()
@@ -363,7 +362,7 @@ class MqttClientTest {
     ) {
         val persistence = connectionRequest.controlPacketFactory.defaultPersistence(inMemory)
         val broker = persistence.addBroker(connectionOptions, connectionRequest)
-        val client = LocalMqttClient.start(scope, broker, persistence, createConnectFactory(broker))
+        val client = MqttClient.start(scope, broker, persistence, createConnectFactory(broker))
         val flow = client.observe(TopicFilter.fromOrThrow(topic.toString()))
         val collectJob =
             scope.launch {

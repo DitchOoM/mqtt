@@ -220,7 +220,7 @@ class IDBPersistence(
         val tx = db.transaction(BROKER, IDBTransactionMode.readwrite)
         val store = tx.objectStore(BROKER)
         val connections = PersistableSocketConnection.from(connectionOps)
-        val persistableRequest = PersistableConnectionRequest.from(connectionRequest as ConnectionRequest<*>)
+        val persistableRequest = PersistableConnectionRequest.from(connectionRequest as ConnectionRequest)
         val storeCountRequest = store.count()
         val countOp =
             suspendCoroutine { cont ->
@@ -236,7 +236,11 @@ class IDBPersistence(
         return MqttBroker(countOp, connectionOps, connectionRequest)
     }
 
-    override suspend fun updatePublishState(broker: MqttBroker, packetId: Int, state: Int) {
+    override suspend fun updatePublishState(
+        broker: MqttBroker,
+        packetId: Int,
+        state: Int,
+    ) {
         // IDB persistence doesn't track QoS2 state separately
     }
 
@@ -389,9 +393,7 @@ class IDBPersistence(
         commitTransaction(tx2, "incomingHandlerComplete.write")
     }
 
-    override suspend fun incomingMessagesToRedispatch(
-        broker: MqttBroker,
-    ): Collection<com.ditchoom.mqtt.IncomingPublishRecord> {
+    override suspend fun incomingMessagesToRedispatch(broker: MqttBroker): Collection<com.ditchoom.mqtt.IncomingPublishRecord> {
         val tx = db.transaction(PUB_MSG, IDBTransactionMode.readonly)
         val req =
             tx

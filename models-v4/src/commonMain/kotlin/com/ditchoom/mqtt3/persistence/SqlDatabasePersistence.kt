@@ -2,6 +2,8 @@ package com.ditchoom.mqtt3.persistence
 
 import app.cash.sqldelight.db.SqlDriver
 import com.ditchoom.Mqtt4
+import com.ditchoom.buffer.Charset
+import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.mqtt.Persistence
 import com.ditchoom.mqtt.connection.MqttBroker
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
@@ -16,16 +18,14 @@ import com.ditchoom.mqtt.controlpacket.ISubscribeRequest
 import com.ditchoom.mqtt.controlpacket.ISubscription
 import com.ditchoom.mqtt.controlpacket.IUnsubscribeAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IUnsubscribeRequest
+import com.ditchoom.mqtt.controlpacket.MqttFixedHeader
 import com.ditchoom.mqtt.controlpacket.NO_PACKET_ID
 import com.ditchoom.mqtt.controlpacket.PublishMessage
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt.controlpacket.WillConfig
-import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.mqtt.controlpacket.payloadAsReadBufferOrNull
-import com.ditchoom.buffer.Charset
-import com.ditchoom.mqtt.controlpacket.MqttFixedHeader
 import com.ditchoom.mqtt3.controlpacket.ConnectionRequest
 import com.ditchoom.mqtt3.controlpacket.NonSpecCompliantIntermediaryStringAsBuffer
 import com.ditchoom.mqtt3.controlpacket.PublishComplete
@@ -638,13 +638,16 @@ fun Boolean.toLong(): Long =
     }
 
 /**
- * TEMPORARY (buffer-v1 Phase A): reconstruct a [PublishMessageV4] from persisted SQL
- * columns via [NonSpecCompliantIntermediaryStringAsBuffer]. The SQL `payload` BLOB is
+ * TEMPORARY (buffer-v1 Phase A): reconstruct a [PublishMessageV4] from persisted
+ * columns via [NonSpecCompliantIntermediaryStringAsBuffer]. The persisted `payload` is
  * UTF-8-decoded into a `String`. Lossy for non-UTF-8 application payloads — see the
  * [NonSpecCompliantIntermediaryStringAsBuffer] kdoc. Phase B replaces this with the
  * proper consumer-typed Payload reconstruction once the design lands.
+ *
+ * `internal` so the IndexedDB persistence (jsMain) reuses the same intermediary path
+ * as the SQL backend.
  */
-private fun buildIntermediaryPublishV4(
+internal fun buildIntermediaryPublishV4(
     topic: String,
     qos: QualityOfService,
     payload: ReadBuffer?,

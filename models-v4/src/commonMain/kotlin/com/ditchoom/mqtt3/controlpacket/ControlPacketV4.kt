@@ -12,7 +12,6 @@ import com.ditchoom.buffer.codec.annotations.ProtocolMessage
 import com.ditchoom.buffer.codec.annotations.RemainingBytes
 import com.ditchoom.buffer.codec.annotations.When
 import com.ditchoom.mqtt.MalformedPacketException
-import com.ditchoom.mqtt.controlpacket.MqttRemainingLengthCodec
 import com.ditchoom.mqtt.MqttWarning
 import com.ditchoom.mqtt.ProtocolError
 import com.ditchoom.mqtt.controlpacket.ControlPacket
@@ -32,6 +31,7 @@ import com.ditchoom.mqtt.controlpacket.ISubscription
 import com.ditchoom.mqtt.controlpacket.IUnsubscribeAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IUnsubscribeRequest
 import com.ditchoom.mqtt.controlpacket.MqttFixedHeader
+import com.ditchoom.mqtt.controlpacket.MqttRemainingLengthCodec
 import com.ditchoom.mqtt.controlpacket.NO_PACKET_ID
 import com.ditchoom.mqtt.controlpacket.PublishMessage
 import com.ditchoom.mqtt.controlpacket.QualityOfService
@@ -315,12 +315,14 @@ data class ConnectionRequest(
                 // ReadBuffer for the legacy accessor. See willPayloadValue TODO above.
                 willPayload =
                     willPayloadValue?.let { s ->
-                        BufferFactory.Default.allocate(s.length * 4).apply {
-                            writeString(s, com.ditchoom.buffer.Charset.UTF8)
-                            val written = position()
-                            position(0)
-                            setLimit(written)
-                        }.slice()
+                        BufferFactory.Default
+                            .allocate(s.length * 4)
+                            .apply {
+                                writeString(s, com.ditchoom.buffer.Charset.UTF8)
+                                val written = position()
+                                position(0)
+                                setLimit(written)
+                            }.slice()
                     },
                 userName = username,
                 password = password,
@@ -629,7 +631,8 @@ data class PublishMessageV4<P : Payload>(
 
     override fun validate(): MalformedPacketException? {
         val hasPid = packetId != null
-        if (qualityOfService == AT_MOST_ONCE && hasPid &&
+        if (qualityOfService == AT_MOST_ONCE &&
+            hasPid &&
             packetIdentifier in validControlPacketIdentifierRange
         ) {
             return MalformedPacketException(
@@ -826,8 +829,7 @@ data class SubscribeRequest(
             subscriptions = Subscription.from(topicsQosMap.keys.toList(), topicsQosMap.values.toList()),
         )
 
-    override fun copyWithNewPacketIdentifier(packetIdentifier: Int): ISubscribeRequest =
-        copy(packetId = packetIdentifier.toUShort())
+    override fun copyWithNewPacketIdentifier(packetIdentifier: Int): ISubscribeRequest = copy(packetId = packetIdentifier.toUShort())
 
     override fun expectedResponse(): SubscribeAcknowledgement {
         val returnCodes =
@@ -924,8 +926,7 @@ data class UnsubscribeRequest(
     constructor(packetIdentifier: Int, topicString: Collection<String>) :
         this(MqttFixedHeader(0xA2u), packetIdentifier.toUShort(), topicString.map { TopicFilterEntry(it) })
 
-    override fun copyWithNewPacketIdentifier(packetIdentifier: Int): IUnsubscribeRequest =
-        copy(packetId = packetIdentifier.toUShort())
+    override fun copyWithNewPacketIdentifier(packetIdentifier: Int): IUnsubscribeRequest = copy(packetId = packetIdentifier.toUShort())
 }
 
 // ── UNSUBACK (§3.11) ──────────────────────────────────────────────────────

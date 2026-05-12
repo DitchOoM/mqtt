@@ -7,12 +7,11 @@ import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.ISubscription
 import com.ditchoom.mqtt.controlpacket.PublishMessage
-import com.ditchoom.mqtt.controlpacket.payloadAsByteArrayOrNull
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.TopicName
+import com.ditchoom.mqtt.controlpacket.payloadAsByteArrayOrNull
 import com.ditchoom.mqtt3.controlpacket.ConnectionRequest
-import com.ditchoom.mqtt3.controlpacket.PublishMessageV4
 import com.ditchoom.mqtt3.controlpacket.Subscription
 import com.ditchoom.mqtt3.controlpacket.UnsubscribeRequest
 import org.khronos.webgl.Int8Array
@@ -129,16 +128,17 @@ data class PersistablePublishMessage(
 }
 
 fun toPub(p: PersistablePublishMessage): PublishMessage =
-    PublishMessageV4.ofRaw(
-        topic = TopicName.fromOrThrow(p.topicName),
+    buildIntermediaryPublishV4(
+        topic = p.topicName,
         qos = p.qos.toQos(),
         payload =
-            p.payload?.let {
-                JsBuffer(it).also { buf ->
-                    buf.position(it.length)
-                    buf.setLimit(it.length)
+            p.payload?.let { arr ->
+                JsBuffer(arr).also { buf ->
+                    buf.position(arr.length)
+                    buf.setLimit(arr.length)
+                    buf.resetForRead()
                 }
-            }?.also { it.resetForRead() },
+            },
         dup = p.dup,
         retain = p.retain,
         packetIdentifier = p.packetId,
@@ -262,7 +262,7 @@ data class PersistableConnectionRequest(
     val password: String?,
 ) {
     companion object {
-        fun from(connectionRequest: ConnectionRequest<*>): PersistableConnectionRequest =
+        fun from(connectionRequest: ConnectionRequest): PersistableConnectionRequest =
             PersistableConnectionRequest(
                 connectionRequest.variableHeader.protocolName,
                 connectionRequest.variableHeader.protocolLevel.toInt(),
@@ -280,7 +280,7 @@ data class PersistableConnectionRequest(
     }
 }
 
-fun toConnectionRequest(a: Any?): ConnectionRequest<ReadBuffer?> {
+fun toConnectionRequest(a: Any?): ConnectionRequest {
     val p = a.asDynamic()
     return ConnectionRequest(
         ConnectionRequest.VariableHeader(

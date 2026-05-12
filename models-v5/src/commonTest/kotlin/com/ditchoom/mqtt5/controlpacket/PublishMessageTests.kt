@@ -351,10 +351,10 @@ class PublishMessageTests {
 
     @Test
     fun correlationDataDuplicateThrowsProtocolError() {
-        yoyoBuffer.position(0)
-        val obj1 = CorrelationData(yoyoBuffer.remaining().toUShort(), yoyoBuffer)
-        val obj2 = CorrelationData(yoyoBuffer.remaining().toUShort(), yoyoBuffer)
-        val buffer = BufferFactory.Default.allocate(15)
+        // Phase A intermediary: CorrelationData carries a String value (UTF-8 lossy).
+        val obj1 = CorrelationData("yoyo")
+        val obj2 = CorrelationData("yoyo")
+        val buffer = BufferFactory.Default.allocate(20)
         buffer.writeVariableByteInteger(encodedSize(obj1) + encodedSize(obj2))
         encodeProperty(buffer, obj1)
         encodeProperty(buffer, obj2)

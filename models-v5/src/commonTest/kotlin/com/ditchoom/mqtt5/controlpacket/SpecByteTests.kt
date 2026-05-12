@@ -26,10 +26,10 @@ import kotlin.test.assertTrue
 class SpecByteTests {
     // ── Helper ──────────────────────────────────────────────────────────────
 
-    private fun packetBuffer(block: () -> ControlPacketV5): ReadBuffer {
+    private fun packetBuffer(block: () -> ControlPacketV5<*>): ReadBuffer {
         val packet = block()
-        val buffer = BufferFactory.Default.allocate(packet.packetSize())
-        packet.serialize(buffer)
+        val buffer = BufferFactory.Default.allocate(packetSizeV5(packet))
+        serializeV5(packet, buffer)
         buffer.resetForRead()
         return buffer
     }
@@ -780,81 +780,25 @@ class SpecByteTests {
     private val encodeInt: com.ditchoom.buffer.WriteBuffer.(Int) -> Unit = { writeInt(it) }
     private val encodeShort: com.ditchoom.buffer.WriteBuffer.(Short) -> Unit = { writeShort(it) }
 
+    // Ignore reason: buffer-v1 Phase B — exercises the removed `.ofTyped(...)` builder
+    // (typed PUBLISH payload design pending).
+    @kotlin.test.Ignore
     @Test
     fun publishTypedPayloadQos0ExactBytes() {
-        // Typed publish: payload is Int (4 bytes), no properties
-        val buf =
-            ControlPacketV5.Publish
-                .ofTyped(
-                    topic = TopicName.fromOrThrow("a"),
-                    qos = AT_MOST_ONCE,
-                    payload = 42,
-                    encodePayload = encodeInt,
-                ).serialize(BufferFactory.Default)
-        // topic "a" (3 bytes) + props VBI (1 byte) + payload (4 bytes) = 8 bytes remaining
-        assertEquals(10, buf.remaining())
-        assertEquals(0x30u, buf.readUnsignedByte()) // type=3, QoS 0
-        assertEquals(0x08u, buf.readUnsignedByte()) // RL=8
-        assertEquals(0x00u, buf.readUnsignedByte())
-        assertEquals(0x01u, buf.readUnsignedByte()) // topic "a"
-        assertEquals(0x61u, buf.readUnsignedByte())
-        assertEquals(0x00u, buf.readUnsignedByte()) // property length = 0
-        // payload: Int 42 = 0x0000002A
-        assertEquals(0x00u, buf.readUnsignedByte())
-        assertEquals(0x00u, buf.readUnsignedByte())
-        assertEquals(0x00u, buf.readUnsignedByte())
-        assertEquals(0x2Au, buf.readUnsignedByte())
+        // legacy ofTyped() builder removed
     }
 
+    // Ignore reason: buffer-v1 Phase B — see publishTypedPayloadQos0ExactBytes above.
+    @kotlin.test.Ignore
     @Test
     fun publishTypedPayloadQos1ExactBytes() {
-        val buf =
-            ControlPacketV5.Publish
-                .ofTyped(
-                    topic = TopicName.fromOrThrow("a"),
-                    qos = AT_LEAST_ONCE,
-                    payload = 0x1234.toShort(),
-                    encodePayload = encodeShort,
-                    packetIdentifier = 5,
-                ).serialize(BufferFactory.Default)
-        // topic "a" (3) + packetId (2) + props VBI (1) + payload (2) = 8
-        assertEquals(10, buf.remaining())
-        assertEquals(0x32u, buf.readUnsignedByte()) // type=3, QoS 1
-        assertEquals(0x08u, buf.readUnsignedByte()) // RL=8
-        assertEquals(0x00u, buf.readUnsignedByte())
-        assertEquals(0x01u, buf.readUnsignedByte())
-        assertEquals(0x61u, buf.readUnsignedByte())
-        assertEquals(0x00u, buf.readUnsignedByte())
-        assertEquals(0x05u, buf.readUnsignedByte()) // packet ID=5
-        assertEquals(0x00u, buf.readUnsignedByte()) // property length = 0
-        assertEquals(0x12u, buf.readUnsignedByte())
-        assertEquals(0x34u, buf.readUnsignedByte()) // payload
+        // legacy ofTyped() builder removed
     }
 
+    // Ignore reason: buffer-v1 Phase B — see publishTypedPayloadQos0ExactBytes above.
+    @kotlin.test.Ignore
     @Test
     fun publishTypedPayloadMatchesReadBufferPayload() {
-        // Verify typed codec produces identical bytes to the ReadBuffer path
-        val payloadBytes = BufferFactory.Default.allocate(4)
-        payloadBytes.writeInt(42)
-        payloadBytes.resetForRead()
-
-        val readBufferPub =
-            ControlPacketV5.Publish
-                .ofRaw(topic = TopicName.fromOrThrow("a"), payload = payloadBytes)
-                .serialize(BufferFactory.Default)
-
-        val typedPub =
-            ControlPacketV5.Publish
-                .ofTyped(
-                    topic = TopicName.fromOrThrow("a"),
-                    qos = AT_MOST_ONCE,
-                    payload = 42,
-                    encodePayload = encodeInt,
-                ).serialize(BufferFactory.Default)
-
-        assertEquals(readBufferPub.remaining(), typedPub.remaining())
-        while (readBufferPub.hasRemaining()) {
-            assertEquals(readBufferPub.readUnsignedByte(), typedPub.readUnsignedByte())
-        }
+        // legacy ofTyped() builder removed
     }
 }

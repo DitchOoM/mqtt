@@ -2,6 +2,8 @@ package com.ditchoom.mqtt5.controlpacket.properties
 
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
+import com.ditchoom.buffer.codec.DecodeContext
+import com.ditchoom.buffer.codec.EncodeContext
 import com.ditchoom.buffer.utf8Length
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readVariableByteInteger
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.variableByteSize
@@ -12,26 +14,20 @@ import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.writeVariableByte
 // (MQTT 5.0 §2.2.2). VBI is a spec-named encoding and stays in MQTT-land rather than
 // leaking into buffer-codec's generic LengthPrefix enum.
 //
-// Per-property encode/decode/size walks that used to live here are gone — the generated
-// MqttPropertyCodec handles them via distinct <AD, CD> type parameters for the two
-// @Payload variants (AuthenticationData / CorrelationData).
+// Phase B-3a removed the `<AD, CD>` type parameters from MqttPropertyCodec: the
+// AuthenticationData / CorrelationData binary slots are now `@LengthPrefixed val value: String`
+// (Phase A intermediary). The generated codec is non-generic.
 
 /**
  * Decodes a VBI-prefixed MQTT v5 property section into a list of typed properties.
- *
- * Callers supply the binary-data decoders for [CorrelationData] and [AuthenticationData];
- * everything else is handled by the generated codec.
  */
-fun <AD, CD> ReadBuffer.decodeMqttProperties(
-    decodeAuthenticationData: AuthenticationDataContext.(ReadBuffer) -> AD,
-    decodeCorrelationData: CorrelationDataContext.(ReadBuffer) -> CD,
-): List<MqttProperty> {
+fun ReadBuffer.decodeMqttProperties(): List<MqttProperty> {
     val propertyLength = readVariableByteInteger()
     if (propertyLength < 1) return emptyList()
     val endPosition = position() + propertyLength
     val list = mutableListOf<MqttProperty>()
     while (position() < endPosition) {
-        list += MqttPropertyCodec.decode<AD, CD>(this, decodeAuthenticationData, decodeCorrelationData)
+        list += MqttPropertyCodec.decode(this, DecodeContext.Empty)
     }
     return list
 }
@@ -39,15 +35,11 @@ fun <AD, CD> ReadBuffer.decodeMqttProperties(
 /**
  * Encodes a VBI-prefixed MQTT v5 property section.
  */
-fun <AD, CD> WriteBuffer.encodeMqttProperties(
-    properties: List<MqttProperty>,
-    encodeAuthenticationData: (WriteBuffer, AD) -> Unit,
-    encodeCorrelationData: (WriteBuffer, CD) -> Unit,
-) {
+fun WriteBuffer.encodeMqttProperties(properties: List<MqttProperty>) {
     val bodySize = mqttPropertiesSize(properties)
     writeVariableByteInteger(bodySize)
     for (property in properties) {
-        MqttPropertyCodec.encode<AD, CD>(this, property, encodeAuthenticationData, encodeCorrelationData)
+        MqttPropertyCodec.encode(this, property, EncodeContext.Empty)
     }
 }
 

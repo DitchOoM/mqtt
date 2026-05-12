@@ -18,7 +18,14 @@ import com.ditchoom.mqtt5.persistence.newDefaultPersistence
 object ControlPacketV5Factory : ControlPacketFactory {
     override val protocolVersion: Int = 5
 
-    override fun from(buffer: ReadBuffer): ControlPacket = ControlPacketV5.from(buffer)
+    // TODO(buffer-v1, Phase A): default decode path is being removed entirely. Under the
+    //  v1 contract each consumer constructs its own ControlPacketV5Codec(payloadCodec).
+    //  IPC sites migrate in Phase B; this stub keeps the interface contract until then.
+    override fun from(buffer: ReadBuffer): ControlPacket =
+        throw UnsupportedOperationException(
+            "ControlPacketV5Factory.from(buffer) is deferred under buffer-v1: construct " +
+                "ControlPacketV5Codec(yourPayloadCodec).decode(buffer, ctx) directly.",
+        )
 
     override fun pingRequest() = PingRequest()
 

@@ -1,3 +1,5 @@
+@file:kotlin.jvm.JvmName("DefaultPersistenceCommon")
+
 package com.ditchoom.mqtt5.persistence
 
 import com.ditchoom.mqtt.Persistence

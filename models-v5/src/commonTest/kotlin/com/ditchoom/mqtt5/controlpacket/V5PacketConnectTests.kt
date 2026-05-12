@@ -162,7 +162,7 @@ class V5PacketConnectTests {
     fun connectWillQos3RejectedAtConstruction() {
         // §3.1.2-12: Will QoS = 3 is malformed. Init validation rejects construction.
         assertFailsWith<MalformedPacketException> {
-            ControlPacketV5.Connect<com.ditchoom.buffer.ReadBuffer?>(
+            ControlPacketV5.Connect(
                 protocolName = "MQTT",
                 protocolLevel = 5u,
                 connectFlags = ConnectFlagsV5(0x1Cu), // willFlag=1, willQos=3
@@ -221,7 +221,7 @@ class V5PacketConnectTests {
         val pkt = ConnectionRequest(clientId = "dispatched")
         val buf = pkt.serialize()
         val decoded = ControlPacketV5.from(buf)
-        assertIs<ControlPacketV5.Connect<*>>(decoded)
+        assertIs<ControlPacketV5.Connect>(decoded)
         assertEquals(1.toByte(), decoded.controlPacketValue)
     }
 

@@ -6,33 +6,18 @@ import com.ditchoom.buffer.WriteBuffer
 /**
  * Test-only conveniences for round-tripping the MQTT v5 property section without
  * constructing a full PUBLISH/CONNECT/etc. packet. Production code goes through
- * the generated codec dispatcher (with an EncodeContext/DecodeContext supplied by
- * the surrounding control packet).
+ * the generated codec dispatcher.
  *
- * Binary-data variants (CorrelationData / AuthenticationData) take the `ReadBuffer`
- * slice handed to them by the codec — identity passthrough; no allocation. The slice
- * remains readable for as long as the source buffer is alive.
+ * Phase A intermediary: CorrelationData / AuthenticationData carry `String` payloads
+ * (lossy UTF-8 decode of bytes). The dedicated binary-data shape returns with the
+ * Phase B typed-payload design pick.
  */
 fun ReadBuffer.readProperties(): Collection<MqttProperty>? {
-    val result =
-        decodeMqttProperties<ReadBuffer, ReadBuffer>(
-            decodeAuthenticationData = { slice -> slice },
-            decodeCorrelationData = { slice -> slice },
-        )
+    val result = decodeMqttProperties()
     return result.ifEmpty { null }
 }
 
 fun WriteBuffer.writeProperties(properties: Collection<MqttProperty>?) {
     val list = properties?.toList().orEmpty()
-    encodeMqttProperties<ReadBuffer, ReadBuffer>(
-        list,
-        encodeAuthenticationData = { buf, data ->
-            data.position(0)
-            buf.write(data)
-        },
-        encodeCorrelationData = { buf, data ->
-            data.position(0)
-            buf.write(data)
-        },
-    )
+    encodeMqttProperties(list)
 }

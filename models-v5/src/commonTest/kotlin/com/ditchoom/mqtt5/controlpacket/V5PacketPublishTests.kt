@@ -1,8 +1,5 @@
 package com.ditchoom.mqtt5.controlpacket
 
-import com.ditchoom.buffer.BufferFactory
-import com.ditchoom.buffer.ByteOrder
-import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.toReadBuffer
 import com.ditchoom.mqtt.controlpacket.MqttFixedHeader
@@ -33,22 +30,16 @@ import kotlin.test.assertTrue
  * Locks in the round-trip shape for `ControlPacketV5.Publish<P>`.
  */
 class V5PacketPublishTests {
-    private fun roundTrip(value: ControlPacketV5.Publish<ReadBuffer>): ControlPacketV5.Publish<ReadBuffer> {
-        val buf = BufferFactory.Default.allocate(value.remainingLength() + 8, ByteOrder.BIG_ENDIAN)
-        // ControlPacketV5PublishCodec.encode writes byte1 (the fixed-header byte) into the buffer
-        // because PUBLISH carries `header: MqttFixedHeader` as its first field. The matching
-        // decode reads `header` from context (set by the dispatcher) and skips byte1 from the
-        // wire — so the round-trip helper consumes byte1 explicitly here, then hands the
-        // remaining body bytes to the variant codec along with the header in context.
-        ControlPacketV5PublishCodec.encode(buf, value) { wbuf, p -> wbuf.write(p) }
-        buf.resetForRead()
-        val byte1 = MqttFixedHeader(buf.readUnsignedByte())
-        val ctx =
-            com.ditchoom.buffer.codec.DecodeContext.Empty
-                .with(ControlPacketV5Codec.DiscriminatorKey, byte1)
-        return ControlPacketV5PublishCodec.decode<ReadBuffer>(buf, ctx) { slice ->
-            slice.readBytes(slice.remaining())
-        }
+    // Phase A intermediary: PUBLISH payload routes through NonSpecCompliantIntermediaryStringAsBuffer.
+    // Round-trip via the parent sealed-tree codec (ControlPacketV5Codec) — the variant codec
+    // shape changed under directional-codec migration and is no longer directly callable
+    // for round-trip testing without the dispatcher's header forwarding.
+    private fun roundTrip(
+        value: ControlPacketV5.Publish<NonSpecCompliantIntermediaryStringAsBuffer>,
+    ): ControlPacketV5.Publish<NonSpecCompliantIntermediaryStringAsBuffer> {
+        val encoded = encodeToReadBufferV5(value)
+        @Suppress("UNCHECKED_CAST")
+        return decodeV5(encoded) as ControlPacketV5.Publish<NonSpecCompliantIntermediaryStringAsBuffer>
     }
 
     private fun makePayload(text: String): ReadBuffer {
@@ -71,7 +62,7 @@ class V5PacketPublishTests {
         assertNull(decoded.packetId)
         assertEquals(false, decoded.dup)
         assertEquals(false, decoded.retain)
-        assertEquals("hello", decoded.payload.readString(decoded.payload.remaining()))
+        assertEquals("hello", decoded.payload.s)
     }
 
     @Test
@@ -87,7 +78,7 @@ class V5PacketPublishTests {
         assertEquals(AT_LEAST_ONCE, decoded.qualityOfService)
         assertEquals(42u.toUShort(), decoded.packetId)
         assertEquals(42, decoded.packetIdentifier)
-        assertEquals("body", decoded.payload.readString(decoded.payload.remaining()))
+        assertEquals("body", decoded.payload.s)
     }
 
     @Test
@@ -159,12 +150,12 @@ class V5PacketPublishTests {
     @Test
     fun validateRejectsQos0WithPacketId() {
         val invalid =
-            ControlPacketV5.Publish<ReadBuffer>(
+            ControlPacketV5.Publish<NonSpecCompliantIntermediaryStringAsBuffer>(
                 header = MqttFixedHeader(0x30u),
                 topicName = "t/a",
                 packetId = 1u, // QoS 0 with packet id — invalid per [MQTT-2.3.1-1]
                 properties = emptyList(),
-                payload = ReadBuffer.EMPTY_BUFFER,
+                payload = NonSpecCompliantIntermediaryStringAsBuffer(""),
             )
         val err = invalid.validate()
         assertTrue(err != null && err.message?.contains("MQTT-2.3.1-1") == true)
@@ -173,12 +164,12 @@ class V5PacketPublishTests {
     @Test
     fun validateRejectsQosGreaterZeroWithoutPacketId() {
         val invalid =
-            ControlPacketV5.Publish<ReadBuffer>(
+            ControlPacketV5.Publish<NonSpecCompliantIntermediaryStringAsBuffer>(
                 header = MqttFixedHeader(0x32u), // QoS 1
                 topicName = "t/a",
                 packetId = null,
                 properties = emptyList(),
-                payload = ReadBuffer.EMPTY_BUFFER,
+                payload = NonSpecCompliantIntermediaryStringAsBuffer(""),
             )
         val err = invalid.validate()
         assertTrue(err != null && err.message?.contains("MQTT-2.3.1-5") == true)
@@ -188,12 +179,12 @@ class V5PacketPublishTests {
     fun reservedQos3Rejected() {
         // QoS bits = 11 → spec §3.3.1-4 malformed
         assertFailsWith<com.ditchoom.mqtt.MalformedPacketException> {
-            ControlPacketV5.Publish<ReadBuffer>(
+            ControlPacketV5.Publish<NonSpecCompliantIntermediaryStringAsBuffer>(
                 header = MqttFixedHeader(0x36u),
                 topicName = "t/a",
                 packetId = null,
                 properties = emptyList(),
-                payload = ReadBuffer.EMPTY_BUFFER,
+                payload = NonSpecCompliantIntermediaryStringAsBuffer(""),
             )
         }
     }

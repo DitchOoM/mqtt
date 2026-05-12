@@ -4,11 +4,10 @@ import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.codec.Codec
-import com.ditchoom.buffer.codec.DecodeContext
 import com.ditchoom.buffer.codec.EncodeContext
+import com.ditchoom.buffer.codec.Payload
 import com.ditchoom.buffer.codec.WireSize
 import com.ditchoom.buffer.flow.Connection
-import com.ditchoom.buffer.freeIfNeeded
 import com.ditchoom.mqtt.Persistence
 import com.ditchoom.mqtt.connection.MqttBroker
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
@@ -41,9 +40,10 @@ import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
-class MqttClient(
+class MqttClient internal constructor(
     internal val connectivityManager: ConnectivityManager,
     internal val scope: CoroutineScope,
+    internal val publishCodecRegistry: TopicCodecRegistry = TopicCodecRegistry(),
 ) {
     internal val processor: ControlPacketProcessor get() = connectivityManager.processor
     val broker: MqttBroker = connectivityManager.broker
@@ -137,29 +137,45 @@ class MqttClient(
         }
 
     /**
-     * Observe incoming publishes matching [filter] decoded through [payloadCodec]. Each emitted
-     * value contains the owned typed payload — no buffer-lifecycle contract.
+     * Extract the typed `payload` field from the concrete v4 / v5 PUBLISH variant. Mirrors
+     * the helper in [PublishDispatcher]; lives here too so the typed [observe] overload can
+     * surface the typed value without leaking dispatcher internals.
      */
-    fun <P> observe(
+    private fun typedPayloadOf(publish: PublishMessage): Any? =
+        when (publish) {
+            is com.ditchoom.mqtt3.controlpacket.PublishMessageV4<*> -> publish.payload
+            is com.ditchoom.mqtt5.controlpacket.ControlPacketV5.Publish<*> -> publish.payload
+            else -> null
+        }
+
+    /**
+     * Observe incoming publishes matching [filter] with the typed payload supplied via
+     * [payloadCodec]. The codec is registered into the connection's
+     * [TopicCodecRegistry] so [MqttCodec] can decode incoming PUBLISHes zero-copy at the
+     * wire-frame layer; the typed value is then cast at the per-emit site here.
+     *
+     * Last-write-wins on the registry: if a different codec is already registered for
+     * [filter], it's overwritten. Subscribers using both codecs would see the latter's
+     * type and the former's handler would `ClassCastException` — documented "one codec
+     * per topic" semantics.
+     */
+    fun <P : Payload> observe(
         filter: TopicFilter,
         payloadCodec: Codec<P>,
-    ): Flow<Pair<PublishMessage, P>> =
-        observe(filter).map { pub ->
-            val raw = pub.rawPayload()
-            val ctx = DecodeContext.Empty
-            val decoded =
-                if (raw == null || raw.remaining() == 0) {
-                    payloadCodec.decode(ReadBuffer.EMPTY_BUFFER, ctx)
-                } else {
-                    val slice = raw.slice()
-                    try {
-                        payloadCodec.decode(slice, ctx)
-                    } finally {
-                        slice.freeIfNeeded()
-                    }
-                }
-            pub to decoded
+    ): Flow<Pair<PublishMessage, P>> {
+        publishCodecRegistry.register(filter, payloadCodec)
+        return observe(filter).map { pub ->
+            @Suppress("UNCHECKED_CAST")
+            val typed =
+                typedPayloadOf(pub) as? P
+                    ?: error(
+                        "Expected typed ${payloadCodec::class.simpleName} payload on ${pub::class.simpleName} " +
+                            "for topic '${pub.topic}', but the actually-decoded payload doesn't match. " +
+                            "Check for overlapping wildcard subscriptions registering different codec result types.",
+                    )
+            pub to typed
         }
+    }
 
     suspend fun sendQueuedSubscribeMessage(packetId: Int) {
         val sub =
@@ -231,6 +247,7 @@ class MqttClient(
     suspend fun unsubscribe(unsub: IUnsubscribeRequest): UnsubscribeOperation {
         for (topic in unsub.topics) {
             processor.publishDispatcher.unsubscribe(topic)
+            publishCodecRegistry.unregister(topic)
         }
         return observeUnsubscribe(processor.unsubscribe(unsub))
     }
@@ -292,22 +309,27 @@ class MqttClient(
     }
 
     /**
-     * Subscribe with a typed handler. The dispatcher hands [payloadCodec] a wire-payload
-     * `ReadBuffer` slice and passes both the [PublishMessage] (for metadata) and the
-     * decoded value to [handler]. Auto-ack on handler return — if the handler throws, the
-     * message is NOT acknowledged and will be redelivered on reconnect.
+     * Subscribe with a typed handler. [payloadCodec] is registered into the connection's
+     * [TopicCodecRegistry] *before* the SUBSCRIBE packet leaves the wire, so the
+     * dispatcher's per-PUBLISH topic-router can resolve it the moment a matching
+     * message arrives. The handler receives the already-typed payload extracted from
+     * the wire-decoded `PublishMessage` — no re-decode, no buffer-lifecycle contract.
+     *
+     * Auto-ack on handler return — if the handler throws, the message is NOT
+     * acknowledged and will be redelivered on reconnect.
      */
-    suspend fun <P> subscribe(
+    suspend fun <P : Payload> subscribe(
         topicFilter: String,
         payloadCodec: Codec<P>,
         maxQos: QualityOfService = QualityOfService.AT_LEAST_ONCE,
         handler: suspend (PublishMessage, P) -> Unit,
     ): SubscribeOperation {
         val filter = TopicFilter.fromOrThrow(topicFilter)
+        publishCodecRegistry.register(filter, payloadCodec)
         val sub = packetFactory.subscribe(filter, maxQos)
         processor.publishDispatcher.subscribeTyped(
             filter,
-            SubscriberEntry.Typed({ payloadCodec.decode(this, DecodeContext.Empty) }, handler),
+            SubscriberEntry.Typed(handler),
         )
         return observeSub(processor.subscribe(sub))
     }
@@ -415,12 +437,20 @@ class MqttClient(
             scope: CoroutineScope = CoroutineScope(Dispatchers.Default + CoroutineName("MQTT Client")),
             broker: MqttBroker,
             persistence: Persistence,
-            connectSingle: suspend (MqttConnectionOptions) -> Connection<ControlPacket> =
-                com.ditchoom.mqtt.client.net
-                    .defaultSingleConnection(broker),
+            defaultPublishCodec: Codec<out Payload>? = null,
+            connectSingle: (suspend (MqttConnectionOptions) -> Connection<ControlPacket>)? = null,
         ): MqttClient {
-            val cm = ConnectivityManager(persistence, broker, connectSingle)
-            val client = MqttClient(cm, scope)
+            val registry = TopicCodecRegistry()
+            val effectiveConnect =
+                connectSingle ?: com.ditchoom.mqtt.client.net.defaultSingleConnection(
+                    broker = broker,
+                    publishCodecForTopic = { topic ->
+                        registry.codecForTopicName(TopicName.fromOrThrow(topic))
+                    },
+                    defaultPublishCodec = defaultPublishCodec,
+                )
+            val cm = ConnectivityManager(persistence, broker, effectiveConnect)
+            val client = MqttClient(cm, scope, registry)
             client.connectionJob =
                 scope.launch {
                     while (kotlinx.coroutines.currentCoroutineContext().isActive) {

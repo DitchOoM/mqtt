@@ -811,7 +811,8 @@ class SpecByteTests {
 
     // Binary payload (0xAA × 126) is lossy through NonSpecCompliantIntermediaryStringAsBuffer's
     // UTF-8 round-trip; multi-byte-VBI behavior is still exercised by the SQL persistence layer.
-    @kotlin.test.Ignore("buffer-v1 Phase B: typed PUBLISH payload design pending")
+    // Ignore reason: buffer-v1 Phase B — typed PUBLISH payload design pending.
+    @kotlin.test.Ignore
     @Test
     fun publishLargePayloadMultiByteVbiExactBytes() {
         // Topic "t" (3 bytes) + payload of 126 bytes = 129 bytes remaining
@@ -823,22 +824,26 @@ class SpecByteTests {
     // ControlPacketV4Codec(codec). These tests exercise the removed builder surface; the
     // underlying backpatch path is covered indirectly by the wire-shape constructor tests.
 
-    @kotlin.test.Ignore("buffer-v1 Phase B: typed PUBLISH payload design pending")
+    // Ignore reason: buffer-v1 Phase B — typed PUBLISH payload design pending.
+    @kotlin.test.Ignore
     @Test
     fun publishTypedPayloadQos0BackpatchExactBytes() {
     }
 
-    @kotlin.test.Ignore("buffer-v1 Phase B: typed PUBLISH payload design pending")
+    // Ignore reason: buffer-v1 Phase B — typed PUBLISH payload design pending.
+    @kotlin.test.Ignore
     @Test
     fun publishTypedPayloadQos1BackpatchExactBytes() {
     }
 
-    @kotlin.test.Ignore("buffer-v1 Phase B: typed PUBLISH payload design pending")
+    // Ignore reason: buffer-v1 Phase B — typed PUBLISH payload design pending.
+    @kotlin.test.Ignore
     @Test
     fun publishTypedPayloadMatchesReadBufferPayload() {
     }
 
-    @kotlin.test.Ignore("buffer-v1 Phase B: typed PUBLISH payload design pending")
+    // Ignore reason: buffer-v1 Phase B — typed PUBLISH payload design pending.
+    @kotlin.test.Ignore
     @Test
     fun publishTypedPayloadRemainingLengthUsesPayloadSize() {
     }

@@ -69,7 +69,8 @@ class PersistenceTests {
     // empty buffer. Until Phase B threads a payload codec into the persistence write side,
     // these roundtrip tests fail at the payload comparison even though every other field is
     // correct. Re-enable after the typed-payload persistence design lands.
-    @kotlin.test.Ignore("buffer-v1 Phase B: typed PUBLISH payload not surfaced via rawPayload()")
+    // Ignore reason: buffer-v1 Phase B — typed PUBLISH payload not surfaced via rawPayload().
+    @kotlin.test.Ignore
     @Test
     fun pubQos1() =
         runTest {
@@ -90,7 +91,8 @@ class PersistenceTests {
             assertEquals(0, persistence.messagesToSendOnReconnect(broker).size)
         }
 
-    @kotlin.test.Ignore("buffer-v1 Phase B: typed PUBLISH payload not surfaced via rawPayload()")
+    // Ignore reason: buffer-v1 Phase B — typed PUBLISH payload not surfaced via rawPayload().
+    @kotlin.test.Ignore
     @Test
     fun pubQos2() =
         runTest {

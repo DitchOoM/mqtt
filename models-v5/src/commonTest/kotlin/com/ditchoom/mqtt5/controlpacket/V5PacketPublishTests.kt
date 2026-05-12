@@ -30,16 +30,16 @@ import kotlin.test.assertTrue
  * Locks in the round-trip shape for `ControlPacketV5.Publish<P>`.
  */
 class V5PacketPublishTests {
-    // Phase A intermediary: PUBLISH payload routes through NonSpecCompliantIntermediaryStringAsBuffer.
+    // Phase A intermediary: PUBLISH payload routes through com.ditchoom.mqtt.controlpacket.OpaquePublishPayload.
     // Round-trip via the parent sealed-tree codec (ControlPacketV5Codec) — the variant codec
     // shape changed under directional-codec migration and is no longer directly callable
     // for round-trip testing without the dispatcher's header forwarding.
     private fun roundTrip(
-        value: ControlPacketV5.Publish<NonSpecCompliantIntermediaryStringAsBuffer>,
-    ): ControlPacketV5.Publish<NonSpecCompliantIntermediaryStringAsBuffer> {
+        value: ControlPacketV5.Publish<com.ditchoom.mqtt.controlpacket.OpaquePublishPayload>,
+    ): ControlPacketV5.Publish<com.ditchoom.mqtt.controlpacket.OpaquePublishPayload> {
         val encoded = encodeToReadBufferV5(value)
         @Suppress("UNCHECKED_CAST")
-        return decodeV5(encoded) as ControlPacketV5.Publish<NonSpecCompliantIntermediaryStringAsBuffer>
+        return decodeV5(encoded) as ControlPacketV5.Publish<com.ditchoom.mqtt.controlpacket.OpaquePublishPayload>
     }
 
     private fun makePayload(text: String): ReadBuffer {
@@ -62,7 +62,7 @@ class V5PacketPublishTests {
         assertNull(decoded.packetId)
         assertEquals(false, decoded.dup)
         assertEquals(false, decoded.retain)
-        assertEquals("hello", decoded.payload.s)
+        assertEquals("hello", decoded.payload.asUtf8String())
     }
 
     @Test
@@ -78,7 +78,7 @@ class V5PacketPublishTests {
         assertEquals(AT_LEAST_ONCE, decoded.qualityOfService)
         assertEquals(42u.toUShort(), decoded.packetId)
         assertEquals(42, decoded.packetIdentifier)
-        assertEquals("body", decoded.payload.s)
+        assertEquals("body", decoded.payload.asUtf8String())
     }
 
     @Test
@@ -150,12 +150,12 @@ class V5PacketPublishTests {
     @Test
     fun validateRejectsQos0WithPacketId() {
         val invalid =
-            ControlPacketV5.Publish<NonSpecCompliantIntermediaryStringAsBuffer>(
+            ControlPacketV5.Publish<com.ditchoom.mqtt.controlpacket.OpaquePublishPayload>(
                 header = MqttFixedHeader(0x30u),
                 topicName = "t/a",
                 packetId = 1u, // QoS 0 with packet id — invalid per [MQTT-2.3.1-1]
                 properties = emptyList(),
-                payload = NonSpecCompliantIntermediaryStringAsBuffer(""),
+                payload = opaquePublishPayloadOf(""),
             )
         val err = invalid.validate()
         assertTrue(err != null && err.message?.contains("MQTT-2.3.1-1") == true)
@@ -164,12 +164,12 @@ class V5PacketPublishTests {
     @Test
     fun validateRejectsQosGreaterZeroWithoutPacketId() {
         val invalid =
-            ControlPacketV5.Publish<NonSpecCompliantIntermediaryStringAsBuffer>(
+            ControlPacketV5.Publish<com.ditchoom.mqtt.controlpacket.OpaquePublishPayload>(
                 header = MqttFixedHeader(0x32u), // QoS 1
                 topicName = "t/a",
                 packetId = null,
                 properties = emptyList(),
-                payload = NonSpecCompliantIntermediaryStringAsBuffer(""),
+                payload = opaquePublishPayloadOf(""),
             )
         val err = invalid.validate()
         assertTrue(err != null && err.message?.contains("MQTT-2.3.1-5") == true)
@@ -179,12 +179,12 @@ class V5PacketPublishTests {
     fun reservedQos3Rejected() {
         // QoS bits = 11 → spec §3.3.1-4 malformed
         assertFailsWith<com.ditchoom.mqtt.MalformedPacketException> {
-            ControlPacketV5.Publish<NonSpecCompliantIntermediaryStringAsBuffer>(
+            ControlPacketV5.Publish<com.ditchoom.mqtt.controlpacket.OpaquePublishPayload>(
                 header = MqttFixedHeader(0x36u),
                 topicName = "t/a",
                 packetId = null,
                 properties = emptyList(),
-                payload = NonSpecCompliantIntermediaryStringAsBuffer(""),
+                payload = opaquePublishPayloadOf(""),
             )
         }
     }

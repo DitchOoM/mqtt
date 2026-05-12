@@ -33,6 +33,8 @@ import com.ditchoom.mqtt.controlpacket.IUnsubscribeRequest
 import com.ditchoom.mqtt.controlpacket.MqttFixedHeader
 import com.ditchoom.mqtt.controlpacket.MqttRemainingLengthCodec
 import com.ditchoom.mqtt.controlpacket.NO_PACKET_ID
+import com.ditchoom.mqtt.controlpacket.OpaquePublishPayload
+import com.ditchoom.mqtt.controlpacket.OpaquePublishPayloadCodec
 import com.ditchoom.mqtt.controlpacket.PublishMessage
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.QualityOfService.AT_LEAST_ONCE
@@ -186,6 +188,29 @@ value class ConnectV4Flags(
 sealed interface ControlPacketV4<out P : Payload> : ControlPacket {
     override val mqttVersion: Byte get() = 4
     override val controlPacketFactory: ControlPacketFactory get() = ControlPacketV4Factory
+
+    // Override the legacy `ControlPacket.serialize(...)` / `packetSize()` (which use the
+    // gone encodeBody/remainingLength path) to route through the v4 sealed-tree codec
+    // with [OpaquePublishPayload] as the PUBLISH payload carrier. Production callers with
+    // typed PUBLISH payloads should call `ControlPacketV4Codec(theirCodec).encode(...)`
+    // directly; this default exists for the `MqttCodec.encode → value.serialize(buffer)`
+    // path that consumes ControlPackets at the wire-write boundary. Messages reach
+    // serialize() with their payload already encoded into bytes (eagerEncode in
+    // MqttClient.publish<P>), so the cast to ControlPacketV4<OpaquePublishPayload> holds.
+    override fun serialize(factory: com.ditchoom.buffer.BufferFactory): ReadBuffer {
+        @Suppress("UNCHECKED_CAST")
+        return ControlPacketV4Codec(OpaquePublishPayloadCodec).encode(
+            this as ControlPacketV4<OpaquePublishPayload>,
+            com.ditchoom.buffer.codec.EncodeContext.Empty,
+            factory,
+        )
+    }
+
+    override fun serialize(writeBuffer: com.ditchoom.buffer.WriteBuffer) {
+        writeBuffer.write(serialize(com.ditchoom.buffer.BufferFactory.Default))
+    }
+
+    override fun packetSize(): Int = serialize(com.ditchoom.buffer.BufferFactory.Default).remaining()
 }
 
 // ── Reserved (wire 0x00) ───────────────────────────────────────────────────

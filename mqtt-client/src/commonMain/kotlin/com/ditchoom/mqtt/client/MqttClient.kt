@@ -44,6 +44,14 @@ class MqttClient internal constructor(
     internal val connectivityManager: ConnectivityManager,
     internal val scope: CoroutineScope,
     internal val publishCodecRegistry: TopicCodecRegistry = TopicCodecRegistry(),
+    /**
+     * Connection-default [BufferFactory] for eager publish-side encoding and for the
+     * fallback decode path's `OpaqueBytesHandleCodec`. Consumers wanting a pool, a
+     * deterministic factory, or a shared-memory allocator supply it at
+     * [MqttClient.start] or per-call on [publish] / [publish<P>]. Defaults to
+     * [BufferFactory.Default].
+     */
+    internal val bufferFactory: BufferFactory = BufferFactory.Default,
 ) {
     internal val processor: ControlPacketProcessor get() = connectivityManager.processor
     val broker: MqttBroker = connectivityManager.broker
@@ -286,9 +294,16 @@ class MqttClient internal constructor(
 
     /**
      * Publish a typed payload through [payloadCodec]. The codec runs eagerly on the calling
-     * thread; the resulting wire bytes are wrapped in a `PublishMessage` and queued. Routing
-     * through `Codec<P>` (rather than a raw write lambda) means the same generated codec
-     * that validates spec compliance produces the wire bytes.
+     * thread using [bufferFactory] (defaults to the client's connection-default factory);
+     * the resulting wire bytes are wrapped in an [com.ditchoom.mqtt.controlpacket.OpaquePublishPayload]
+     * and queued. Constructing the [PublishMessage] directly here (rather than routing through
+     * `packetFactory.publish(ReadBuffer?)`) avoids the convenience overload's extra
+     * allocate-and-copy — the [eagerEncode] output's [com.ditchoom.buffer.PlatformBuffer]
+     * is handed straight to [com.ditchoom.buffer.codec.opaqueBytesFrom] which takes
+     * ownership.
+     *
+     * Routing through `Codec<P>` (rather than a raw write lambda) means the same generated
+     * codec that validates spec compliance produces the wire bytes.
      */
     suspend fun <P> publish(
         topic: String,
@@ -296,16 +311,66 @@ class MqttClient internal constructor(
         payloadCodec: Codec<P>,
         qos: QualityOfService = QualityOfService.AT_MOST_ONCE,
         retain: Boolean = false,
+        bufferFactory: BufferFactory = this.bufferFactory,
     ): PublishResult {
-        val encoded = eagerEncode(payload, payloadCodec)
-        val pub =
-            packetFactory.publish(
-                topicName = TopicName.fromOrThrow(topic),
-                qos = qos,
-                retain = retain,
-                payload = encoded,
+        val encoded = eagerEncode(payload, payloadCodec, bufferFactory)
+        val opaque =
+            com.ditchoom.mqtt.controlpacket.OpaquePublishPayload(
+                com.ditchoom.buffer.codec.opaqueBytesFrom(encoded as com.ditchoom.buffer.PlatformBuffer),
             )
+        val pub = buildPublishMessage(TopicName.fromOrThrow(topic), qos, retain, opaque)
         return publish(pub)
+    }
+
+    /**
+     * Construct a version-appropriate [PublishMessage] directly carrying an
+     * [com.ditchoom.mqtt.controlpacket.OpaquePublishPayload]. Skips
+     * `ControlPacketFactory.publish(ReadBuffer?)`'s wrap-and-copy convenience overload —
+     * the typed [publish] path has full ownership of the eagerEncoded buffer and can
+     * forward it without an intermediate allocation.
+     */
+    private fun buildPublishMessage(
+        topic: TopicName,
+        qos: QualityOfService,
+        retain: Boolean,
+        opaque: com.ditchoom.mqtt.controlpacket.OpaquePublishPayload,
+    ): PublishMessage {
+        val header =
+            com.ditchoom.mqtt.controlpacket.MqttFixedHeader(
+                makePublishHeaderByte(dup = false, qos = qos, retain = retain),
+            )
+        val packetIdField =
+            if (qos == QualityOfService.AT_MOST_ONCE) null else NO_PACKET_ID.toUShort()
+        return when (packetFactory.protocolVersion) {
+            4 ->
+                com.ditchoom.mqtt3.controlpacket.PublishMessageV4(
+                    header = header,
+                    topicName = topic.toString(),
+                    packetId = packetIdField,
+                    payload = opaque,
+                )
+            5 ->
+                com.ditchoom.mqtt5.controlpacket.ControlPacketV5.Publish(
+                    header = header,
+                    topicName = topic.toString(),
+                    packetId = packetIdField,
+                    properties = emptyList(),
+                    payload = opaque,
+                )
+            else -> error("Unsupported MQTT protocol version: ${packetFactory.protocolVersion}")
+        }
+    }
+
+    /** Reproduces the v4/v5 PUBLISH fixed-header first-byte layout. */
+    private fun makePublishHeaderByte(
+        dup: Boolean,
+        qos: QualityOfService,
+        retain: Boolean,
+    ): UByte {
+        val dupBit = if (dup) 0x08 else 0x00
+        val retainBit = if (retain) 0x01 else 0x00
+        val qosBits = qos.integerValue.toInt() shl 1
+        return ((3 shl 4) or dupBit or qosBits or retainBit).toUByte()
     }
 
     /**
@@ -335,25 +400,29 @@ class MqttClient internal constructor(
     }
 
     /**
-     * Encode [value] through [codec] into a fresh read-positioned [ReadBuffer]. Picks an
-     * exact-size allocation when `codec.wireSize` returns `Exact`; otherwise grows by
-     * doubling on overflow up to [MAX_BACKPATCH_BYTES] (a codec that returns BackPatch
-     * but cannot fit within that cap is a configuration error — callers needing larger
-     * payloads should supply a codec with an exact `wireSize`).
+     * Encode [value] through [codec] into a fresh read-positioned [ReadBuffer] using
+     * [factory]. Picks an exact-size allocation when `codec.wireSize` returns `Exact`;
+     * otherwise grows by doubling on overflow up to [MAX_BACKPATCH_BYTES] (a codec that
+     * returns BackPatch but cannot fit within that cap is a configuration error —
+     * callers needing larger payloads should supply a codec with an exact `wireSize`).
+     *
+     * Surfaces the [BufferFactory] explicitly so consumers can plug in a pool, a
+     * deterministic factory, or a shared-memory allocator at the per-publish call site.
      */
     private fun <P> eagerEncode(
         value: P,
         codec: Codec<P>,
+        factory: BufferFactory,
     ): ReadBuffer {
         val ctx = EncodeContext.Empty
         return when (val size = codec.wireSize(value, ctx)) {
             is WireSize.Exact -> {
-                val buf = BufferFactory.Default.allocate(size.bytes)
+                val buf = factory.allocate(size.bytes)
                 codec.encode(buf, value, ctx)
                 buf.resetForRead()
                 buf
             }
-            WireSize.BackPatch -> encodeBackPatch(value, codec, ctx)
+            WireSize.BackPatch -> encodeBackPatch(value, codec, ctx, factory)
         }
     }
 
@@ -361,10 +430,11 @@ class MqttClient internal constructor(
         value: P,
         codec: Codec<P>,
         ctx: EncodeContext,
+        factory: BufferFactory,
     ): ReadBuffer {
         var capacity = INITIAL_BACKPATCH_BYTES
         while (capacity <= MAX_BACKPATCH_BYTES) {
-            val buf = BufferFactory.Default.allocate(capacity)
+            val buf = factory.allocate(capacity)
             try {
                 codec.encode(buf, value, ctx)
                 buf.resetForRead()
@@ -438,6 +508,7 @@ class MqttClient internal constructor(
             broker: MqttBroker,
             persistence: Persistence,
             defaultPublishCodec: Codec<out Payload>? = null,
+            bufferFactory: BufferFactory = BufferFactory.Default,
             connectSingle: (suspend (MqttConnectionOptions) -> Connection<ControlPacket>)? = null,
         ): MqttClient {
             val registry = TopicCodecRegistry()
@@ -450,7 +521,7 @@ class MqttClient internal constructor(
                     defaultPublishCodec = defaultPublishCodec,
                 )
             val cm = ConnectivityManager(persistence, broker, effectiveConnect)
-            val client = MqttClient(cm, scope, registry)
+            val client = MqttClient(cm, scope, registry, bufferFactory)
             client.connectionJob =
                 scope.launch {
                     while (kotlinx.coroutines.currentCoroutineContext().isActive) {

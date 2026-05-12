@@ -1,11 +1,18 @@
 package com.ditchoom.mqtt3.controlpacket
 
+import com.ditchoom.buffer.BufferFactory
+import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.ReadBuffer
+import com.ditchoom.buffer.codec.DecodeContext
+import com.ditchoom.buffer.codec.opaqueBytesFrom
 import com.ditchoom.mqtt.Persistence
 import com.ditchoom.mqtt.controlpacket.ControlPacketFactory
 import com.ditchoom.mqtt.controlpacket.ISubscribeRequest
 import com.ditchoom.mqtt.controlpacket.ISubscription
+import com.ditchoom.mqtt.controlpacket.MqttFixedHeader
 import com.ditchoom.mqtt.controlpacket.NO_PACKET_ID
+import com.ditchoom.mqtt.controlpacket.OpaquePublishPayload
+import com.ditchoom.mqtt.controlpacket.OpaquePublishPayloadCodec
 import com.ditchoom.mqtt.controlpacket.PublishMessage
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
@@ -22,15 +29,16 @@ object ControlPacketV4Factory : ControlPacketFactory {
         inMemory: Boolean,
     ): Persistence = newDefaultPersistence(androidContext, name, inMemory)
 
-    // TODO(buffer-v1, Phase A): default decode path is being removed entirely. Under the
-    //  v1 contract each consumer constructs its own ControlPacketV4Codec(payloadCodec).
-    //  IPC sites (MqttCodec, RemoteMqttClientWorker, AndroidRemoteMqttClient, MessageHelper)
-    //  migrate in Phase B; this stub keeps the interface contract until then.
+    /**
+     * Decode a v4 control-packet wire (`[byte1][VBI(remainingLength)][body]`) with PUBLISH
+     * application bytes carried in an [OpaquePublishPayload] (Pattern #2 — consumer-owned
+     * `PlatformBuffer`, byte-exact). Production decode at the connection layer should
+     * route through `MqttCodec` so the topic-router lambda picks per-topic codecs zero-copy;
+     * this path is the no-codec-knowledge fallback (IPC consumers, debug capture,
+     * cross-version dispatch) where the consumer wants opaque bytes back.
+     */
     override fun from(buffer: ReadBuffer): com.ditchoom.mqtt.controlpacket.ControlPacket =
-        throw UnsupportedOperationException(
-            "ControlPacketV4Factory.from(buffer) is deferred under buffer-v1: construct " +
-                "ControlPacketV4Codec(yourPayloadCodec).decode(buffer, ctx) directly.",
-        )
+        ControlPacketV4Codec(OpaquePublishPayloadCodec).decode(buffer, DecodeContext.Empty)
 
     override fun pingRequest() = PingRequest()
 
@@ -52,14 +60,50 @@ object ControlPacketV4Factory : ControlPacketFactory {
         subscriptionIdentifier: Set<Long>,
         contentType: String?,
     ): PublishMessage {
-        // TODO(buffer-v1, Phase A): the factory used to wrap raw ReadBuffer payloads as
-        //  BufferPayload. Under v1 the PUBLISH payload is consumer-typed; this convenience
-        //  function is deferred and throws. Construct PublishMessageV4 directly with your
-        //  typed Payload, or wait for Phase B which reshapes the IPC layers.
-        throw UnsupportedOperationException(
-            "ControlPacketV4Factory.publish(...) is deferred under buffer-v1: construct " +
-                "PublishMessageV4(...) directly with a typed <P : Payload> payload.",
+        val opaquePayload = OpaquePublishPayload(opaqueBytesFromOrEmpty(payload))
+        val packetIdField =
+            if (qos == QualityOfService.AT_MOST_ONCE) {
+                null
+            } else {
+                // Real packet IDs are assigned by Persistence on enqueue; the factory
+                // entry point uses NO_PACKET_ID as a sentinel before that step.
+                NO_PACKET_ID.toUShort()
+            }
+        return PublishMessageV4(
+            header = MqttFixedHeader(makePublishHeaderByte(dup, qos, retain)),
+            topicName = topicName.toString(),
+            packetId = packetIdField,
+            payload = opaquePayload,
         )
+    }
+
+    /**
+     * Compute the v4 PUBLISH fixed-header first byte from the dup/qos/retain bits.
+     * Matches the wire layout in MQTT 3.1.1 §3.3.1.
+     */
+    private fun makePublishHeaderByte(
+        dup: Boolean,
+        qos: QualityOfService,
+        retain: Boolean,
+    ): UByte {
+        val dupBit = if (dup) 0x08 else 0x00
+        val retainBit = if (retain) 0x01 else 0x00
+        val qosBits = qos.integerValue.toInt() shl 1
+        return ((3 shl 4) or dupBit or qosBits or retainBit).toUByte()
+    }
+
+    /**
+     * Wrap [src] into a consumer-owned [OpaquePublishPayload.handle]. Empty / null inputs
+     * produce a zero-byte handle. Pattern #2: allocate a fresh [com.ditchoom.buffer.PlatformBuffer]
+     * via [BufferFactory.Default], copy the wire bytes, hand ownership to the handle.
+     */
+    private fun opaqueBytesFromOrEmpty(src: ReadBuffer?): com.ditchoom.buffer.codec.OpaqueBytesHandle {
+        val factory = BufferFactory.Default
+        val remaining = src?.remaining() ?: 0
+        val dst = factory.allocate(remaining)
+        if (remaining > 0 && src != null) dst.write(src)
+        dst.resetForRead()
+        return opaqueBytesFrom(dst)
     }
 
     override fun subscribe(

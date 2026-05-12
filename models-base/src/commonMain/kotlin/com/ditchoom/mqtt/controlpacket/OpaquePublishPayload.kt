@@ -15,7 +15,6 @@ import com.ditchoom.buffer.codec.byteSize
 import com.ditchoom.buffer.codec.handleEquals
 import com.ditchoom.buffer.codec.handleHashCode
 import com.ditchoom.buffer.stream.StreamProcessor
-import kotlin.jvm.JvmInline
 
 /**
  * Spec-compliant `Payload`-marker carrier for opaque PUBLISH application bytes.
@@ -41,15 +40,23 @@ import kotlin.jvm.JvmInline
  * §3.3.2 PUBLISH application bytes are arbitrary octets, and this carrier preserves
  * them exactly through the consumer-owned `PlatformBuffer` inside [handle].
  */
-@JvmInline
-value class OpaquePublishPayload(
+/**
+ * Plain `class` (not `value class` / `data class`) to allow `equals` / `hashCode`
+ * overrides that route through [OpaqueBytesHandle.handleEquals] for byte-content
+ * comparison. [OpaqueBytesHandle] is an expect class whose actuals don't override
+ * `equals` / `hashCode` (they hold an internal `PlatformBuffer` field that the KSP
+ * walker treats as opaque), so default reference equality would surprise consumers
+ * round-tripping a `PublishMessage` through encode/decode.
+ */
+class OpaquePublishPayload(
     val handle: OpaqueBytesHandle,
 ) : Payload {
-    /** Content-equality via the platform-shielded handle's byte-content comparison. */
-    fun contentEquals(other: OpaquePublishPayload): Boolean = handle.handleEquals(other.handle)
+    override fun equals(other: Any?): Boolean =
+        other is OpaquePublishPayload && handle.handleEquals(other.handle)
 
-    /** Content hash via the platform-shielded handle's byte-content hash. */
-    fun contentHashCode(): Int = handle.handleHashCode()
+    override fun hashCode(): Int = handle.handleHashCode()
+
+    override fun toString(): String = "OpaquePublishPayload(byteSize=${handle.byteSize()})"
 
     /** Byte count carried by this payload. */
     fun byteSize(): Int = handle.byteSize()

@@ -1,6 +1,7 @@
 package com.ditchoom.mqtt5.controlpacket
 
 import com.ditchoom.buffer.ReadBuffer
+import com.ditchoom.buffer.codec.DecodeContext
 import com.ditchoom.mqtt.Persistence
 import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.ControlPacketFactory
@@ -8,6 +9,8 @@ import com.ditchoom.mqtt.controlpacket.IDisconnectNotification
 import com.ditchoom.mqtt.controlpacket.ISubscribeRequest
 import com.ditchoom.mqtt.controlpacket.ISubscription
 import com.ditchoom.mqtt.controlpacket.NO_PACKET_ID
+import com.ditchoom.mqtt.controlpacket.OpaquePublishPayload
+import com.ditchoom.mqtt.controlpacket.OpaquePublishPayloadCodec
 import com.ditchoom.mqtt.controlpacket.PublishMessage
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
@@ -18,14 +21,14 @@ import com.ditchoom.mqtt5.persistence.newDefaultPersistence
 object ControlPacketV5Factory : ControlPacketFactory {
     override val protocolVersion: Int = 5
 
-    // TODO(buffer-v1, Phase A): default decode path is being removed entirely. Under the
-    //  v1 contract each consumer constructs its own ControlPacketV5Codec(payloadCodec).
-    //  IPC sites migrate in Phase B; this stub keeps the interface contract until then.
+    /**
+     * Decode a v5 control-packet wire with PUBLISH application bytes carried in an
+     * [OpaquePublishPayload] (Pattern #2 — consumer-owned `PlatformBuffer`, byte-exact).
+     * Production decode routes through `MqttCodec`'s topic-router for zero-copy; this is
+     * the no-codec-knowledge fallback.
+     */
     override fun from(buffer: ReadBuffer): ControlPacket =
-        throw UnsupportedOperationException(
-            "ControlPacketV5Factory.from(buffer) is deferred under buffer-v1: construct " +
-                "ControlPacketV5Codec(yourPayloadCodec).decode(buffer, ctx) directly.",
-        )
+        ControlPacketV5Codec(OpaquePublishPayloadCodec).decode(buffer, DecodeContext.Empty)
 
     override fun pingRequest() = PingRequest()
 

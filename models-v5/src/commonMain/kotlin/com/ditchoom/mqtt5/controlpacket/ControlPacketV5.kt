@@ -164,13 +164,15 @@ sealed interface ControlPacketV5<out P : Payload> : com.ditchoom.mqtt.controlpac
 
     // Override the legacy `ControlPacket.serialize(...)` / `packetSize()` (which use the
     // gone encodeBody/remainingLength path) to route through the v5 sealed-tree codec
-    // via the Phase A intermediary. Production callers with typed PUBLISH payloads
-    // should call `ControlPacketV5Codec(theirCodec).encode(...)` directly; this default
-    // exists for the legacy serialize() / packetSize() API surface during Phase B.
+    // with [OpaquePublishPayload] as the PUBLISH payload carrier. Production callers with
+    // typed PUBLISH payloads should call `ControlPacketV5Codec(theirCodec).encode(...)`
+    // directly; this default exists for the `MqttCodec.encode → value.serialize(buffer)`
+    // path. Messages reach serialize() with their payload already encoded into bytes
+    // (eagerEncode in MqttClient.publish<P>), so the cast holds.
     override fun serialize(factory: com.ditchoom.buffer.BufferFactory): ReadBuffer {
         @Suppress("UNCHECKED_CAST")
-        return ControlPacketV5Codec(NonSpecCompliantIntermediaryStringAsBufferCodec).encode(
-            this as ControlPacketV5<NonSpecCompliantIntermediaryStringAsBuffer>,
+        return ControlPacketV5Codec(com.ditchoom.mqtt.controlpacket.OpaquePublishPayloadCodec).encode(
+            this as ControlPacketV5<com.ditchoom.mqtt.controlpacket.OpaquePublishPayload>,
             com.ditchoom.buffer.codec.EncodeContext.Empty,
             factory,
         )
@@ -185,15 +187,13 @@ sealed interface ControlPacketV5<out P : Payload> : com.ditchoom.mqtt.controlpac
     companion object {
         /**
          * Decode a full v5 control-packet wire (`[byte1][VBI(remainingLength)][body]`)
-         * with the Phase A intermediary payload codec.
-         *
-         * PUBLISH application payloads route through [NonSpecCompliantIntermediaryStringAsBufferCodec]
-         * — UTF-8 lossy for non-UTF-8 bytes (TODO Phase B: typed-payload design pick).
-         * For typed payloads, construct `ControlPacketV5Codec(yourPayloadCodec)` directly.
+         * with PUBLISH application bytes carried in an [com.ditchoom.mqtt.controlpacket.OpaquePublishPayload]
+         * (Pattern #2 — consumer-owned `PlatformBuffer`, byte-exact). For typed payloads,
+         * construct `ControlPacketV5Codec(yourPayloadCodec)` directly.
          */
-        fun from(buffer: ReadBuffer): ControlPacketV5<NonSpecCompliantIntermediaryStringAsBuffer> =
+        fun from(buffer: ReadBuffer): ControlPacketV5<com.ditchoom.mqtt.controlpacket.OpaquePublishPayload> =
             try {
-                ControlPacketV5Codec(NonSpecCompliantIntermediaryStringAsBufferCodec)
+                ControlPacketV5Codec(com.ditchoom.mqtt.controlpacket.OpaquePublishPayloadCodec)
                     .decode(buffer, DecodeContext.Empty)
             } catch (e: com.ditchoom.buffer.codec.DecodeException) {
                 // Replaces the retired `@ProtocolMessage(onUnknownDiscriminator = MalformedPacketException)`
@@ -546,12 +546,11 @@ sealed interface ControlPacketV5<out P : Payload> : com.ditchoom.mqtt.controlpac
 
         companion object {
             /**
-             * Phase A intermediary factory — constructs a
-             * `Publish<NonSpecCompliantIntermediaryStringAsBuffer>` for callers that previously
-             * relied on `ofRaw(ReadBuffer?)`. UTF-8 decode of the payload is lossy for
-             * non-UTF-8 application bytes; Phase B replaces this with the typed-payload
-             * design pick. ofTyped(...) was removed; consumers needing a typed payload
-             * construct `ControlPacketV5.Publish<MyPayload>(...)` directly.
+             * Convenience factory — constructs a `Publish<OpaquePublishPayload>` from a
+             * raw [ReadBuffer] payload. Pattern #2 (consumer-owned `PlatformBuffer`):
+             * allocates a fresh buffer, copies the wire bytes, hands ownership to the
+             * handle. Consumers needing a typed payload construct
+             * `ControlPacketV5.Publish<MyPayload>(...)` directly.
              */
             fun ofRaw(
                 topic: TopicName,
@@ -561,7 +560,7 @@ sealed interface ControlPacketV5<out P : Payload> : com.ditchoom.mqtt.controlpac
                 retain: Boolean = false,
                 packetIdentifier: Int = NO_PACKET_ID,
                 properties: PublishProperties = PublishProperties(),
-            ): Publish<NonSpecCompliantIntermediaryStringAsBuffer> {
+            ): Publish<com.ditchoom.mqtt.controlpacket.OpaquePublishPayload> {
                 val header = MqttFixedHeader(makePublishHeaderByte(dup, qos, retain))
                 val pid =
                     if (qos == QualityOfService.AT_MOST_ONCE || packetIdentifier == NO_PACKET_ID) {
@@ -569,17 +568,21 @@ sealed interface ControlPacketV5<out P : Payload> : com.ditchoom.mqtt.controlpac
                     } else {
                         packetIdentifier.toUShort()
                     }
-                val payloadStr =
-                    payload?.let { buf ->
-                        val slice = buf.slice()
-                        slice.readString(slice.remaining(), Charset.UTF8)
-                    } ?: ""
+                val factory = com.ditchoom.buffer.BufferFactory.Default
+                val remaining = payload?.remaining() ?: 0
+                val dst = factory.allocate(remaining)
+                if (remaining > 0 && payload != null) dst.write(payload)
+                dst.resetForRead()
+                val opaque =
+                    com.ditchoom.mqtt.controlpacket.OpaquePublishPayload(
+                        com.ditchoom.buffer.codec.opaqueBytesFrom(dst),
+                    )
                 return Publish(
                     header = header,
                     topicName = topic.toString(),
                     packetId = pid,
                     properties = properties.props,
-                    payload = NonSpecCompliantIntermediaryStringAsBuffer(payloadStr),
+                    payload = opaque,
                 )
             }
 

@@ -39,7 +39,7 @@ class SpecByteTests {
         dup: Boolean = false,
         retain: Boolean = false,
         payloadString: String = "",
-    ): PublishMessageV4<NonSpecCompliantIntermediaryStringAsBuffer> =
+    ): PublishMessageV4<com.ditchoom.mqtt.controlpacket.OpaquePublishPayload> =
         PublishMessageV4(
             header =
                 com.ditchoom.mqtt.controlpacket
@@ -51,7 +51,7 @@ class SpecByteTests {
                 } else {
                     packetIdentifier.toUShort()
                 },
-            payload = NonSpecCompliantIntermediaryStringAsBuffer(payloadString),
+            payload = opaquePublishPayloadOf(payloadString),
         )
 
     // ── PINGREQ (§3.12) ────────────────────────────────────────────────────
@@ -258,10 +258,10 @@ class SpecByteTests {
         val decoded = decodeV4(buf)
         assertIs<PublishMessageV4<*>>(decoded)
         @Suppress("UNCHECKED_CAST")
-        val packet = decoded as PublishMessageV4<NonSpecCompliantIntermediaryStringAsBuffer>
+        val packet = decoded as PublishMessageV4<com.ditchoom.mqtt.controlpacket.OpaquePublishPayload>
         assertEquals("a", packet.topic.toString())
         assertEquals(AT_MOST_ONCE, packet.qualityOfService)
-        assertEquals("", packet.payload.s)
+        assertEquals("", packet.payload.asUtf8String())
     }
 
     @Test
@@ -279,7 +279,7 @@ class SpecByteTests {
         val decoded = decodeV4(buf)
         assertIs<PublishMessageV4<*>>(decoded)
         @Suppress("UNCHECKED_CAST")
-        val packet = decoded as PublishMessageV4<NonSpecCompliantIntermediaryStringAsBuffer>
+        val packet = decoded as PublishMessageV4<com.ditchoom.mqtt.controlpacket.OpaquePublishPayload>
         assertEquals("a", packet.topic.toString())
         assertEquals(AT_LEAST_ONCE, packet.qualityOfService)
         assertEquals(1, packet.packetIdentifier)
@@ -809,9 +809,10 @@ class SpecByteTests {
 
     // ── Edge cases: Multi-byte VBI (remaining length > 127) ────────────────
 
-    // Binary payload (0xAA × 126) is lossy through NonSpecCompliantIntermediaryStringAsBuffer's
-    // UTF-8 round-trip; multi-byte-VBI behavior is still exercised by the SQL persistence layer.
-    // Ignore reason: buffer-v1 Phase B — typed PUBLISH payload design pending.
+    // Binary payload (0xAA × 126) multi-byte-VBI behavior. Originally @Ignored because
+    // NonSpecCompliantIntermediaryStringAsBuffer's UTF-8 round-trip was lossy for binary;
+    // now reachable via OpaquePublishPayload (Pattern #2, byte-exact). Revisit and un-ignore
+    // in B-4b alongside the marker-hierarchy reshape and typed PUBLISH payload tests.
     @kotlin.test.Ignore
     @Test
     fun publishLargePayloadMultiByteVbiExactBytes() {

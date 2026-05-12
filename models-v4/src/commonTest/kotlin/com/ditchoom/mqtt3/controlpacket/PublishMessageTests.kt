@@ -7,6 +7,7 @@ import com.ditchoom.mqtt.MalformedPacketException
 import com.ditchoom.mqtt.MqttException
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readVariableByteInteger
 import com.ditchoom.mqtt.controlpacket.MqttFixedHeader
+import com.ditchoom.mqtt.controlpacket.OpaquePublishPayload
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.format.fixed.get
 import kotlinx.coroutines.test.runTest
@@ -25,12 +26,12 @@ class PublishMessageTests {
         dup: Boolean = false,
         retain: Boolean = false,
         payloadString: String = "",
-    ): PublishMessageV4<NonSpecCompliantIntermediaryStringAsBuffer> =
+    ): PublishMessageV4<OpaquePublishPayload> =
         PublishMessageV4(
             header = MqttFixedHeader(makePublishHeaderByteV4(dup, qos, retain)),
             topicName = topic,
             packetId = if (packetId == com.ditchoom.mqtt.controlpacket.NO_PACKET_ID) null else packetId.toUShort(),
-            payload = NonSpecCompliantIntermediaryStringAsBuffer(payloadString),
+            payload = opaquePublishPayloadOf(payloadString),
         )
 
     @Test
@@ -163,13 +164,13 @@ class PublishMessageTests {
         assertEquals("yolo", buffer.readString(4, Charset.UTF8), "payload value")
         buffer.resetForRead()
         @Suppress("UNCHECKED_CAST")
-        val result = decodeV4(buffer) as PublishMessageV4<NonSpecCompliantIntermediaryStringAsBuffer>
+        val result = decodeV4(buffer) as PublishMessageV4<OpaquePublishPayload>
         assertEquals(topic, result.topic.toString())
         assertEquals(qos, result.qualityOfService)
         assertEquals(dup, result.dup)
         assertEquals(retain, result.retain)
         if (qos != QualityOfService.AT_MOST_ONCE) assertEquals(packetId, result.packetIdentifier)
-        assertContentEquals("yolo".encodeToByteArray(), result.payload.s.encodeToByteArray())
+        assertContentEquals("yolo".encodeToByteArray(), result.payload.asUtf8String().encodeToByteArray())
     }
 
     private fun assertMessageIsSame(

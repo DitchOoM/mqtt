@@ -1,19 +1,24 @@
 package com.ditchoom.mqtt3.persistence
 
+import com.ditchoom.mqtt.InMemoryPersistence
 import com.ditchoom.mqtt.Persistence
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.newSingleThreadContext
+import kotlinx.coroutines.Dispatchers
 
+// See commonMain/DefaultPersistence.kt for the Phase B
+// consumer-supplied-persistence rationale.
 actual suspend fun newDefaultPersistence(
     androidContext: Any?,
     name: String,
     inMemory: Boolean,
-): Persistence = SqlDatabasePersistence(sqlDriver(androidContext, name, inMemory)!!)
+): Persistence {
+    if (!inMemory) {
+        warnPersistentStorageUnavailable("v4 JVM")
+    }
+    return InMemoryPersistence()
+}
 
-@OptIn(DelicateCoroutinesApi::class, ExperimentalCoroutinesApi::class)
 actual fun defaultDispatcher(
     nThreads: Int,
     name: String,
-): CoroutineDispatcher = newSingleThreadContext("Mqtt-SQL")
+): CoroutineDispatcher = Dispatchers.Default

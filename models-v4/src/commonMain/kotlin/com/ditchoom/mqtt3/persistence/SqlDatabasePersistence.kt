@@ -24,7 +24,10 @@ import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt.controlpacket.WillConfig
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.mqtt.controlpacket.payloadAsReadBufferOrNull
+import com.ditchoom.buffer.Charset
+import com.ditchoom.mqtt.controlpacket.MqttFixedHeader
 import com.ditchoom.mqtt3.controlpacket.ConnectionRequest
+import com.ditchoom.mqtt3.controlpacket.NonSpecCompliantIntermediaryStringAsBuffer
 import com.ditchoom.mqtt3.controlpacket.PublishComplete
 import com.ditchoom.mqtt3.controlpacket.PublishMessageV4
 import com.ditchoom.mqtt3.controlpacket.PublishReceived
@@ -360,8 +363,8 @@ class SqlDatabasePersistence(
                 .executeAsList()
                 .map { row ->
                     val pub =
-                        PublishMessageV4.ofRaw(
-                            topic = TopicName.fromOrThrow(row.topic_name),
+                        buildIntermediaryPublishV4(
+                            topic = row.topic_name,
                             qos = row.qos.toQos(),
                             payload = row.payload,
                             dup = row.dup == 1L,
@@ -383,8 +386,8 @@ class SqlDatabasePersistence(
         val map = ArrayList<ControlPacket>()
         map +=
             pubQueries.queuedPubMessages(broker.identifier.toLong()).executeAsList().map {
-                PublishMessageV4.ofRaw(
-                    topic = TopicName.fromOrThrow(it.topic_name),
+                buildIntermediaryPublishV4(
+                    topic = it.topic_name,
                     qos = it.qos.toQos(),
                     payload = it.payload,
                     dup = true,
@@ -492,8 +495,8 @@ class SqlDatabasePersistence(
             pubQueries
                 .messageWithId(broker.identifier.toLong(), 0L, packetId.toLong())
                 .executeAsOneOrNull() ?: return null
-        return PublishMessageV4.ofRaw(
-            topic = TopicName.fromOrThrow(pub.topic_name),
+        return buildIntermediaryPublishV4(
+            topic = pub.topic_name,
             qos = pub.qos.toQos(),
             payload = pub.payload,
             dup = pub.dup == 1L,
@@ -633,3 +636,45 @@ fun Boolean.toLong(): Long =
     } else {
         0L
     }
+
+/**
+ * TEMPORARY (buffer-v1 Phase A): reconstruct a [PublishMessageV4] from persisted SQL
+ * columns via [NonSpecCompliantIntermediaryStringAsBuffer]. The SQL `payload` BLOB is
+ * UTF-8-decoded into a `String`. Lossy for non-UTF-8 application payloads — see the
+ * [NonSpecCompliantIntermediaryStringAsBuffer] kdoc. Phase B replaces this with the
+ * proper consumer-typed Payload reconstruction once the design lands.
+ */
+private fun buildIntermediaryPublishV4(
+    topic: String,
+    qos: QualityOfService,
+    payload: ReadBuffer?,
+    dup: Boolean,
+    retain: Boolean,
+    packetIdentifier: Int,
+): PublishMessageV4<NonSpecCompliantIntermediaryStringAsBuffer> {
+    val flag = makePublishHeaderByte(dup, qos, retain)
+    val pid = if (packetIdentifier == NO_PACKET_ID) null else packetIdentifier.toUShort()
+    val payloadString =
+        payload?.let { p ->
+            val slice = p.slice()
+            slice.readString(slice.remaining(), Charset.UTF8)
+        } ?: ""
+    return PublishMessageV4(
+        header = MqttFixedHeader(flag),
+        topicName = topic,
+        packetId = pid,
+        payload = NonSpecCompliantIntermediaryStringAsBuffer(payloadString),
+    )
+}
+
+private fun makePublishHeaderByte(
+    dup: Boolean,
+    qos: QualityOfService,
+    retain: Boolean,
+): UByte {
+    val type = 3 shl 4
+    val dupBit = if (dup) 0x08 else 0
+    val qosBits = qos.integerValue.toInt() shl 1
+    val retainBit = if (retain) 0x01 else 0
+    return (type or dupBit or qosBits or retainBit).toUByte()
+}

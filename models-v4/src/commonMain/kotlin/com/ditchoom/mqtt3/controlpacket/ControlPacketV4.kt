@@ -3,7 +3,6 @@ package com.ditchoom.mqtt3.controlpacket
 import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.ReadBuffer
-import com.ditchoom.buffer.codec.DecodeContext
 import com.ditchoom.buffer.codec.Payload
 import com.ditchoom.buffer.codec.annotations.DispatchOn
 import com.ditchoom.buffer.codec.annotations.FramedBy
@@ -11,11 +10,8 @@ import com.ditchoom.buffer.codec.annotations.LengthPrefixed
 import com.ditchoom.buffer.codec.annotations.PacketType
 import com.ditchoom.buffer.codec.annotations.ProtocolMessage
 import com.ditchoom.buffer.codec.annotations.RemainingBytes
-import com.ditchoom.buffer.codec.annotations.UseCodec
 import com.ditchoom.buffer.codec.annotations.When
 import com.ditchoom.mqtt.MalformedPacketException
-import com.ditchoom.mqtt.controlpacket.BufferPayload
-import com.ditchoom.mqtt.controlpacket.BufferPayloadCodec
 import com.ditchoom.mqtt.controlpacket.MqttRemainingLengthCodec
 import com.ditchoom.mqtt.MqttWarning
 import com.ditchoom.mqtt.ProtocolError
@@ -53,21 +49,6 @@ import com.ditchoom.mqtt.controlpacket.format.ReasonCode.UNSPECIFIED_ERROR
 import com.ditchoom.mqtt.controlpacket.format.fixed.DirectionOfFlow
 import com.ditchoom.mqtt.controlpacket.validControlPacketIdentifierRange
 import kotlin.jvm.JvmInline
-
-/**
- * UTF-8 encode [s] into a fresh [BufferPayload] for the legacy String-typed convenience
- * constructor on [ConnectionRequest] (the wire field is [BufferPayload] per §3.1.3.5;
- * passwords are bytes, not strings). Allocates a worst-case-sized buffer (4 bytes per
- * char), writes UTF-8, slices to the actual byte count.
- */
-private fun utf8BufferPayload(s: String): BufferPayload {
-    val buf = BufferFactory.Default.allocate(s.length * 4)
-    buf.writeString(s, com.ditchoom.buffer.Charset.UTF8)
-    val written = buf.position()
-    buf.position(0)
-    buf.setLimit(written)
-    return BufferPayload(buf.slice())
-}
 
 // ── Wire-shape element types for list-payload packets ─────────────────────
 
@@ -205,34 +186,6 @@ value class ConnectV4Flags(
 sealed interface ControlPacketV4<out P : Payload> : ControlPacket {
     override val mqttVersion: Byte get() = 4
     override val controlPacketFactory: ControlPacketFactory get() = ControlPacketV4Factory
-
-    companion object {
-        /**
-         * Decode a full v4 control-packet wire (`[byte1][VBI(remainingLength)][body]`),
-         * routing PUBLISH application bytes through [payloadCodec]. The sealed dispatcher
-         * consumes the fixed-header byte via [MqttFixedHeader]'s `@DispatchValue` packetType
-         * nibble, applies the `@FramedBy(MqttRemainingLengthCodec)` VBI body-length bound,
-         * and routes to the matching variant codec. Body-overrun and PUBLISH QoS=3
-         * rejections are handled by the generated dispatcher's body-length guard and
-         * [MqttFixedHeader]'s `init {}`.
-         *
-         * Construct the codec once and reuse on hot paths — the `mqtt-client` connection
-         * layer holds a single instance per connection. This convenience constructs on
-         * each call for one-off / test decode sites.
-         */
-        fun <P : Payload> from(
-            buffer: ReadBuffer,
-            payloadCodec: com.ditchoom.buffer.codec.Codec<P>,
-        ): ControlPacketV4<P> = ControlPacketV4Codec(payloadCodec).decode(buffer, DecodeContext.Empty)
-
-        /**
-         * Default zero-copy decode: aliases the PUBLISH payload slice as [BufferPayload].
-         * Consumers wanting a typed payload supply their own [com.ditchoom.buffer.codec.Codec]
-         * via the [from] overload above to decode directly into their domain type without
-         * an intermediate buffer copy.
-         */
-        fun from(buffer: ReadBuffer): ControlPacketV4<BufferPayload> = from(buffer, BufferPayloadCodec)
-    }
 }
 
 // ── Reserved (wire 0x00) ───────────────────────────────────────────────────
@@ -265,15 +218,13 @@ data class ConnectionRequest(
     val keepAlive: UShort = UShort.MAX_VALUE,
     @LengthPrefixed val clientId: String = "",
     @When("connectFlags.willFlag") @LengthPrefixed val willTopicString: String? = null,
-    @When("connectFlags.willFlag")
-    @LengthPrefixed
-    @UseCodec(BufferPayloadCodec::class)
-    val willPayloadValue: BufferPayload? = null,
+    // TODO(buffer-v1): Will payload is bytes per §3.1.3.3, not UTF-8. Reverted to String?
+    //  pending Will/Password design (multi-param parent threading vs hand-written codec vs
+    //  injected-codec-per-field). See memory `mqtt_will_password_deferred.md`.
+    @When("connectFlags.willFlag") @LengthPrefixed val willPayloadValue: String? = null,
     @When("connectFlags.usernameFlag") @LengthPrefixed val username: String? = null,
-    @When("connectFlags.passwordFlag")
-    @LengthPrefixed
-    @UseCodec(BufferPayloadCodec::class)
-    val passwordValue: BufferPayload? = null,
+    // TODO(buffer-v1): Password is bytes per §3.1.3.5, not UTF-8. Same deferral as willPayloadValue.
+    @When("connectFlags.passwordFlag") @LengthPrefixed val passwordValue: String? = null,
 ) : ControlPacketV4<Nothing>,
     IConnectionRequest {
     init {
@@ -304,29 +255,26 @@ data class ConnectionRequest(
     override val hasPassword: Boolean get() = connectFlags.passwordFlag
     override val userName: String? get() = username
 
-    /**
-     * Legacy String accessor for the password field. Per MQTT v3.1.1 §3.1.3.5 the password
-     * is arbitrary bytes, not UTF-8; the wire-shape field is [passwordValue] (BufferPayload).
-     * This getter decodes the buffer as UTF-8 for backward compatibility — callers carrying
-     * non-UTF-8 password bytes must read [passwordValue] directly to avoid lossy conversion.
-     */
-    override val password: String?
-        get() = passwordValue?.buffer?.let { buf ->
-            val slice = buf.slice()
-            slice.readString(slice.remaining(), com.ditchoom.buffer.Charset.UTF8)
-        }
+    override val password: String? get() = passwordValue
 
     override val will: WillConfig
         get() {
-            val payload = willPayloadValue?.buffer
+            val payloadStr = willPayloadValue
             return if (
                 connectFlags.willFlag &&
                 willTopicString != null &&
-                payload != null
+                payloadStr != null
             ) {
+                val payloadBuffer =
+                    BufferFactory.Default.allocate(payloadStr.length * 4).apply {
+                        writeString(payloadStr, com.ditchoom.buffer.Charset.UTF8)
+                        val written = position()
+                        position(0)
+                        setLimit(written)
+                    }
                 WillConfig.Enabled(
                     TopicName.fromOrThrow(willTopicString),
-                    payload,
+                    payloadBuffer.slice(),
                     QualityOfService.fromBooleans(
                         (connectFlags.willQos shr 1) and 1 == 1,
                         connectFlags.willQos and 1 == 1,
@@ -363,7 +311,17 @@ data class ConnectionRequest(
             Payload(
                 clientId = clientId,
                 willTopic = willTopicString?.let { TopicName.fromOrThrow(it) },
-                willPayload = willPayloadValue?.buffer,
+                // Will payload reflects the (currently String?-typed) wire field. Materialize a
+                // ReadBuffer for the legacy accessor. See willPayloadValue TODO above.
+                willPayload =
+                    willPayloadValue?.let { s ->
+                        BufferFactory.Default.allocate(s.length * 4).apply {
+                            writeString(s, com.ditchoom.buffer.Charset.UTF8)
+                            val written = position()
+                            position(0)
+                            setLimit(written)
+                        }.slice()
+                    },
                 userName = username,
                 password = password,
             )
@@ -431,9 +389,13 @@ data class ConnectionRequest(
         keepAlive = variableHeader.keepAliveSeconds.toUShort(),
         clientId = payload.clientId,
         willTopicString = payload.willTopic?.toString(),
-        willPayloadValue = payload.willPayload?.let { BufferPayload(it) },
+        willPayloadValue =
+            payload.willPayload?.let { buf ->
+                val slice = buf.slice()
+                slice.readString(slice.remaining(), com.ditchoom.buffer.Charset.UTF8)
+            },
         username = payload.userName,
-        passwordValue = payload.password?.let { utf8BufferPayload(it) },
+        passwordValue = payload.password,
     )
 
     constructor(
@@ -631,7 +593,11 @@ data class PublishMessageV4<P : Payload>(
     override val retain: Boolean get() = header.publishRetain
     override val packetIdentifier: Int get() = packetId?.toInt() ?: NO_PACKET_ID
 
-    override fun rawPayload(): ReadBuffer = (payload as? BufferPayload)?.buffer ?: BufferFactory.Default.allocate(0)
+    // TODO(buffer-v1): rawPayload used to alias the BufferPayload wrapper. Under v1 the
+    //  payload is consumer-typed via parent generic <P : Payload> — a default raw-buffer
+    //  view doesn't exist. Re-encode the payload via the consumer's codec at the call site
+    //  if you need bytes back. Returning an empty buffer here keeps the interface contract.
+    override fun rawPayload(): ReadBuffer = BufferFactory.Default.allocate(0)
 
     override fun expectedResponse(
         reasonCode: ReasonCode,
@@ -681,44 +647,10 @@ data class PublishMessageV4<P : Payload>(
         return null
     }
 
-    companion object {
-        /**
-         * Create a v4 PUBLISH with a raw-bytes payload. Null falls back to an empty buffer.
-         */
-        fun ofRaw(
-            topic: TopicName,
-            qos: QualityOfService = AT_MOST_ONCE,
-            payload: ReadBuffer? = null,
-            dup: Boolean = false,
-            retain: Boolean = false,
-            packetIdentifier: Int = NO_PACKET_ID,
-        ): PublishMessageV4<BufferPayload> {
-            val header = MqttFixedHeader(makePublishHeaderByte(dup, qos, retain))
-            // Preserve the user-supplied packetIdentifier even when qos=0 / packetIdentifier=NO_PACKET_ID
-            // so `validate()` can detect malformed combinations (qos=0 + non-zero pid;
-            // qos>0 + missing pid). Decoded messages from the wire reach the wire-shape
-            // primary constructor directly with packetId=null when qos=0.
-            val pid = if (packetIdentifier == NO_PACKET_ID) null else packetIdentifier.toUShort()
-            return PublishMessageV4(
-                header = header,
-                topicName = topic.toString(),
-                packetId = pid,
-                payload = BufferPayload(payload ?: BufferFactory.Default.allocate(0)),
-            )
-        }
-
-        private fun makePublishHeaderByte(
-            dup: Boolean,
-            qos: QualityOfService,
-            retain: Boolean,
-        ): UByte {
-            val type = 3 shl 4
-            val dupBit = if (dup) 0x08 else 0
-            val qosBits = qos.integerValue.toInt() shl 1
-            val retainBit = if (retain) 0x01 else 0
-            return (type or dupBit or qosBits or retainBit).toUByte()
-        }
-    }
+    // ofRaw(...) removed under buffer-v1: there is no canonical raw-bytes PUBLISH payload
+    // type. Consumers construct PublishMessageV4<MyPayload>(..., payload = MyPayload(...))
+    // with their own typed Payload and a matching Codec<MyPayload> wired through
+    // ControlPacketV4Codec(codec).
 }
 
 // ── PUBACK (§3.4) ─────────────────────────────────────────────────────────

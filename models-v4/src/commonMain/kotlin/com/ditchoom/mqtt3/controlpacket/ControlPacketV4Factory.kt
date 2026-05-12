@@ -22,7 +22,15 @@ object ControlPacketV4Factory : ControlPacketFactory {
         inMemory: Boolean,
     ): Persistence = newDefaultPersistence(androidContext, name, inMemory)
 
-    override fun from(buffer: ReadBuffer) = ControlPacketV4.from(buffer)
+    // TODO(buffer-v1, Phase A): default decode path is being removed entirely. Under the
+    //  v1 contract each consumer constructs its own ControlPacketV4Codec(payloadCodec).
+    //  IPC sites (MqttCodec, RemoteMqttClientWorker, AndroidRemoteMqttClient, MessageHelper)
+    //  migrate in Phase B; this stub keeps the interface contract until then.
+    override fun from(buffer: ReadBuffer): com.ditchoom.mqtt.controlpacket.ControlPacket =
+        throw UnsupportedOperationException(
+            "ControlPacketV4Factory.from(buffer) is deferred under buffer-v1: construct " +
+                "ControlPacketV4Codec(yourPayloadCodec).decode(buffer, ctx) directly.",
+        )
 
     override fun pingRequest() = PingRequest()
 
@@ -43,15 +51,16 @@ object ControlPacketV4Factory : ControlPacketFactory {
         userProperty: List<Pair<String, String>>,
         subscriptionIdentifier: Set<Long>,
         contentType: String?,
-    ): PublishMessage =
-        PublishMessageV4.ofRaw(
-            topic = topicName,
-            qos = qos,
-            payload = payload,
-            dup = dup,
-            retain = retain,
-            packetIdentifier = NO_PACKET_ID,
+    ): PublishMessage {
+        // TODO(buffer-v1, Phase A): the factory used to wrap raw ReadBuffer payloads as
+        //  BufferPayload. Under v1 the PUBLISH payload is consumer-typed; this convenience
+        //  function is deferred and throws. Construct PublishMessageV4 directly with your
+        //  typed Payload, or wait for Phase B which reshapes the IPC layers.
+        throw UnsupportedOperationException(
+            "ControlPacketV4Factory.publish(...) is deferred under buffer-v1: construct " +
+                "PublishMessageV4(...) directly with a typed <P : Payload> payload.",
         )
+    }
 
     override fun subscribe(
         topicFilter: TopicFilter,

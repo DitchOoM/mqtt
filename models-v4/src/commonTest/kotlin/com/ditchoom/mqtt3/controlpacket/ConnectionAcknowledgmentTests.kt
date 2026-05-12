@@ -12,9 +12,9 @@ class ConnectionAcknowledgmentTests {
     fun serializeDeserializeDefault() {
         val buffer = BufferFactory.Default.allocate(4)
         val actual = ConnectionAcknowledgment()
-        actual.serialize(buffer)
+        serializeV4(actual, buffer)
         buffer.resetForRead()
-        val expected = ControlPacketV4.from(buffer)
+        val expected = decodeV4(buffer)
         assertEquals(expected, actual)
     }
 
@@ -22,19 +22,19 @@ class ConnectionAcknowledgmentTests {
     fun bit0SessionPresentFalseFlags() {
         val buffer = BufferFactory.Default.allocate(4)
         val model = ConnectionAcknowledgment()
-        model.serialize(buffer)
+        serializeV4(model, buffer)
         buffer.resetForRead()
-        val result = ControlPacketV4.from(buffer) as ConnectionAcknowledgment
-        assertFalse(result.header.sessionPresent)
+        val result = decodeV4(buffer) as ConnectionAcknowledgment
+        assertFalse(result.sessionPresent)
     }
 
     @Test
     fun bit0SessionPresentFlags() {
         val buffer = BufferFactory.Default.allocate(4)
         val model = ConnectionAcknowledgment(ConnectionAcknowledgment.VariableHeader(true))
-        model.serialize(buffer)
+        serializeV4(model, buffer)
         buffer.resetForRead()
-        val result = ControlPacketV4.from(buffer) as ConnectionAcknowledgment
-        assertTrue(result.header.sessionPresent)
+        val result = decodeV4(buffer) as ConnectionAcknowledgment
+        assertTrue(result.sessionPresent)
     }
 }

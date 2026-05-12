@@ -12,9 +12,9 @@ class UnsubscribeRequestTests {
     fun basicTest() {
         val buffer = BufferFactory.Default.allocate(17)
         val unsub = UnsubscribeRequest(packetIdentifier, setOf("yolo", "yolo1"))
-        unsub.serialize(buffer)
+        serializeV4(unsub, buffer)
         buffer.resetForRead()
-        val result = ControlPacketV4.from(buffer) as UnsubscribeRequest
+        val result = decodeV4(buffer) as UnsubscribeRequest
         val topics = result.topics.sortedBy { it.toString() }
         assertEquals(topics.first().toString(), "yolo")
         assertEquals(topics[1].toString(), "yolo1")

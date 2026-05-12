@@ -12,10 +12,10 @@ class PublishReleaseTests {
     fun packetIdentifier() {
         val buffer = BufferFactory.Default.allocate(4)
         val puback = PublishRelease(packetIdentifier)
-        assertEquals(4, puback.packetSize())
-        puback.serialize(buffer)
+        assertEquals(4, packetSizeV4(puback))
+        serializeV4(puback, buffer)
         buffer.resetForRead()
-        val pubackResult = ControlPacketV4.from(buffer) as PublishRelease
+        val pubackResult = decodeV4(buffer) as PublishRelease
         assertEquals(pubackResult.packetIdentifier, packetIdentifier.toInt())
     }
 
@@ -23,7 +23,7 @@ class PublishReleaseTests {
     fun wireFormatBytes() {
         val pubrel = PublishRelease(0x1234.toUShort())
         val buffer = BufferFactory.Default.allocate(4)
-        pubrel.serialize(buffer)
+        serializeV4(pubrel, buffer)
         buffer.resetForRead()
         assertEquals(0x62.toByte(), buffer.readByte()) // byte1: type=6, flags=0b0010
         assertEquals(0x02.toByte(), buffer.readByte()) // VBI: remainingLength=2

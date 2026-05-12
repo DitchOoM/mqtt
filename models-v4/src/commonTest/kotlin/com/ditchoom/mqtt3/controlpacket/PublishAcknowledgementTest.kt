@@ -12,10 +12,10 @@ class PublishAcknowledgementTest {
     fun packetIdentifier() {
         val buffer = BufferFactory.Default.allocate(4)
         val puback = PublishAcknowledgment(packetIdentifier)
-        assertEquals(4, puback.packetSize())
-        puback.serialize(buffer)
+        assertEquals(4, packetSizeV4(puback))
+        serializeV4(puback, buffer)
         buffer.resetForRead()
-        val pubackResult = ControlPacketV4.from(buffer) as PublishAcknowledgment
+        val pubackResult = decodeV4(buffer) as PublishAcknowledgment
         assertEquals(pubackResult.packetIdentifier, packetIdentifier.toInt())
     }
 
@@ -23,10 +23,10 @@ class PublishAcknowledgementTest {
     fun packetIdentifierSendDefaults() {
         val buffer = BufferFactory.Default.allocate(4)
         val puback = PublishAcknowledgment(packetIdentifier)
-        assertEquals(4, puback.packetSize())
-        puback.serialize(buffer)
+        assertEquals(4, packetSizeV4(puback))
+        serializeV4(puback, buffer)
         buffer.resetForRead()
-        val pubackResult = ControlPacketV4.from(buffer) as PublishAcknowledgment
+        val pubackResult = decodeV4(buffer) as PublishAcknowledgment
         assertEquals(pubackResult.packetIdentifier, packetIdentifier.toInt())
     }
 
@@ -34,7 +34,7 @@ class PublishAcknowledgementTest {
     fun wireFormatBytes() {
         val puback = PublishAcknowledgment(0x1234.toUShort())
         val buffer = BufferFactory.Default.allocate(4)
-        puback.serialize(buffer)
+        serializeV4(puback, buffer)
         buffer.resetForRead()
         assertEquals(0x40.toByte(), buffer.readByte()) // byte1: type=4, flags=0
         assertEquals(0x02.toByte(), buffer.readByte()) // VBI: remainingLength=2

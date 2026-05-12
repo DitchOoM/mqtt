@@ -26,7 +26,7 @@ class SubscribeRequestTests {
                 ),
             )
         val buffer = BufferFactory.Default.allocate(20)
-        request.serialize(buffer)
+        serializeV4(request, buffer)
         buffer.resetForRead()
 
         // Fixed header: 0x82 (type=8, flags=0010), remaining length
@@ -70,9 +70,9 @@ class SubscribeRequestTests {
                 ),
             )
         val buffer = BufferFactory.Default.allocate(64)
-        request.serialize(buffer)
+        serializeV4(request, buffer)
         buffer.resetForRead()
-        val decoded = ControlPacketV4.from(buffer) as SubscribeRequest
+        val decoded = decodeV4(buffer) as SubscribeRequest
         assertEquals(request.packetIdentifier, decoded.packetIdentifier)
         assertEquals(request.entries.size, decoded.entries.size)
         request.entries.zip(decoded.entries).forEach { (expected, actual) ->
@@ -86,7 +86,7 @@ class SubscribeRequestTests {
         val buffer = BufferFactory.Default.allocate(100)
         val subscription = SubscribeRequest(10.toUShort(), "a/b", AT_MOST_ONCE)
         assertEquals(10, subscription.packetIdentifier)
-        subscription.serialize(buffer)
+        serializeV4(subscription, buffer)
         buffer.resetForRead()
         buffer.readByte()
         buffer.readByte()
@@ -107,7 +107,7 @@ class SubscribeRequestTests {
             )
         val buffer = BufferFactory.Default.allocate(19)
         val request = SubscribeRequest(10, subscriptions)
-        request.serialize(buffer)
+        serializeV4(request, buffer)
         buffer.resetForRead()
 
         // Fixed header: packet type 8 (SUBSCRIBE) with reserved flags 0010 = 0x82
@@ -148,9 +148,9 @@ class SubscribeRequestTests {
         val validated = validateMqttUTF8StringOrThrowWith(filter.toString())
         assertEquals(validated, "test")
         val buffer = BufferFactory.Default.allocate(11)
-        subscribeRequest.serialize(buffer)
+        serializeV4(subscribeRequest, buffer)
         buffer.resetForRead()
-        val requestRead = ControlPacketV4.from(buffer) as SubscribeRequest
+        val requestRead = decodeV4(buffer) as SubscribeRequest
         val subs1 = requestRead.subscriptions
         val firstSub1 = subs1.first()
         val filter1 = firstSub1.topicFilter

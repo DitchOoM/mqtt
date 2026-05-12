@@ -11,11 +11,11 @@ class PublishCompleteTests {
     @Test
     fun packetIdentifier() {
         val puback = PublishComplete(packetIdentifier)
-        assertEquals(4, puback.packetSize())
+        assertEquals(4, packetSizeV4(puback))
         val buffer = BufferFactory.Default.allocate(4)
-        puback.serialize(buffer)
+        serializeV4(puback, buffer)
         buffer.resetForRead()
-        val pubackResult = ControlPacketV4.from(buffer) as PublishComplete
+        val pubackResult = decodeV4(buffer) as PublishComplete
         assertEquals(pubackResult.packetIdentifier, packetIdentifier.toInt())
     }
 
@@ -23,7 +23,7 @@ class PublishCompleteTests {
     fun wireFormatBytes() {
         val pubcomp = PublishComplete(0x1234.toUShort())
         val buffer = BufferFactory.Default.allocate(4)
-        pubcomp.serialize(buffer)
+        serializeV4(pubcomp, buffer)
         buffer.resetForRead()
         assertEquals(0x70.toByte(), buffer.readByte()) // byte1: type=7, flags=0
         assertEquals(0x02.toByte(), buffer.readByte()) // VBI: remainingLength=2

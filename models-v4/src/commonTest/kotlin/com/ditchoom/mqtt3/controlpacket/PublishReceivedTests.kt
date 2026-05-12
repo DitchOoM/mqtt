@@ -11,22 +11,22 @@ class PublishReceivedTests {
     @Test
     fun packetIdentifier() {
         val puback = PublishReceived(packetIdentifier)
-        assertEquals(4, puback.packetSize())
+        assertEquals(4, packetSizeV4(puback))
         val buffer = BufferFactory.Default.allocate(4)
-        puback.serialize(buffer)
+        serializeV4(puback, buffer)
         buffer.resetForRead()
-        val pubackResult = ControlPacketV4.from(buffer) as PublishReceived
+        val pubackResult = decodeV4(buffer) as PublishReceived
         assertEquals(pubackResult.packetIdentifier, packetIdentifier.toInt())
     }
 
     @Test
     fun packetIdentifierSendDefaults() {
         val puback = PublishReceived(packetIdentifier)
-        assertEquals(4, puback.packetSize())
+        assertEquals(4, packetSizeV4(puback))
         val buffer = BufferFactory.Default.allocate(4)
-        puback.serialize(buffer)
+        serializeV4(puback, buffer)
         buffer.resetForRead()
-        val pubackResult = ControlPacketV4.from(buffer) as PublishReceived
+        val pubackResult = decodeV4(buffer) as PublishReceived
         assertEquals(pubackResult.packetIdentifier, packetIdentifier.toInt())
     }
 
@@ -34,7 +34,7 @@ class PublishReceivedTests {
     fun wireFormatBytes() {
         val pubrec = PublishReceived(0x1234.toUShort())
         val buffer = BufferFactory.Default.allocate(4)
-        pubrec.serialize(buffer)
+        serializeV4(pubrec, buffer)
         buffer.resetForRead()
         assertEquals(0x50.toByte(), buffer.readByte()) // byte1: type=5, flags=0
         assertEquals(0x02.toByte(), buffer.readByte()) // VBI: remainingLength=2

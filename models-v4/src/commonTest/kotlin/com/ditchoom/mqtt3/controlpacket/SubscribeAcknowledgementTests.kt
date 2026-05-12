@@ -17,9 +17,9 @@ class SubscribeAcknowledgementTests {
         val buffer = BufferFactory.Default.allocate(5)
         val payload = GRANTED_QOS_0
         val puback = SubscribeAcknowledgement(packetIdentifier, listOf(payload))
-        puback.serialize(buffer)
+        serializeV4(puback, buffer)
         buffer.resetForRead()
-        val pubackResult = ControlPacketV4.from(buffer) as SubscribeAcknowledgement
+        val pubackResult = decodeV4(buffer) as SubscribeAcknowledgement
         assertEquals(pubackResult.packetIdentifier, packetIdentifier)
         assertEquals(pubackResult.payload, listOf(GRANTED_QOS_0))
     }
@@ -29,9 +29,9 @@ class SubscribeAcknowledgementTests {
         val payload = GRANTED_QOS_1
         val puback = SubscribeAcknowledgement(packetIdentifier, listOf(payload))
         val buffer = BufferFactory.Default.allocate(5)
-        puback.serialize(buffer)
+        serializeV4(puback, buffer)
         buffer.resetForRead()
-        val pubackResult = ControlPacketV4.from(buffer) as SubscribeAcknowledgement
+        val pubackResult = decodeV4(buffer) as SubscribeAcknowledgement
         assertEquals(pubackResult.packetIdentifier, packetIdentifier)
         assertEquals(pubackResult.payload, listOf(GRANTED_QOS_1))
     }
@@ -41,9 +41,9 @@ class SubscribeAcknowledgementTests {
         val payload = GRANTED_QOS_2
         val puback = SubscribeAcknowledgement(packetIdentifier, listOf(payload))
         val buffer = BufferFactory.Default.allocate(5)
-        puback.serialize(buffer)
+        serializeV4(puback, buffer)
         buffer.resetForRead()
-        val pubackResult = ControlPacketV4.from(buffer) as SubscribeAcknowledgement
+        val pubackResult = decodeV4(buffer) as SubscribeAcknowledgement
         assertEquals(pubackResult.packetIdentifier, packetIdentifier)
         assertEquals(pubackResult.payload, listOf(GRANTED_QOS_2))
     }
@@ -53,9 +53,9 @@ class SubscribeAcknowledgementTests {
         val payload = UNSPECIFIED_ERROR
         val puback = SubscribeAcknowledgement(packetIdentifier, listOf(payload))
         val buffer = BufferFactory.Default.allocate(5)
-        puback.serialize(buffer)
+        serializeV4(puback, buffer)
         buffer.resetForRead()
-        val pubackResult = ControlPacketV4.from(buffer) as SubscribeAcknowledgement
+        val pubackResult = decodeV4(buffer) as SubscribeAcknowledgement
         assertEquals(pubackResult.packetIdentifier, packetIdentifier)
         assertEquals(pubackResult.payload, listOf(UNSPECIFIED_ERROR))
     }

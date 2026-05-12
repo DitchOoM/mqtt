@@ -12,9 +12,9 @@ class UnsubscribeAcknowledgmentTests {
     fun serializeDeserializeDefault() {
         val buffer = BufferFactory.Default.allocate(4)
         val actual = UnsubscribeAcknowledgment(packetIdentifier)
-        actual.serialize(buffer)
+        serializeV4(actual, buffer)
         buffer.resetForRead()
-        val expected = ControlPacketV4.from(buffer)
+        val expected = decodeV4(buffer)
         assertEquals(expected, actual)
     }
 
@@ -22,7 +22,7 @@ class UnsubscribeAcknowledgmentTests {
     fun wireFormatBytes() {
         val unsuback = UnsubscribeAcknowledgment(0x1234.toUShort())
         val buffer = BufferFactory.Default.allocate(4)
-        unsuback.serialize(buffer)
+        serializeV4(unsuback, buffer)
         buffer.resetForRead()
         assertEquals(0xB0.toByte(), buffer.readByte()) // byte1: type=11, flags=0
         assertEquals(0x02.toByte(), buffer.readByte()) // VBI: remainingLength=2

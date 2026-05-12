@@ -3,12 +3,11 @@ package com.ditchoom.mqtt3.controlpacket
 import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Charset
 import com.ditchoom.buffer.Default
-import com.ditchoom.buffer.PlatformBuffer
 import com.ditchoom.mqtt.MalformedPacketException
 import com.ditchoom.mqtt.MqttException
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readVariableByteInteger
+import com.ditchoom.mqtt.controlpacket.MqttFixedHeader
 import com.ditchoom.mqtt.controlpacket.QualityOfService
-import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt.controlpacket.format.fixed.get
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -19,12 +18,20 @@ import kotlin.test.assertFalse
 import kotlin.test.fail
 
 class PublishMessageTests {
-    private fun freshPayload(): PlatformBuffer {
-        val p = BufferFactory.Default.allocate(4)
-        p.writeString("yolo", Charset.UTF8)
-        p.resetForRead()
-        return p
-    }
+    private fun publishMessage(
+        topic: String,
+        qos: QualityOfService = QualityOfService.AT_MOST_ONCE,
+        packetId: Int = com.ditchoom.mqtt.controlpacket.NO_PACKET_ID,
+        dup: Boolean = false,
+        retain: Boolean = false,
+        payloadString: String = "",
+    ): PublishMessageV4<NonSpecCompliantIntermediaryStringAsBuffer> =
+        PublishMessageV4(
+            header = MqttFixedHeader(makePublishHeaderByteV4(dup, qos, retain)),
+            topicName = topic,
+            packetId = if (packetId == com.ditchoom.mqtt.controlpacket.NO_PACKET_ID) null else packetId.toUShort(),
+            payload = NonSpecCompliantIntermediaryStringAsBuffer(payloadString),
+        )
 
     @Test
     fun qosBothBitsSetTo1ThrowsMalformedPacketException() {
@@ -35,7 +42,7 @@ class PublishMessageTests {
         buffer.writeByte(remainingLength)
         buffer.resetForRead()
         try {
-            ControlPacketV4.from(buffer)
+            decodeV4(buffer)
             fail()
         } catch (_: MalformedPacketException) {
         }
@@ -44,34 +51,31 @@ class PublishMessageTests {
     @Test
     fun qos0AndPacketIdentifierThrowsIllegalArgumentException() {
         assertFailsWith(MqttException::class) {
-            PublishMessageV4
-                .ofRaw(
-                    topic = TopicName.fromOrThrow("t"),
-                    qos = QualityOfService.AT_MOST_ONCE,
-                    packetIdentifier = 2,
-                ).validateOrThrow()
+            publishMessage(
+                topic = "t",
+                qos = QualityOfService.AT_MOST_ONCE,
+                packetId = 2,
+            ).validateOrThrow()
         }
     }
 
     @Test
     fun qos1WithoutPacketIdentifierThrowsIllegalArgumentException() {
         assertFailsWith(MqttException::class) {
-            PublishMessageV4
-                .ofRaw(
-                    topic = TopicName.fromOrThrow("t"),
-                    qos = QualityOfService.AT_LEAST_ONCE,
-                ).validateOrThrow()
+            publishMessage(
+                topic = "t",
+                qos = QualityOfService.AT_LEAST_ONCE,
+            ).validateOrThrow()
         }
     }
 
     @Test
     fun qos2WithoutPacketIdentifierThrowsIllegalArgumentException() {
         assertFailsWith(MqttException::class) {
-            PublishMessageV4
-                .ofRaw(
-                    topic = TopicName.fromOrThrow("t"),
-                    qos = QualityOfService.EXACTLY_ONCE,
-                ).validateOrThrow()
+            publishMessage(
+                topic = "t",
+                qos = QualityOfService.EXACTLY_ONCE,
+            ).validateOrThrow()
         }
     }
 
@@ -105,9 +109,9 @@ class PublishMessageTests {
     @Test
     fun nullGenericSerialization() =
         runTest {
-            val publishMessage = PublishMessageV4.ofRaw(topic = TopicName.fromOrThrow("user/log"))
+            val pm = publishMessage(topic = "user/log")
             val buffer = BufferFactory.Default.allocate(12)
-            publishMessage.serialize(buffer)
+            serializeV4(pm, buffer)
             buffer.resetForRead()
             val firstByte = buffer.readUnsignedByte()
             assertEquals(3, firstByte.toInt().shr(4), "fixed header control packet type")
@@ -119,8 +123,8 @@ class PublishMessageTests {
             assertEquals(8u, buffer.readUnsignedShort(), "topic name length")
             assertEquals("user/log", buffer.readString(8, Charset.UTF8), "topic name value")
             buffer.resetForRead()
-            val result = ControlPacketV4.from(buffer) as PublishMessageV4<*>
-            assertMessageIsSame(publishMessage, result)
+            val result = decodeV4(buffer) as PublishMessageV4<*>
+            assertMessageIsSame(pm, result)
         }
 
     private fun roundtrip(
@@ -131,18 +135,17 @@ class PublishMessageTests {
         retain: Boolean = false,
         expectedRemainingLength: Int,
     ) = runTest {
-        val payload = freshPayload()
-        val publishMessage =
-            PublishMessageV4.ofRaw(
-                topic = TopicName.fromOrThrow(topic),
+        val pm =
+            publishMessage(
+                topic = topic,
                 qos = qos,
-                payload = payload,
                 dup = dup,
                 retain = retain,
-                packetIdentifier = packetId,
+                packetId = packetId,
+                payloadString = "yolo",
             )
         val buffer = BufferFactory.Default.allocate(expectedRemainingLength + 4)
-        publishMessage.serialize(buffer)
+        serializeV4(pm, buffer)
         buffer.resetForRead()
 
         val firstByte = buffer.readUnsignedByte()
@@ -160,28 +163,27 @@ class PublishMessageTests {
         assertEquals("yolo", buffer.readString(4, Charset.UTF8), "payload value")
         buffer.resetForRead()
         @Suppress("UNCHECKED_CAST")
-        val result = ControlPacketV4.from(buffer) as PublishMessageV4<com.ditchoom.buffer.ReadBuffer>
+        val result = decodeV4(buffer) as PublishMessageV4<NonSpecCompliantIntermediaryStringAsBuffer>
         assertEquals(topic, result.topic.toString())
         assertEquals(qos, result.qualityOfService)
         assertEquals(dup, result.dup)
         assertEquals(retain, result.retain)
         if (qos != QualityOfService.AT_MOST_ONCE) assertEquals(packetId, result.packetIdentifier)
-        val bytes = result.payload.readByteArray(result.payload.remaining())
-        assertContentEquals("yolo".encodeToByteArray(), bytes)
+        assertContentEquals("yolo".encodeToByteArray(), result.payload.s.encodeToByteArray())
     }
 
     private fun assertMessageIsSame(
-        left: ControlPacketV4,
-        right: ControlPacketV4,
+        left: ControlPacketV4<*>,
+        right: ControlPacketV4<*>,
     ) {
-        val leftSize = left.packetSize()
+        val leftSize = packetSizeV4(left)
         val leftBuffer = BufferFactory.Default.allocate(leftSize)
-        left.serialize(leftBuffer)
+        serializeV4(left, leftBuffer)
         leftBuffer.resetForRead()
 
-        val rightSize = right.packetSize()
+        val rightSize = packetSizeV4(right)
         val rightBuffer = BufferFactory.Default.allocate(rightSize)
-        right.serialize(rightBuffer)
+        serializeV4(right, rightBuffer)
         rightBuffer.resetForRead()
 
         val leftByteArray = leftBuffer.readByteArray(leftSize)

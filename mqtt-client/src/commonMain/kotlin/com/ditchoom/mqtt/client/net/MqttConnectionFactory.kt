@@ -1,5 +1,7 @@
 package com.ditchoom.mqtt.client.net
 
+import com.ditchoom.buffer.codec.Codec
+import com.ditchoom.buffer.codec.Payload
 import com.ditchoom.buffer.flow.Connection
 import com.ditchoom.buffer.flow.mapNotNull
 import com.ditchoom.mqtt.client.MqttCodec
@@ -25,13 +27,15 @@ import com.ditchoom.websocket.WebSocketConnectionOptions as WsLibOptions
 suspend fun defaultSingleConnection(
     connectionOp: MqttConnectionOptions,
     factory: ControlPacketFactory,
+    publishCodecForTopic: (topicName: String) -> Codec<out Payload>? = { null },
+    defaultPublishCodec: Codec<out Payload>? = null,
 ): Connection<ControlPacket> =
     when (connectionOp) {
         is MqttConnectionOptions.SocketConnection -> {
             CodecConnection.connect(
                 connectionOp.host,
                 connectionOp.port,
-                MqttCodec(factory),
+                MqttCodec(factory, publishCodecForTopic, defaultPublishCodec),
                 TcpTransport(),
                 ConnectionOptions(
                     socketOptions = buildSocketOptions(connectionOp),
@@ -68,7 +72,7 @@ suspend fun defaultSingleConnection(
                             websocketEndpoint = connectionOp.websocketEndpoint,
                             protocols = connectionOp.protocols,
                         ),
-                    binaryCodec = MqttCodec(factory),
+                    binaryCodec = MqttCodec(factory, publishCodecForTopic, defaultPublishCodec),
                 )
             wsConnection.mapNotNull(
                 encode = { packet -> WebSocketMessage.Binary(packet) },
@@ -82,9 +86,25 @@ suspend fun defaultSingleConnection(
         }
     }
 
-/** Curries [defaultSingleConnection] against [broker]'s control-packet factory. */
-fun defaultSingleConnection(broker: MqttBroker): suspend (MqttConnectionOptions) -> Connection<ControlPacket> =
-    { op -> defaultSingleConnection(op, broker.connectionRequest.controlPacketFactory) }
+/**
+ * Curries [defaultSingleConnection] against [broker]'s control-packet factory. The
+ * [publishCodecForTopic] lookup and [defaultPublishCodec] fallback are typically
+ * wired from `MqttClient`'s [com.ditchoom.mqtt.client.TopicCodecRegistry] — see
+ * `MqttClient.start(...)`.
+ */
+fun defaultSingleConnection(
+    broker: MqttBroker,
+    publishCodecForTopic: (topicName: String) -> Codec<out Payload>? = { null },
+    defaultPublishCodec: Codec<out Payload>? = null,
+): suspend (MqttConnectionOptions) -> Connection<ControlPacket> =
+    { op ->
+        defaultSingleConnection(
+            op,
+            broker.connectionRequest.controlPacketFactory,
+            publishCodecForTopic,
+            defaultPublishCodec,
+        )
+    }
 
 private fun buildSocketOptions(connectionOp: MqttConnectionOptions): SocketOptions =
     if (connectionOp.tlsEnabled) {

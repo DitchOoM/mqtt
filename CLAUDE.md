@@ -22,6 +22,17 @@ Android AIDL is **not** a remaining boundary: `IPCMqttClient.aidl` takes `JvmBuf
 
 For each, annotate the call site with `@Suppress("NoByteArrayInProd")` and a one-line inline comment naming the specific driver / API. Tests (`*Test/`) may use `ByteArray` freely.
 
+### No raw bytes inside `Payload` either (buffer-v1 lockdown)
+
+The buffer-v1 lockdown extends the rule transitively into `Payload`-implementing types: no `ReadBuffer`, `WriteBuffer`, `PlatformBuffer`, `kotlin.ByteArray`, or primitive arrays as fields on a class that implements `com.ditchoom.buffer.codec.Payload`. The processor's `walkType` walks Payload types recursively and rejects forbidden fields at KSP-time. The previous `BufferPayload(val buffer: ReadBuffer) : Payload` shape is removed.
+
+The three canonical decode patterns (see `buffer/CLAUDE.md` §"Canonical decode patterns"):
+1. **Zero-copy typed value** — `Bitmap(val nativeBitmap: PlatformBitmap) : Payload`. Walker stops at `PlatformBitmap` (expect class, not a Payload, not a value class).
+2. **Consumer-owned `PlatformBuffer`** — `data class IpcBuffer(val buffer: PlatformBuffer)` — NOT `Payload`. Decode allocates via `DecodeContext[BufferFactoryKey]` and copies.
+3. **Consumer-owned `ByteArray`** — `data class OpaqueBytes(val bytes: ByteArray)` — NOT `Payload`. Decode via `buffer.copyToByteArray(n)`.
+
+**Phase A intermediary** (TEMPORARY): until the Will/Password/PUBLISH typed-payload design lands in Phase B, mqtt-v4 wire fields use `NonSpecCompliantIntermediaryStringAsBuffer(val s: String) : Payload`. UTF-8 decode is lossy for non-UTF-8 application payloads — the type's deliberately-ugly name surfaces the fix-it-later signal at every call site. Phase B decides between multi-param parent threading (`<W : Payload, PWD : Payload, P : Payload>` on the sealed parent), hand-written `ConnectionRequestCodec` with consumer-supplied codecs, or a field-level `@InjectedCodec` annotation.
+
 ## Build Commands
 
 ```bash

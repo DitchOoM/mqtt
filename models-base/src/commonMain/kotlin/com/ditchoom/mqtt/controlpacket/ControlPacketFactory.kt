@@ -1,19 +1,24 @@
 package com.ditchoom.mqtt.controlpacket
 
-import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.mqtt.Persistence
 import com.ditchoom.mqtt.controlpacket.ISubscription.RetainHandling
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
 
+/**
+ * Polymorphic constructors for the protocol packets that are *not* version-typed by
+ * a `<P : Payload>` parameter — SUBSCRIBE / UNSUBSCRIBE / DISCONNECT / PING. Each
+ * call site otherwise needs a `when (broker.protocolVersion)` to choose between the
+ * v4 and v5 concrete types; routing through this factory keeps the version dispatch
+ * at one site per packet kind.
+ *
+ * Version-typed packets (PUBLISH) construct via the typed [MqttClient.publish]
+ * overload directly; wire-bytes decode flows through [MqttCodec] / the generated
+ * `ControlPacketV*Codec.decodeAggregating`. Both used to live here too as a generic
+ * `from(buffer) / publish(payload: ReadBuffer?)` pair — moved out under buffer-v1
+ * because they duplicated the more direct paths.
+ */
 interface ControlPacketFactory {
     val protocolVersion: Int
-
-    /**
-     * Decode a full MQTT control-packet wire (`[byte1][VBI(remainingLength)][body]`) from
-     * [buffer]. Implementations dispatch directly to the version-specific generated codec
-     * with zero per-frame body memcpy: the slice's body bytes are read in place.
-     */
-    fun from(buffer: ReadBuffer): ControlPacket
 
     fun pingRequest(): IPingRequest
 
@@ -34,28 +39,6 @@ interface ControlPacketFactory {
         serverReference: String? = null,
         userProperty: List<Pair<String, String>> = emptyList(),
     ): ISubscribeRequest
-
-    /**
-     * Create a PUBLISH message with a raw payload [ReadBuffer].
-     *
-     * The [payload], when non-null, is written directly to the wire during serialization (zero-copy).
-     */
-    fun publish(
-        dup: Boolean = false,
-        qos: QualityOfService = QualityOfService.AT_MOST_ONCE,
-        retain: Boolean = false,
-        topicName: TopicName,
-        payload: ReadBuffer? = null,
-        // MQTT 5 Properties
-        payloadFormatIndicator: Boolean = false,
-        messageExpiryInterval: Long? = null,
-        topicAlias: Int? = null,
-        responseTopic: TopicName? = null,
-        correlationData: ReadBuffer? = null,
-        userProperty: List<Pair<String, String>> = emptyList(),
-        subscriptionIdentifier: Set<Long> = emptySet(),
-        contentType: String? = null,
-    ): PublishMessage
 
     fun unsubscribe(
         topic: TopicFilter,

@@ -491,11 +491,6 @@ sealed interface ControlPacketV5<out P : Payload> : com.ditchoom.mqtt.controlpac
         override val retain: Boolean get() = header.publishRetain
         override val packetIdentifier: Int get() = packetId?.toInt() ?: NO_PACKET_ID
 
-        // TODO(buffer-v1): rawPayload used to alias the BufferPayload wrapper. Under v1 the
-        //  payload is consumer-typed via parent generic <P : Payload> — a default raw-buffer
-        //  view doesn't exist. Re-encode the payload via the consumer's codec at the call site
-        //  if you need bytes back. Returning an empty buffer here keeps the interface contract.
-        override fun rawPayload(): ReadBuffer = BufferFactory.Default.allocate(0)
 
         /** Typed view of the variable-header properties (§3.3.2.3). */
         val typedProperties: PublishProperties get() = PublishProperties.from(properties)

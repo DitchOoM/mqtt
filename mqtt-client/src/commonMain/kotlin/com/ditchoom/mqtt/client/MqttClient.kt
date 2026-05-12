@@ -92,20 +92,31 @@ class MqttClient internal constructor(
         processor.publish(pub, false)
     }
 
+    /**
+     * Convenience publish for callers that already have wire bytes (proxy / forwarding /
+     * untyped log producers). Bytes are copied into a consumer-owned [com.ditchoom.buffer.PlatformBuffer]
+     * via [bufferFactory] (defaults to the client's connection-default factory) and wrapped
+     * in an [com.ditchoom.mqtt.controlpacket.OpaquePublishPayload]. Typed publishes go
+     * through the [publish] / `<P>` overload below for codec-driven encoding.
+     */
     suspend fun publish(
         topicName: String,
         qos: QualityOfService = QualityOfService.AT_MOST_ONCE,
         payload: ReadBuffer? = null,
         retain: Boolean = false,
-    ): PublishResult =
-        publish(
-            packetFactory.publish(
-                topicName = TopicName.fromOrThrow(topicName),
-                qos = qos,
-                retain = retain,
-                payload = payload,
-            ),
-        )
+        bufferFactory: BufferFactory = this.bufferFactory,
+    ): PublishResult {
+        val remaining = payload?.remaining() ?: 0
+        val dst = bufferFactory.allocate(remaining)
+        if (remaining > 0 && payload != null) dst.write(payload)
+        dst.resetForRead()
+        val opaque =
+            com.ditchoom.mqtt.controlpacket.OpaquePublishPayload(
+                com.ditchoom.buffer.codec.opaqueBytesFrom(dst),
+            )
+        val pub = buildPublishMessage(TopicName.fromOrThrow(topicName), qos, retain, opaque)
+        return publish(pub)
+    }
 
     suspend fun publish(pub: PublishMessage): PublishResult {
         val prepared = processor.preparePublish(pub)

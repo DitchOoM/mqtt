@@ -4,6 +4,7 @@ import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.codec.Payload
+import com.ditchoom.buffer.codec.asReadBuffer
 import com.ditchoom.buffer.codec.annotations.DispatchOn
 import com.ditchoom.buffer.codec.annotations.FramedBy
 import com.ditchoom.buffer.codec.annotations.LengthPrefixed
@@ -620,11 +621,6 @@ data class PublishMessageV4<P : Payload>(
     override val retain: Boolean get() = header.publishRetain
     override val packetIdentifier: Int get() = packetId?.toInt() ?: NO_PACKET_ID
 
-    // TODO(buffer-v1): rawPayload used to alias the BufferPayload wrapper. Under v1 the
-    //  payload is consumer-typed via parent generic <P : Payload> — a default raw-buffer
-    //  view doesn't exist. Re-encode the payload via the consumer's codec at the call site
-    //  if you need bytes back. Returning an empty buffer here keeps the interface contract.
-    override fun rawPayload(): ReadBuffer = BufferFactory.Default.allocate(0)
 
     override fun expectedResponse(
         reasonCode: ReasonCode,

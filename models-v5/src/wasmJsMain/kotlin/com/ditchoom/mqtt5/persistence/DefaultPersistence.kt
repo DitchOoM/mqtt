@@ -5,11 +5,18 @@ import com.ditchoom.mqtt.Persistence
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 
+// See commonMain/DefaultPersistence.kt for the Phase B
+// consumer-supplied-persistence rationale.
 actual suspend fun newDefaultPersistence(
     androidContext: Any?,
     name: String,
     inMemory: Boolean,
-): Persistence = InMemoryPersistence()
+): Persistence {
+    if (!inMemory) {
+        warnPersistentStorageUnavailable("v5 wasmJs")
+    }
+    return InMemoryPersistence()
+}
 
 actual fun defaultDispatcher(
     nThreads: Int,

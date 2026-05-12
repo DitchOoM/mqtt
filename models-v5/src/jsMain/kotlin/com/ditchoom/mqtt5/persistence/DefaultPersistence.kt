@@ -2,30 +2,21 @@ package com.ditchoom.mqtt5.persistence
 
 import com.ditchoom.mqtt.InMemoryPersistence
 import com.ditchoom.mqtt.Persistence
-import js.errors.ReferenceError
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
-import web.idb.IDBFactory
 
+// See commonMain/DefaultPersistence.kt for the Phase B
+// consumer-supplied-persistence rationale. The prior IDB-backed persistence
+// (IDBPersistence.kt / IDBObjects.kt) was removed along with the SQL impl.
 actual suspend fun newDefaultPersistence(
     androidContext: Any?,
     name: String,
     inMemory: Boolean,
 ): Persistence {
-    val indexedDb =
-        try {
-            js(
-                "indexedDB || window.indexedDB || window.mozIndexedDB || " +
-                    "window.webkitIndexedDB || window.msIndexedDB || window.shimIndexedDB",
-            ) as IDBFactory
-        } catch (e: ReferenceError) {
-            console.warn(
-                "Failed to reference indexedDB, defaulting to InMemoryPersistence " +
-                    "for mqtt 5",
-            )
-            return InMemoryPersistence()
-        }
-    return IDBPersistence.idbPersistence(indexedDb, name)
+    if (!inMemory) {
+        warnPersistentStorageUnavailable("v5 JS")
+    }
+    return InMemoryPersistence()
 }
 
 actual fun defaultDispatcher(

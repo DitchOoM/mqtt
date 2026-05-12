@@ -30,6 +30,12 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.time.Duration.Companion.seconds
 
+// Ignore reason: v5 SQL / IDB persistence implementations were removed pending
+// the Phase B consumer-supplied Persistence design — every newDefaultPersistence
+// actual falls back to InMemoryPersistence. These tests exercised the bundled
+// implementations' round-trip behavior and don't translate cleanly to an
+// in-memory-only world. Revisit once the consumer-supplied design lands.
+@kotlin.test.Ignore
 class PersistenceTests {
     private val buffer = BufferFactory.Default.wrap(byteArrayOf(1, 2, 3, 4))
 

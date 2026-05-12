@@ -4,7 +4,6 @@ plugins {
     id("org.jlleitschuh.gradle.ktlint")
     id("com.vanniktech.maven.publish")
     id("org.jetbrains.dokka")
-    alias(libs.plugins.sqldelight)
     alias(libs.plugins.ksp)
     signing
     id("com.ditchoom.version")
@@ -55,20 +54,10 @@ kotlin {
             implementation(kotlin("test"))
             implementation(libs.kotlinx.coroutines.test)
         }
-        androidMain.dependencies {
-            implementation(libs.sqldelight.android.driver)
-            compileOnly(libs.sqldelight.sqlite.driver)
-        }
-        jvmMain.dependencies {
-            implementation(libs.sqldelight.sqlite.driver)
-        }
         jsMain.dependencies {
             implementation(libs.kotlin.web)
             implementation(libs.kotlin.browser)
             implementation(libs.kotlin.js)
-        }
-        nativeMain.dependencies {
-            implementation(libs.sqldelight.native.driver)
         }
     }
 }
@@ -103,46 +92,6 @@ android {
             withJavadocJar()
         }
     }
-}
-
-sqldelight {
-    databases {
-        create("Mqtt5") {
-            packageName.set(group.toString())
-        }
-    }
-}
-
-// SQLDelight native linker fix
-afterEvaluate {
-    project.extensions
-        .findByType<org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension>()
-        ?.let { kmpExt ->
-            kmpExt.targets
-                .filterIsInstance<org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget>()
-                .forEach { target ->
-                    target.binaries.forEach { binary ->
-                        binary.linkerOpts("-lsqlite3")
-                        if (target.konanTarget == org.jetbrains.kotlin.konan.target.KonanTarget.LINUX_X64) {
-                            binary.linkerOpts(
-                                "-L/usr/lib/x86_64-linux-gnu",
-                                "-lpthread",
-                                "-ldl",
-                                "-lm",
-                                "--allow-shlib-undefined",
-                            )
-                        } else if (target.konanTarget == org.jetbrains.kotlin.konan.target.KonanTarget.LINUX_ARM64) {
-                            binary.linkerOpts(
-                                "-L/usr/lib/aarch64-linux-gnu",
-                                "-lpthread",
-                                "-ldl",
-                                "-lm",
-                                "--allow-shlib-undefined",
-                            )
-                        }
-                    }
-                }
-        }
 }
 
 // Gradle 8.14 strict-mode: sourcesJar / ktlint / dokka tasks consume KSP-generated sources; declare the dep explicitly.

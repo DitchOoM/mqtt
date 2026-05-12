@@ -1,5 +1,8 @@
 package com.ditchoom.mqtt5.controlpacket
 
+import com.ditchoom.buffer.BufferFactory
+import com.ditchoom.buffer.Charset
+import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.mqtt.ProtocolError
 import com.ditchoom.mqtt.controlpacket.TopicName
@@ -40,17 +43,23 @@ data class PublishProperties(
 
     val props: List<MqttProperty> by lazy(LazyThreadSafetyMode.NONE) {
         buildList {
-            if (payloadFormatIndicator) add(PayloadFormatIndicator(payloadFormatIndicator))
-            if (messageExpiryInterval != null) add(MessageExpiryInterval(messageExpiryInterval.toUInt()))
-            if (topicAlias != null) add(TopicAlias(topicAlias.toUShort()))
-            if (responseTopic != null) add(ResponseTopic(responseTopic.toString()))
+            if (payloadFormatIndicator) add(PayloadFormatIndicator(isUtf8 = payloadFormatIndicator))
+            if (messageExpiryInterval != null) add(MessageExpiryInterval(seconds = messageExpiryInterval.toUInt()))
+            if (topicAlias != null) add(TopicAlias(value = topicAlias.toUShort()))
+            if (responseTopic != null) add(ResponseTopic(value = responseTopic.toString()))
             if (correlationData != null) {
                 correlationData.position(0)
-                add(CorrelationData(correlationData.remaining().toUShort(), correlationData))
+                // TODO(buffer-v1): CorrelationData reshape via Phase A intermediary.
+                val slice = correlationData.slice()
+                add(
+                    CorrelationData(
+                        value = slice.readString(slice.remaining(), Charset.UTF8),
+                    ),
+                )
             }
-            for (kv in userProperty) add(UserProperty(kv.first, kv.second))
-            for (sub in subscriptionIdentifier) add(SubscriptionIdentifier(sub.toInt()))
-            if (contentType != null) add(ContentType(contentType))
+            for (kv in userProperty) add(UserProperty(key = kv.first, value = kv.second))
+            for (sub in subscriptionIdentifier) add(SubscriptionIdentifier(value = sub.toUInt()))
+            if (contentType != null) add(ContentType(value = contentType))
         }
     }
 
@@ -72,11 +81,22 @@ data class PublishProperties(
                     }?.value
                     ?.toInt()
             val responseTopic = p.single<ResponseTopic>()?.let { TopicName.fromOrThrow(it.value) }
-            val correlationData = p.single<CorrelationData<*>>()?.data as? ReadBuffer
+            // TODO(buffer-v1): CorrelationData carries a String placeholder under Phase A.
+            val correlationData =
+                p.single<CorrelationData>()?.value?.let { s ->
+                    BufferFactory.Default
+                        .allocate(s.length * 4)
+                        .apply {
+                            writeString(s, Charset.UTF8)
+                            val written = position()
+                            position(0)
+                            setLimit(written)
+                        }.slice()
+                }
             val userProperty = p.list<UserProperty>().map { it.key to it.value }
             val subscriptionIdentifier =
                 p.list<SubscriptionIdentifier>().mapTo(LinkedHashSet()) {
-                    if (it.value == 0) {
+                    if (it.value == 0u) {
                         throw ProtocolError(
                             "Subscription Identifier not permitted to be set to 0:" +
                                 "https://docs.oasis-open.org/mqtt/mqtt/v5.0/cos02/mqtt-v5.0-cos02.html#_Toc1477417",

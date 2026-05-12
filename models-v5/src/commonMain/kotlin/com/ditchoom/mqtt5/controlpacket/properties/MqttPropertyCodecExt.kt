@@ -93,10 +93,11 @@ fun mqttPropertySize(property: MqttProperty): Int {
             // String pair: 2+key + 2+value
             is UserProperty -> 2 + property.key.utf8Length() + 2 + property.value.utf8Length()
             // Variable byte integer
-            is SubscriptionIdentifier -> variableByteSize(property.value).toInt()
-            // Binary data: 2 (length prefix) + data length
-            is CorrelationData<*> -> 2 + property.length.toInt()
-            is AuthenticationData<*> -> 2 + property.length.toInt()
+            is SubscriptionIdentifier -> variableByteSize(property.value.toInt()).toInt()
+            // Binary data: 2 (length prefix) + payload bytes. Phase A intermediates the
+            // payload via `value: String` — the utf8 byte count is the wire byte count.
+            is CorrelationData -> 2 + property.value.utf8Length()
+            is AuthenticationData -> 2 + property.value.utf8Length()
         }
     return 1 + payloadSize
 }

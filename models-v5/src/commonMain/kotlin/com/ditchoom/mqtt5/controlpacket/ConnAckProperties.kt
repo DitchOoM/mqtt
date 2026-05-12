@@ -1,6 +1,8 @@
 package com.ditchoom.mqtt5.controlpacket
 
-import com.ditchoom.buffer.ReadBuffer
+import com.ditchoom.buffer.BufferFactory
+import com.ditchoom.buffer.Charset
+import com.ditchoom.buffer.Default
 import com.ditchoom.mqtt.ProtocolError
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
@@ -74,27 +76,46 @@ data class ConnAckProperties(
 ) {
     val props: List<MqttProperty> =
         buildList {
-            if (sessionExpiryIntervalSeconds != null) add(SessionExpiryInterval(sessionExpiryIntervalSeconds.toUInt()))
-            if (receiveMaximum != UShort.MAX_VALUE.toInt()) add(ReceiveMaximum(receiveMaximum.toUShort()))
-            if (maximumQos != QualityOfService.EXACTLY_ONCE) {
-                add(MaximumQos(maximumQos != QualityOfService.AT_MOST_ONCE))
+            if (sessionExpiryIntervalSeconds != null) {
+                add(SessionExpiryInterval(seconds = sessionExpiryIntervalSeconds.toUInt()))
             }
-            if (!retainAvailable) add(RetainAvailable(retainAvailable))
-            if (maximumPacketSize != null) add(MaximumPacketSize(maximumPacketSize.toUInt()))
-            if (assignedClientIdentifier != null) add(AssignedClientIdentifier(assignedClientIdentifier))
-            if (topicAliasMaximum != 0) add(TopicAliasMaximum(topicAliasMaximum.toUShort()))
-            if (reasonString != null) add(ReasonString(reasonString))
-            for ((k, v) in userProperty) add(UserProperty(k, v))
-            if (!supportsWildcardSubscriptions) add(WildcardSubscriptionAvailable(supportsWildcardSubscriptions))
-            if (!subscriptionIdentifiersAvailable) add(SubscriptionIdentifierAvailable(subscriptionIdentifiersAvailable))
-            if (!sharedSubscriptionAvailable) add(SharedSubscriptionAvailable(sharedSubscriptionAvailable))
-            if (serverKeepAlive != null) add(ServerKeepAlive(serverKeepAlive.toUShort()))
-            if (responseInformation != null) add(ResponseInformation(responseInformation))
-            if (serverReference != null) add(ServerReference(serverReference))
+            if (receiveMaximum != UShort.MAX_VALUE.toInt()) {
+                add(ReceiveMaximum(max = receiveMaximum.toUShort()))
+            }
+            if (maximumQos != QualityOfService.EXACTLY_ONCE) {
+                add(MaximumQos(qos1Allowed = maximumQos != QualityOfService.AT_MOST_ONCE))
+            }
+            if (!retainAvailable) add(RetainAvailable(supported = retainAvailable))
+            if (maximumPacketSize != null) add(MaximumPacketSize(bytes = maximumPacketSize.toUInt()))
+            if (assignedClientIdentifier != null) add(AssignedClientIdentifier(value = assignedClientIdentifier))
+            if (topicAliasMaximum != 0) add(TopicAliasMaximum(max = topicAliasMaximum.toUShort()))
+            if (reasonString != null) add(ReasonString(value = reasonString))
+            for ((k, v) in userProperty) add(UserProperty(key = k, value = v))
+            if (!supportsWildcardSubscriptions) {
+                add(WildcardSubscriptionAvailable(supported = supportsWildcardSubscriptions))
+            }
+            if (!subscriptionIdentifiersAvailable) {
+                add(SubscriptionIdentifierAvailable(supported = subscriptionIdentifiersAvailable))
+            }
+            if (!sharedSubscriptionAvailable) {
+                add(SharedSubscriptionAvailable(supported = sharedSubscriptionAvailable))
+            }
+            if (serverKeepAlive != null) add(ServerKeepAlive(seconds = serverKeepAlive.toUShort()))
+            if (responseInformation != null) add(ResponseInformation(value = responseInformation))
+            if (serverReference != null) add(ServerReference(value = serverReference))
             if (authentication != null) {
-                add(AuthenticationMethod(authentication.method))
+                add(AuthenticationMethod(value = authentication.method))
                 authentication.data.position(0)
-                add(AuthenticationData(authentication.data.remaining().toUShort(), authentication.data))
+                // TODO(buffer-v1): AuthenticationData reshape via Phase A intermediary
+                //  (`@LengthPrefixed val value: String`). UTF-8 decode of binary auth tokens
+                //  is lossy — sticky failure on non-UTF-8 sessions until Phase B design lands.
+                //  See memory `mqtt_will_password_deferred.md`.
+                val slice = authentication.data.slice()
+                add(
+                    AuthenticationData(
+                        value = slice.readString(slice.remaining(), Charset.UTF8),
+                    ),
+                )
             }
         }
 
@@ -142,7 +163,20 @@ data class ConnAckProperties(
             val responseInfo = p.single<ResponseInformation>()?.value
             val serverRef = p.single<ServerReference>()?.value
             val authMethod = p.single<AuthenticationMethod>()?.value
-            val authData = p.single<AuthenticationData<*>>()?.data as? ReadBuffer
+            // TODO(buffer-v1): AuthenticationData carries a String placeholder under Phase A —
+            //  re-encode to a ReadBuffer for the typed Authentication accessor. Lossy for
+            //  non-UTF-8 sessions; sticky until Phase B design lands.
+            val authData =
+                p.single<AuthenticationData>()?.value?.let { s ->
+                    BufferFactory.Default
+                        .allocate(s.length * 4)
+                        .apply {
+                            writeString(s, Charset.UTF8)
+                            val written = position()
+                            position(0)
+                            setLimit(written)
+                        }.slice()
+                }
             p.rejectUnknown()
             val auth =
                 if (authMethod != null && authData != null) {

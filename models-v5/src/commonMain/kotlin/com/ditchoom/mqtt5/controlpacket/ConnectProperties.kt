@@ -1,5 +1,8 @@
 package com.ditchoom.mqtt5.controlpacket
 
+import com.ditchoom.buffer.BufferFactory
+import com.ditchoom.buffer.Charset
+import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.mqtt.ProtocolError
 import com.ditchoom.mqtt.controlpacket.TopicName
@@ -38,17 +41,30 @@ data class ConnectProperties(
 ) {
     val props: List<MqttProperty> =
         buildList {
-            if (sessionExpiryIntervalSeconds != null) add(SessionExpiryInterval(sessionExpiryIntervalSeconds.toUInt()))
-            if (receiveMaximum != null) add(ReceiveMaximum(receiveMaximum.toUShort()))
-            if (maximumPacketSize != null) add(MaximumPacketSize(maximumPacketSize.toUInt()))
-            if (topicAliasMaximum != null) add(TopicAliasMaximum(topicAliasMaximum.toUShort()))
-            if (requestResponseInformation != null) add(RequestResponseInformation(requestResponseInformation))
-            if (requestProblemInformation != null) add(RequestProblemInformation(requestProblemInformation))
-            for ((k, v) in userProperty) add(UserProperty(k, v))
+            if (sessionExpiryIntervalSeconds != null) {
+                add(SessionExpiryInterval(seconds = sessionExpiryIntervalSeconds.toUInt()))
+            }
+            if (receiveMaximum != null) add(ReceiveMaximum(max = receiveMaximum.toUShort()))
+            if (maximumPacketSize != null) add(MaximumPacketSize(bytes = maximumPacketSize.toUInt()))
+            if (topicAliasMaximum != null) add(TopicAliasMaximum(max = topicAliasMaximum.toUShort()))
+            if (requestResponseInformation != null) {
+                add(RequestResponseInformation(enabled = requestResponseInformation))
+            }
+            if (requestProblemInformation != null) {
+                add(RequestProblemInformation(enabled = requestProblemInformation))
+            }
+            for ((k, v) in userProperty) add(UserProperty(key = k, value = v))
             if (authentication != null) {
-                add(AuthenticationMethod(authentication.method))
+                add(AuthenticationMethod(value = authentication.method))
                 authentication.data.position(0)
-                add(AuthenticationData(authentication.data.remaining().toUShort(), authentication.data))
+                // TODO(buffer-v1): AuthenticationData reshape via Phase A intermediary.
+                //  See memory `mqtt_will_password_deferred.md`.
+                val slice = authentication.data.slice()
+                add(
+                    AuthenticationData(
+                        value = slice.readString(slice.remaining(), Charset.UTF8),
+                    ),
+                )
             }
         }
 
@@ -87,7 +103,18 @@ data class ConnectProperties(
             val requestProblemInformation = p.single<RequestProblemInformation>()?.enabled
             val userProperty = p.list<UserProperty>().map { it.key to it.value }
             val authMethod = p.single<AuthenticationMethod>()?.value
-            val authData = p.single<AuthenticationData<*>>()?.data as? ReadBuffer
+            // TODO(buffer-v1): AuthenticationData carries a String placeholder under Phase A.
+            val authData =
+                p.single<AuthenticationData>()?.value?.let { s ->
+                    BufferFactory.Default
+                        .allocate(s.length * 4)
+                        .apply {
+                            writeString(s, Charset.UTF8)
+                            val written = position()
+                            position(0)
+                            setLimit(written)
+                        }.slice()
+                }
             p.rejectUnknown()
             val auth =
                 if (authMethod != null && authData != null) {
@@ -123,16 +150,26 @@ data class ConnectWillProperties(
 ) {
     val props: List<MqttProperty> =
         buildList {
-            if (willDelayIntervalSeconds != 0L) add(WillDelayInterval(willDelayIntervalSeconds.toUInt()))
-            if (payloadFormatIndicator) add(PayloadFormatIndicator(payloadFormatIndicator))
-            if (messageExpiryIntervalSeconds != null) add(MessageExpiryInterval(messageExpiryIntervalSeconds.toUInt()))
-            if (contentType != null) add(ContentType(contentType))
-            if (responseTopic != null) add(ResponseTopic(responseTopic.toString()))
+            if (willDelayIntervalSeconds != 0L) {
+                add(WillDelayInterval(seconds = willDelayIntervalSeconds.toUInt()))
+            }
+            if (payloadFormatIndicator) add(PayloadFormatIndicator(isUtf8 = payloadFormatIndicator))
+            if (messageExpiryIntervalSeconds != null) {
+                add(MessageExpiryInterval(seconds = messageExpiryIntervalSeconds.toUInt()))
+            }
+            if (contentType != null) add(ContentType(value = contentType))
+            if (responseTopic != null) add(ResponseTopic(value = responseTopic.toString()))
             if (correlationData != null) {
                 correlationData.position(0)
-                add(CorrelationData(correlationData.remaining().toUShort(), correlationData))
+                // TODO(buffer-v1): CorrelationData reshape via Phase A intermediary.
+                val slice = correlationData.slice()
+                add(
+                    CorrelationData(
+                        value = slice.readString(slice.remaining(), Charset.UTF8),
+                    ),
+                )
             }
-            for ((k, v) in userProperty) add(UserProperty(k, v))
+            for ((k, v) in userProperty) add(UserProperty(key = k, value = v))
         }
 
     fun size(): Int = mqttPropertiesSize(props)
@@ -146,7 +183,18 @@ data class ConnectWillProperties(
             val messageExpiryIntervalSeconds = p.single<MessageExpiryInterval>()?.seconds?.toLong()
             val contentType = p.single<ContentType>()?.value
             val responseTopic = p.single<ResponseTopic>()?.let { TopicName.fromOrThrow(it.value) }
-            val correlationData = p.single<CorrelationData<*>>()?.data as? ReadBuffer
+            // TODO(buffer-v1): CorrelationData carries a String placeholder under Phase A.
+            val correlationData =
+                p.single<CorrelationData>()?.value?.let { s ->
+                    BufferFactory.Default
+                        .allocate(s.length * 4)
+                        .apply {
+                            writeString(s, Charset.UTF8)
+                            val written = position()
+                            position(0)
+                            setLimit(written)
+                        }.slice()
+                }
             val userProperty = p.list<UserProperty>().map { it.key to it.value }
             p.rejectUnknown()
             return ConnectWillProperties(

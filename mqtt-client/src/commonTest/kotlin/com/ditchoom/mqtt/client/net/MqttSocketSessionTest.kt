@@ -87,7 +87,7 @@ class MqttSocketSessionTest {
         try {
             val connectionRequest =
                 if (version == 4) {
-                    ConnectionRequest(payload = ConnectionRequest.Payload(clientId = "taco123-" + Random.nextInt()))
+                    ConnectionRequest(clientId = "taco123-" + Random.nextInt())
                 } else {
                     com.ditchoom.mqtt5.controlpacket
                         .ConnectionRequest(clientId = "taco123-" + Random.nextInt())
@@ -101,11 +101,20 @@ class MqttSocketSessionTest {
             assertTrue(connack.isSuccessful)
 
             val publish =
-                factory
-                    .publish(
-                        topicName = TopicName.fromOrThrow("testtt"),
-                        qos = QualityOfService.AT_LEAST_ONCE,
-                    ).maybeCopyWithNewPacketIdentifier(1)
+                if (version == 4) {
+                    com.ditchoom.mqtt3.controlpacket
+                        .PublishMessageV4
+                        .ofRaw(
+                            topic = TopicName.fromOrThrow("testtt"),
+                            qos = QualityOfService.AT_LEAST_ONCE,
+                        ).maybeCopyWithNewPacketIdentifier(1)
+                } else {
+                    com.ditchoom.mqtt5.controlpacket.ControlPacketV5.Publish
+                        .ofRaw(
+                            topic = TopicName.fromOrThrow("testtt"),
+                            qos = QualityOfService.AT_LEAST_ONCE,
+                        ).maybeCopyWithNewPacketIdentifier(1)
+                }
             connection.send(publish)
             val controlPacketAck = connection.receive().first()
             assertTrue { controlPacketAck is IPublishAcknowledgment }

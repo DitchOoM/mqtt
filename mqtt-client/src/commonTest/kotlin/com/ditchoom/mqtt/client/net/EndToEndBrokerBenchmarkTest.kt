@@ -84,7 +84,7 @@ class EndToEndBrokerBenchmarkTest {
                     CoroutineScope(Dispatchers.Default),
                     broker,
                     persistence,
-                    createConnectFactory(broker),
+                    connectSingle = createConnectFactory(broker),
                 )
 
             try {
@@ -106,11 +106,9 @@ class EndToEndBrokerBenchmarkTest {
                 val mark = TimeSource.Monotonic.markNow()
                 for (i in 0 until count) {
                     client.publish(
-                        connReq.controlPacketFactory.publish(
-                            topicName = topic,
-                            qos = qos,
-                            payload = BufferFactory.Default.wrap(payloadBytes),
-                        ),
+                        topicName = topicStr,
+                        qos = qos,
+                        payload = BufferFactory.Default.wrap(payloadBytes),
                     )
                 }
                 withTimeout(60.seconds) { allReceived.await() }

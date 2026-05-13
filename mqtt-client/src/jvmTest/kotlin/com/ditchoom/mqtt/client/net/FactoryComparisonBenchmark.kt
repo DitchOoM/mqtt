@@ -121,7 +121,7 @@ class FactoryComparisonBenchmark {
         repeat(64) { payload.writeByte((it % 256).toByte()) }
         payload.resetForRead()
         return listOf(
-            ConnectV4(payload = ConnectV4.Payload(clientId = "bench")),
+            ConnectV4(clientId = "bench"),
             PublishV4.ofRaw(
                 topic = TopicName.fromOrThrow("bench/topic"),
                 qos = QualityOfService.AT_LEAST_ONCE,

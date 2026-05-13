@@ -112,7 +112,8 @@ class MqttClient internal constructor(
         dst.resetForRead()
         val opaque =
             com.ditchoom.mqtt.controlpacket.OpaquePublishPayload(
-                com.ditchoom.buffer.codec.opaqueBytesFrom(dst),
+                com.ditchoom.buffer.codec
+                    .opaqueBytesFrom(dst),
             )
         val pub = buildPublishMessage(TopicName.fromOrThrow(topicName), qos, retain, opaque)
         return publish(pub)
@@ -327,7 +328,8 @@ class MqttClient internal constructor(
         val encoded = eagerEncode(payload, payloadCodec, bufferFactory)
         val opaque =
             com.ditchoom.mqtt.controlpacket.OpaquePublishPayload(
-                com.ditchoom.buffer.codec.opaqueBytesFrom(encoded as com.ditchoom.buffer.PlatformBuffer),
+                com.ditchoom.buffer.codec
+                    .opaqueBytesFrom(encoded as com.ditchoom.buffer.PlatformBuffer),
             )
         val pub = buildPublishMessage(TopicName.fromOrThrow(topic), qos, retain, opaque)
         return publish(pub)

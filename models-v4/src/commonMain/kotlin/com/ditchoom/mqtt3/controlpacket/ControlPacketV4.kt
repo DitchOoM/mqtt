@@ -212,6 +212,22 @@ sealed interface ControlPacketV4<out P : Payload> : ControlPacket {
     }
 
     override fun packetSize(): Int = serialize(com.ditchoom.buffer.BufferFactory.Default).remaining()
+
+    companion object {
+        /**
+         * Decode a full v4 control-packet wire (`[byte1][VBI(remainingLength)][body]`) with
+         * PUBLISH application bytes carried in an [OpaquePublishPayload] (Pattern #2 —
+         * consumer-owned `PlatformBuffer`, byte-exact). For typed payloads, construct
+         * `ControlPacketV4Codec(yourPayloadCodec)` directly.
+         */
+        fun from(buffer: ReadBuffer): ControlPacketV4<OpaquePublishPayload> =
+            try {
+                ControlPacketV4Codec(OpaquePublishPayloadCodec)
+                    .decode(buffer, com.ditchoom.buffer.codec.DecodeContext.Empty)
+            } catch (e: com.ditchoom.buffer.codec.DecodeException) {
+                throw MalformedPacketException(e.message ?: "malformed control packet")
+            }
+    }
 }
 
 // ── Reserved (wire 0x00) ───────────────────────────────────────────────────
@@ -671,10 +687,49 @@ data class PublishMessageV4<P : Payload>(
         return null
     }
 
-    // ofRaw(...) removed under buffer-v1: there is no canonical raw-bytes PUBLISH payload
-    // type. Consumers construct PublishMessageV4<MyPayload>(..., payload = MyPayload(...))
-    // with their own typed Payload and a matching Codec<MyPayload> wired through
-    // ControlPacketV4Codec(codec).
+    companion object {
+        /**
+         * Convenience factory — constructs a `PublishMessageV4<OpaquePublishPayload>` from a
+         * raw [ReadBuffer] payload. Pattern #2 (consumer-owned `PlatformBuffer`): allocates
+         * a fresh buffer, copies the wire bytes, hands ownership to the handle. Consumers
+         * needing a typed payload construct `PublishMessageV4<MyPayload>(...)` directly.
+         */
+        fun ofRaw(
+            topic: TopicName,
+            qos: QualityOfService = QualityOfService.AT_MOST_ONCE,
+            payload: ReadBuffer? = null,
+            dup: Boolean = false,
+            retain: Boolean = false,
+            packetIdentifier: Int = com.ditchoom.mqtt.controlpacket.NO_PACKET_ID,
+        ): PublishMessageV4<OpaquePublishPayload> {
+            val type = 3 shl 4
+            val dupBit = if (dup) 0x08 else 0
+            val qosBits = qos.integerValue.toInt() shl 1
+            val retainBit = if (retain) 0x01 else 0
+            val header = MqttFixedHeader((type or dupBit or qosBits or retainBit).toUByte())
+            val pid =
+                if (qos == AT_MOST_ONCE || packetIdentifier == com.ditchoom.mqtt.controlpacket.NO_PACKET_ID) {
+                    null
+                } else {
+                    packetIdentifier.toUShort()
+                }
+            val factory = BufferFactory.Default
+            val remaining = payload?.remaining() ?: 0
+            val dst = factory.allocate(remaining)
+            if (remaining > 0 && payload != null) dst.write(payload)
+            dst.resetForRead()
+            val opaque =
+                OpaquePublishPayload(
+                    com.ditchoom.buffer.codec.opaqueBytesFrom(dst),
+                )
+            return PublishMessageV4(
+                header = header,
+                topicName = topic.toString(),
+                packetId = pid,
+                payload = opaque,
+            )
+        }
+    }
 }
 
 // ── PUBACK (§3.4) ─────────────────────────────────────────────────────────

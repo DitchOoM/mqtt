@@ -4,6 +4,7 @@ import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Charset
 import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.ReadBuffer.Companion.EMPTY_BUFFER
+import com.ditchoom.buffer.codec.asReadBuffer
 import com.ditchoom.buffer.toReadBuffer
 import com.ditchoom.mqtt.InMemoryPersistence
 import com.ditchoom.mqtt.client.MqttClient
@@ -176,7 +177,7 @@ class MqttClientTest {
         val persistence = connectionRequest.controlPacketFactory.defaultPersistence(inMemory)
         val connections = listOf(wsBadPort, goodOptions)
         val broker = persistence.addBroker(connections, connectionRequest)
-        val client = MqttClient.start(scope, broker, persistence, createConnectFactory(broker))
+        val client = MqttClient.start(scope, broker, persistence, connectSingle = createConnectFactory(broker))
         assertEquals(2L, client.connectionAttempts())
         assertEquals(1L, client.connectionCount())
         client.shutdown()
@@ -213,7 +214,7 @@ class MqttClientTest {
         val connections = listOf(wsBadPort, goodOptions)
         val persistence = connectionRequest.controlPacketFactory.defaultPersistence(inMemory)
         val broker = persistence.addBroker(connections, connectionRequest)
-        val client = MqttClient.start(scope, broker, persistence, createConnectFactory(broker))
+        val client = MqttClient.start(scope, broker, persistence, connectSingle = createConnectFactory(broker))
         client.awaitConnectivity()
         assertEquals(2L, client.connectionAttempts())
         assertEquals(1L, client.connectionCount())
@@ -240,7 +241,7 @@ class MqttClientTest {
         val persistence = InMemoryPersistence()
         val broker = persistence.addBroker(connectionOptions, connectionRequest)
         val expectedPingCount = 2
-        val client = MqttClient.start(scope, broker, persistence, createConnectFactory(broker))
+        val client = MqttClient.start(scope, broker, persistence, connectSingle = createConnectFactory(broker))
         // Wait long enough for keepAlive pings to be exchanged
         withTimeout((connectionRequestMqtt4.variableHeader.keepAliveSeconds * expectedPingCount + 5).seconds) {
             while (client.pingResponseCount() < expectedPingCount) {
@@ -311,9 +312,9 @@ class MqttClientTest {
         val wsOptions = if (isMqtt5) testWsMqtt5ConnectionOptions else testWsMqttConnectionOptions
         val persistence = connectionRequest.controlPacketFactory.defaultPersistence(inMemory)
         val brokerLwt = persistence.addBroker(wsOptions, lwtConnectionRequest)
-        val clientLwt = MqttClient.start(scope, brokerLwt, persistence, createConnectFactory(brokerLwt))
+        val clientLwt = MqttClient.start(scope, brokerLwt, persistence, connectSingle = createConnectFactory(brokerLwt))
         val broker = persistence.addBroker(wsOptions, connectionRequest)
-        val clientOther = MqttClient.start(scope, broker, persistence, createConnectFactory(broker))
+        val clientOther = MqttClient.start(scope, broker, persistence, connectSingle = createConnectFactory(broker))
 
         val willTopicFilter = TopicFilter.fromOrThrow(willTopic.toString())
         val receivedLwt =
@@ -333,8 +334,24 @@ class MqttClientTest {
         clientLwt.shutdown(sendDisconnect = false)
         val message = receivedLwt.await()
         assertEquals(message.topic.toString(), willTopic.toString())
-        val payload = checkNotNull(message.rawPayload())
+        val payload = checkNotNull(opaquePayloadOf(message)).asReadBuffer()
         assertEquals("yolo", payload.readString(payload.remaining(), Charset.UTF8))
+    }
+
+    /**
+     * Extract the [com.ditchoom.buffer.codec.OpaqueBytesHandle] from a [PublishMessage]
+     * whose typed payload is an [com.ditchoom.mqtt.controlpacket.OpaquePublishPayload]
+     * (the default codec for the v4/v5 wire path). Mirrors the test-side equivalent of
+     * `rawPayload()` that the dispatcher used to surface.
+     */
+    private fun opaquePayloadOf(publish: PublishMessage): com.ditchoom.buffer.codec.OpaqueBytesHandle? {
+        val typed =
+            when (publish) {
+                is com.ditchoom.mqtt3.controlpacket.PublishMessageV4<*> -> publish.payload
+                is com.ditchoom.mqtt5.controlpacket.ControlPacketV5.Publish<*> -> publish.payload
+                else -> null
+            }
+        return (typed as? com.ditchoom.mqtt.controlpacket.OpaquePublishPayload)?.handle
     }
 
     private suspend fun stayConnectedEchoInternal(
@@ -345,7 +362,7 @@ class MqttClientTest {
         Mutex(true)
         val persistence = connectionRequest.controlPacketFactory.defaultPersistence(inMemory)
         val broker = persistence.addBroker(connectionOptions, connectionRequest)
-        val client = MqttClient.start(scope, broker, persistence, createConnectFactory(broker))
+        val client = MqttClient.start(scope, broker, persistence, connectSingle = createConnectFactory(broker))
         client.awaitConnectivity()
         sendAllMessageTypes2(client)
         client.sendDisconnect()
@@ -362,12 +379,12 @@ class MqttClientTest {
     ) {
         val persistence = connectionRequest.controlPacketFactory.defaultPersistence(inMemory)
         val broker = persistence.addBroker(connectionOptions, connectionRequest)
-        val client = MqttClient.start(scope, broker, persistence, createConnectFactory(broker))
+        val client = MqttClient.start(scope, broker, persistence, connectSingle = createConnectFactory(broker))
         val flow = client.observe(TopicFilter.fromOrThrow(topic.toString()))
         val collectJob =
             scope.launch {
                 flow.filterIsInstance<PublishMessage>().take(3).collect {
-                    val payload = it.rawPayload() ?: EMPTY_BUFFER
+                    val payload = opaquePayloadOf(it)?.asReadBuffer() ?: EMPTY_BUFFER
                     val qosValue = it.qualityOfService.integerValue.toString()
                     assertEquals(payloadString + qosValue, payload.readString(payload.limit()))
                 }
@@ -387,29 +404,25 @@ suspend fun sendAllMessageTypes(
 ) {
     val factory = client.packetFactory
     val topicFilter = TopicFilter.fromOrThrow(topic.toString())
-    val pubQos0 =
-        factory.publish(
-            topicName = topic,
-            qos = QualityOfService.AT_MOST_ONCE,
-            payload = (payloadString + "0").toReadBuffer(Charset.UTF8),
-        )
-    val pubQos1 =
-        factory.publish(
-            topicName = topic,
-            qos = QualityOfService.AT_LEAST_ONCE,
-            payload = (payloadString + "1").toReadBuffer(Charset.UTF8),
-        )
-    val pubQos2 =
-        factory.publish(
-            topicName = topic,
+    client.subscribe(factory.subscribe(topicFilter, maximumQos = QualityOfService.EXACTLY_ONCE)).subAck.await()
+    val pub =
+        client.publish(
+            topicName = topic.toString(),
             qos = QualityOfService.EXACTLY_ONCE,
             payload = (payloadString + "2").toReadBuffer(Charset.UTF8),
         )
-    client.subscribe(factory.subscribe(topicFilter, maximumQos = QualityOfService.EXACTLY_ONCE)).subAck.await()
-    val pub = client.publish(pubQos2)
     if (pub is PublishResult.QoS2) pub.state.first { it is QoS2State.Complete }
-    val pub0 = client.publish(pubQos0) // QoS 0 — no ack to wait for
-    val pub1 = client.publish(pubQos1)
+    client.publish(
+        topicName = topic.toString(),
+        qos = QualityOfService.AT_MOST_ONCE,
+        payload = (payloadString + "0").toReadBuffer(Charset.UTF8),
+    )
+    val pub1 =
+        client.publish(
+            topicName = topic.toString(),
+            qos = QualityOfService.AT_LEAST_ONCE,
+            payload = (payloadString + "1").toReadBuffer(Charset.UTF8),
+        )
     if (pub1 is PublishResult.QoS1) pub1.state.first { it is QoS1State.Acknowledged }
     client.unsubscribe(factory.unsubscribe(topicFilter)).unsubAck.await()
 }

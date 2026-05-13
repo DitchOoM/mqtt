@@ -51,10 +51,7 @@ class DefaultConnectionFactoryWsIntegrationTest {
                     protocols = listOf("mqtt"),
                     connectionTimeout = 15.seconds,
                 )
-            val connectionRequest =
-                ConnectionRequest(
-                    payload = ConnectionRequest.Payload(clientId = "ditchoom-ws-${Random.nextInt()}"),
-                )
+            val connectionRequest = ConnectionRequest(clientId = "ditchoom-ws-${Random.nextInt()}")
             val connection = defaultSingleConnection(options, connectionRequest.controlPacketFactory)
 
             connection.send(connectionRequest)
@@ -63,9 +60,9 @@ class DefaultConnectionFactoryWsIntegrationTest {
             assertTrue(connack.isSuccessful, "CONNACK rejected: ${connack.connectionReason}")
 
             val publish =
-                connectionRequest.controlPacketFactory
-                    .publish(
-                        topicName = TopicName.fromOrThrow("ditchoom/it/ws"),
+                com.ditchoom.mqtt3.controlpacket.PublishMessageV4
+                    .ofRaw(
+                        topic = TopicName.fromOrThrow("ditchoom/it/ws"),
                         qos = QualityOfService.AT_LEAST_ONCE,
                     ).maybeCopyWithNewPacketIdentifier(1)
             connection.send(publish)

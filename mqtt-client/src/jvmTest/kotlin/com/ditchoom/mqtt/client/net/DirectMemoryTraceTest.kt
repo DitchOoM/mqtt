@@ -41,7 +41,7 @@ class DirectMemoryTraceTest {
         printDirect("after 1x64B allocate")
 
         // 2. Single serialize of a small packet
-        val connect = ConnectV4(payload = ConnectV4.Payload(clientId = "trace-client"))
+        val connect = ConnectV4(clientId = "trace-client")
         println("  connect packetSize = ${connect.packetSize()} bytes")
         val serialized = connect.serialize()
         printDirect("after 1 CONNECT serialize (${connect.packetSize()}B)")

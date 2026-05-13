@@ -72,7 +72,7 @@ class EndToEndBenchmark {
         var lastException: Exception? = null
         for (attempt in 1..maxAttempts) {
             try {
-                return MqttClient.start(scope, broker, persistence, createConnectFactory(broker))
+                return MqttClient.start(scope, broker, persistence, connectSingle = createConnectFactory(broker))
             } catch (e: Exception) {
                 lastException = e
                 if (attempt < maxAttempts) {
@@ -121,11 +121,9 @@ class EndToEndBenchmark {
                 for (i in 0 until count) {
                     try {
                         client.publish(
-                            connReq.controlPacketFactory.publish(
-                                topicName = topic,
-                                qos = qos,
-                                payload = BufferFactory.Default.wrap(payloadBytes),
-                            ),
+                            topicName = topicStr,
+                            qos = qos,
+                            payload = BufferFactory.Default.wrap(payloadBytes),
                         )
                         published.incrementAndGet()
                     } catch (_: Exception) {

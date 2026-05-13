@@ -49,10 +49,7 @@ class DefaultConnectionFactoryTcpIntegrationTest {
                     tlsEnabled = false,
                     connectionTimeout = 15.seconds,
                 )
-            val connectionRequest =
-                ConnectionRequest(
-                    payload = ConnectionRequest.Payload(clientId = "ditchoom-tcp-${Random.nextInt()}"),
-                )
+            val connectionRequest = ConnectionRequest(clientId = "ditchoom-tcp-${Random.nextInt()}")
             val connection = defaultSingleConnection(options, connectionRequest.controlPacketFactory)
 
             connection.send(connectionRequest)
@@ -61,9 +58,9 @@ class DefaultConnectionFactoryTcpIntegrationTest {
             assertTrue(connack.isSuccessful, "CONNACK rejected: ${connack.connectionReason}")
 
             val publish =
-                connectionRequest.controlPacketFactory
-                    .publish(
-                        topicName = TopicName.fromOrThrow("ditchoom/it/tcp"),
+                com.ditchoom.mqtt3.controlpacket.PublishMessageV4
+                    .ofRaw(
+                        topic = TopicName.fromOrThrow("ditchoom/it/tcp"),
                         qos = QualityOfService.AT_LEAST_ONCE,
                     ).maybeCopyWithNewPacketIdentifier(1)
             connection.send(publish)

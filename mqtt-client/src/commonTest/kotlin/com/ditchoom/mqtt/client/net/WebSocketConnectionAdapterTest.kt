@@ -65,7 +65,7 @@ class WebSocketConnectionAdapterTest {
             val ws = fakePair()
             val adapted = adapt(ws)
 
-            adapted.send(PingRequest)
+            adapted.send(PingRequest())
 
             val emitted = ws.outbound.receive()
             assertTrue(emitted is WebSocketMessage.Binary, "Expected Binary frame, got ${emitted::class.simpleName}")
@@ -78,7 +78,7 @@ class WebSocketConnectionAdapterTest {
             val ws = fakePair()
             val adapted = adapt(ws)
 
-            ws.inbound.send(WebSocketMessage.Binary(DisconnectNotification))
+            ws.inbound.send(WebSocketMessage.Binary(DisconnectNotification()))
 
             val received = adapted.receive().first()
             assertTrue(received is DisconnectNotification, "Expected DisconnectNotification, got ${received::class.simpleName}")
@@ -93,7 +93,7 @@ class WebSocketConnectionAdapterTest {
             ws.inbound.send(WebSocketMessage.Text("ignored"))
             ws.inbound.send(WebSocketMessage.Ping())
             ws.inbound.send(WebSocketMessage.Pong())
-            ws.inbound.send(WebSocketMessage.Binary(PingRequest))
+            ws.inbound.send(WebSocketMessage.Binary(PingRequest()))
             ws.inbound.send(WebSocketMessage.Close(code = 1000u, reason = ""))
 
             val received = adapted.receive().take(1).toList()

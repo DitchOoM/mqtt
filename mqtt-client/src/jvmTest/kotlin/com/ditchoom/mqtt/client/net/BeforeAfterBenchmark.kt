@@ -2,11 +2,12 @@ package com.ditchoom.mqtt.client.net
 
 import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Default
+import com.ditchoom.buffer.codec.PeekResult
 import com.ditchoom.buffer.pool.BufferPool
-import com.ditchoom.buffer.stream.PeekResult
 import com.ditchoom.buffer.stream.StreamProcessor
 import com.ditchoom.buffer.stream.builder
 import com.ditchoom.mqtt.controlpacket.ControlPacket
+import com.ditchoom.mqtt.controlpacket.OpaquePublishPayloadCodec
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt3.controlpacket.ControlPacketV4
@@ -79,7 +80,7 @@ class BeforeAfterBenchmark {
         repeat(128) { payload.writeByte((it % 256).toByte()) }
         payload.resetForRead()
         return listOf(
-            ConnectV4(payload = ConnectV4.Payload(clientId = "bench-v4")),
+            ConnectV4(clientId = "bench-v4"),
             PublishV4.ofRaw(
                 topic = TopicName.fromOrThrow("bench/topic"),
                 qos = QualityOfService.AT_LEAST_ONCE,
@@ -187,6 +188,8 @@ class BeforeAfterBenchmark {
         val warmupIters = 5_000
         val benchIters = 50_000
 
+        val codec = ControlPacketV5Codec(OpaquePublishPayloadCodec)
+
         fun runPooled(iterations: Int) {
             val pool = BufferPool()
             val stream = StreamProcessor.builder(pool).build()
@@ -195,9 +198,10 @@ class BeforeAfterBenchmark {
                     val serialized = p.serialize()
                     stream.append(serialized)
                     val frameSize =
-                        when (val r = ControlPacketV5Codec.peekFrameSize(stream, 0)) {
-                            is PeekResult.Size -> r.bytes
+                        when (val r = codec.peekFrameSize(stream, 0)) {
+                            is PeekResult.Complete -> r.bytes
                             PeekResult.NeedsMoreData -> error("frame underflow")
+                            PeekResult.NoFraming -> error("codec does not participate in framing")
                         }
                     stream.readBufferScoped(frameSize) { ControlPacketV5.from(this) }
                 }
@@ -230,6 +234,8 @@ class BeforeAfterBenchmark {
         val warmupIters = 5_000
         val benchIters = 50_000
 
+        val codec = ControlPacketV4Codec(OpaquePublishPayloadCodec)
+
         fun runPooled(iterations: Int) {
             val pool = BufferPool()
             val stream = StreamProcessor.builder(pool).build()
@@ -238,9 +244,10 @@ class BeforeAfterBenchmark {
                     val serialized = p.serialize()
                     stream.append(serialized)
                     val frameSize =
-                        when (val r = ControlPacketV4Codec.peekFrameSize(stream, 0)) {
-                            is PeekResult.Size -> r.bytes
+                        when (val r = codec.peekFrameSize(stream, 0)) {
+                            is PeekResult.Complete -> r.bytes
                             PeekResult.NeedsMoreData -> error("frame underflow")
+                            PeekResult.NoFraming -> error("codec does not participate in framing")
                         }
                     stream.readBufferScoped(frameSize) { ControlPacketV4.from(this) }
                 }

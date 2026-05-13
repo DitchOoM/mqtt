@@ -339,7 +339,27 @@ class PublicBrokerValidationTest {
         if (mqttV5) {
             ConnectionRequestV5(clientId = clientId)
         } else {
-            ConnectionRequest(payload = ConnectionRequest.Payload(clientId = clientId))
+            ConnectionRequest(clientId = clientId)
+        }
+
+    private fun makePublish(
+        topic: String,
+        mqttV5: Boolean,
+        packetId: Int,
+        qos: QualityOfService = QualityOfService.AT_LEAST_ONCE,
+    ): com.ditchoom.mqtt.controlpacket.PublishMessage =
+        if (mqttV5) {
+            com.ditchoom.mqtt5.controlpacket.ControlPacketV5.Publish
+                .ofRaw(
+                    topic = TopicName.fromOrThrow(topic),
+                    qos = qos,
+                ).maybeCopyWithNewPacketIdentifier(packetId)
+        } else {
+            com.ditchoom.mqtt3.controlpacket.PublishMessageV4
+                .ofRaw(
+                    topic = TopicName.fromOrThrow(topic),
+                    qos = qos,
+                ).maybeCopyWithNewPacketIdentifier(packetId)
         }
 
     /**
@@ -376,12 +396,7 @@ class PublicBrokerValidationTest {
         val connectionRequest = makeConnectionRequest(clientId, mqttV5)
         val connection = connectAndValidate(connectionOptions, connectionRequest, clientId)
 
-        val publish =
-            connectionRequest.controlPacketFactory
-                .publish(
-                    topicName = TopicName.fromOrThrow("ditchoom/validation/test"),
-                    qos = QualityOfService.AT_LEAST_ONCE,
-                ).maybeCopyWithNewPacketIdentifier(1)
+        val publish = makePublish("ditchoom/validation/test", mqttV5, packetId = 1)
         connection.send(publish)
         val ack = connection.receive().first()
         assertTrue(ack is IPublishAcknowledgment, "Expected PUBACK, got ${ack::class.simpleName}")
@@ -400,12 +415,7 @@ class PublicBrokerValidationTest {
         val connection = connectAndValidate(connectionOptions, connectionRequest, clientId)
 
         repeat(publishCount) { i ->
-            val publish =
-                connectionRequest.controlPacketFactory
-                    .publish(
-                        topicName = TopicName.fromOrThrow("ditchoom/validation/multi/$i"),
-                        qos = QualityOfService.AT_LEAST_ONCE,
-                    ).maybeCopyWithNewPacketIdentifier(i + 1)
+            val publish = makePublish("ditchoom/validation/multi/$i", mqttV5, packetId = i + 1)
             connection.send(publish)
             val ack = connection.receive().first()
             assertTrue(ack is IPublishAcknowledgment, "Expected PUBACK for message $i, got ${ack::class.simpleName}")
@@ -434,12 +444,7 @@ class PublicBrokerValidationTest {
         assertTrue(suback is ISubscribeAcknowledgement, "Expected SUBACK, got ${suback::class.simpleName}")
 
         // Publish to the topic we subscribed to
-        val publish =
-            connectionRequest.controlPacketFactory
-                .publish(
-                    topicName = TopicName.fromOrThrow(uniqueTopic),
-                    qos = QualityOfService.AT_LEAST_ONCE,
-                ).maybeCopyWithNewPacketIdentifier(2)
+        val publish = makePublish(uniqueTopic, mqttV5, packetId = 2)
         connection.send(publish)
 
         // Read PUBACK and incoming PUBLISH (order is not guaranteed)

@@ -46,7 +46,7 @@ class MqttClient internal constructor(
     internal val publishCodecRegistry: TopicCodecRegistry = TopicCodecRegistry(),
     /**
      * Connection-default [BufferFactory] for eager publish-side encoding and for the
-     * fallback decode path's `OpaqueBytesHandleCodec`. Consumers wanting a pool, a
+     * fallback decode path's `OwnedBytesHandleCodec`. Consumers wanting a pool, a
      * deterministic factory, or a shared-memory allocator supply it at
      * [MqttClient.start] or per-call on [publish] / [publish<P>]. Defaults to
      * [BufferFactory.Default].
@@ -113,7 +113,7 @@ class MqttClient internal constructor(
         val opaque =
             com.ditchoom.mqtt.controlpacket.OpaquePublishPayload(
                 com.ditchoom.buffer.codec
-                    .opaqueBytesFrom(dst),
+                    .ownedBytesFrom(dst),
             )
         val pub = buildPublishMessage(TopicName.fromOrThrow(topicName), qos, retain, opaque)
         return publish(pub)
@@ -317,7 +317,7 @@ class MqttClient internal constructor(
      * and queued. Constructing the [PublishMessage] directly here (rather than routing through
      * `packetFactory.publish(ReadBuffer?)`) avoids the convenience overload's extra
      * allocate-and-copy — the [eagerEncode] output's [com.ditchoom.buffer.PlatformBuffer]
-     * is handed straight to [com.ditchoom.buffer.codec.opaqueBytesFrom] which takes
+     * is handed straight to [com.ditchoom.buffer.codec.ownedBytesFrom] which takes
      * ownership.
      *
      * Routing through `Codec<P>` (rather than a raw write lambda) means the same generated
@@ -335,7 +335,7 @@ class MqttClient internal constructor(
         val opaque =
             com.ditchoom.mqtt.controlpacket.OpaquePublishPayload(
                 com.ditchoom.buffer.codec
-                    .opaqueBytesFrom(encoded as com.ditchoom.buffer.PlatformBuffer),
+                    .ownedBytesFrom(encoded as com.ditchoom.buffer.PlatformBuffer),
             )
         val pub = buildPublishMessage(TopicName.fromOrThrow(topic), qos, retain, opaque)
         return publish(pub)

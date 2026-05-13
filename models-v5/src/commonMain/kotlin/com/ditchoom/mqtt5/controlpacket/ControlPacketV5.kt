@@ -5,6 +5,8 @@ import com.ditchoom.buffer.Charset
 import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.codec.DecodeContext
+import com.ditchoom.buffer.codec.OwnedBytesHandle
+import com.ditchoom.buffer.codec.OwnedBytesHandleCodec
 import com.ditchoom.buffer.codec.Payload
 import com.ditchoom.buffer.codec.annotations.DispatchOn
 import com.ditchoom.buffer.codec.annotations.FramedBy
@@ -14,6 +16,8 @@ import com.ditchoom.buffer.codec.annotations.ProtocolMessage
 import com.ditchoom.buffer.codec.annotations.RemainingBytes
 import com.ditchoom.buffer.codec.annotations.UseCodec
 import com.ditchoom.buffer.codec.annotations.When
+import com.ditchoom.buffer.codec.asReadBuffer
+import com.ditchoom.buffer.codec.ownedBytesFrom
 import com.ditchoom.mqtt.MalformedPacketException
 import com.ditchoom.mqtt.MqttWarning
 import com.ditchoom.mqtt.ProtocolError
@@ -38,6 +42,8 @@ import com.ditchoom.mqtt.controlpacket.IUnsubscribeRequest
 import com.ditchoom.mqtt.controlpacket.MqttFixedHeader
 import com.ditchoom.mqtt.controlpacket.MqttRemainingLengthCodec
 import com.ditchoom.mqtt.controlpacket.NO_PACKET_ID
+import com.ditchoom.mqtt.controlpacket.OpaquePublishPayload
+import com.ditchoom.mqtt.controlpacket.OpaquePublishPayloadCodec
 import com.ditchoom.mqtt.controlpacket.PublishMessage
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
@@ -220,13 +226,24 @@ sealed interface ControlPacketV5<out P : Payload> : com.ditchoom.mqtt.controlpac
         // via `will: WillConfig`. The codec processor uses these names verbatim for the
         // wire serialization; the typed accessors below convert at the API boundary.
         @When("connectFlags.willFlag") @LengthPrefixed val willTopicString: String? = null,
-        // TODO(buffer-v1): Will payload is bytes per §3.1.3.3, not UTF-8. Reverted to String?
-        //  pending Will/Password design (multi-param parent threading vs hand-written codec vs
-        //  injected-codec-per-field). See memory `mqtt_will_password_deferred.md`.
-        @When("connectFlags.willFlag") @LengthPrefixed val willPayloadValue: String? = null,
+        // §3.1.3.3: Will Message is arbitrary application bytes — preserved verbatim via
+        // [OpaquePublishPayload], the mqtt-side `Payload`-marker carrier around
+        // [OwnedBytesHandle]. The Payload marker holds because Will payloads ARE
+        // admissible into `<P : Payload>` PUBLISH paths (the broker re-publishes the
+        // Will on ungraceful disconnect §3.1.2.5).
+        @When("connectFlags.willFlag")
+        @LengthPrefixed
+        @UseCodec(OpaquePublishPayloadCodec::class)
+        val willPayloadValue: OpaquePublishPayload? = null,
         @When("connectFlags.usernameFlag") @LengthPrefixed val username: String? = null,
-        // TODO(buffer-v1): Password is bytes per §3.1.3.5, not UTF-8. Same deferral as willPayloadValue.
-        @When("connectFlags.passwordFlag") @LengthPrefixed override val password: String? = null,
+        // §3.1.3.5: Password is binary auth bytes — NOT a Payload (must never be
+        // admissible into `<P : Payload>` PUBLISH paths). [OwnedBytesHandle] keeps auth
+        // bytes in their own type-system lane; [OwnedBytesHandleCodec] does the safe
+        // single-copy Pattern #2 at the wire boundary.
+        @When("connectFlags.passwordFlag")
+        @LengthPrefixed
+        @UseCodec(OwnedBytesHandleCodec::class)
+        val passwordValue: OwnedBytesHandle? = null,
     ) : ControlPacketV5<Nothing>,
         IConnectionRequest {
         init {
@@ -266,6 +283,17 @@ sealed interface ControlPacketV5<out P : Payload> : com.ditchoom.mqtt.controlpac
         override val hasPassword: Boolean get() = connectFlags.passwordFlag
         override val userName: String? get() = username
 
+        // §3.1.3.5: Password is binary on the wire; the `String?` accessor preserved for
+        // [IConnectionRequest] compatibility decodes the OwnedBytesHandle as UTF-8 (lossy
+        // on non-UTF-8 bytes — consumers needing byte-exact access read [passwordValue]
+        // directly).
+        override val password: String?
+            get() {
+                val handle = passwordValue ?: return null
+                val view = handle.asReadBuffer()
+                return view.readString(view.remaining(), Charset.UTF8)
+            }
+
         val typedProperties: ConnectProperties get() = ConnectProperties.from(properties)
         val typedWillProperties: ConnectWillProperties?
             get() = if (willProperties != null) ConnectWillProperties.from(willProperties) else null
@@ -280,24 +308,15 @@ sealed interface ControlPacketV5<out P : Payload> : com.ditchoom.mqtt.controlpac
 
         override val will: WillConfig
             get() {
-                val payloadStr = willPayloadValue
+                val payload = willPayloadValue
                 return if (
                     connectFlags.willFlag &&
                     willTopicString != null &&
-                    payloadStr != null
+                    payload != null
                 ) {
-                    val payloadBuffer =
-                        BufferFactory.Default
-                            .allocate(payloadStr.length * 4)
-                            .apply {
-                                writeString(payloadStr, Charset.UTF8)
-                                val written = position()
-                                position(0)
-                                setLimit(written)
-                            }
                     WillConfig.Enabled(
                         TopicName.fromOrThrow(willTopicString),
-                        payloadBuffer.slice(),
+                        payload.handle.asReadBuffer(),
                         QualityOfService.fromBooleans(connectFlags.willQosBit2, connectFlags.willQosBit1),
                         connectFlags.willRetain,
                     )
@@ -371,14 +390,9 @@ sealed interface ControlPacketV5<out P : Payload> : com.ditchoom.mqtt.controlpac
                             null
                         },
                     willTopicString = willEnabled?.topic?.toString(),
-                    // TODO(buffer-v1): UTF-8 decode of will payload (Phase A intermediary).
-                    willPayloadValue =
-                        willEnabled?.payload?.let { buf ->
-                            val slice = buf.slice()
-                            slice.readString(slice.remaining(), Charset.UTF8)
-                        },
+                    willPayloadValue = willEnabled?.payload?.let { buf -> wireWillPayload(buf) },
                     username = userName,
-                    password = password,
+                    passwordValue = password?.let { s -> wirePasswordBytes(s) },
                 )
             }
         }
@@ -569,7 +583,7 @@ sealed interface ControlPacketV5<out P : Payload> : com.ditchoom.mqtt.controlpac
                 val opaque =
                     com.ditchoom.mqtt.controlpacket.OpaquePublishPayload(
                         com.ditchoom.buffer.codec
-                            .opaqueBytesFrom(dst),
+                            .ownedBytesFrom(dst),
                     )
                 return Publish(
                     header = header,
@@ -1453,4 +1467,32 @@ private val unsubAckValidReasonCodes: Set<UByte> =
 // by a companion-init reference to its own generated class.
 internal val ControlPacketV5OpaqueWireCodec: ControlPacketV5Codec<com.ditchoom.mqtt.controlpacket.OpaquePublishPayload> by lazy {
     ControlPacketV5Codec(com.ditchoom.mqtt.controlpacket.OpaquePublishPayloadCodec)
+}
+
+/**
+ * Wire-shape conversion for the Will payload at the legacy-API boundary. Copies [source]'s
+ * remaining bytes into a freshly-allocated `PlatformBuffer` (Pattern #2 — consumer-owned
+ * buffer) and wraps it in an [OpaquePublishPayload]. The source buffer is sliced so the
+ * caller's position is untouched.
+ */
+private fun wireWillPayload(source: ReadBuffer): OpaquePublishPayload {
+    val slice = source.slice()
+    val dst = BufferFactory.Default.allocate(slice.remaining())
+    dst.write(slice)
+    dst.resetForRead()
+    return OpaquePublishPayload(ownedBytesFrom(dst))
+}
+
+/**
+ * Wire-shape conversion for the legacy `password: String?` API. UTF-8 encodes [source]
+ * into a freshly-allocated `PlatformBuffer` and wraps it in an [OwnedBytesHandle].
+ * Consumers needing byte-exact password material (§3.1.3.5 is binary) construct
+ * [OwnedBytesHandle] directly via [ownedBytesFrom] and pass through [passwordValue].
+ */
+private fun wirePasswordBytes(source: String): OwnedBytesHandle {
+    val bytes = source.encodeToByteArray()
+    val dst = BufferFactory.Default.allocate(bytes.size)
+    dst.writeBytes(bytes)
+    dst.resetForRead()
+    return ownedBytesFrom(dst)
 }

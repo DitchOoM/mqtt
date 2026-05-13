@@ -347,12 +347,12 @@ class MqttClientTest {
     }
 
     /**
-     * Extract the [com.ditchoom.buffer.codec.OpaqueBytesHandle] from a [PublishMessage]
+     * Extract the [com.ditchoom.buffer.codec.OwnedBytesHandle] from a [PublishMessage]
      * whose typed payload is an [com.ditchoom.mqtt.controlpacket.OpaquePublishPayload]
      * (the default codec for the v4/v5 wire path). Mirrors the test-side equivalent of
      * `rawPayload()` that the dispatcher used to surface.
      */
-    private fun opaquePayloadOf(publish: PublishMessage): com.ditchoom.buffer.codec.OpaqueBytesHandle? {
+    private fun opaquePayloadOf(publish: PublishMessage): com.ditchoom.buffer.codec.OwnedBytesHandle? {
         val typed =
             when (publish) {
                 is com.ditchoom.mqtt3.controlpacket.PublishMessageV4<*> -> publish.payload

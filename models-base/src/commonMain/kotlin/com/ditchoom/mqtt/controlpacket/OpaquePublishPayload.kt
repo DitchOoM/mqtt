@@ -5,8 +5,8 @@ import com.ditchoom.buffer.WriteBuffer
 import com.ditchoom.buffer.codec.Codec
 import com.ditchoom.buffer.codec.DecodeContext
 import com.ditchoom.buffer.codec.EncodeContext
-import com.ditchoom.buffer.codec.OpaqueBytesHandle
-import com.ditchoom.buffer.codec.OpaqueBytesHandleCodec
+import com.ditchoom.buffer.codec.OwnedBytesHandle
+import com.ditchoom.buffer.codec.OwnedBytesHandleCodec
 import com.ditchoom.buffer.codec.Payload
 import com.ditchoom.buffer.codec.PeekResult
 import com.ditchoom.buffer.codec.WireSize
@@ -19,7 +19,7 @@ import com.ditchoom.buffer.stream.StreamProcessor
 /**
  * Spec-compliant `Payload`-marker carrier for opaque PUBLISH application bytes.
  *
- * `OpaqueBytesHandle` (in `buffer-codec`) is the platform-shielded `PlatformBuffer`
+ * `OwnedBytesHandle` (in `buffer-codec`) is the platform-shielded `PlatformBuffer`
  * carrier — it intentionally does NOT implement [Payload], so that buffer-codec
  * primitives stay decoupled from any protocol's Payload-shape marker. This thin
  * mqtt-side wrapper supplies the [Payload] marker the typed control-packet machinery
@@ -41,14 +41,14 @@ import com.ditchoom.buffer.stream.StreamProcessor
  * them exactly through the consumer-owned `PlatformBuffer` inside [handle].
  *
  * Plain `class` (not `value class` / `data class`) to allow `equals` / `hashCode`
- * overrides that route through [OpaqueBytesHandle.handleEquals] for byte-content
- * comparison. [OpaqueBytesHandle] is an expect class whose actuals don't override
+ * overrides that route through [OwnedBytesHandle.handleEquals] for byte-content
+ * comparison. [OwnedBytesHandle] is an expect class whose actuals don't override
  * `equals` / `hashCode` (they hold an internal `PlatformBuffer` field that the KSP
  * walker treats as opaque), so default reference equality would surprise consumers
  * round-tripping a `PublishMessage` through encode/decode.
  */
 class OpaquePublishPayload(
-    val handle: OpaqueBytesHandle,
+    val handle: OwnedBytesHandle,
 ) : Payload {
     override fun equals(other: Any?): Boolean = other is OpaquePublishPayload && handle.handleEquals(other.handle)
 
@@ -61,7 +61,7 @@ class OpaquePublishPayload(
 }
 
 /**
- * Codec for [OpaquePublishPayload]. Delegates to [OpaqueBytesHandleCodec] for the
+ * Codec for [OpaquePublishPayload]. Delegates to [OwnedBytesHandleCodec] for the
  * buffer-allocation-and-copy decode (Pattern #2: consumer-owned `PlatformBuffer` via
  * `factory.allocate(...) + dst.write(source)`), and writes the carrier's owned bytes
  * back to the wire on encode.
@@ -70,7 +70,7 @@ object OpaquePublishPayloadCodec : Codec<OpaquePublishPayload> {
     override fun decode(
         buffer: ReadBuffer,
         context: DecodeContext,
-    ): OpaquePublishPayload = OpaquePublishPayload(OpaqueBytesHandleCodec.decode(buffer, context))
+    ): OpaquePublishPayload = OpaquePublishPayload(OwnedBytesHandleCodec.decode(buffer, context))
 
     override fun encode(
         buffer: WriteBuffer,

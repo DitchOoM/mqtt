@@ -8,7 +8,7 @@ import com.ditchoom.buffer.WriteBuffer
 import com.ditchoom.buffer.codec.DecodeContext
 import com.ditchoom.buffer.codec.EncodeContext
 import com.ditchoom.buffer.codec.asReadBuffer
-import com.ditchoom.buffer.codec.opaqueBytesFrom
+import com.ditchoom.buffer.codec.ownedBytesFrom
 import com.ditchoom.mqtt.controlpacket.OpaquePublishPayload
 import com.ditchoom.mqtt.controlpacket.OpaquePublishPayloadCodec
 import com.ditchoom.mqtt.controlpacket.QualityOfService
@@ -82,13 +82,13 @@ internal fun encodeToReadBuffer(packet: ControlPacketV4<*>): ReadBuffer =
  * payload migrate to this helper to preserve assertion semantics.
  */
 internal fun opaquePublishPayloadOf(s: String): OpaquePublishPayload {
-    // OpaqueBytesHandle.byteSize() returns the wrapped buffer's full `capacity`, so we
+    // OwnedBytesHandle.byteSize() returns the wrapped buffer's full `capacity`, so we
     // must allocate exactly the UTF-8 byte count (not s.length * 4 max-width).
     val bytes = s.encodeToByteArray()
     val buf = BufferFactory.Default.allocate(bytes.size)
     buf.writeBytes(bytes)
     buf.resetForRead()
-    return OpaquePublishPayload(opaqueBytesFrom(buf))
+    return OpaquePublishPayload(ownedBytesFrom(buf))
 }
 
 /**

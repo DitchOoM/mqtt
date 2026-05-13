@@ -1,8 +1,11 @@
 package com.ditchoom.mqtt3.controlpacket
 
 import com.ditchoom.buffer.BufferFactory
+import com.ditchoom.buffer.Charset
 import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.ReadBuffer
+import com.ditchoom.buffer.codec.OwnedBytesHandle
+import com.ditchoom.buffer.codec.OwnedBytesHandleCodec
 import com.ditchoom.buffer.codec.Payload
 import com.ditchoom.buffer.codec.annotations.DispatchOn
 import com.ditchoom.buffer.codec.annotations.FramedBy
@@ -10,7 +13,10 @@ import com.ditchoom.buffer.codec.annotations.LengthPrefixed
 import com.ditchoom.buffer.codec.annotations.PacketType
 import com.ditchoom.buffer.codec.annotations.ProtocolMessage
 import com.ditchoom.buffer.codec.annotations.RemainingBytes
+import com.ditchoom.buffer.codec.annotations.UseCodec
 import com.ditchoom.buffer.codec.annotations.When
+import com.ditchoom.buffer.codec.asReadBuffer
+import com.ditchoom.buffer.codec.ownedBytesFrom
 import com.ditchoom.mqtt.MalformedPacketException
 import com.ditchoom.mqtt.MqttWarning
 import com.ditchoom.mqtt.ProtocolError
@@ -265,13 +271,25 @@ data class ConnectionRequest(
     val keepAlive: UShort = UShort.MAX_VALUE,
     @LengthPrefixed val clientId: String = "",
     @When("connectFlags.willFlag") @LengthPrefixed val willTopicString: String? = null,
-    // TODO(buffer-v1): Will payload is bytes per §3.1.3.3, not UTF-8. Reverted to String?
-    //  pending Will/Password design (multi-param parent threading vs hand-written codec vs
-    //  injected-codec-per-field). See memory `mqtt_will_password_deferred.md`.
-    @When("connectFlags.willFlag") @LengthPrefixed val willPayloadValue: String? = null,
+    // §3.1.3.3: Will Message is arbitrary application bytes — preserved verbatim by
+    // routing through `OpaquePublishPayload`, the mqtt-side `Payload`-marker carrier
+    // around `OwnedBytesHandle`. The marker holds because Will payloads ARE admissible
+    // into `<P : Payload>` PUBLISH paths (the broker re-publishes the Will on
+    // ungraceful disconnect §3.1.2.5).
+    @When("connectFlags.willFlag")
+    @LengthPrefixed
+    @UseCodec(OpaquePublishPayloadCodec::class)
+    val willPayloadValue: OpaquePublishPayload? = null,
     @When("connectFlags.usernameFlag") @LengthPrefixed val username: String? = null,
-    // TODO(buffer-v1): Password is bytes per §3.1.3.5, not UTF-8. Same deferral as willPayloadValue.
-    @When("connectFlags.passwordFlag") @LengthPrefixed val passwordValue: String? = null,
+    // §3.1.3.5: Password is binary auth bytes — NOT a Payload (a password must never
+    // be admissible into `<P : Payload>` PUBLISH paths). `OwnedBytesHandle` keeps
+    // auth bytes in their own type-system lane; `OwnedBytesHandleCodec` does the
+    // safe single-copy Pattern #2 at the wire boundary, allocator-aware via
+    // `DecodeContext[BufferFactoryKey]`.
+    @When("connectFlags.passwordFlag")
+    @LengthPrefixed
+    @UseCodec(OwnedBytesHandleCodec::class)
+    val passwordValue: OwnedBytesHandle? = null,
 ) : ControlPacketV4<Nothing>,
     IConnectionRequest {
     init {
@@ -302,26 +320,28 @@ data class ConnectionRequest(
     override val hasPassword: Boolean get() = connectFlags.passwordFlag
     override val userName: String? get() = username
 
-    override val password: String? get() = passwordValue
+    // §3.1.3.5: Password is binary on the wire; the `String?` accessor preserved
+    // for `IConnectionRequest` compatibility decodes the OwnedBytesHandle as UTF-8
+    // (lossy on non-UTF-8 bytes — consumers needing byte-exact access read
+    // [passwordValue] directly).
+    override val password: String?
+        get() {
+            val handle = passwordValue ?: return null
+            val view = handle.asReadBuffer()
+            return view.readString(view.remaining(), Charset.UTF8)
+        }
 
     override val will: WillConfig
         get() {
-            val payloadStr = willPayloadValue
+            val payload = willPayloadValue
             return if (
                 connectFlags.willFlag &&
                 willTopicString != null &&
-                payloadStr != null
+                payload != null
             ) {
-                val payloadBuffer =
-                    BufferFactory.Default.allocate(payloadStr.length * 4).apply {
-                        writeString(payloadStr, com.ditchoom.buffer.Charset.UTF8)
-                        val written = position()
-                        position(0)
-                        setLimit(written)
-                    }
                 WillConfig.Enabled(
                     TopicName.fromOrThrow(willTopicString),
-                    payloadBuffer.slice(),
+                    payload.handle.asReadBuffer(),
                     QualityOfService.fromBooleans(
                         (connectFlags.willQos shr 1) and 1 == 1,
                         connectFlags.willQos and 1 == 1,
@@ -358,19 +378,10 @@ data class ConnectionRequest(
             Payload(
                 clientId = clientId,
                 willTopic = willTopicString?.let { TopicName.fromOrThrow(it) },
-                // Will payload reflects the (currently String?-typed) wire field. Materialize a
-                // ReadBuffer for the legacy accessor. See willPayloadValue TODO above.
-                willPayload =
-                    willPayloadValue?.let { s ->
-                        BufferFactory.Default
-                            .allocate(s.length * 4)
-                            .apply {
-                                writeString(s, com.ditchoom.buffer.Charset.UTF8)
-                                val written = position()
-                                position(0)
-                                setLimit(written)
-                            }.slice()
-                    },
+                // Will payload bytes preserved verbatim via the OpaquePublishPayload
+                // wire carrier; the legacy `ReadBuffer?` accessor surfaces a view over
+                // those bytes without re-copying.
+                willPayload = willPayloadValue?.handle?.asReadBuffer(),
                 userName = username,
                 password = password,
             )
@@ -438,13 +449,9 @@ data class ConnectionRequest(
         keepAlive = variableHeader.keepAliveSeconds.toUShort(),
         clientId = payload.clientId,
         willTopicString = payload.willTopic?.toString(),
-        willPayloadValue =
-            payload.willPayload?.let { buf ->
-                val slice = buf.slice()
-                slice.readString(slice.remaining(), com.ditchoom.buffer.Charset.UTF8)
-            },
+        willPayloadValue = payload.willPayload?.let { buf -> wireWillPayload(buf) },
         username = payload.userName,
-        passwordValue = payload.password,
+        passwordValue = payload.password?.let { s -> wirePasswordBytes(s) },
     )
 
     constructor(
@@ -595,10 +602,33 @@ data class ConnectionAcknowledgment(
 
 typealias CONNACK = ConnectionAcknowledgment
 
-// Factory functions matching legacy `ConnectionRequest(...)` call shapes were retained
-// while the class was generic over `<@Payload WP>`. After the directional-codec migration
-// the will payload routes through `@UseCodec(BufferPayloadCodec)` and the class is no
-// longer generic, so these factories are unnecessary — call the class directly.
+/**
+ * Wire-shape conversion for the Will payload at the legacy-API boundary. Copies [source]'s
+ * remaining bytes into a freshly-allocated `PlatformBuffer` (Pattern #2 — consumer-owned
+ * buffer) and wraps it in an [OpaquePublishPayload]. The source buffer is not consumed —
+ * a slice is read so the caller's position is untouched.
+ */
+private fun wireWillPayload(source: ReadBuffer): OpaquePublishPayload {
+    val slice = source.slice()
+    val dst = BufferFactory.Default.allocate(slice.remaining())
+    dst.write(slice)
+    dst.resetForRead()
+    return OpaquePublishPayload(ownedBytesFrom(dst))
+}
+
+/**
+ * Wire-shape conversion for the legacy `password: String?` API. UTF-8 encodes [source]
+ * into a freshly-allocated `PlatformBuffer` and wraps it in an [OwnedBytesHandle].
+ * Consumers needing byte-exact password material (§3.1.3.5 is binary) construct
+ * [OwnedBytesHandle] directly via [ownedBytesFrom] and pass through [passwordValue].
+ */
+private fun wirePasswordBytes(source: String): OwnedBytesHandle {
+    val bytes = source.encodeToByteArray()
+    val dst = BufferFactory.Default.allocate(bytes.size)
+    dst.writeBytes(bytes)
+    dst.resetForRead()
+    return ownedBytesFrom(dst)
+}
 
 // ── PUBLISH (§3.3) ────────────────────────────────────────────────────────
 
@@ -725,7 +755,7 @@ data class PublishMessageV4<P : Payload>(
             val opaque =
                 OpaquePublishPayload(
                     com.ditchoom.buffer.codec
-                        .opaqueBytesFrom(dst),
+                        .ownedBytesFrom(dst),
                 )
             return PublishMessageV4(
                 header = header,

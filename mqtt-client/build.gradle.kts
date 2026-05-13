@@ -152,6 +152,13 @@ android {
         minSdk = 21
         targetSdk = 36
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // Mirror the JVM/Native/JS `runIntegrationTests` filter on Android instrumented tests.
+        // Without this, connectedDebugAndroidTest runs the broker-dependent suite by default and
+        // every test that talks to a broker times out at 60s — see [[mqtt_client_integration_test_flakiness]].
+        // Opt in with -PintegrationTests (and -PuseMosquittoContainer=true to actually start a broker).
+        if (!runIntegrationTests) {
+            testInstrumentationRunnerArguments["notClass"] = integrationTestPatterns.joinToString(",")
+        }
     }
     publishing {
         singleVariant("release") {

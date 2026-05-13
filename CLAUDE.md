@@ -4,21 +4,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-MQTT is a Kotlin Multiplatform library providing MQTT 3.1.1 (v4) and MQTT 5.0 client implementations with automatic reconnection, message persistence, offline buffering, and IPC support. It delegates to native platform APIs via the DitchOoM buffer, socket, and websocket libraries.
+MQTT is a Kotlin Multiplatform library providing MQTT 3.1.1 (v4) and MQTT 5.0 client implementations with automatic reconnection, message persistence, and offline buffering. It delegates to native platform APIs via the DitchOoM buffer, socket, and websocket libraries.
 
 **Package:** `com.ditchoom.mqtt`
 
 ## No ByteArray in Production Code
 
-Production source sets (`*Main/`) must not allocate or accept `kotlin.ByteArray`. Control-packet decode, payload dispatch, and persistence flows all run at message volume; a single missed `ByteArray` in a hot path is a guaranteed copy per packet. Use `ReadBuffer` / `WriteBuffer` from the `com.ditchoom:buffer` dependency; consume payloads via `PublishMessage.rawPayload()` (zero-copy) or `encodePayloadTo(WriteBuffer)` (direct-write) whenever possible.
+Production source sets (`*Main/`) must not allocate or accept `kotlin.ByteArray`. Control-packet decode, payload dispatch, and persistence flows all run at message volume; a single missed `ByteArray` in a hot path is a guaranteed copy per packet. Use `ReadBuffer` / `WriteBuffer` (or the typed `Codec<P>` surface — `MqttClient.publish<P>` / `subscribe<P>` / `observe<P>` each take a `Codec<P>`, and CONNECT carries `OpaquePublishPayload` / `OwnedBytesHandle` for Will and Password slots).
 
 **Platform boundaries** where `ByteArray` is genuinely unavoidable:
 
 - **SQLDelight BLOB binding** — JDBC `PreparedStatement.setBytes(int, byte[])` and the K/N SQLite driver's `bind_blob` both take a `ByteArray`. Sites: `SqlDatabasePersistence` (v4 + v5) for Will payload, auth data, correlation data. A custom `ColumnAdapter<ReadBuffer, ByteArray>` would consolidate the six call-site copies into a single adapter — tracked for Phase 4.
 - **IndexedDB on JS** — `Int8Array` keys, reached via `ByteArray.unsafeCast<Int8Array>()`. Zero-copy when the source buffer is `JsBuffer`-backed.
 - **Kotlin stdlib `Base64`** — takes / returns `ByteArray`. Used by the MQTT v5 AUTH flow.
-
-Android AIDL is **not** a remaining boundary: `IPCMqttClient.aidl` takes `JvmBuffer` (Parcelable), and `buffer/JvmBuffer.writeToParcel` uses `SharedMemory` on API 27+ (zero-copy) and a `ParcelFileDescriptor` pipe on earlier APIs. No `ByteArray` traverses the AIDL surface.
 
 For each, annotate the call site with `@Suppress("NoByteArrayInProd")` and a one-line inline comment naming the specific driver / API. Tests (`*Test/`) may use `ByteArray` freely.
 
@@ -67,7 +65,7 @@ mqtt/
 ├── models-base/     # Shared MQTT protocol interfaces (IConnectionRequest, IPublishMessage, etc.)
 ├── models-v4/       # MQTT 3.1.1 (v4) control packet implementations + SQLDelight persistence
 ├── models-v5/       # MQTT 5.0 control packet implementations + SQLDelight persistence
-└── mqtt-client/     # Client logic: MqttService, MqttClient, connection management, IPC
+└── mqtt-client/     # Client logic: MqttClient, connection management, persistence wiring
 ```
 
 ### Kotlin Multiplatform Structure
@@ -79,21 +77,18 @@ src/
 ├── commonMain/          # Shared interfaces and logic
 ├── commonTest/          # Shared tests run on all platforms
 ├── jvmMain/             # JVM-specific implementations
-├── androidMain/         # Android: AIDL IPC, ContentProvider, AndroidX Startup
+├── androidMain/         # Android: in-process client (no AIDL service; flat MqttClient)
 ├── appleMain/           # iOS/macOS/watchOS/tvOS implementations
-├── jsMain/              # Browser/Node.js: Web Worker IPC
+├── jsMain/              # Browser/Node.js: in-process client
 ├── linuxMain/           # Linux x64/arm64 implementations
 └── wasmJsMain/          # WASM/JS implementations (models-v4, models-v5)
 ```
 
 ### Key Components
 
-- **`MqttService`** - Entry point. Manages brokers, clients, persistence. Supports IPC-backed remote service.
-- **`MqttClient`** - Client API for publish/subscribe/unsubscribe. Handles reconnection automatically.
-- **`LocalMqttService`** / **`LocalMqttClient`** - In-process implementations.
-- **`ControlPacket`** - Base class for all MQTT packets. Factory pattern via `ControlPacketFactory`.
+- **`MqttClient`** - In-process client API for publish/subscribe/unsubscribe with typed `Codec<P>`. Handles reconnection automatically.
+- **`ControlPacket`** - Base class for all MQTT packets. Factory pattern via `ControlPacketFactory` / `ControlPacketV4Factory` / `ControlPacketV5Factory`.
 - **`Persistence`** - SQLDelight-backed message persistence (JVM, Android, Apple, Linux).
-- **IPC** (`mqtt-client/src/commonMain/.../ipc/`) - Cross-process communication (Android AIDL, JS Web Workers).
 
 ### Dependencies
 

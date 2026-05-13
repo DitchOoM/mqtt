@@ -200,7 +200,7 @@ sealed interface ControlPacketV4<out P : Payload> : ControlPacket {
     // MqttClient.publish<P>), so the cast to ControlPacketV4<OpaquePublishPayload> holds.
     override fun serialize(factory: com.ditchoom.buffer.BufferFactory): ReadBuffer {
         @Suppress("UNCHECKED_CAST")
-        return ControlPacketV4Codec(OpaquePublishPayloadCodec).encode(
+        return ControlPacketV4OpaqueWireCodec.encode(
             this as ControlPacketV4<OpaquePublishPayload>,
             com.ditchoom.buffer.codec.EncodeContext.Empty,
             factory,
@@ -222,12 +222,18 @@ sealed interface ControlPacketV4<out P : Payload> : ControlPacket {
          */
         fun from(buffer: ReadBuffer): ControlPacketV4<OpaquePublishPayload> =
             try {
-                ControlPacketV4Codec(OpaquePublishPayloadCodec)
-                    .decode(buffer, com.ditchoom.buffer.codec.DecodeContext.Empty)
+                ControlPacketV4OpaqueWireCodec.decode(buffer, com.ditchoom.buffer.codec.DecodeContext.Empty)
             } catch (e: com.ditchoom.buffer.codec.DecodeException) {
                 throw MalformedPacketException(e.message ?: "malformed control packet")
             }
     }
+}
+
+// Cached codec instance for the hot wire-write path. Lives at top-level (not on
+// the sealed parent's companion) so KSP's `@DispatchOn` discovery isn't confused
+// by a companion-init reference to its own generated class.
+internal val ControlPacketV4OpaqueWireCodec: ControlPacketV4Codec<OpaquePublishPayload> by lazy {
+    ControlPacketV4Codec(OpaquePublishPayloadCodec)
 }
 
 // ── Reserved (wire 0x00) ───────────────────────────────────────────────────

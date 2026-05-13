@@ -171,7 +171,7 @@ sealed interface ControlPacketV5<out P : Payload> : com.ditchoom.mqtt.controlpac
     // (eagerEncode in MqttClient.publish<P>), so the cast holds.
     override fun serialize(factory: com.ditchoom.buffer.BufferFactory): ReadBuffer {
         @Suppress("UNCHECKED_CAST")
-        return ControlPacketV5Codec(com.ditchoom.mqtt.controlpacket.OpaquePublishPayloadCodec).encode(
+        return ControlPacketV5OpaqueWireCodec.encode(
             this as ControlPacketV5<com.ditchoom.mqtt.controlpacket.OpaquePublishPayload>,
             com.ditchoom.buffer.codec.EncodeContext.Empty,
             factory,
@@ -193,8 +193,7 @@ sealed interface ControlPacketV5<out P : Payload> : com.ditchoom.mqtt.controlpac
          */
         fun from(buffer: ReadBuffer): ControlPacketV5<com.ditchoom.mqtt.controlpacket.OpaquePublishPayload> =
             try {
-                ControlPacketV5Codec(com.ditchoom.mqtt.controlpacket.OpaquePublishPayloadCodec)
-                    .decode(buffer, DecodeContext.Empty)
+                ControlPacketV5OpaqueWireCodec.decode(buffer, DecodeContext.Empty)
             } catch (e: com.ditchoom.buffer.codec.DecodeException) {
                 // Replaces the retired `@ProtocolMessage(onUnknownDiscriminator = MalformedPacketException)`
                 // mapping. The dispatcher throws DecodeException for unknown packet types and
@@ -1448,3 +1447,10 @@ private val unsubAckValidReasonCodes: Set<UByte> =
 // AuthenticationData / CorrelationData property variants are intermediated via
 // `@LengthPrefixed val value: String` (UTF-8) until the Phase B typed-payload design
 // pick lands. The generated MqttPropertyCodec is non-generic and needs no context keys.
+
+// Cached codec instance for the hot wire-write path. Lives at top-level (not on
+// the sealed parent's companion) so KSP's `@DispatchOn` discovery isn't confused
+// by a companion-init reference to its own generated class.
+internal val ControlPacketV5OpaqueWireCodec: ControlPacketV5Codec<com.ditchoom.mqtt.controlpacket.OpaquePublishPayload> by lazy {
+    ControlPacketV5Codec(com.ditchoom.mqtt.controlpacket.OpaquePublishPayloadCodec)
+}

@@ -370,7 +370,15 @@ class PublicBrokerValidationTest {
     private suspend fun openConnection(
         connectionOptions: MqttConnectionOptions,
         connectionRequest: IConnectionRequest,
-    ): Connection<ControlPacket> = defaultSingleConnection(connectionOptions, connectionRequest.controlPacketFactory)
+    ): Connection<ControlPacket> =
+        defaultSingleConnection(
+            connectionOptions,
+            connectionRequest.controlPacketFactory,
+            // No MqttClient here — the raw-connection test path has no TopicCodecRegistry,
+            // so decode every PUBLISH as opaque bytes. Validation tests only inspect the
+            // PublishMessage shape, never its typed payload.
+            publishCodecForTopic = { _ -> com.ditchoom.mqtt.controlpacket.OpaquePublishPayloadCodec },
+        )
 
     /**
      * Sends CONNECT, validates CONNACK, and returns the connection.

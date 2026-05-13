@@ -25,17 +25,20 @@ class MalformedInvalidVariableByteInteger(
 
 /**
  * Thrown when a PUBLISH arrives on a topic with no codec registered in
- * the connection's TopicCodecRegistry and no `defaultPublishCodec`
- * configured at `MqttClient.start(...)`. The fix is to call
- * `MqttClient.subscribe<P>(filter, codec, handler)` (which registers the
- * codec before SUBSCRIBE leaves the wire), or to supply a fallback codec
- * (typically `OpaqueBytesHandleCodec` for log/dead-letter handling).
+ * the connection's TopicCodecRegistry. The fix is to call
+ * `MqttClient.observe<P>(filter, codec)` or
+ * `MqttClient.subscribe<P>(filter, codec, ...)` before any SUBSCRIBE leaves
+ * the wire — both register the codec eagerly. For raw-byte consumers,
+ * pass `OpaquePublishPayloadCodec` (one wire-boundary copy, no hidden
+ * defaults). Low-level `defaultSingleConnection` users supply
+ * `publishCodecForTopic` directly.
  */
 class MissingCodecException(
     val topicName: String,
 ) : MqttException(
         "No codec registered for topic '$topicName'. Register via " +
-            "MqttClient.subscribe<P>(filter, codec, handler) before SUBSCRIBE, " +
-            "or supply a defaultPublishCodec to MqttClient.start(...).",
+            "MqttClient.observe<P>(filter, codec) or " +
+            "MqttClient.subscribe<P>(filter, codec, ...) before SUBSCRIBE. " +
+            "For raw bytes, pass OpaquePublishPayloadCodec.",
         ReasonCode.UNSPECIFIED_ERROR.byte,
     )

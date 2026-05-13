@@ -43,13 +43,13 @@ class PublishContractTests {
             val dispatcher = PublishDispatcher()
             val seenByA = mutableListOf<OpaquePublishPayload>()
             val seenByB = mutableListOf<OpaquePublishPayload>()
-            dispatcher.subscribeTyped<OpaquePublishPayload>(
+            dispatcher.subscribe<OpaquePublishPayload>(
                 TopicFilter.fromOrThrow("dual/one"),
-                SubscriberEntry.Typed { _, payload -> seenByA.add(payload) },
+                SubscriberEntry { _, payload -> seenByA.add(payload) },
             )
-            dispatcher.subscribeTyped<OpaquePublishPayload>(
+            dispatcher.subscribe<OpaquePublishPayload>(
                 TopicFilter.fromOrThrow("dual/+"),
-                SubscriberEntry.Typed { _, payload -> seenByB.add(payload) },
+                SubscriberEntry { _, payload -> seenByB.add(payload) },
             )
 
             val publish = rawPublish("dual/one", payload(1, 2, 3, 4))
@@ -71,9 +71,9 @@ class PublishContractTests {
         runTest {
             val dispatcher = PublishDispatcher()
             val received = mutableListOf<OpaquePublishPayload>()
-            dispatcher.subscribeTyped<OpaquePublishPayload>(
+            dispatcher.subscribe<OpaquePublishPayload>(
                 TopicFilter.fromOrThrow("empty/+"),
-                SubscriberEntry.Typed { _, payload -> received.add(payload) },
+                SubscriberEntry { _, payload -> received.add(payload) },
             )
 
             dispatcher.dispatch(

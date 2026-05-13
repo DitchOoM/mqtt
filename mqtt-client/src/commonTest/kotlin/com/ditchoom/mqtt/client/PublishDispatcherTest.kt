@@ -41,16 +41,14 @@ class PublishDispatcherTest {
                 },
         )
 
-    // ── Untyped subscribe ──────────────────────────────────────────────
-
     @Test
-    fun dispatchInvokesMatchingUntypedHandler() =
+    fun dispatchInvokesMatchingHandler() =
         runTest {
             val dispatcher = PublishDispatcher()
             val received = mutableListOf<PublishMessage>()
-            dispatcher.subscribe(
+            dispatcher.subscribe<OpaquePublishPayload>(
                 TopicFilter.fromOrThrow("sensor/+"),
-                SubscriptionHandler.Async { publish -> received.add(publish) },
+                SubscriberEntry { pub, _ -> received.add(pub) },
             )
 
             val matched = dispatcher.dispatch(v4Publish("sensor/temp", makePayload(42)))
@@ -63,40 +61,22 @@ class PublishDispatcherTest {
     fun dispatchReturnsFalseWhenNoMatch() =
         runTest {
             val dispatcher = PublishDispatcher()
-            dispatcher.subscribe(
+            dispatcher.subscribe<OpaquePublishPayload>(
                 TopicFilter.fromOrThrow("sensor/+"),
-                SubscriptionHandler.Async { },
+                SubscriberEntry { _, _ -> },
             )
             val matched = dispatcher.dispatch(v4Publish("other/topic", makePayload()))
             assertFalse(matched)
         }
 
     @Test
-    fun dispatchInvokesBlockingHandler() =
-        runTest {
-            val dispatcher = PublishDispatcher()
-            val received = mutableListOf<PublishMessage>()
-            dispatcher.subscribe(
-                TopicFilter.fromOrThrow("alerts/#"),
-                SubscriptionHandler.Blocking { publish -> received.add(publish) },
-            )
-            dispatcher.dispatch(v4Publish("alerts/fire", makePayload(7)))
-            assertEquals(1, received.size)
-        }
-
-    // ── Typed subscribe ───────────────────────────────────────────────
-    //
-    // The MqttCodec layer attaches the typed payload to `PublishMessageV4<P>.payload`
-    // (Pattern #1/#2). PublishDispatcher only routes — the typed value flows verbatim.
-
-    @Test
     fun typedSubscribeReceivesAlreadyTypedPayload() =
         runTest {
             val dispatcher = PublishDispatcher()
             val received = mutableListOf<Pair<PublishMessage, OpaquePublishPayload>>()
-            dispatcher.subscribeTyped<OpaquePublishPayload>(
+            dispatcher.subscribe<OpaquePublishPayload>(
                 TopicFilter.fromOrThrow("data/#"),
-                SubscriberEntry.Typed { pub, decoded -> received.add(pub to decoded) },
+                SubscriberEntry { pub, decoded -> received.add(pub to decoded) },
             )
 
             dispatcher.dispatch(v4Publish("data/values", makePayload(0, 0, 0, 42)))
@@ -106,35 +86,17 @@ class PublishDispatcherTest {
         }
 
     @Test
-    fun typedSubscribeHandlerReceivesMessageAndPayloadInstance() =
-        runTest {
-            val dispatcher = PublishDispatcher()
-            val received = mutableListOf<Pair<PublishMessage, OpaquePublishPayload>>()
-            dispatcher.subscribeTyped<OpaquePublishPayload>(
-                TopicFilter.fromOrThrow("cmd/+"),
-                SubscriberEntry.Typed { pub, decoded -> received.add(pub to decoded) },
-            )
-            dispatcher.dispatch(v4Publish("cmd/run", makePayload(0, 0, 1, 0)))
-
-            assertEquals(1, received.size)
-            assertEquals(4, received[0].second.byteSize())
-            assertEquals(TopicName.fromOrThrow("cmd/run"), received[0].first.topic)
-        }
-
-    // ── Multi-subscriber: one codec per topic — both handlers see the same typed value ──
-
-    @Test
     fun multipleSubscribersSameTopicEachGetTypedPayload() =
         runTest {
             val dispatcher = PublishDispatcher()
             val results = mutableListOf<OpaquePublishPayload>()
-            dispatcher.subscribeTyped<OpaquePublishPayload>(
+            dispatcher.subscribe<OpaquePublishPayload>(
                 TopicFilter.fromOrThrow("dual/int"),
-                SubscriberEntry.Typed { _, decoded -> results.add(decoded) },
+                SubscriberEntry { _, decoded -> results.add(decoded) },
             )
-            dispatcher.subscribeTyped<OpaquePublishPayload>(
+            dispatcher.subscribe<OpaquePublishPayload>(
                 TopicFilter.fromOrThrow("dual/+"),
-                SubscriberEntry.Typed { _, decoded -> results.add(decoded) },
+                SubscriberEntry { _, decoded -> results.add(decoded) },
             )
 
             val matched = dispatcher.dispatch(v4Publish("dual/int", makePayload(0, 0, 0, 9)))
@@ -143,23 +105,19 @@ class PublishDispatcherTest {
             assertEquals(2, results.size, "both filters match the same topic — both handlers fire")
         }
 
-    // ── Empty-payload typed decode ────────────────────────────────────
-
     @Test
     fun typedSubscribeReceivesEmptyPayload() =
         runTest {
             val dispatcher = PublishDispatcher()
             val received = mutableListOf<OpaquePublishPayload>()
-            dispatcher.subscribeTyped<OpaquePublishPayload>(
+            dispatcher.subscribe<OpaquePublishPayload>(
                 TopicFilter.fromOrThrow("empty/+"),
-                SubscriberEntry.Typed { _, p -> received.add(p) },
+                SubscriberEntry { _, p -> received.add(p) },
             )
             dispatcher.dispatch(v4Publish("empty/x", BufferFactory.Default.allocate(0).also { it.resetForRead() }))
             assertEquals(1, received.size)
             assertEquals(0, received.single().byteSize())
         }
-
-    // ── Unsubscribe / clear ───────────────────────────────────────────
 
     @Test
     fun unsubscribeRemovesHandler() =
@@ -167,7 +125,7 @@ class PublishDispatcherTest {
             val dispatcher = PublishDispatcher()
             val filter = TopicFilter.fromOrThrow("remove/me")
             val received = mutableListOf<PublishMessage>()
-            dispatcher.subscribe(filter, SubscriptionHandler.Async { received.add(it) })
+            dispatcher.subscribe<OpaquePublishPayload>(filter, SubscriberEntry { pub, _ -> received.add(pub) })
             dispatcher.dispatch(v4Publish("remove/me", makePayload(1)))
             assertEquals(1, received.size)
 
@@ -181,10 +139,13 @@ class PublishDispatcherTest {
     fun clearRemovesAllHandlers() =
         runTest {
             val dispatcher = PublishDispatcher()
-            dispatcher.subscribe(TopicFilter.fromOrThrow("a/#"), SubscriptionHandler.Async { })
-            dispatcher.subscribeTyped<OpaquePublishPayload>(
+            dispatcher.subscribe<OpaquePublishPayload>(
+                TopicFilter.fromOrThrow("a/#"),
+                SubscriberEntry { _, _ -> },
+            )
+            dispatcher.subscribe<OpaquePublishPayload>(
                 TopicFilter.fromOrThrow("b/+"),
-                SubscriberEntry.Typed { _, _ -> },
+                SubscriberEntry { _, _ -> },
             )
             assertFalse(dispatcher.isEmpty())
             dispatcher.clear()

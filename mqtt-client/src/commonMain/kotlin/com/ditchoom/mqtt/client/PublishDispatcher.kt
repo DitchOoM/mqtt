@@ -15,41 +15,26 @@ import com.ditchoom.mqtt5.controlpacket.ControlPacketV5
  * typed payload via the concrete subtype's `payload: P` field. Dispatch is
  * pure routing — no re-decode from raw bytes, no per-subscriber decode
  * lambda. The typed payload is extracted from the concrete subtype here and
- * handed to each matching [SubscriberEntry.Typed].
+ * handed to each matching [SubscriberEntry].
  *
  * "One codec per topic" semantics: all subscribers matching an incoming
  * topic receive the same typed payload. If two subscribers register different
  * codec result types for overlapping filters, the type cast in
- * [SubscriberEntry.Typed] throws `ClassCastException`. Users who need
+ * [SubscriberEntry] throws `ClassCastException`. Users who need
  * multi-codec semantics for the same topic should register
- * `OpaqueBytesHandleCodec` and re-decode in their handler.
+ * `OpaquePublishPayloadCodec` and re-decode in their handler.
  */
 internal class PublishDispatcher {
-    private val trie = TopicTrie<SubscriberEntry>()
-
-    /** Register an untyped handler for the given topic filter. */
-    fun subscribe(
-        filter: TopicFilter,
-        handler: SubscriptionHandler,
-    ): SubscriberEntry? =
-        trie.insert(
-            filter,
-            when (handler) {
-                is SubscriptionHandler.Blocking ->
-                    SubscriberEntry.Untyped { pub -> handler.onPublish(pub) }
-                is SubscriptionHandler.Async ->
-                    SubscriberEntry.Untyped { pub -> handler.onPublish(pub) }
-            },
-        )
+    private val trie = TopicTrie<SubscriberEntry<*>>()
 
     /** Register a typed subscriber. The codec lives in [TopicCodecRegistry]; this entry only routes. */
-    fun <P> subscribeTyped(
+    fun <P> subscribe(
         filter: TopicFilter,
-        entry: SubscriberEntry.Typed<P>,
-    ): SubscriberEntry? = trie.insert(filter, entry)
+        entry: SubscriberEntry<P>,
+    ): SubscriberEntry<*>? = trie.insert(filter, entry)
 
     /** Remove the handler for the given topic filter. */
-    fun unsubscribe(filter: TopicFilter): SubscriberEntry? = trie.remove(filter)
+    fun unsubscribe(filter: TopicFilter): SubscriberEntry<*>? = trie.remove(filter)
 
     /**
      * Dispatch an incoming publish to all matching subscribers.
@@ -59,20 +44,9 @@ internal class PublishDispatcher {
     suspend fun dispatch(publish: PublishMessage): Boolean {
         val entries = trie.matchAll(publish.topic)
         if (entries.isEmpty()) return false
-        val typedPayload = typedPayloadOf(publish)
+        val typedPayload = typedPayloadOf(publish) ?: return false
         for (entry in entries) {
-            when (entry) {
-                is SubscriberEntry.Untyped -> entry.dispatch(publish)
-                is SubscriberEntry.Typed<*> -> {
-                    if (typedPayload != null) {
-                        entry.dispatch(publish, typedPayload)
-                    }
-                    // null typedPayload only occurs for non-v4/v5 PublishMessage subtypes
-                    // (none exist today) — silently skip rather than crash. Typed
-                    // subscribers expect a typed message; if the wire decode produced
-                    // something else, the subscription model is mis-wired upstream.
-                }
-            }
+            entry.dispatch(publish, typedPayload)
         }
         return true
     }

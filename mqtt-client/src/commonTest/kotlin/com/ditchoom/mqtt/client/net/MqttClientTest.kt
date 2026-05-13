@@ -13,6 +13,8 @@ import com.ditchoom.mqtt.client.QoS1State
 import com.ditchoom.mqtt.client.QoS2State
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.IConnectionRequest
+import com.ditchoom.mqtt.controlpacket.OpaquePublishPayload
+import com.ditchoom.mqtt.controlpacket.OpaquePublishPayloadCodec
 import com.ditchoom.mqtt.controlpacket.PublishMessage
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
@@ -25,8 +27,8 @@ import com.ditchoom.socket.getNetworkCapabilities
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -319,7 +321,12 @@ class MqttClientTest {
         val willTopicFilter = TopicFilter.fromOrThrow(willTopic.toString())
         val receivedLwt =
             scope.async {
-                val result = clientOther.observe(willTopicFilter).take(1).first()
+                val result =
+                    clientOther
+                        .observe(willTopicFilter, OpaquePublishPayloadCodec)
+                        .take(1)
+                        .first()
+                        .first
                 clientOther.unsubscribe(connectionRequest.controlPacketFactory.unsubscribe(willTopicFilter)).unsubAck.await()
                 clientOther.sendDisconnect()
                 clientOther.shutdown()
@@ -330,6 +337,7 @@ class MqttClientTest {
                 willTopicFilter,
                 QualityOfService.AT_LEAST_ONCE,
             ),
+            OpaquePublishPayloadCodec,
         )
         clientLwt.shutdown(sendDisconnect = false)
         val message = receivedLwt.await()
@@ -380,10 +388,10 @@ class MqttClientTest {
         val persistence = connectionRequest.controlPacketFactory.defaultPersistence(inMemory)
         val broker = persistence.addBroker(connectionOptions, connectionRequest)
         val client = MqttClient.start(scope, broker, persistence, connectSingle = createConnectFactory(broker))
-        val flow = client.observe(TopicFilter.fromOrThrow(topic.toString()))
+        val flow = client.observe(TopicFilter.fromOrThrow(topic.toString()), OpaquePublishPayloadCodec).map { it.first }
         val collectJob =
             scope.launch {
-                flow.filterIsInstance<PublishMessage>().take(3).collect {
+                flow.take(3).collect {
                     val payload = opaquePayloadOf(it)?.asReadBuffer() ?: EMPTY_BUFFER
                     val qosValue = it.qualityOfService.integerValue.toString()
                     assertEquals(payloadString + qosValue, payload.readString(payload.limit()))
@@ -404,7 +412,12 @@ suspend fun sendAllMessageTypes(
 ) {
     val factory = client.packetFactory
     val topicFilter = TopicFilter.fromOrThrow(topic.toString())
-    client.subscribe(factory.subscribe(topicFilter, maximumQos = QualityOfService.EXACTLY_ONCE)).subAck.await()
+    client
+        .subscribe(
+            factory.subscribe(topicFilter, maximumQos = QualityOfService.EXACTLY_ONCE),
+            OpaquePublishPayloadCodec,
+        ).subAck
+        .await()
     val pub =
         client.publish(
             topicName = topic.toString(),

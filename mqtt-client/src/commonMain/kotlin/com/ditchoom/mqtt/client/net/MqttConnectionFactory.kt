@@ -28,14 +28,13 @@ suspend fun defaultSingleConnection(
     connectionOp: MqttConnectionOptions,
     factory: ControlPacketFactory,
     publishCodecForTopic: (topicName: String) -> Codec<out Payload>? = { null },
-    defaultPublishCodec: Codec<out Payload>? = null,
 ): Connection<ControlPacket> =
     when (connectionOp) {
         is MqttConnectionOptions.SocketConnection -> {
             CodecConnection.connect(
                 connectionOp.host,
                 connectionOp.port,
-                MqttCodec(factory, publishCodecForTopic, defaultPublishCodec),
+                MqttCodec(factory, publishCodecForTopic),
                 TcpTransport(),
                 ConnectionOptions(
                     socketOptions = buildSocketOptions(connectionOp),
@@ -72,7 +71,7 @@ suspend fun defaultSingleConnection(
                             websocketEndpoint = connectionOp.websocketEndpoint,
                             protocols = connectionOp.protocols,
                         ),
-                    binaryCodec = MqttCodec(factory, publishCodecForTopic, defaultPublishCodec),
+                    binaryCodec = MqttCodec(factory, publishCodecForTopic),
                 )
             wsConnection.mapNotNull(
                 encode = { packet -> WebSocketMessage.Binary(packet) },
@@ -88,21 +87,18 @@ suspend fun defaultSingleConnection(
 
 /**
  * Curries [defaultSingleConnection] against [broker]'s control-packet factory. The
- * [publishCodecForTopic] lookup and [defaultPublishCodec] fallback are typically
- * wired from `MqttClient`'s [com.ditchoom.mqtt.client.TopicCodecRegistry] — see
- * `MqttClient.start(...)`.
+ * [publishCodecForTopic] lookup is typically wired from `MqttClient`'s
+ * [com.ditchoom.mqtt.client.TopicCodecRegistry] — see `MqttClient.start(...)`.
  */
 fun defaultSingleConnection(
     broker: MqttBroker,
     publishCodecForTopic: (topicName: String) -> Codec<out Payload>? = { null },
-    defaultPublishCodec: Codec<out Payload>? = null,
 ): suspend (MqttConnectionOptions) -> Connection<ControlPacket> =
     { op ->
         defaultSingleConnection(
             op,
             broker.connectionRequest.controlPacketFactory,
             publishCodecForTopic,
-            defaultPublishCodec,
         )
     }
 

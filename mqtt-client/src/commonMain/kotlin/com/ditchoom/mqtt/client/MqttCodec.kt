@@ -25,9 +25,11 @@ import com.ditchoom.mqtt5.controlpacket.ControlPacketV5Codec
  * while the wire frame is still alive — zero-copy when the codec is
  * Pattern #1 (typed value from native handle). The lambda inspects
  * `partial.topicName` (decoded before the payload bytes are read) and
- * resolves the codec via [publishCodecForTopic]; missing-codec falls back
- * to [defaultPublishCodec] when supplied, otherwise throws
- * [MissingCodecException].
+ * resolves the codec via [publishCodecForTopic]. If no codec is registered for
+ * the topic, [MissingCodecException] is thrown — this signals "broker sent
+ * a PUBLISH on a topic we never subscribed to", which is a server or wiring
+ * bug, not a normal-path consumer concern. Every [MqttClient.observe] /
+ * [MqttClient.subscribe] call site supplies its own codec by design.
  *
  * **Encode**: routes through `ControlPacket.serialize` so non-PUBLISH packets
  * (CONNECT, SUBSCRIBE, PING…) reach the wire unchanged. PUBLISH encode is
@@ -42,7 +44,6 @@ import com.ditchoom.mqtt5.controlpacket.ControlPacketV5Codec
 class MqttCodec(
     private val factory: ControlPacketFactory,
     private val publishCodecForTopic: (topicName: String) -> Codec<out Payload>? = { null },
-    private val defaultPublishCodec: Codec<out Payload>? = null,
 ) : Codec<ControlPacket> {
     @Suppress("UNCHECKED_CAST")
     override fun decode(
@@ -57,7 +58,6 @@ class MqttCodec(
                     onPublishMessageV4 = { partial ->
                         val codec =
                             publishCodecForTopic(partial.topicName)
-                                ?: defaultPublishCodec
                                 ?: throw MissingCodecException(partial.topicName)
                         partial.complete(codec as Codec<Payload>)
                     },
@@ -69,7 +69,6 @@ class MqttCodec(
                     onPublish = { partial ->
                         val codec =
                             publishCodecForTopic(partial.topicName)
-                                ?: defaultPublishCodec
                                 ?: throw MissingCodecException(partial.topicName)
                         partial.complete(codec as Codec<Payload>)
                     },

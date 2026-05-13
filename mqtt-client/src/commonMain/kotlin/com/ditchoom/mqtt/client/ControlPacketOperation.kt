@@ -71,12 +71,12 @@ sealed interface PublishResult {
     ) : PublishResult
 }
 
-data class SubscribeOperation(
+data class SubscribeOperation<P>(
     val packetId: Int,
-    val subscriptions: Map<ISubscription, Flow<PublishMessage>>,
+    val subscriptions: Map<ISubscription, Flow<Pair<PublishMessage, P>>>,
     val subAck: Deferred<ISubscribeAcknowledgement>,
-) : Flow<PublishMessage> {
-    override suspend fun collect(collector: FlowCollector<PublishMessage>) {
+) : Flow<Pair<PublishMessage, P>> {
+    override suspend fun collect(collector: FlowCollector<Pair<PublishMessage, P>>) {
         combine(subscriptions.values.asIterable()) { array ->
             array.forEach { collector.emit(it) }
         }

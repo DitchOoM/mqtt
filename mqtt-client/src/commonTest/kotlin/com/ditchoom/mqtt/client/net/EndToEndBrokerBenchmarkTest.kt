@@ -6,8 +6,8 @@ import com.ditchoom.buffer.pool.BufferPool
 import com.ditchoom.buffer.withPooling
 import com.ditchoom.mqtt.InMemoryPersistence
 import com.ditchoom.mqtt.client.MqttClient
-import com.ditchoom.mqtt.client.SubscriptionHandler
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
+import com.ditchoom.mqtt.controlpacket.OpaquePublishPayloadCodec
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.TopicName
@@ -90,16 +90,15 @@ class EndToEndBrokerBenchmarkTest {
             try {
                 val received = MutableStateFlow(0)
                 val allReceived = CompletableDeferred<Unit>()
-                val handler =
-                    SubscriptionHandler.Blocking { _ ->
+                client
+                    .subscribe(topicStr, OpaquePublishPayloadCodec, qos) { _, _ ->
                         val newVal = received.value + 1
                         received.value = newVal
                         if (newVal >= count) {
                             allReceived.complete(Unit)
                         }
-                    }
-                val sub = connReq.controlPacketFactory.subscribe(filter, qos)
-                client.subscribe(sub, handler).subAck.await()
+                    }.subAck
+                    .await()
 
                 val payloadBytes = ByteArray(payloadSize) { (it % 256).toByte() }
 

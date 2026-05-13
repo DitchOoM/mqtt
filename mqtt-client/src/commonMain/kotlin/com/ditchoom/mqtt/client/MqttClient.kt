@@ -148,15 +148,6 @@ class MqttClient internal constructor(
     }
 
     /**
-     * Observe incoming publishes matching [filter] as an untyped flow. Payloads are the raw
-     * wire [PublishMessage] instances (each carries its own owned payload).
-     */
-    fun observe(filter: TopicFilter): Flow<PublishMessage> =
-        processor.readChannel.filterIsInstance<PublishMessage>().filter {
-            filter.matches(it.topic)
-        }
-
-    /**
      * Extract the typed `payload` field from the concrete v4 / v5 PUBLISH variant. Mirrors
      * the helper in [PublishDispatcher]; lives here too so the typed [observe] overload can
      * surface the typed value without leaking dispatcher internals.
@@ -178,23 +169,31 @@ class MqttClient internal constructor(
      * [filter], it's overwritten. Subscribers using both codecs would see the latter's
      * type and the former's handler would `ClassCastException` — documented "one codec
      * per topic" semantics.
+     *
+     * No untyped overload exists by design: every observer chooses its decode shape so
+     * the cost of producing the typed value (zero-copy for Pattern #1 / field-by-field;
+     * one wire-boundary copy for [com.ditchoom.mqtt.controlpacket.OpaquePublishPayloadCodec])
+     * is visible at the call site rather than hidden in a default.
      */
     fun <P : Payload> observe(
         filter: TopicFilter,
         payloadCodec: Codec<P>,
     ): Flow<Pair<PublishMessage, P>> {
         publishCodecRegistry.register(filter, payloadCodec)
-        return observe(filter).map { pub ->
-            @Suppress("UNCHECKED_CAST")
-            val typed =
-                typedPayloadOf(pub) as? P
-                    ?: error(
-                        "Expected typed ${payloadCodec::class.simpleName} payload on ${pub::class.simpleName} " +
-                            "for topic '${pub.topic}', but the actually-decoded payload doesn't match. " +
-                            "Check for overlapping wildcard subscriptions registering different codec result types.",
-                    )
-            pub to typed
-        }
+        return processor.readChannel
+            .filterIsInstance<PublishMessage>()
+            .filter { filter.matches(it.topic) }
+            .map { pub ->
+                @Suppress("UNCHECKED_CAST")
+                val typed =
+                    typedPayloadOf(pub) as? P
+                        ?: error(
+                            "Expected typed ${payloadCodec::class.simpleName} payload on ${pub::class.simpleName} " +
+                                "for topic '${pub.topic}', but the actually-decoded payload doesn't match. " +
+                                "Check for overlapping wildcard subscriptions registering different codec result types.",
+                        )
+                pub to typed
+            }
     }
 
     suspend fun sendQueuedSubscribeMessage(packetId: Int) {
@@ -203,44 +202,51 @@ class MqttClient internal constructor(
         processor.subscribe(sub, false)
     }
 
-    suspend fun subscribe(
-        topicFilter: String,
-        maxQos: QualityOfService,
-    ): SubscribeOperation = subscribe(packetFactory.subscribe(TopicFilter.fromOrThrow(topicFilter), maxQos))
-
-    suspend fun subscribe(subscriptions: Set<ISubscription>): SubscribeOperation = subscribe(packetFactory.subscribe(subscriptions))
-
-    suspend fun subscribe(sub: ISubscribeRequest): SubscribeOperation = observeSub(processor.subscribe(sub))
-
     /**
-     * Subscribe with a callback handler for incoming publishes.
+     * Subscribe to [topicFilter] with the typed codec [payloadCodec]; collect incoming
+     * publishes via [SubscribeOperation.subscriptions] or the operation's flow.
      *
-     * The handler receives a [PublishMessage] whose payload is owned (no scope contract);
-     * capture it freely. For typed payloads, prefer the overload that accepts a
-     * `ReadBuffer.() -> P` decode lambda.
+     * Registers [payloadCodec] in this client's [TopicCodecRegistry] so [MqttCodec]
+     * decodes wire bytes zero-copy at the framing boundary (Pattern #1 when the codec
+     * uses the wire buffer's native handle; field-by-field structured codecs are also
+     * zero bulk-copy). For raw-bytes consumers, pass [com.ditchoom.mqtt.controlpacket.OpaquePublishPayloadCodec]
+     * — one explicit copy at the wire boundary, no hidden defaults.
      */
-    suspend fun subscribe(
+    suspend fun <P : Payload> subscribe(
         topicFilter: String,
+        payloadCodec: Codec<P>,
         maxQos: QualityOfService = QualityOfService.AT_LEAST_ONCE,
-        handler: SubscriptionHandler,
-    ): SubscribeOperation =
-        subscribe(
-            packetFactory.subscribe(TopicFilter.fromOrThrow(topicFilter), maxQos),
-            handler,
-        )
-
-    suspend fun subscribe(
-        sub: ISubscribeRequest,
-        handler: SubscriptionHandler,
-    ): SubscribeOperation {
-        for (subscription in sub.subscriptions) {
-            processor.publishDispatcher.subscribe(subscription.topicFilter, handler)
-        }
-        return observeSub(processor.subscribe(sub))
+    ): SubscribeOperation<P> {
+        val filter = TopicFilter.fromOrThrow(topicFilter)
+        publishCodecRegistry.register(filter, payloadCodec)
+        return observeSub(processor.subscribe(packetFactory.subscribe(filter, maxQos)), payloadCodec)
     }
 
-    private fun observeSub(subscribeRequestSent: ISubscribeRequest): SubscribeOperation {
-        val map = subscribeRequestSent.subscriptions.associateWith { observe(it.topicFilter) }
+    /** Multi-topic subscribe; one codec applies to every subscription in the SUB packet. */
+    suspend fun <P : Payload> subscribe(
+        subscriptions: Set<ISubscription>,
+        payloadCodec: Codec<P>,
+    ): SubscribeOperation<P> = subscribe(packetFactory.subscribe(subscriptions), payloadCodec)
+
+    /** Multi-topic subscribe variant taking a pre-built [ISubscribeRequest]. */
+    suspend fun <P : Payload> subscribe(
+        sub: ISubscribeRequest,
+        payloadCodec: Codec<P>,
+    ): SubscribeOperation<P> {
+        for (subscription in sub.subscriptions) {
+            publishCodecRegistry.register(subscription.topicFilter, payloadCodec)
+        }
+        return observeSub(processor.subscribe(sub), payloadCodec)
+    }
+
+    private fun <P : Payload> observeSub(
+        subscribeRequestSent: ISubscribeRequest,
+        payloadCodec: Codec<P>,
+    ): SubscribeOperation<P> {
+        val map =
+            subscribeRequestSent.subscriptions.associateWith { subscription ->
+                observe(subscription.topicFilter, payloadCodec)
+            }
         return SubscribeOperation(
             subscribeRequestSent.packetIdentifier,
             map,
@@ -401,15 +407,12 @@ class MqttClient internal constructor(
         payloadCodec: Codec<P>,
         maxQos: QualityOfService = QualityOfService.AT_LEAST_ONCE,
         handler: suspend (PublishMessage, P) -> Unit,
-    ): SubscribeOperation {
+    ): SubscribeOperation<P> {
         val filter = TopicFilter.fromOrThrow(topicFilter)
         publishCodecRegistry.register(filter, payloadCodec)
         val sub = packetFactory.subscribe(filter, maxQos)
-        processor.publishDispatcher.subscribeTyped(
-            filter,
-            SubscriberEntry.Typed(handler),
-        )
-        return observeSub(processor.subscribe(sub))
+        processor.publishDispatcher.subscribe(filter, SubscriberEntry(handler))
+        return observeSub(processor.subscribe(sub), payloadCodec)
     }
 
     /**
@@ -520,7 +523,6 @@ class MqttClient internal constructor(
             scope: CoroutineScope = CoroutineScope(Dispatchers.Default + CoroutineName("MQTT Client")),
             broker: MqttBroker,
             persistence: Persistence,
-            defaultPublishCodec: Codec<out Payload>? = null,
             bufferFactory: BufferFactory = BufferFactory.Default,
             connectSingle: (suspend (MqttConnectionOptions) -> Connection<ControlPacket>)? = null,
         ): MqttClient {
@@ -531,7 +533,6 @@ class MqttClient internal constructor(
                     publishCodecForTopic = { topic ->
                         registry.codecForTopicName(TopicName.fromOrThrow(topic))
                     },
-                    defaultPublishCodec = defaultPublishCodec,
                 )
             val cm = ConnectivityManager(persistence, broker, effectiveConnect)
             val client = MqttClient(cm, scope, registry, bufferFactory)

@@ -1,9 +1,14 @@
 package com.ditchoom.mqtt5.controlpacket.properties
 
+import com.ditchoom.buffer.BufferFactory
+import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
 import com.ditchoom.buffer.codec.DecodeContext
 import com.ditchoom.buffer.codec.EncodeContext
+import com.ditchoom.buffer.codec.OwnedBytesHandle
+import com.ditchoom.buffer.codec.byteSize
+import com.ditchoom.buffer.codec.ownedBytesFrom
 import com.ditchoom.buffer.utf8Length
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readVariableByteInteger
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.variableByteSize
@@ -13,10 +18,6 @@ import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.writeVariableByte
 // generated MqttPropertyCodec dispatch with a Variable Byte Integer length prefix
 // (MQTT 5.0 §2.2.2). VBI is a spec-named encoding and stays in MQTT-land rather than
 // leaking into buffer-codec's generic LengthPrefix enum.
-//
-// Phase B-3a removed the `<AD, CD>` type parameters from MqttPropertyCodec: the
-// AuthenticationData / CorrelationData binary slots are now `@LengthPrefixed val value: String`
-// (Phase A intermediary). The generated codec is non-generic.
 
 /**
  * Decodes a VBI-prefixed MQTT v5 property section into a list of typed properties.
@@ -86,10 +87,9 @@ fun mqttPropertySize(property: MqttProperty): Int {
             is UserProperty -> 2 + property.key.utf8Length() + 2 + property.value.utf8Length()
             // Variable byte integer
             is SubscriptionIdentifier -> variableByteSize(property.value.toInt()).toInt()
-            // Binary data: 2 (length prefix) + payload bytes. Phase A intermediates the
-            // payload via `value: String` — the utf8 byte count is the wire byte count.
-            is CorrelationData -> 2 + property.value.utf8Length()
-            is AuthenticationData -> 2 + property.value.utf8Length()
+            // Binary data: 2 (length prefix) + payload bytes.
+            is CorrelationData -> 2 + property.value.byteSize()
+            is AuthenticationData -> 2 + property.value.byteSize()
         }
     return 1 + payloadSize
 }
@@ -105,4 +105,18 @@ fun mqttPropertiesSize(properties: List<MqttProperty>): Int {
 fun mqttPropertiesSectionSize(properties: List<MqttProperty>): Int {
     val bodySize = mqttPropertiesSize(properties)
     return bodySize + variableByteSize(bodySize)
+}
+
+/**
+ * Copies the source buffer's remaining bytes into a consumer-owned [PlatformBuffer]
+ * (Pattern #2 from the buffer-codec lockdown) and wraps it in an [OwnedBytesHandle].
+ * Used at the typed-API → wire-property boundary for CorrelationData / AuthenticationData.
+ * Reads a slice so the caller's read position is untouched.
+ */
+internal fun readBufferToOwnedBytes(source: ReadBuffer): OwnedBytesHandle {
+    val slice = source.slice()
+    val dst = BufferFactory.Default.allocate(slice.remaining())
+    dst.write(slice)
+    dst.resetForRead()
+    return ownedBytesFrom(dst)
 }

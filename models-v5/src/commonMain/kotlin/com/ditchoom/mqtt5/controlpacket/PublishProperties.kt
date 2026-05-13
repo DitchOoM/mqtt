@@ -1,9 +1,7 @@
 package com.ditchoom.mqtt5.controlpacket
 
-import com.ditchoom.buffer.BufferFactory
-import com.ditchoom.buffer.Charset
-import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.ReadBuffer
+import com.ditchoom.buffer.codec.asReadBuffer
 import com.ditchoom.mqtt.ProtocolError
 import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt5.controlpacket.properties.ContentType
@@ -16,6 +14,7 @@ import com.ditchoom.mqtt5.controlpacket.properties.ResponseTopic
 import com.ditchoom.mqtt5.controlpacket.properties.SubscriptionIdentifier
 import com.ditchoom.mqtt5.controlpacket.properties.TopicAlias
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
+import com.ditchoom.mqtt5.controlpacket.properties.readBufferToOwnedBytes
 
 /**
  * Typed view of PUBLISH variable-header properties (§3.3.2.3). Parallels
@@ -49,13 +48,7 @@ data class PublishProperties(
             if (responseTopic != null) add(ResponseTopic(value = responseTopic.toString()))
             if (correlationData != null) {
                 correlationData.position(0)
-                // TODO(buffer-v1): CorrelationData reshape via Phase A intermediary.
-                val slice = correlationData.slice()
-                add(
-                    CorrelationData(
-                        value = slice.readString(slice.remaining(), Charset.UTF8),
-                    ),
-                )
+                add(CorrelationData(value = readBufferToOwnedBytes(correlationData)))
             }
             for (kv in userProperty) add(UserProperty(key = kv.first, value = kv.second))
             for (sub in subscriptionIdentifier) add(SubscriptionIdentifier(value = sub.toUInt()))
@@ -81,18 +74,7 @@ data class PublishProperties(
                     }?.value
                     ?.toInt()
             val responseTopic = p.single<ResponseTopic>()?.let { TopicName.fromOrThrow(it.value) }
-            // TODO(buffer-v1): CorrelationData carries a String placeholder under Phase A.
-            val correlationData =
-                p.single<CorrelationData>()?.value?.let { s ->
-                    BufferFactory.Default
-                        .allocate(s.length * 4)
-                        .apply {
-                            writeString(s, Charset.UTF8)
-                            val written = position()
-                            position(0)
-                            setLimit(written)
-                        }.slice()
-                }
+            val correlationData = p.single<CorrelationData>()?.value?.asReadBuffer()
             val userProperty = p.list<UserProperty>().map { it.key to it.value }
             val subscriptionIdentifier =
                 p.list<SubscriptionIdentifier>().mapTo(LinkedHashSet()) {

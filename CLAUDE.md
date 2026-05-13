@@ -31,7 +31,7 @@ The three canonical decode patterns (see `buffer/CLAUDE.md` §"Canonical decode 
 2. **Consumer-owned `PlatformBuffer`** — `data class IpcBuffer(val buffer: PlatformBuffer)` — NOT `Payload`. Decode allocates via `DecodeContext[BufferFactoryKey]` and copies.
 3. **Consumer-owned `ByteArray`** — `data class OpaqueBytes(val bytes: ByteArray)` — NOT `Payload`. Decode via `buffer.copyToByteArray(n)`.
 
-**Phase A intermediary** (TEMPORARY): until the Will/Password/PUBLISH typed-payload design lands in Phase B, mqtt-v4 wire fields use `NonSpecCompliantIntermediaryStringAsBuffer(val s: String) : Payload`. UTF-8 decode is lossy for non-UTF-8 application payloads — the type's deliberately-ugly name surfaces the fix-it-later signal at every call site. Phase B decides between multi-param parent threading (`<W : Payload, PWD : Payload, P : Payload>` on the sealed parent), hand-written `ConnectionRequestCodec` with consumer-supplied codecs, or a field-level `@InjectedCodec` annotation.
+**Wire-typed bytes carriers** (the four MQTT binary slots): all reshaped to the framework's canonical owned-bytes carriers — `OpaquePublishPayload : Payload` for PUBLISH application bytes + Will payload (admissible into `<P : Payload>`), and `OwnedBytesHandle` (not Payload) for CONNECT Password, CorrelationData (v5 §3.3.2.3.6 / §3.1.3.2.4), and AuthenticationData (v5 §3.1.2.11.10 / §3.15.2.2.2 / §3.2.2.3.18). Bytes-exact; the spec-compliant `<P : Payload>` constraint prevents accidentally publishing a password.
 
 ## Build Commands
 

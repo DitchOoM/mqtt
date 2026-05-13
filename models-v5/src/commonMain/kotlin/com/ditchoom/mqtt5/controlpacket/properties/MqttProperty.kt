@@ -1,5 +1,7 @@
 package com.ditchoom.mqtt5.controlpacket.properties
 
+import com.ditchoom.buffer.codec.OwnedBytesHandle
+import com.ditchoom.buffer.codec.OwnedBytesHandleCodec
 import com.ditchoom.buffer.codec.annotations.DispatchOn
 import com.ditchoom.buffer.codec.annotations.DispatchValue
 import com.ditchoom.buffer.codec.annotations.LengthPrefixed
@@ -277,30 +279,26 @@ data class SubscriptionIdentifier(
     constructor(value: Int) : this(PropertyId(0x0Bu), value.toUInt())
 }
 
-// ── Binary data properties (Phase A intermediary: UTF-8 string slot) ────
+// ── Binary data properties — OwnedBytesHandle wire carriers (bytes-exact per spec) ────
 
-// TODO(buffer-v1): CorrelationData is bytes per MQTT v5 §3.3.2.3.6, not UTF-8.
-//  Phase A intermediates through `@LengthPrefixed val value: String`, mirroring the
-//  v4 willPayloadValue / passwordValue deferral. UTF-8 decode is lossy for non-UTF-8
-//  application correlation tokens. Phase B picks between multi-param parent threading
-//  vs hand-written codec vs field-level @InjectedCodec. See memory
-//  `mqtt_will_password_deferred.md`.
+// MQTT v5 §3.3.2.3.6 — Correlation Data is binary, not UTF-8. The handle carries the
+// length-prefixed bytes verbatim; consumers extract via `value.asReadBuffer()` (zero-copy)
+// when the application chooses to interpret them.
 @PacketType(0x09)
 @ProtocolMessage
 data class CorrelationData(
     val id: PropertyId = PropertyId(0x09u),
-    @LengthPrefixed val value: String,
+    @LengthPrefixed @UseCodec(OwnedBytesHandleCodec::class) val value: OwnedBytesHandle,
 ) : MqttProperty {
-    constructor(value: String) : this(PropertyId(0x09u), value)
+    constructor(value: OwnedBytesHandle) : this(PropertyId(0x09u), value)
 }
 
-// TODO(buffer-v1): AuthenticationData is bytes per MQTT v5 §3.1.2.11.10, not UTF-8.
-//  Same deferral pattern as CorrelationData.
+// MQTT v5 §3.1.2.11.10 — Authentication Data is binary auth-method-specific material.
 @PacketType(0x16)
 @ProtocolMessage
 data class AuthenticationData(
     val id: PropertyId = PropertyId(0x16u),
-    @LengthPrefixed val value: String,
+    @LengthPrefixed @UseCodec(OwnedBytesHandleCodec::class) val value: OwnedBytesHandle,
 ) : MqttProperty {
-    constructor(value: String) : this(PropertyId(0x16u), value)
+    constructor(value: OwnedBytesHandle) : this(PropertyId(0x16u), value)
 }

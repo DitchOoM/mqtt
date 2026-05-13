@@ -436,14 +436,13 @@ class PropertyRoundTripTests {
 
     @Test
     fun sizeMatchesActualBytesWrittenForAllTypes() {
-        // Phase A intermediary: Correlation/Authentication Data carry `String` payloads.
         val properties =
             listOf<MqttProperty>(
                 PayloadFormatIndicator(true),
                 MessageExpiryInterval(300u),
                 ContentType("text/plain"),
                 ResponseTopic("t"),
-                CorrelationData("xy"),
+                CorrelationData(ownedBytesFromUtf8("xy")),
                 SessionExpiryInterval(3600u),
                 ReceiveMaximum(100.toUShort()),
                 MaximumPacketSize(65536u),
@@ -452,7 +451,7 @@ class PropertyRoundTripTests {
                 RequestProblemInformation(false),
                 UserProperty("a", "b"),
                 AuthenticationMethod("plain"),
-                AuthenticationData("zw"),
+                AuthenticationData(ownedBytesFromUtf8("zw")),
                 ReasonString("ok"),
                 ServerKeepAlive(60.toUShort()),
                 ResponseInformation("info"),

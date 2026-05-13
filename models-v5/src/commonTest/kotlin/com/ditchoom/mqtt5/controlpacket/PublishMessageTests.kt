@@ -21,6 +21,7 @@ import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
 import com.ditchoom.mqtt5.controlpacket.properties.WillDelayInterval
 import com.ditchoom.mqtt5.controlpacket.properties.encodeProperty
 import com.ditchoom.mqtt5.controlpacket.properties.encodedSize
+import com.ditchoom.mqtt5.controlpacket.properties.ownedBytesFromUtf8
 import com.ditchoom.mqtt5.controlpacket.properties.readProperties
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -351,9 +352,8 @@ class PublishMessageTests {
 
     @Test
     fun correlationDataDuplicateThrowsProtocolError() {
-        // Phase A intermediary: CorrelationData carries a String value (UTF-8 lossy).
-        val obj1 = CorrelationData("yoyo")
-        val obj2 = CorrelationData("yoyo")
+        val obj1 = CorrelationData(ownedBytesFromUtf8("yoyo"))
+        val obj2 = CorrelationData(ownedBytesFromUtf8("yoyo"))
         val buffer = BufferFactory.Default.allocate(20)
         buffer.writeVariableByteInteger(encodedSize(obj1) + encodedSize(obj2))
         encodeProperty(buffer, obj1)

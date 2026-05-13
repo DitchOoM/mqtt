@@ -1,9 +1,7 @@
 package com.ditchoom.mqtt5.controlpacket
 
-import com.ditchoom.buffer.BufferFactory
-import com.ditchoom.buffer.Charset
-import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.ReadBuffer
+import com.ditchoom.buffer.codec.asReadBuffer
 import com.ditchoom.mqtt.ProtocolError
 import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt5.controlpacket.properties.Authentication
@@ -25,6 +23,7 @@ import com.ditchoom.mqtt5.controlpacket.properties.TopicAliasMaximum
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
 import com.ditchoom.mqtt5.controlpacket.properties.WillDelayInterval
 import com.ditchoom.mqtt5.controlpacket.properties.mqttPropertiesSize
+import com.ditchoom.mqtt5.controlpacket.properties.readBufferToOwnedBytes
 
 /**
  * Typed view of CONNECT variable-header properties (§3.1.2.11).
@@ -57,14 +56,7 @@ data class ConnectProperties(
             if (authentication != null) {
                 add(AuthenticationMethod(value = authentication.method))
                 authentication.data.position(0)
-                // TODO(buffer-v1): AuthenticationData reshape via Phase A intermediary.
-                //  See memory `mqtt_will_password_deferred.md`.
-                val slice = authentication.data.slice()
-                add(
-                    AuthenticationData(
-                        value = slice.readString(slice.remaining(), Charset.UTF8),
-                    ),
-                )
+                add(AuthenticationData(value = readBufferToOwnedBytes(authentication.data)))
             }
         }
 
@@ -103,18 +95,7 @@ data class ConnectProperties(
             val requestProblemInformation = p.single<RequestProblemInformation>()?.enabled
             val userProperty = p.list<UserProperty>().map { it.key to it.value }
             val authMethod = p.single<AuthenticationMethod>()?.value
-            // TODO(buffer-v1): AuthenticationData carries a String placeholder under Phase A.
-            val authData =
-                p.single<AuthenticationData>()?.value?.let { s ->
-                    BufferFactory.Default
-                        .allocate(s.length * 4)
-                        .apply {
-                            writeString(s, Charset.UTF8)
-                            val written = position()
-                            position(0)
-                            setLimit(written)
-                        }.slice()
-                }
+            val authData = p.single<AuthenticationData>()?.value?.asReadBuffer()
             p.rejectUnknown()
             val auth =
                 if (authMethod != null && authData != null) {
@@ -161,13 +142,7 @@ data class ConnectWillProperties(
             if (responseTopic != null) add(ResponseTopic(value = responseTopic.toString()))
             if (correlationData != null) {
                 correlationData.position(0)
-                // TODO(buffer-v1): CorrelationData reshape via Phase A intermediary.
-                val slice = correlationData.slice()
-                add(
-                    CorrelationData(
-                        value = slice.readString(slice.remaining(), Charset.UTF8),
-                    ),
-                )
+                add(CorrelationData(value = readBufferToOwnedBytes(correlationData)))
             }
             for ((k, v) in userProperty) add(UserProperty(key = k, value = v))
         }
@@ -183,18 +158,7 @@ data class ConnectWillProperties(
             val messageExpiryIntervalSeconds = p.single<MessageExpiryInterval>()?.seconds?.toLong()
             val contentType = p.single<ContentType>()?.value
             val responseTopic = p.single<ResponseTopic>()?.let { TopicName.fromOrThrow(it.value) }
-            // TODO(buffer-v1): CorrelationData carries a String placeholder under Phase A.
-            val correlationData =
-                p.single<CorrelationData>()?.value?.let { s ->
-                    BufferFactory.Default
-                        .allocate(s.length * 4)
-                        .apply {
-                            writeString(s, Charset.UTF8)
-                            val written = position()
-                            position(0)
-                            setLimit(written)
-                        }.slice()
-                }
+            val correlationData = p.single<CorrelationData>()?.value?.asReadBuffer()
             val userProperty = p.list<UserProperty>().map { it.key to it.value }
             p.rejectUnknown()
             return ConnectWillProperties(

@@ -1,8 +1,6 @@
 package com.ditchoom.mqtt5.controlpacket
 
-import com.ditchoom.buffer.BufferFactory
-import com.ditchoom.buffer.Charset
-import com.ditchoom.buffer.Default
+import com.ditchoom.buffer.codec.asReadBuffer
 import com.ditchoom.mqtt.ProtocolError
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
@@ -49,6 +47,7 @@ import com.ditchoom.mqtt5.controlpacket.properties.TopicAlias
 import com.ditchoom.mqtt5.controlpacket.properties.TopicAliasMaximum
 import com.ditchoom.mqtt5.controlpacket.properties.UserProperty
 import com.ditchoom.mqtt5.controlpacket.properties.WildcardSubscriptionAvailable
+import com.ditchoom.mqtt5.controlpacket.properties.readBufferToOwnedBytes
 
 /**
  * Typed view of a CONNACK property bag. Spec §3.2.2.3.
@@ -106,16 +105,7 @@ data class ConnAckProperties(
             if (authentication != null) {
                 add(AuthenticationMethod(value = authentication.method))
                 authentication.data.position(0)
-                // TODO(buffer-v1): AuthenticationData reshape via Phase A intermediary
-                //  (`@LengthPrefixed val value: String`). UTF-8 decode of binary auth tokens
-                //  is lossy — sticky failure on non-UTF-8 sessions until Phase B design lands.
-                //  See memory `mqtt_will_password_deferred.md`.
-                val slice = authentication.data.slice()
-                add(
-                    AuthenticationData(
-                        value = slice.readString(slice.remaining(), Charset.UTF8),
-                    ),
-                )
+                add(AuthenticationData(value = readBufferToOwnedBytes(authentication.data)))
             }
         }
 
@@ -163,20 +153,7 @@ data class ConnAckProperties(
             val responseInfo = p.single<ResponseInformation>()?.value
             val serverRef = p.single<ServerReference>()?.value
             val authMethod = p.single<AuthenticationMethod>()?.value
-            // TODO(buffer-v1): AuthenticationData carries a String placeholder under Phase A —
-            //  re-encode to a ReadBuffer for the typed Authentication accessor. Lossy for
-            //  non-UTF-8 sessions; sticky until Phase B design lands.
-            val authData =
-                p.single<AuthenticationData>()?.value?.let { s ->
-                    BufferFactory.Default
-                        .allocate(s.length * 4)
-                        .apply {
-                            writeString(s, Charset.UTF8)
-                            val written = position()
-                            position(0)
-                            setLimit(written)
-                        }.slice()
-                }
+            val authData = p.single<AuthenticationData>()?.value?.asReadBuffer()
             p.rejectUnknown()
             val auth =
                 if (authMethod != null && authData != null) {

@@ -490,7 +490,6 @@ sealed interface ControlPacketV5<out P : Payload> : com.ditchoom.mqtt.controlpac
         override val retain: Boolean get() = header.publishRetain
         override val packetIdentifier: Int get() = packetId?.toInt() ?: NO_PACKET_ID
 
-
         /** Typed view of the variable-header properties (§3.3.2.3). */
         val typedProperties: PublishProperties get() = PublishProperties.from(properties)
 
@@ -569,7 +568,8 @@ sealed interface ControlPacketV5<out P : Payload> : com.ditchoom.mqtt.controlpac
                 dst.resetForRead()
                 val opaque =
                     com.ditchoom.mqtt.controlpacket.OpaquePublishPayload(
-                        com.ditchoom.buffer.codec.opaqueBytesFrom(dst),
+                        com.ditchoom.buffer.codec
+                            .opaqueBytesFrom(dst),
                     )
                 return Publish(
                     header = header,

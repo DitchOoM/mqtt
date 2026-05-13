@@ -39,8 +39,7 @@ import com.ditchoom.buffer.stream.StreamProcessor
  * `NonSpecCompliantIntermediaryStringAsBuffer` UTF-8-lossy intermediary): MQTT
  * §3.3.2 PUBLISH application bytes are arbitrary octets, and this carrier preserves
  * them exactly through the consumer-owned `PlatformBuffer` inside [handle].
- */
-/**
+ *
  * Plain `class` (not `value class` / `data class`) to allow `equals` / `hashCode`
  * overrides that route through [OpaqueBytesHandle.handleEquals] for byte-content
  * comparison. [OpaqueBytesHandle] is an expect class whose actuals don't override
@@ -51,8 +50,7 @@ import com.ditchoom.buffer.stream.StreamProcessor
 class OpaquePublishPayload(
     val handle: OpaqueBytesHandle,
 ) : Payload {
-    override fun equals(other: Any?): Boolean =
-        other is OpaquePublishPayload && handle.handleEquals(other.handle)
+    override fun equals(other: Any?): Boolean = other is OpaquePublishPayload && handle.handleEquals(other.handle)
 
     override fun hashCode(): Int = handle.handleHashCode()
 

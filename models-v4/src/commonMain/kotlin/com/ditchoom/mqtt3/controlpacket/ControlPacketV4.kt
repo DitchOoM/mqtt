@@ -4,7 +4,6 @@ import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.codec.Payload
-import com.ditchoom.buffer.codec.asReadBuffer
 import com.ditchoom.buffer.codec.annotations.DispatchOn
 import com.ditchoom.buffer.codec.annotations.FramedBy
 import com.ditchoom.buffer.codec.annotations.LengthPrefixed
@@ -643,7 +642,6 @@ data class PublishMessageV4<P : Payload>(
     override val retain: Boolean get() = header.publishRetain
     override val packetIdentifier: Int get() = packetId?.toInt() ?: NO_PACKET_ID
 
-
     override fun expectedResponse(
         reasonCode: ReasonCode,
         reasonString: String?,
@@ -726,7 +724,8 @@ data class PublishMessageV4<P : Payload>(
             dst.resetForRead()
             val opaque =
                 OpaquePublishPayload(
-                    com.ditchoom.buffer.codec.opaqueBytesFrom(dst),
+                    com.ditchoom.buffer.codec
+                        .opaqueBytesFrom(dst),
                 )
             return PublishMessageV4(
                 header = header,

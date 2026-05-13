@@ -10,12 +10,12 @@ import com.ditchoom.mqtt.client.toBuffer
 import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicName
-import com.ditchoom.mqtt3.controlpacket.ConnectionRequest as ConnectV4
-import com.ditchoom.mqtt3.controlpacket.PublishMessageV4 as PublishV4
-import com.ditchoom.mqtt3.controlpacket.SubscribeRequest as SubscribeV4
 import org.junit.Test
 import java.io.File
 import kotlin.test.assertTrue
+import com.ditchoom.mqtt3.controlpacket.ConnectionRequest as ConnectV4
+import com.ditchoom.mqtt3.controlpacket.PublishMessageV4 as PublishV4
+import com.ditchoom.mqtt3.controlpacket.SubscribeRequest as SubscribeV4
 
 /**
  * Android-instrumented mirror of MemoryPressureTest.pooledFactoryWritePath.

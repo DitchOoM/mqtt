@@ -85,3 +85,13 @@ android {
         }
     }
 }
+
+// Gradle 8.14 strict-mode: sourcesJar / ktlint / dokka tasks consume KSP-generated sources; declare the dep explicitly.
+tasks
+    .matching {
+        it.name.endsWith("SourcesJar") ||
+            it.name == "sourcesJar" ||
+            it.name == "runKtlintCheckOverCommonMainSourceSet" ||
+            it.name == "runKtlintFormatOverCommonMainSourceSet" ||
+            it.name.startsWith("dokkaGenerate")
+    }.configureEach { dependsOn("kspCommonMainKotlinMetadata") }

@@ -26,5 +26,4 @@ include(
     "models-v4",
     "models-v5",
     "mqtt-client",
-    "benchmark",
 )

@@ -524,17 +524,21 @@ class MqttClient internal constructor(
             broker: MqttBroker,
             persistence: Persistence,
             bufferFactory: BufferFactory = BufferFactory.Default,
-            connectSingle: (suspend (MqttConnectionOptions) -> Connection<ControlPacket>)? = null,
+            connectSingle: (
+                suspend (
+                    MqttConnectionOptions,
+                    (topicName: String) -> Codec<out Payload>?,
+                ) -> Connection<ControlPacket>
+            )? = null,
         ): MqttClient {
             val registry = TopicCodecRegistry()
             val effectiveConnect =
-                connectSingle ?: com.ditchoom.mqtt.client.net.defaultSingleConnection(
-                    broker = broker,
-                    publishCodecForTopic = { topic ->
-                        registry.codecForTopicName(TopicName.fromOrThrow(topic))
-                    },
-                )
-            val cm = ConnectivityManager(persistence, broker, effectiveConnect)
+                connectSingle ?: com.ditchoom.mqtt.client.net
+                    .defaultSingleConnection(broker)
+            val publishCodecForTopic: (String) -> Codec<out Payload>? = { topic ->
+                registry.codecForTopicName(TopicName.fromOrThrow(topic))
+            }
+            val cm = ConnectivityManager(persistence, broker, publishCodecForTopic, effectiveConnect)
             val client = MqttClient(cm, scope, registry, bufferFactory)
             client.connectionJob =
                 scope.launch {

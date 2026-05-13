@@ -87,14 +87,16 @@ suspend fun defaultSingleConnection(
 
 /**
  * Curries [defaultSingleConnection] against [broker]'s control-packet factory. The
- * [publishCodecForTopic] lookup is typically wired from `MqttClient`'s
- * [com.ditchoom.mqtt.client.TopicCodecRegistry] — see `MqttClient.start(...)`.
+ * `publishCodecForTopic` lookup is supplied at invocation time by
+ * [com.ditchoom.mqtt.client.ConnectivityManager] from `MqttClient`'s
+ * [com.ditchoom.mqtt.client.TopicCodecRegistry] — passing it through the call
+ * (rather than capturing at construction) makes it impossible for a caller-
+ * supplied `connectSingle` to bypass the registry.
  */
 fun defaultSingleConnection(
     broker: MqttBroker,
-    publishCodecForTopic: (topicName: String) -> Codec<out Payload>? = { null },
-): suspend (MqttConnectionOptions) -> Connection<ControlPacket> =
-    { op ->
+): suspend (MqttConnectionOptions, (topicName: String) -> Codec<out Payload>?) -> Connection<ControlPacket> =
+    { op, publishCodecForTopic ->
         defaultSingleConnection(
             op,
             broker.connectionRequest.controlPacketFactory,

@@ -1,5 +1,7 @@
 package com.ditchoom.mqtt.client
 
+import com.ditchoom.buffer.codec.Codec
+import com.ditchoom.buffer.codec.Payload
 import com.ditchoom.buffer.flow.Connection
 import com.ditchoom.mqtt.Persistence
 import com.ditchoom.mqtt.connection.MqttBroker
@@ -33,13 +35,17 @@ import kotlin.time.Duration.Companion.seconds
  * connection ends (session-resume / "stay connected" pattern). That outer loop keeps the
  * reconnection policy in one place; [run] itself is a single-session body.
  *
- * [connectSingle] is atomic: given a [MqttConnectionOptions], establish one transport. Option
- * iteration happens here so each attempted option is counted in [connectionAttempts].
+ * [connectSingle] is atomic: given a [MqttConnectionOptions] and the per-topic codec lookup,
+ * establish one transport. Option iteration happens here so each attempted option is counted
+ * in [connectionAttempts]. The lookup is invoked by the wire-decoder for every incoming
+ * PUBLISH, so threading it through the call (rather than capturing at construction) means
+ * a caller-supplied [connectSingle] cannot bypass the per-client [TopicCodecRegistry].
  */
 class ConnectivityManager(
     internal val persistence: Persistence,
     internal val broker: MqttBroker,
-    private val connectSingle: suspend (MqttConnectionOptions) -> Connection<ControlPacket>,
+    private val publishCodecForTopic: (topicName: String) -> Codec<out Payload>?,
+    private val connectSingle: suspend (MqttConnectionOptions, (topicName: String) -> Codec<out Payload>?) -> Connection<ControlPacket>,
 ) {
     var connectionCount = 0L
         private set
@@ -118,7 +124,7 @@ class ConnectivityManager(
             connectionAttempts++
             val conn =
                 try {
-                    connectSingle(connectionOp)
+                    connectSingle(connectionOp, publishCodecForTopic)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (

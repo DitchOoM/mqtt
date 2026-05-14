@@ -16,8 +16,12 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.io.IOException
+import java.net.InetSocketAddress
+import java.net.Socket
 import kotlin.random.Random
 import kotlin.random.nextUInt
 import kotlin.test.assertTrue
@@ -44,9 +48,42 @@ class WsConnectIsolationTest {
             payload = ConnectionRequest.Payload(clientId = "ws-isolation-" + Random.nextUInt()),
         )
 
+    /**
+     * Probes whether a Mosquitto broker is reachable from the emulator at
+     * `10.0.2.2:[port]` (the host machine's loopback). The broker is started by
+     * the Gradle `startMosquitto` task that fires when `connectedDebugAndroidTest`
+     * runs with `-PuseMosquittoContainer=true` (see `:mqtt-client:build.gradle.kts`
+     * §"Mosquitto container for Android instrumented tests"). Without that flag
+     * the broker isn't up and these tests should skip cleanly rather than fail
+     * loudly with a `Connection refused` masquerading as a real regression.
+     */
+    private fun isBrokerReachable(
+        host: String,
+        port: Int,
+    ): Boolean =
+        try {
+            Socket().use { socket ->
+                socket.connect(InetSocketAddress(host, port), 2_000)
+                true
+            }
+        } catch (_: IOException) {
+            false
+        }
+
+    private fun assumeBrokerReachable(
+        host: String,
+        port: Int,
+    ) {
+        assumeTrue(
+            "Mosquitto not reachable at $host:$port — start with `-PuseMosquittoContainer=true` or run a broker on the host machine and `adb reverse tcp:$port tcp:$port`.",
+            isBrokerReachable(host, port),
+        )
+    }
+
     @Test
     fun tcpConnectAndReceiveConnack() =
         runBlocking(Dispatchers.Default) {
+            assumeBrokerReachable("10.0.2.2", 1883)
             withTimeout(15.seconds) {
                 val options =
                     MqttConnectionOptions.SocketConnection(
@@ -70,6 +107,7 @@ class WsConnectIsolationTest {
     @Test
     fun wsConnectAndReceiveConnack() =
         runBlocking(Dispatchers.Default) {
+            assumeBrokerReachable("10.0.2.2", 8080)
             withTimeout(15.seconds) {
                 val options =
                     MqttConnectionOptions.WebSocketConnectionOptions(
@@ -102,6 +140,7 @@ class WsConnectIsolationTest {
     @Test
     fun wsMqttClientAwaitConnectivity() =
         runBlocking(Dispatchers.Default) {
+            assumeBrokerReachable("10.0.2.2", 8080)
             withTimeout(15.seconds) {
                 val options =
                     MqttConnectionOptions.WebSocketConnectionOptions(

@@ -7,6 +7,7 @@ import com.ditchoom.buffer.codec.Payload
 import com.ditchoom.buffer.codec.ownedBytesFrom
 import com.ditchoom.buffer.flow.Connection
 import com.ditchoom.mqtt.InMemoryPersistence
+import com.ditchoom.mqtt.client.net.runTestNoTimeSkipping
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.ISubscribeRequest
@@ -26,7 +27,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -53,7 +53,7 @@ import kotlin.time.Duration.Companion.seconds
 class MqttClientCodecRoutingRegressionTest {
     @Test
     fun connectSingleReceivesLookupThatResolvesSubscribedCodec() =
-        runBlocking {
+        runTestNoTimeSkipping {
             val capturedLookup = CompletableDeferred<(String) -> Codec<out Payload>?>()
             val fakeConn = FakeConnection()
             val persistence = InMemoryPersistence()
@@ -114,7 +114,7 @@ class MqttClientCodecRoutingRegressionTest {
 
     @Test
     fun handlerSubscribeFiresOnIncomingPublishDispatch() =
-        runBlocking {
+        runTestNoTimeSkipping {
             val fakeConn = FakeConnection()
             val persistence = InMemoryPersistence()
             val broker =

@@ -40,6 +40,23 @@ import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
+/**
+ * In-process MQTT 3.1.1 (v4) / 5.0 client for a single [broker].
+ *
+ * Create one with [MqttClient.start], which connects and then *stays* connected: it automatically
+ * reconnects, fails over across the broker's [MqttBroker.connectionOps], resumes the session, and
+ * resends unacknowledged QoS 1/2 messages. Delivery state and subscriptions are tracked through the
+ * [com.ditchoom.mqtt.Persistence] passed to [start], so in-flight messages can survive a process
+ * restart on platforms with durable persistence.
+ *
+ * The messaging surface is [publish], [subscribe], [observe] and [unsubscribe]. Payloads are handled
+ * zero-copy: the typed overloads take a [Codec] `<P>` for a domain type, while the raw overloads work
+ * with [com.ditchoom.buffer.ReadBuffer] (and `OpaquePublishPayloadCodec` for received bytes). Transport
+ * selection (TCP / WebSocket / QUIC / WebTransport) is handled behind the client via the
+ * [com.ditchoom.mqtt.client.net.MqttTransport] seam, so this API is transport-agnostic.
+ *
+ * Instances are obtained from [start]; the constructor is internal.
+ */
 class MqttClient internal constructor(
     internal val connectivityManager: ConnectivityManager,
     internal val scope: CoroutineScope,
@@ -64,6 +81,11 @@ class MqttClient internal constructor(
 
     suspend fun currentConnectionAcknowledgment(): IConnectionAcknowledgment? = connectivityManager.currentConnack()
 
+    /**
+     * Suspends until the client is connected, returning the current CONNACK. Returns immediately if
+     * already connected; otherwise waits for the next successful handshake (including after a
+     * reconnect). Use this to gate work that must not run before the session is established.
+     */
     suspend fun awaitConnectivity(): IConnectionAcknowledgment {
         var c = currentConnectionAcknowledgment()
         if (c == null) {
@@ -265,6 +287,10 @@ class MqttClient internal constructor(
         processor.unsubscribe(unsub, false)
     }
 
+    /**
+     * Unsubscribe from [topicFilter]. Stops delivery, unregisters the topic's codec, and returns an
+     * [UnsubscribeOperation] whose `unsubAck` completes when the broker's UNSUBACK arrives.
+     */
     suspend fun unsubscribe(topicFilter: String): UnsubscribeOperation =
         unsubscribe(packetFactory.unsubscribe(TopicFilter.fromOrThrow(topicFilter)))
 
@@ -289,6 +315,11 @@ class MqttClient internal constructor(
             },
         )
 
+    /**
+     * Sends a DISCONNECT to the broker for the current session without shutting the client down. The
+     * "stay connected" loop then kicks off a fresh connect/handshake pass. To stop the client
+     * entirely, use [shutdown] instead.
+     */
     suspend fun sendDisconnect() {
         connectivityManager.sendDisconnect()
     }

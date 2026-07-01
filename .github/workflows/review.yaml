@@ -7,6 +7,15 @@ on:
       - synchronize
       - opened
 
+# Cancel superseded runs on the same PR branch when a new commit is pushed.
+concurrency:
+  group: review-${{ github.ref }}
+  cancel-in-progress: true
+
+# Least privilege: PR review only needs to read the repo.
+permissions:
+  contents: read
+
 jobs:
   build-linux:
     uses: ./.github/workflows/build-linux.yaml

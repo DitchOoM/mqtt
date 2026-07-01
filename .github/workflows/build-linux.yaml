@@ -40,19 +40,28 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.konan
-          key: konan-linux-${{ hashFiles('gradle/libs.versions.toml') }}
+          key: konan-linux-${{ hashFiles('gradle/libs.versions.toml', '**/*.gradle.kts') }}
           restore-keys: konan-linux-
+
+      - name: Cache Gradle build outputs
+        uses: actions/cache@v4
+        with:
+          path: ~/.gradle/caches
+          key: gradle-linux-${{ hashFiles('gradle/libs.versions.toml', '**/*.gradle.kts', 'gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: gradle-linux-
 
       - name: Get version
         id: version
         run: echo "version=$(./gradlew -q :mqtt-client:nextVersion ${{ inputs.gradle-args }})" >> $GITHUB_OUTPUT
 
-      - name: Run JVM / JS / Android tests
+      # linuxX64Test added for native test-execution parity (JVM behaviour ≠ native memory/lifecycle).
+      - name: Run JVM / JS / Android / Linux-native tests
         run: >-
           ./gradlew ktlintCheck
           jvmTest jsNodeTest jsBrowserTest
           testDebugUnitTest testReleaseUnitTest
-          --no-build-cache ${{ inputs.gradle-args }}
+          linuxX64Test
+          ${{ inputs.gradle-args }}
 
       - name: Publish to Maven Local
         run: ./gradlew publishToMavenLocal --no-build-cache ${{ inputs.gradle-args }}

@@ -5,9 +5,17 @@ plugins {
     id("com.vanniktech.maven.publish")
     id("org.jetbrains.dokka")
     alias(libs.plugins.ksp)
+    alias(libs.plugins.buffer.codec.schema)
     signing
     id("com.ditchoom.version")
     id("com.ditchoom.module")
+}
+
+// Wire-format snapshot gate — see models-base/build.gradle.kts. MQTT's wire format is fixed by the
+// v5.0 spec, so any breaking drift fails the build. Accept intentional changes with
+// `./gradlew updateCodecSchema` + commit src/codecSchema/codec-schema.txt.
+codecSchema {
+    failOnBreaking.set(true)
 }
 
 val hostOs = org.jetbrains.kotlin.konan.target.HostManager.host

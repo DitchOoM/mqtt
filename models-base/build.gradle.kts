@@ -5,9 +5,19 @@ plugins {
     id("com.vanniktech.maven.publish")
     id("org.jetbrains.dokka")
     alias(libs.plugins.ksp)
+    alias(libs.plugins.buffer.codec.schema)
     signing
     id("com.ditchoom.version")
     id("com.ditchoom.module")
+}
+
+// Wire-format snapshot gate. KSP emits a descriptor of every @ProtocolMessage/enum/sealed codec;
+// `checkCodecSchema` (wired into `check`) diffs it against the committed baseline and classifies
+// drift as safe/advisory/breaking. MQTT's wire format is externally fixed by the 3.1.1/5.0 spec, so
+// it must never drift — `failOnBreaking` makes a breaking change fail the build. After an intentional
+// wire change, run `./gradlew updateCodecSchema` and commit src/codecSchema/codec-schema.txt.
+codecSchema {
+    failOnBreaking.set(true)
 }
 
 val hostOs = org.jetbrains.kotlin.konan.target.HostManager.host
@@ -75,7 +85,7 @@ android {
     compileSdk = 36
     sourceSets["main"].manifest.srcFile("src/androidMain/AndroidManifest.xml")
     defaultConfig {
-        minSdk = 19
+        minSdk = 21
     }
     namespace = "com.ditchoom.mqtt"
     publishing {

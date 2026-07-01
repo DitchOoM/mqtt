@@ -12,8 +12,8 @@ import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt3.controlpacket.ConnectionRequest
-import com.ditchoom.socket.NetworkCapabilities
-import com.ditchoom.socket.getNetworkCapabilities
+import com.ditchoom.socket.TransportKind
+import com.ditchoom.socket.networkCapabilities
 import kotlinx.coroutines.flow.first
 import kotlin.random.Random
 import kotlin.test.Ignore
@@ -51,7 +51,7 @@ class PublicBrokerValidationTest {
     @Test
     fun hivemqTcpPlaintext() =
         runTestNoTimeSkipping(timeout = 30.seconds) {
-            if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTestNoTimeSkipping
+            if (TransportKind.TCP !in networkCapabilities().transports) return@runTestNoTimeSkipping
             connectPublishDisconnect(
                 MqttConnectionOptions.SocketConnection("broker.hivemq.com", 1883, tlsEnabled = false, connectionTimeout = 15.seconds),
             )
@@ -60,7 +60,7 @@ class PublicBrokerValidationTest {
     @Test
     fun hivemqTcpTls() =
         runTestNoTimeSkipping(timeout = 30.seconds) {
-            if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTestNoTimeSkipping
+            if (TransportKind.TCP !in networkCapabilities().transports) return@runTestNoTimeSkipping
             connectPublishDisconnect(
                 MqttConnectionOptions.SocketConnection("broker.hivemq.com", 8883, tlsEnabled = true, connectionTimeout = 15.seconds),
             )
@@ -105,7 +105,7 @@ class PublicBrokerValidationTest {
     @Test
     fun mosquittoTcpPlaintext() =
         runTestNoTimeSkipping(timeout = 30.seconds) {
-            if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTestNoTimeSkipping
+            if (TransportKind.TCP !in networkCapabilities().transports) return@runTestNoTimeSkipping
             connectPublishDisconnect(
                 MqttConnectionOptions.SocketConnection("test.mosquitto.org", 1883, tlsEnabled = false, connectionTimeout = 15.seconds),
             )
@@ -152,7 +152,7 @@ class PublicBrokerValidationTest {
     @Test
     fun hivemqTcpTlsMultiplePublishes() =
         runTestNoTimeSkipping(timeout = 30.seconds) {
-            if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTestNoTimeSkipping
+            if (TransportKind.TCP !in networkCapabilities().transports) return@runTestNoTimeSkipping
             connectMultiplePublishes(
                 MqttConnectionOptions.SocketConnection("broker.hivemq.com", 8883, tlsEnabled = true, connectionTimeout = 15.seconds),
                 publishCount = 5,
@@ -183,7 +183,7 @@ class PublicBrokerValidationTest {
     @Test
     fun hivemqTcpTlsSubscribeReceive() =
         runTestNoTimeSkipping(timeout = 30.seconds) {
-            if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTestNoTimeSkipping
+            if (TransportKind.TCP !in networkCapabilities().transports) return@runTestNoTimeSkipping
             connectSubscribeReceive(
                 MqttConnectionOptions.SocketConnection("broker.hivemq.com", 8883, tlsEnabled = true, connectionTimeout = 15.seconds),
             )
@@ -209,7 +209,7 @@ class PublicBrokerValidationTest {
     @Test
     fun hivemqTcpPlaintextV5() =
         runTestNoTimeSkipping(timeout = 30.seconds) {
-            if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTestNoTimeSkipping
+            if (TransportKind.TCP !in networkCapabilities().transports) return@runTestNoTimeSkipping
             connectPublishDisconnect(
                 MqttConnectionOptions.SocketConnection("broker.hivemq.com", 1883, tlsEnabled = false, connectionTimeout = 15.seconds),
                 mqttV5 = true,
@@ -219,7 +219,7 @@ class PublicBrokerValidationTest {
     @Test
     fun hivemqTcpTlsV5() =
         runTestNoTimeSkipping(timeout = 30.seconds) {
-            if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTestNoTimeSkipping
+            if (TransportKind.TCP !in networkCapabilities().transports) return@runTestNoTimeSkipping
             connectPublishDisconnect(
                 MqttConnectionOptions.SocketConnection("broker.hivemq.com", 8883, tlsEnabled = true, connectionTimeout = 15.seconds),
                 mqttV5 = true,
@@ -261,7 +261,7 @@ class PublicBrokerValidationTest {
     @Test
     fun hivemqTcpTlsSubscribeReceiveV5() =
         runTestNoTimeSkipping(timeout = 30.seconds) {
-            if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTestNoTimeSkipping
+            if (TransportKind.TCP !in networkCapabilities().transports) return@runTestNoTimeSkipping
             connectSubscribeReceive(
                 MqttConnectionOptions.SocketConnection("broker.hivemq.com", 8883, tlsEnabled = true, connectionTimeout = 15.seconds),
                 mqttV5 = true,
@@ -289,7 +289,7 @@ class PublicBrokerValidationTest {
     @Test
     fun mosquittoTcpPlaintextV5() =
         runTestNoTimeSkipping(timeout = 30.seconds) {
-            if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTestNoTimeSkipping
+            if (TransportKind.TCP !in networkCapabilities().transports) return@runTestNoTimeSkipping
             connectPublishDisconnect(
                 MqttConnectionOptions.SocketConnection("test.mosquitto.org", 1883, tlsEnabled = false, connectionTimeout = 15.seconds),
                 mqttV5 = true,

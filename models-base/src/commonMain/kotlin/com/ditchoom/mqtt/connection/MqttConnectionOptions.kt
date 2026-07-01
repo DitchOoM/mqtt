@@ -101,4 +101,50 @@ sealed interface MqttConnectionOptions {
         companion object {
         }
     }
+
+    /**
+     * MQTT over QUIC (**experimental, non-standard** — mirrors EMQX's mapping). The entire MQTT byte
+     * stream is tunneled over a single bidirectional QUIC stream, so the existing packet framing is
+     * reused unchanged. QUIC is always encrypted, so [tlsEnabled] defaults to `true`.
+     *
+     * Native only: QUIC needs raw UDP, which browsers do not expose — use
+     * [WebTransportConnectionOptions] on the web. Constructed directly (the [copy] helper only
+     * toggles between [SocketConnection] and [WebSocketConnectionOptions]).
+     */
+    data class QuicConnectionOptions(
+        override val host: String,
+        override val port: Int,
+        val alpnProtocols: List<String> = listOf("mqtt"),
+        override val tlsEnabled: Boolean = true,
+        override val tlsVerifyCerts: Boolean = true,
+        override val tlsVerifyHostname: Boolean = true,
+        override val tlsAllowExpired: Boolean = false,
+        override val tlsAllowSelfSigned: Boolean = false,
+        override val connectionTimeout: Duration = 15.seconds,
+        override val readTimeout: Duration = connectionTimeout,
+        override val writeTimeout: Duration = connectionTimeout,
+    ) : MqttConnectionOptions
+
+    /**
+     * MQTT over WebTransport (**experimental**, no standard mapping exists). The browser-and-native
+     * substitute for [QuicConnectionOptions] where raw UDP is unavailable: WebTransport rides
+     * HTTP/3 (QUIC) and is available on every target, including the browser. The MQTT byte stream is
+     * tunneled over a single bidirectional WebTransport stream. Always secure (HTTP/3), so
+     * [tlsEnabled] defaults to `true`. Constructed directly (see [copy] note on [QuicConnectionOptions]).
+     */
+    data class WebTransportConnectionOptions(
+        override val host: String,
+        override val port: Int,
+        override val tlsEnabled: Boolean = true,
+        override val tlsVerifyCerts: Boolean = true,
+        override val tlsVerifyHostname: Boolean = true,
+        override val tlsAllowExpired: Boolean = false,
+        override val tlsAllowSelfSigned: Boolean = false,
+        override val connectionTimeout: Duration = 15.seconds,
+        override val readTimeout: Duration = connectionTimeout,
+        override val writeTimeout: Duration = connectionTimeout,
+        val endpoint: String = "/mqtt",
+    ) : MqttConnectionOptions {
+        internal fun buildUrl(): String = "https://$host:$port$endpoint"
+    }
 }

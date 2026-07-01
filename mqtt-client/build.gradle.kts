@@ -64,7 +64,15 @@ kotlin {
             implementation(libs.buffer.codec)
             implementation(libs.buffer.flow)
             implementation(libs.socket)
-            implementation(libs.websocket)
+            // WebSocket transport is temporarily gated: the websocket library is still built against
+            // buffer 4 / socket 3.0.1 and cannot coexist with buffer 6. Restore alongside the wiring
+            // preserved in WebSocketMqttTransport once a buffer-6 websocket build is published (TODO.md).
+            // implementation(libs.websocket)
+            // QUIC / WebTransport transports (currently stubs — see Quic/WebTransportMqttTransport).
+            // Uncomment when implementing the single-bidirectional-stream mapping:
+            // implementation(libs.socket.quic.default)     // withQuicConnection / withQuicMux
+            // implementation(libs.socket.quic.quiche)      // QUIC engine (non-JS targets)
+            // implementation(libs.socket.webtransport)     // webTransportSupport() — all targets incl. browser
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
@@ -72,7 +80,7 @@ kotlin {
             implementation(project(":models-v4"))
             implementation(project(":models-v5"))
             implementation(libs.socket)
-            implementation(libs.websocket)
+            // implementation(libs.websocket) // gated — see commonMain note above
         }
 
         jsMain.dependencies {

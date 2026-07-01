@@ -22,8 +22,8 @@ import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt.controlpacket.WillConfig
 import com.ditchoom.mqtt3.controlpacket.ConnectionRequest
 import com.ditchoom.mqtt5.controlpacket.ConnectWillProperties
-import com.ditchoom.socket.NetworkCapabilities
-import com.ditchoom.socket.getNetworkCapabilities
+import com.ditchoom.socket.TransportKind
+import com.ditchoom.socket.networkCapabilities
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
@@ -99,14 +99,14 @@ class MqttClientTest {
     @Test
     fun clientEcho4() =
         runTestNoTimeSkipping {
-            if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTestNoTimeSkipping
+            if (TransportKind.TCP !in networkCapabilities().transports) return@runTestNoTimeSkipping
             clientEchoInternal(this, testMqttConnectionOptions, connectionRequestMqtt4)
         }
 
     @Test
     fun clientEchoMqtt5() =
         runTestNoTimeSkipping {
-            if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTestNoTimeSkipping
+            if (TransportKind.TCP !in networkCapabilities().transports) return@runTestNoTimeSkipping
             clientEchoInternal(this, testMqttConnectionOptions, connectionRequestMqtt5)
         }
 
@@ -125,14 +125,14 @@ class MqttClientTest {
     @Test
     fun stayConnectedEcho4() =
         runTestNoTimeSkipping {
-            if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTestNoTimeSkipping
+            if (TransportKind.TCP !in networkCapabilities().transports) return@runTestNoTimeSkipping
             stayConnectedEchoInternal(this, testMqttConnectionOptions, connectionRequestResumeSessionMqtt4)
         }
 
     @Test
     fun stayConnectedEcho5() =
         runTestNoTimeSkipping {
-            if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTestNoTimeSkipping
+            if (TransportKind.TCP !in networkCapabilities().transports) return@runTestNoTimeSkipping
             stayConnectedEchoInternal(this, testMqttConnectionOptions, connectionRequestResumeSessionMqtt5)
         }
 

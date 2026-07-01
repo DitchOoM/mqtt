@@ -24,6 +24,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Duration.Companion.seconds
 
@@ -136,7 +137,19 @@ class ConnectivityManager(
             try {
                 _connectionState.value = ConnectionState.Handshaking
                 conn.send(broker.connectionRequest as ControlPacket)
-                val response = conn.receive().first()
+                // Bound the CONNACK wait explicitly. The socket now uses ReadPolicy.UntilClosed (a
+                // persistent MQTT stream has no per-read deadline), so the handshake would otherwise
+                // block forever against an unresponsive broker. withTimeoutOrNull (not withTimeout)
+                // so a slow option falls through to the next failover option instead of cancelling.
+                val response = withTimeoutOrNull(connectionOp.connectionTimeout) { conn.receive().first() }
+                if (response == null) {
+                    conn.close()
+                    lastException =
+                        MqttConnectionException.ProtocolError(
+                            "Timed out after ${connectionOp.connectionTimeout} awaiting CONNACK",
+                        )
+                    continue
+                }
                 if (response is IConnectionAcknowledgment && response.isSuccessful) {
                     connectionCount++
                     currentConnack = response

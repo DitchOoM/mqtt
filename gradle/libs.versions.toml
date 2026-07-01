@@ -7,9 +7,9 @@ mavenPublish = "0.35.0"
 dokka = "2.1.0"
 kotlinxCoroutines = "1.10.2"
 kotlinWrappers = "2025.12.6"
-buffer = "4.3.0-SNAPSHOT"
+buffer = "6.0.0"
 ksp = "2.3.0"
-socket = "3.0.1-SNAPSHOT"
+socket = "3.6.10"
 websocket = "1.1.2-SNAPSHOT"
 kotlinxBenchmark = "0.4.15"
 sqldelight = "2.2.1"
@@ -25,6 +25,11 @@ buffer-codec = { module = "com.ditchoom:buffer-codec", version.ref = "buffer" }
 buffer-codec-processor = { module = "com.ditchoom:buffer-codec-processor", version.ref = "buffer" }
 buffer-flow = { module = "com.ditchoom:buffer-flow", version.ref = "buffer" }
 socket = { module = "com.ditchoom:socket", version.ref = "socket" }
+# QUIC / WebTransport transport modules (buffer-neutral byte layer, built on buffer 6).
+# Wired into the composable transport seam; QUIC/WebTransport impls are currently stubs.
+socket-quic-default = { module = "com.ditchoom:socket-quic-default", version.ref = "socket" }
+socket-quic-quiche = { module = "com.ditchoom:socket-quic-quiche", version.ref = "socket" }
+socket-webtransport = { module = "com.ditchoom:socket-webtransport", version.ref = "socket" }
 websocket = { module = "com.ditchoom:websocket", version.ref = "websocket" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinxCoroutines" }
@@ -45,6 +50,7 @@ testcontainers = { module = "org.testcontainers:testcontainers", version.ref = "
 
 [plugins]
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+buffer-codec-schema = { id = "com.ditchoom.buffer.codec-schema", version.ref = "buffer" }
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 android-library = { id = "com.android.library", version.ref = "androidGradlePlugin" }
 ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint" }

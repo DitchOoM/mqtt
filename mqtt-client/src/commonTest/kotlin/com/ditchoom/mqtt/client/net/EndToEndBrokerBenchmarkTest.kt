@@ -12,8 +12,8 @@ import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt3.controlpacket.ConnectionRequest
-import com.ditchoom.socket.NetworkCapabilities
-import com.ditchoom.socket.getNetworkCapabilities
+import com.ditchoom.socket.TransportKind
+import com.ditchoom.socket.networkCapabilities
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -71,7 +71,7 @@ class EndToEndBrokerBenchmarkTest {
         count: Int = messageCount,
     ): TestRunResult =
         runTestNoTimeSkipping(timeout = 120.seconds) {
-            if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTestNoTimeSkipping
+            if (TransportKind.TCP !in networkCapabilities().transports) return@runTestNoTimeSkipping
 
             val topicStr = "bench/${Random.nextUInt()}"
             val topic = TopicName.fromOrThrow(topicStr)

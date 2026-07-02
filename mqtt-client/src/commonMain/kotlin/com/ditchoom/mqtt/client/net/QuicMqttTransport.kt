@@ -3,43 +3,47 @@ package com.ditchoom.mqtt.client.net
 import com.ditchoom.buffer.codec.Codec
 import com.ditchoom.buffer.codec.Payload
 import com.ditchoom.buffer.flow.Connection
+import com.ditchoom.mqtt.client.MqttCodec
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.ControlPacketFactory
+import com.ditchoom.socket.quic.QuicOptions
+import com.ditchoom.socket.quic.QuicTransport
+import com.ditchoom.socket.transport.CodecConnection
 
 /**
- * MQTT over QUIC (**experimental, non-standard** — mirrors EMQX's mapping). Not yet implemented.
+ * MQTT over QUIC (**experimental, non-standard** — mirrors EMQX's mapping). The whole MQTT byte
+ * stream is tunneled over a single bidirectional QUIC stream, so [MqttCodec]'s framing is reused
+ * unchanged.
  *
- * Design (single bidirectional stream), requiring `com.ditchoom:socket-quic-default` (+ the
- * `socket-quic-quiche` engine on non-JS targets) — dependencies are present-but-commented in
- * `mqtt-client/build.gradle.kts`:
+ * [QuicTransport] establishes the QUIC connection, opens one bidi stream, and wraps it in a
+ * session-owning `ByteStream`, so `CodecConnection.close()` tears down the entire QUIC connection —
+ * no extra lifecycle plumbing. ALPN is `"mqtt"` by default (see
+ * [MqttConnectionOptions.QuicConnectionOptions.alpnProtocols]).
  *
- * ```
- * val op = options as MqttConnectionOptions.QuicConnectionOptions
- * // withQuicConnection's block boundary IS the connection lifetime (there is no close()), so bridge
- * // it to Connection.close() by holding the block open on a coroutine tied to the connection's
- * // lifetime and completing a CompletableJob/Deferred when the caller closes.
- * return withQuicConnection(
- *     op.host, op.port,
- *     QuicOptions(alpnProtocols = op.alpnProtocols),
- *     buildTransportConfig(op),
- * ) {
- *     val stream = openStream()                         // QuicByteStream : ByteStream
- *     CodecConnection(stream, MqttCodec(factory, publishCodecForTopic), buildTransportConfig(op))
- * }
- * ```
+ * **Native only:** the default QUIC engine throws [UnsupportedOperationException] on JS/wasmJs and
+ * tvOS/watchOS (no raw UDP / no engine). Use [WebTransportMqttTransport] on the web.
  *
- * QUIC needs raw UDP, which browsers do not expose; on JS/wasmJs the QUIC engine throws. Use
- * [WebTransportMqttTransport] there (see [MqttConnectionOptions.WebTransportConnectionOptions]).
+ * > Not integration-tested against a broker — MQTT-over-QUIC has no IANA-standard binding.
  */
 object QuicMqttTransport : MqttTransport {
     override suspend fun connect(
         options: MqttConnectionOptions,
         factory: ControlPacketFactory,
         publishCodecForTopic: (topicName: String) -> Codec<out Payload>?,
-    ): Connection<ControlPacket> =
-        throw NotImplementedError(
-            "QUIC MQTT transport is not yet implemented. See the single-bidirectional-stream design " +
-                "in the QuicMqttTransport KDoc.",
+    ): Connection<ControlPacket> {
+        val op = options as MqttConnectionOptions.QuicConnectionOptions
+        return CodecConnection.connect(
+            op.host,
+            op.port,
+            MqttCodec(factory, publishCodecForTopic),
+            QuicTransport(
+                QuicOptions(
+                    alpnProtocols = op.alpnProtocols,
+                    verifyPeer = op.tlsVerifyCerts,
+                ),
+            ),
+            buildTransportConfig(op),
         )
+    }
 }

@@ -228,8 +228,8 @@ All transports produce the same `Connection<ControlPacket>` and are selected beh
 |--------|-----------|--------|
 | `SocketConnection` | TCP (+ TLS) | ✅ Ready |
 | `WebSocketConnectionOptions` | WebSocket (+ TLS, permessage-deflate) | ✅ Ready |
-| `QuicConnectionOptions` | QUIC (native) | 🧪 Experimental / stub — MQTT-over-QUIC is non-standard (EMQX-style) |
-| `WebTransportConnectionOptions` | WebTransport (incl. browser) | 🧪 Experimental / stub — the web substitute for QUIC where UDP is unavailable |
+| `QuicConnectionOptions` | QUIC (native) | 🧪 Experimental — implemented (single stream), not broker-tested. Non-standard (EMQX-style); native only. |
+| `WebTransportConnectionOptions` | WebTransport (incl. browser) | 🧪 Experimental — implemented, not broker-tested. The web substitute for QUIC where UDP is unavailable. |
 
 ## Building Locally
 

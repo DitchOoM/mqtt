@@ -28,7 +28,8 @@ socket = { module = "com.ditchoom:socket", version.ref = "socket" }
 # QUIC / WebTransport transport modules (buffer-neutral byte layer, built on buffer 6).
 # Wired into the composable transport seam; QUIC/WebTransport impls are currently stubs.
 socket-quic-default = { module = "com.ditchoom:socket-quic-default", version.ref = "socket" }
-socket-quic-quiche = { module = "com.ditchoom:socket-quic-quiche", version.ref = "socket" }
+# Note: the quiche QUIC engine (socket-quic-quiche) is pulled transitively by socket-quic-default on
+# the platforms that support it; do not depend on it directly (it has no JS/wasmJs variants).
 socket-webtransport = { module = "com.ditchoom:socket-webtransport", version.ref = "socket" }
 websocket = { module = "com.ditchoom:websocket", version.ref = "websocket" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }

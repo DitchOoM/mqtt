@@ -41,7 +41,7 @@ Transports now live behind a composable `MqttTransport` seam selected by the
 [`MqttConnectionOptions`](./core-concepts/connection-options.md) subtype and an `MqttTransportResolver`.
 
 - **TCP** and **WebSocket** are fully supported.
-- **QUIC** and **WebTransport** are experimental stubs.
+- **QUIC** and **WebTransport** are implemented but experimental (single-stream; not broker-tested).
 - Custom transports plug in via a resolver or the `connectSingle` hook on `MqttClient.start`.
 
 See [Transports](./recipes/transports.md) for the full status table and caveats.

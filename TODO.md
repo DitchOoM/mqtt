@@ -17,15 +17,19 @@ JVM/JS/Android compile, JVM unit tests, ktlint, `checkCodecSchema`.
       (`TcpTransport` `ByteStream` → `connectWebSocket(binaryCodec = MqttCodec)` → `mapNotNull`),
       re-added the `websocket` dep, restored `WebSocketConnectionAdapterTest`, and removed the `@Ignore`
       from `DefaultConnectionFactoryWsIntegrationTest`.
-- [ ] **Implement QUIC transport** (`QuicMqttTransport`). Uncomment `socket-quic-default` +
-      `socket-quic-quiche` deps; single-bidirectional-stream design is in the class KDoc. Native only.
-- [ ] **Implement WebTransport transport** (`WebTransportMqttTransport`). Uncomment `socket-webtransport`;
-      design in the class KDoc. Real on all targets incl. browser → the web substitute for QUIC.
+- [x] **QUIC + WebTransport transports implemented** (2026-07-02). Both use socket's held `Transport`
+      front-doors — `QuicTransport(QuicOptions(alpnProtocols=["mqtt"]))` and `WebTransportTransport(path)` —
+      over `CodecConnection.connect`, which wraps the single bidi stream session-owning so
+      `close()` tears the whole transport down (no coroutine bridge). Deps: `socket-quic-default`
+      (pulls quiche transitively; JS/wasm/tvOS/watchOS get a throwing `UnsupportedQuicEngine`) +
+      `socket-webtransport`. `MqttTransportResolverTest` guards the routing.
+      **Not integration-tested against a broker** — neither MQTT-over-QUIC (EMQX-style, non-standard)
+      nor MQTT-over-WebTransport (unspecified) has a standard binding.
+- [ ] **Broker integration tests for QUIC / WebTransport.** e.g. EMQX with a QUIC listener for
+      MQTT-over-QUIC; there is no standard MQTT-over-WebTransport server. Until then these are experimental.
 - [ ] **Platform-aware default resolver.** Intended composition: route
       `QuicConnectionOptions` to QUIC natively but WebTransport on JS/wasmJs (no raw UDP). Belongs in a
       custom/expect-actual `MqttTransportResolver`, not `DefaultMqttTransportResolver`.
-- [ ] **Note:** MQTT-over-QUIC is non-standard (EMQX extension) and MQTT-over-WebTransport is
-      unspecified — both transports are experimental.
 
 ## CI parity pass (2026-07-01)
 

@@ -44,5 +44,5 @@ your code ──> MqttClient ──> ConnectivityManager ──> MqttTransport �
 - Core Concepts — [the client](./core-concepts/mqtt-client.md), [connection options](./core-concepts/connection-options.md), [persistence](./core-concepts/persistence.md).
 - Recipes — [typed payloads](./recipes/typed-payloads.md), [quality of service](./recipes/quality-of-service.md), [reconnection & HA](./recipes/reconnection-and-high-availability.md), [transports](./recipes/transports.md).
 
-> **Status note:** TCP and WebSocket are fully supported. QUIC and WebTransport are experimental
-> stubs (MQTT-over-QUIC is non-standard; MQTT-over-WebTransport is unspecified).
+> **Status note:** TCP and WebSocket are fully supported. QUIC and WebTransport are implemented but
+> experimental — not broker-tested (MQTT-over-QUIC is non-standard; MQTT-over-WebTransport is unspecified).

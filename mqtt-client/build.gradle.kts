@@ -65,11 +65,12 @@ kotlin {
             implementation(libs.buffer.flow)
             implementation(libs.socket)
             implementation(libs.websocket)
-            // QUIC / WebTransport transports (currently stubs — see Quic/WebTransportMqttTransport).
-            // Uncomment when implementing the single-bidirectional-stream mapping:
-            // implementation(libs.socket.quic.default)     // withQuicConnection / withQuicMux
-            // implementation(libs.socket.quic.quiche)      // QUIC engine (non-JS targets)
-            // implementation(libs.socket.webtransport)     // webTransportSupport() — all targets incl. browser
+            // Experimental MQTT-over-QUIC / -WebTransport transports (single bidirectional stream).
+            // socket-quic-default pulls the per-platform QUIC engine transitively (quiche on JVM/native;
+            // an UnsupportedQuicEngine that throws on JS/wasmJs/tvOS/watchOS — no raw UDP there).
+            // socket-webtransport works on every target, including the browser.
+            implementation(libs.socket.quic.default)
+            implementation(libs.socket.webtransport)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))

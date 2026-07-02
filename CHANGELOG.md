@@ -16,9 +16,11 @@ All notable changes to this project are documented here. The format is based on
 - License changed to **MIT** (a `LICENSE` file and consistent POM metadata are now published).
 
 ### Added
-- Experimental transport scaffolding for **QUIC** (`QuicConnectionOptions` / `QuicMqttTransport`) and
-  **WebTransport** (`WebTransportConnectionOptions` / `WebTransportMqttTransport`) — currently stubs mapping
-  MQTT onto a single bidirectional stream. WebTransport is the intended web substitute for QUIC (no UDP on web).
+- Experimental **QUIC** (`QuicConnectionOptions` / `QuicMqttTransport`) and **WebTransport**
+  (`WebTransportConnectionOptions` / `WebTransportMqttTransport`) transports, each tunneling MQTT over a
+  single bidirectional stream. QUIC is native-only; WebTransport works everywhere including the browser
+  (the web substitute for QUIC, since there is no raw UDP on the web). Not integration-tested against a
+  broker — neither mapping is standardized.
 - Codec wire-format snapshot gate (`com.ditchoom.buffer.codec-schema`) on the model modules; a committed
   baseline fails the build on any breaking wire-format drift.
 - `linuxArm64` target re-enabled and published; `linuxX64Test` added to CI.

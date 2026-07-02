@@ -12,8 +12,8 @@ seam, so the rest of the client is transport-agnostic. You select a transport by
 |--------|-----------|--------|
 | `SocketConnection` | TCP (+ TLS) | ✅ Ready |
 | `WebSocketConnectionOptions` | WebSocket (+ TLS, permessage-deflate) | ✅ Ready |
-| `QuicConnectionOptions` | QUIC (native) | 🧪 Experimental / stub |
-| `WebTransportConnectionOptions` | WebTransport (incl. browser) | 🧪 Experimental / stub |
+| `QuicConnectionOptions` | QUIC (native) | 🧪 Experimental (implemented; not broker-tested) |
+| `WebTransportConnectionOptions` | WebTransport (incl. browser) | 🧪 Experimental (implemented; not broker-tested) |
 
 ## How selection works
 
@@ -25,13 +25,17 @@ MQTT packets carried in binary frames.
 
 ## Experimental transports
 
-- **QUIC** — a stub that throws `NotImplementedError`. The design maps MQTT onto a single
-  bidirectional stream. **Native only** — there is no raw UDP on the web. MQTT-over-QUIC is
-  **non-standard** (an EMQX-style extension).
-- **WebTransport** — also a stub today. It works on all targets **including the browser**, making it
-  the web substitute for QUIC where UDP is unavailable. MQTT-over-WebTransport is **unspecified**.
+QUIC and WebTransport are **implemented** — each tunnels the MQTT byte stream over a single
+bidirectional stream (the transport opens the connection + stream and wraps it so closing the MQTT
+connection tears down the whole transport). They are **not integration-tested against a broker**,
+because there is no standard MQTT binding for either — treat them as experimental.
 
-Treat QUIC and WebTransport as experimental until they leave stub status.
+- **QUIC** (`QuicConnectionOptions`) — **native only**: the default QUIC engine throws
+  `UnsupportedOperationException` on JS/wasmJs and tvOS/watchOS (no raw UDP / no engine). ALPN is
+  `"mqtt"`. MQTT-over-QUIC is **non-standard** (an EMQX-style extension).
+- **WebTransport** (`WebTransportConnectionOptions`) — works on all targets **including the browser**,
+  making it the web substitute for QUIC where UDP is unavailable. Connects to
+  `https://host:port/endpoint`. MQTT-over-WebTransport is **unspecified**.
 
 ## Plugging in a custom transport
 

@@ -12,13 +12,11 @@ Migrated the catalog to Maven Central releases: `buffer` `6.0.0` (+ `buffer-code
 `ConnectivityManager`. `models-base` `minSdk` bumped 19→21 (buffer 6 Android requires 21). Green:
 JVM/JS/Android compile, JVM unit tests, ktlint, `checkCodecSchema`.
 
-- [ ] **Re-enable the WebSocket transport** once `com.ditchoom:websocket` is published against buffer 6:
-      (1) uncomment `implementation(libs.websocket)` in `mqtt-client/build.gradle.kts` (common + test);
-      (2) replace `WebSocketMqttTransport.connect`'s throw with the wiring preserved in its KDoc
-      (adjust to the migrated websocket API); (3) restore `WebSocketConnectionAdapterTest` from git
-      history (deleted in this pass — it depended on the old `com.ditchoom.websocket.WebSocketMessage`);
-      (4) remove the `@Ignore` from `DefaultConnectionFactoryWsIntegrationTest` (gated in this pass — it
-      exercises the WS transport end-to-end against a Mosquitto container and hits the gate on CI).
+- [x] **WebSocket transport re-enabled** (2026-07-02). Bumped to `buffer 6.3.0` / `socket 3.8.3` /
+      `websocket 2.0.2` (websocket now built on buffer 6). Restored the `WebSocketMqttTransport` wiring
+      (`TcpTransport` `ByteStream` → `connectWebSocket(binaryCodec = MqttCodec)` → `mapNotNull`),
+      re-added the `websocket` dep, restored `WebSocketConnectionAdapterTest`, and removed the `@Ignore`
+      from `DefaultConnectionFactoryWsIntegrationTest`.
 - [ ] **Implement QUIC transport** (`QuicMqttTransport`). Uncomment `socket-quic-default` +
       `socket-quic-quiche` deps; single-bidirectional-stream design is in the class KDoc. Native only.
 - [ ] **Implement WebTransport transport** (`WebTransportMqttTransport`). Uncomment `socket-webtransport`;

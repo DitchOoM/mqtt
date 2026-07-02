@@ -7,8 +7,8 @@ title: Linux
 Fully supported on `linuxX64` and `linuxArm64`.
 
 - **Transport** — TCP with TLS using **io_uring** (falling back to **epoll**). Select it with
-  `MqttConnectionOptions.SocketConnection`. WebSocket is
-  [temporarily gated](../recipes/transports.md).
+  `MqttConnectionOptions.SocketConnection`, or WebSocket
+  ([transports](../recipes/transports.md)).
 - **Persistence** — SQLite via SQLDelight, linked against `-lsqlite3` (durable), or in-memory. See
   [Persistence](../core-concepts/persistence.md).
 - **Buffers** — native `NativeBuffer`, passed straight to the socket with no `ByteArray` copies.

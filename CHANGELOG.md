@@ -7,8 +7,8 @@ All notable changes to this project are documented here. The format is based on
 ## [Unreleased]
 
 ### Changed
-- Migrated to **buffer 6.0.0** (`ByteSource`/`ByteSink`/`ByteStream` byte-layer, `ReadPolicy`/`WritePolicy`)
-  and **socket 3.6.10** (single immutable `TransportConfig`; the socket is now a `ByteStream`).
+- Migrated to **buffer 6.3.0** (`ByteSource`/`ByteSink`/`ByteStream` byte-layer, `ReadPolicy`/`WritePolicy`)
+  and **socket 3.8.3** (single immutable `TransportConfig`; the socket is now a `ByteStream`).
 - Upgraded the toolchain to **Kotlin 2.4.0** + **KSP 2.3.9**.
 - Consolidated transport selection behind a composable `MqttTransport` seam (`MqttTransportResolver` +
   per-transport implementations) so custom or alternative transports can be plugged in.
@@ -22,9 +22,7 @@ All notable changes to this project are documented here. The format is based on
 - Codec wire-format snapshot gate (`com.ditchoom.buffer.codec-schema`) on the model modules; a committed
   baseline fails the build on any breaking wire-format drift.
 - `linuxArm64` target re-enabled and published; `linuxX64Test` added to CI.
-
-### Deprecated / Temporarily disabled
-- The **WebSocket** transport is temporarily gated pending the `websocket` library's migration to buffer 6.
+- **WebSocket** transport (via **websocket 2.0.2**, built on buffer 6) with TLS and permessage-deflate.
 
 ## [1.2.0]
 

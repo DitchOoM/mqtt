@@ -10,21 +10,15 @@ import kotlinx.coroutines.flow.first
 import org.junit.AfterClass
 import org.junit.Assume.assumeTrue
 import org.junit.BeforeClass
-import org.junit.Ignore
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.seconds
 
 /**
- * End-to-end coverage of the WebSocket branch of [defaultConnectionFactory] against a
+ * End-to-end coverage of the WebSocket branch of [defaultSingleConnection] against a
  * hermetic Mosquitto broker started via Testcontainers. Requires Docker.
- *
- * Ignored while the WebSocket transport is gated (WebSocketMqttTransport throws pending the
- * websocket library's migration to buffer 6). Remove @Ignore when restoring the WS transport —
- * see TODO.md and WebSocketMqttTransport.
  */
-@Ignore("WebSocket transport gated pending websocket buffer-6 migration — see WebSocketMqttTransport / TODO.md")
 class DefaultConnectionFactoryWsIntegrationTest {
     companion object {
         @BeforeClass

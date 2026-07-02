@@ -14,7 +14,7 @@ options, and the client works through that list for high-availability failover.
 // TCP (+ TLS). This is the fully-supported transport today.
 val tcp = MqttConnectionOptions.SocketConnection(host = "broker.example.com", port = 1883)
 
-// WebSocket (temporarily gated — see the transports recipe).
+// WebSocket (+ TLS, permessage-deflate). See the transports recipe.
 val ws = MqttConnectionOptions.WebSocketConnectionOptions(
     host = "broker.example.com",
     port = 443,

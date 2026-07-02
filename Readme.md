@@ -102,7 +102,7 @@ DitchOoM Kotlin Multiplatform runtime dependencies:
 
 * [Buffer](https://github.com/DitchOoM/buffer) — native buffer allocation/management, the `Codec` framework, and the `buffer-flow` byte layer.
 * [Socket](https://github.com/DitchOoM/socket) — TCP (and QUIC / WebTransport) transports for an MQTT broker.
-* [websocket](https://github.com/DitchOoM/websocket) — WebSocket transport. **Temporarily gated** while the websocket library is migrated to buffer 6 (see `TODO.md`).
+* [websocket](https://github.com/DitchOoM/websocket) — WebSocket transport (with TLS and permessage-deflate compression).
 
 Official Kotlin Multiplatform runtime dependencies:
 
@@ -116,17 +116,17 @@ Other runtime dependencies:
 
 | Platform  | MQTT 3.1.1 (v4) | MQTT 5.0 | LWT | SSL / TLS | Persistence | Auto Reconnect | Offline Buffering | TCP | WebSocket | Coroutines API | High Availability |
 |:---------:|:---------------:|:--------:|:---:|:---------:|:-----------:|:--------------:|:-----------------:|:---:|:---------:|:--------------:|:-----------------:|
-|   `JVM`   |       🚀        |    🚀    | 🚀  |    🚀     |     🚀      |       🚀       |        🚀         | 🚀  |    🧪     |       🚀       |        🚀         |
-| `Browser` |       🚀        |    🚀    | 🚀  |    🚀     |     🚀      |       🚀       |        🚀         | ⛔  |    🧪     |       🚀       |        🚀         |
-| `Node.JS` |       🚀        |    🚀    | 🚀  |    🚀     |     📝      |       🚀       |        🚀         | 🚀  |    🧪     |       🚀       |        🚀         |
-| `Android` |       🚀        |    🚀    | 🚀  |    🚀     |     🚀      |       🚀       |        🚀         | 🚀  |    🧪     |       🚀       |        🚀         |
-|   `iOS`   |       🚀        |    🚀    | 🚀  |    🚀     |     🚀      |       🚀       |        🚀         | 🚀  |    🧪     |       🚀       |        🚀         |
-|  `macOS`  |       🚀        |    🚀    | 🚀  |    🚀     |     🚀      |       🚀       |        🚀         | 🚀  |    🧪     |       🚀       |        🚀         |
-| `watchOS` |       🚀        |    🚀    | 🚀  |    🚀     |     🚀      |       🚀       |        🚀         | 🚀  |    🧪     |       🚀       |        🚀         |
-|  `tvOS`   |       🚀        |    🚀    | 🚀  |    🚀     |     🚀      |       🚀       |        🚀         | 🚀  |    🧪     |       🚀       |        🚀         |
-|  `Linux`  |       🚀        |    🚀    | 🚀  |    🚀     |     🚀      |       🚀       |        🚀         | 🚀  |    🧪     |       🚀       |        🚀         |
+|   `JVM`   |       🚀        |    🚀    | 🚀  |    🚀     |     🚀      |       🚀       |        🚀         | 🚀  |    🚀     |       🚀       |        🚀         |
+| `Browser` |       🚀        |    🚀    | 🚀  |    🚀     |     🚀      |       🚀       |        🚀         | ⛔  |    🚀     |       🚀       |        🚀         |
+| `Node.JS` |       🚀        |    🚀    | 🚀  |    🚀     |     📝      |       🚀       |        🚀         | 🚀  |    🚀     |       🚀       |        🚀         |
+| `Android` |       🚀        |    🚀    | 🚀  |    🚀     |     🚀      |       🚀       |        🚀         | 🚀  |    🚀     |       🚀       |        🚀         |
+|   `iOS`   |       🚀        |    🚀    | 🚀  |    🚀     |     🚀      |       🚀       |        🚀         | 🚀  |    🚀     |       🚀       |        🚀         |
+|  `macOS`  |       🚀        |    🚀    | 🚀  |    🚀     |     🚀      |       🚀       |        🚀         | 🚀  |    🚀     |       🚀       |        🚀         |
+| `watchOS` |       🚀        |    🚀    | 🚀  |    🚀     |     🚀      |       🚀       |        🚀         | 🚀  |    🚀     |       🚀       |        🚀         |
+|  `tvOS`   |       🚀        |    🚀    | 🚀  |    🚀     |     🚀      |       🚀       |        🚀         | 🚀  |    🚀     |       🚀       |        🚀         |
+|  `Linux`  |       🚀        |    🚀    | 🚀  |    🚀     |     🚀      |       🚀       |        🚀         | 🚀  |    🚀     |       🚀       |        🚀         |
 
-> 🚀 = Ready &nbsp; 📝 = Planned &nbsp; 🧪 = Temporarily gated (WebSocket lib migrating to buffer 6) &nbsp; ⛔ = Unavailable (platform API limits)
+> 🚀 = Ready &nbsp; 📝 = Planned &nbsp; ⛔ = Unavailable (platform API limits)
 
 ## Installation
 
@@ -227,7 +227,7 @@ All transports produce the same `Connection<ControlPacket>` and are selected beh
 | Option | Transport | Status |
 |--------|-----------|--------|
 | `SocketConnection` | TCP (+ TLS) | ✅ Ready |
-| `WebSocketConnectionOptions` | WebSocket | 🧪 Temporarily gated (websocket lib migrating to buffer 6) |
+| `WebSocketConnectionOptions` | WebSocket (+ TLS, permessage-deflate) | ✅ Ready |
 | `QuicConnectionOptions` | QUIC (native) | 🧪 Experimental / stub — MQTT-over-QUIC is non-standard (EMQX-style) |
 | `WebTransportConnectionOptions` | WebTransport (incl. browser) | 🧪 Experimental / stub — the web substitute for QUIC where UDP is unavailable |
 
@@ -269,7 +269,7 @@ All transports produce the same `Connection<ControlPacket>` and are selected beh
 ## Roadmap
 
 See the [open issues](https://github.com/DitchOoM/mqtt/issues) for proposed features and known issues,
-and `TODO.md` for tracked follow-ups (WebSocket re-enable, QUIC/WebTransport implementation).
+and `TODO.md` for tracked follow-ups (QUIC/WebTransport implementation).
 
 ## Contributing
 

@@ -11,7 +11,7 @@ seam, so the rest of the client is transport-agnostic. You select a transport by
 | Option | Transport | Status |
 |--------|-----------|--------|
 | `SocketConnection` | TCP (+ TLS) | ✅ Ready |
-| `WebSocketConnectionOptions` | WebSocket | 🧪 Temporarily gated (websocket lib migrating to buffer 6) |
+| `WebSocketConnectionOptions` | WebSocket (+ TLS, permessage-deflate) | ✅ Ready |
 | `QuicConnectionOptions` | QUIC (native) | 🧪 Experimental / stub |
 | `WebTransportConnectionOptions` | WebTransport (incl. browser) | 🧪 Experimental / stub |
 
@@ -19,12 +19,12 @@ seam, so the rest of the client is transport-agnostic. You select a transport by
 
 The `MqttConnectionOptions` subtype is mapped to a transport by an `MqttTransportResolver`. The
 built-in `DefaultMqttTransportResolver` handles the standard mapping; `defaultSingleConnection(...)`
-opens a single connection using it. TCP is fully supported today.
+opens a single connection using it. TCP and WebSocket are fully supported today. WebSocket opens a
+TCP `ByteStream` and layers the WebSocket protocol on top (HTTP upgrade + permessage-deflate), with
+MQTT packets carried in binary frames.
 
-## Experimental / gated transports
+## Experimental transports
 
-- **WebSocket** — temporarily throws while `com.ditchoom:websocket` is migrated to buffer 6. The
-  wiring is preserved and will be re-enabled; see `TODO.md`.
 - **QUIC** — a stub that throws `NotImplementedError`. The design maps MQTT onto a single
   bidirectional stream. **Native only** — there is no raw UDP on the web. MQTT-over-QUIC is
   **non-standard** (an EMQX-style extension).

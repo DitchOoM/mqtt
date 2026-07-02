@@ -40,8 +40,7 @@ replacing the raw-bytes-only surface.
 Transports now live behind a composable `MqttTransport` seam selected by the
 [`MqttConnectionOptions`](./core-concepts/connection-options.md) subtype and an `MqttTransportResolver`.
 
-- **TCP** is fully supported.
-- **WebSocket** is temporarily gated while `com.ditchoom:websocket` migrates to buffer 6.
+- **TCP** and **WebSocket** are fully supported.
 - **QUIC** and **WebTransport** are experimental stubs.
 - Custom transports plug in via a resolver or the `connectSingle` hook on `MqttClient.start`.
 

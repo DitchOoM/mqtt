@@ -1,0 +1,106 @@
+name: "MQTT Conformance (paho test broker)"
+
+# Optional / non-blocking: this workflow is intentionally NOT referenced by review.yaml,
+# so it never gates PR merges. It runs the PahoConformanceV4Test / PahoConformanceV5Test
+# behavioral suites against the eclipse-paho conformance broker — the MQTT equivalent of
+# the Autobahn testsuite — and surfaces the broker's spec-conformance-statement coverage
+# report ("coverage statements X out of Y = Z%") in the job summary.
+
+on:
+  pull_request:
+    paths-ignore:
+      - '*.md'
+    types: [synchronize, opened]
+  workflow_dispatch:
+
+concurrency:
+  group: conformance-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  conformance:
+    name: "JVM vs paho.mqtt.testing broker"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      # The broker repo is in maintenance mode (last commit 2024-01); pin the SHA so the
+      # conformance target never drifts underneath us.
+      - name: Checkout paho.mqtt.testing (pinned)
+        uses: actions/checkout@v4
+        with:
+          repository: eclipse-paho/paho.mqtt.testing
+          ref: 9d7bb80bb8b9d9cfc0b52f8cb4c1916401281103
+          path: paho.mqtt.testing
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '21'
+          cache: gradle
+
+      - name: Cache Gradle build outputs
+        uses: actions/cache@v4
+        with:
+          path: ~/.gradle/caches
+          key: gradle-linux-${{ hashFiles('gradle/libs.versions.toml', '**/*.gradle.kts', 'gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: gradle-linux-
+
+      # Serves MQTT 3.1.1 and 5.0 on the same port (version auto-detected from CONNECT).
+      - name: Start conformance broker (MQTT 3.1.1 + 5.0 on :1883)
+        working-directory: paho.mqtt.testing/interoperability
+        run: |
+          nohup python3 startbroker.py > "$GITHUB_WORKSPACE/broker.log" 2>&1 &
+          echo "BROKER_PID=$!" >> "$GITHUB_ENV"
+          for i in $(seq 1 30); do
+            if python3 -c "import socket; socket.create_connection(('127.0.0.1',1883),1).close()" 2>/dev/null; then
+              echo "broker up"; exit 0
+            fi
+            sleep 1
+          done
+          echo "broker failed to start"; cat "$GITHUB_WORKSPACE/broker.log"; exit 1
+
+      - name: Run conformance tests (JVM)
+        run: >-
+          ./gradlew :mqtt-client:jvmTest -PconformanceTests
+          --tests "com.ditchoom.mqtt.client.net.PahoConformance*"
+
+      # SIGINT triggers the broker's coverage.py summary: which MQTT spec conformance
+      # statements the session exercised, and which it missed.
+      - name: Stop broker & extract conformance coverage
+        if: always()
+        run: |
+          kill -INT "$BROKER_PID" 2>/dev/null || true
+          sleep 3
+          kill "$BROKER_PID" 2>/dev/null || true
+          {
+            echo "## MQTT conformance-statement coverage"
+            echo '```'
+            grep -E "coverage statements [0-9]+ out of|exceptions [0-9]+ out of" broker.log || echo "no coverage summary found"
+            echo '```'
+            echo "<details><summary>Statements not exercised</summary>"
+            echo ""
+            echo '```'
+            grep -E "coverage statements not found" broker.log || true
+            echo '```'
+            echo "</details>"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload broker log + test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: conformance-artifacts-${{ github.run_id }}
+          path: |
+            broker.log
+            mqtt-client/build/reports/tests/jvmTest
+          retention-days: 7

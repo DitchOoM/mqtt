@@ -206,6 +206,10 @@ class ConnectivityManager(
     }
 
     private suspend fun prepareSession(connack: IConnectionAcknowledgment) {
+        // Size the client-side send quota from the broker's advertised Receive Maximum
+        // ([MQTT-3.3.4-8]). Created once (see ControlPacketProcessor.configureSendQuota),
+        // so a reconnect that resumes in-flight publishes keeps the quota balanced.
+        processor.configureSendQuota(connack.receiveMaximum)
         val sessionPresent = connack.sessionPresent
         if (broker.connectionRequest.cleanStart && sessionPresent) {
             throw MqttConnectionException.ProtocolError(

@@ -142,13 +142,20 @@ class MqttClient internal constructor(
     }
 
     suspend fun publish(pub: PublishMessage): PublishResult {
+        // [MQTT-3.3.4-8]: don't exceed the broker's Receive Maximum. Acquire a slot before
+        // allocating a packet id so nothing enters the persistence/in-flight set until the
+        // broker can accept it. The permit is released when the ack arrives (see
+        // ControlPacketProcessor). QoS 0 carries no ack, so it isn't quota-limited.
+        if (pub.qualityOfService.isGreaterThan(QualityOfService.AT_MOST_ONCE)) {
+            processor.acquireSendQuota()
+        }
         val prepared = processor.preparePublish(pub)
         val result = observePub(prepared)
         processor.sendPacket(prepared)
         return result
     }
 
-    private fun observePub(publishMessage: PublishMessage): PublishResult {
+    private suspend fun observePub(publishMessage: PublishMessage): PublishResult {
         val packetId = publishMessage.packetIdentifier
         return when (publishMessage.qualityOfService) {
             QualityOfService.AT_MOST_ONCE -> PublishResult.QoS0Sent
@@ -156,14 +163,14 @@ class MqttClient internal constructor(
             QualityOfService.AT_LEAST_ONCE -> {
                 check(packetId != NO_PACKET_ID) { "PacketId must be set by the persistence" }
                 val stateFlow = MutableStateFlow<QoS1State>(QoS1State.Queued)
-                processor.qos1States[packetId] = stateFlow
+                processor.registerQos1State(packetId, stateFlow)
                 PublishResult.QoS1(packetId, stateFlow)
             }
 
             QualityOfService.EXACTLY_ONCE -> {
                 check(packetId != NO_PACKET_ID) { "PacketId must be set by the persistence" }
                 val stateFlow = MutableStateFlow<QoS2State>(QoS2State.Queued)
-                processor.qos2States[packetId] = stateFlow
+                processor.registerQos2State(packetId, stateFlow)
                 PublishResult.QoS2(packetId, stateFlow)
             }
         }
@@ -517,11 +524,12 @@ class MqttClient internal constructor(
      * Useful for recovering UI state or tracking delivery after restart.
      */
     suspend fun pendingPublishes(): List<PublishResult> {
+        val (qos1, qos2) = processor.qosStateSnapshots()
         val results = mutableListOf<PublishResult>()
-        for ((packetId, stateFlow) in processor.qos1States) {
+        for ((packetId, stateFlow) in qos1) {
             results += PublishResult.QoS1(packetId, stateFlow)
         }
-        for ((packetId, stateFlow) in processor.qos2States) {
+        for ((packetId, stateFlow) in qos2) {
             results += PublishResult.QoS2(packetId, stateFlow)
         }
         return results

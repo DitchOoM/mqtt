@@ -5,20 +5,51 @@ import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
 import com.ditchoom.buffer.codec.DecodeContext
+import com.ditchoom.buffer.codec.DecodeException
 import com.ditchoom.buffer.codec.EncodeContext
 import com.ditchoom.buffer.codec.asReadBuffer
 import com.ditchoom.buffer.codec.ownedBytesFrom
+import com.ditchoom.mqtt.MalformedPacketException
 import com.ditchoom.mqtt.controlpacket.OpaquePublishPayload
 import com.ditchoom.mqtt.controlpacket.OpaquePublishPayloadCodec
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 
 /**
- * Test convenience for `ControlPacketV5.from(buffer)` typing — PUBLISH payloads decoded
- * into [OpaquePublishPayload] (Pattern #2, byte-exact). Tests that don't care about the
- * PUBLISH payload type (CONNECT, CONNACK, PUBACK, etc.) should use this helper.
+ * Test convenience replacing the retired `ControlPacketV5.from(buffer)` companion —
+ * PUBLISH payloads decoded into [OpaquePublishPayload] (Pattern #2, byte-exact). Tests
+ * that don't care about the PUBLISH payload type (CONNECT, CONNACK, PUBACK, etc.) should
+ * use this helper.
+ *
+ * Preserves `from()`'s `DecodeException → MalformedPacketException` remap so the ~dozen
+ * `assertFailsWith<MalformedPacketException>` sites keep passing. `ProtocolError` /
+ * `IllegalArgumentException` are NOT caught (matching the retired `from()`), so those
+ * assertions still see the raw type. This is a **test-only** contract — production decode
+ * (`MqttCodec.decode`, exercised by [decodeProductionV5]) does not remap.
  */
 internal fun decodeV5(buffer: ReadBuffer): ControlPacketV5<OpaquePublishPayload> =
-    ControlPacketV5Codec(OpaquePublishPayloadCodec).decode(buffer, DecodeContext.Empty)
+    try {
+        ControlPacketV5Codec(OpaquePublishPayloadCodec).decode(buffer, DecodeContext.Empty)
+    } catch (e: DecodeException) {
+        throw MalformedPacketException(e.message ?: "malformed control packet")
+    }
+
+/**
+ * Production-mirroring decode: routes through the generated `decodeAggregating`
+ * companion **exactly** as `MqttCodec.decode` does — the PUBLISH branch goes through
+ * the partial-then-`complete` aggregation path (not the instance-codec `publishCodec.decode`
+ * that [decodeV5] uses). The two paths differ (the aggregation path skips the
+ * instance codec's post-body `@FramedBy` consumption check), so the fuzzers target
+ * **this** helper to harden the real production wire-decode boundary
+ * (`ConnectivityManager.receive → MqttCodec.decode → decodeAggregating`). PUBLISH
+ * application bytes are carried in [OpaquePublishPayload] (Pattern #2, byte-exact),
+ * matching `MqttCodec`'s missing-codec fallback router.
+ */
+internal fun decodeProductionV5(buffer: ReadBuffer): ControlPacketV5<OpaquePublishPayload> =
+    ControlPacketV5Codec.decodeAggregating(
+        buffer = buffer,
+        context = DecodeContext.Empty,
+        onPublish = { it.complete(OpaquePublishPayloadCodec) },
+    )
 
 /**
  * Test convenience replacing the now-gone `ControlPacket.serialize(WriteBuffer)` API.

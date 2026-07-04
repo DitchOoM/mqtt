@@ -217,21 +217,6 @@ sealed interface ControlPacketV4<out P : Payload> : ControlPacket {
     }
 
     override fun packetSize(): Int = serialize(com.ditchoom.buffer.BufferFactory.Default).remaining()
-
-    companion object {
-        /**
-         * Decode a full v4 control-packet wire (`[byte1][VBI(remainingLength)][body]`) with
-         * PUBLISH application bytes carried in an [OpaquePublishPayload] (Pattern #2 —
-         * consumer-owned `PlatformBuffer`, byte-exact). For typed payloads, construct
-         * `ControlPacketV4Codec(yourPayloadCodec)` directly.
-         */
-        fun from(buffer: ReadBuffer): ControlPacketV4<OpaquePublishPayload> =
-            try {
-                ControlPacketV4OpaqueWireCodec.decode(buffer, com.ditchoom.buffer.codec.DecodeContext.Empty)
-            } catch (e: com.ditchoom.buffer.codec.DecodeException) {
-                throw MalformedPacketException(e.message ?: "malformed control packet")
-            }
-    }
 }
 
 // Cached codec instance for the hot wire-write path. Lives at top-level (not on

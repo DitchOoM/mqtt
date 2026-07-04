@@ -33,7 +33,7 @@ class V5PacketConnAckTests {
         assertEquals(0x00.toByte(), buf.readByte()) // SUCCESS
         assertEquals(0x00.toByte(), buf.readByte()) // property length VBI=0
         buf.position(0)
-        val decoded = ControlPacketV5.from(buf) as ConnectionAcknowledgment
+        val decoded = decodeV5(buf) as ConnectionAcknowledgment
         assertFalse(decoded.sessionPresent)
         assertEquals(ReasonCode.SUCCESS, decoded.connectReason)
         assertTrue(decoded.properties.isEmpty())
@@ -44,7 +44,7 @@ class V5PacketConnAckTests {
         val pkt = ConnectionAcknowledgment(sessionPresent = true)
         val buf = pkt.serialize()
         buf.position(0)
-        val decoded = ControlPacketV5.from(buf) as ConnectionAcknowledgment
+        val decoded = decodeV5(buf) as ConnectionAcknowledgment
         assertTrue(decoded.sessionPresent)
         assertEquals(ReasonCode.SUCCESS, decoded.connectReason)
     }
@@ -54,7 +54,7 @@ class V5PacketConnAckTests {
         val pkt = ConnectionAcknowledgment(connectReason = ReasonCode.NOT_AUTHORIZED)
         val buf = pkt.serialize()
         buf.position(0)
-        val decoded = ControlPacketV5.from(buf) as ConnectionAcknowledgment
+        val decoded = decodeV5(buf) as ConnectionAcknowledgment
         assertFalse(decoded.sessionPresent)
         assertEquals(ReasonCode.NOT_AUTHORIZED, decoded.connectReason)
         assertFalse(decoded.isSuccessful)
@@ -88,7 +88,7 @@ class V5PacketConnAckTests {
         val pkt = ConnectionAcknowledgment(properties = typed)
         val buf = pkt.serialize()
         buf.position(0)
-        val decoded = ControlPacketV5.from(buf) as ConnectionAcknowledgment
+        val decoded = decodeV5(buf) as ConnectionAcknowledgment
         val out = decoded.typedProperties
         assertEquals(300uL, out.sessionExpiryIntervalSeconds)
         assertEquals(100, out.receiveMaximum)
@@ -136,7 +136,7 @@ class V5PacketConnAckTests {
         buf.writeUByte(0x00u)
         buf.writeUByte(0x00u)
         buf.resetForRead()
-        assertFailsWith<IllegalArgumentException> { ControlPacketV5.from(buf) }
+        assertFailsWith<IllegalArgumentException> { decodeV5(buf) }
     }
 
     @Test
@@ -160,7 +160,7 @@ class V5PacketConnAckTests {
         buf.writeUByte(0x10u) // not in CONNACK valid set
         buf.writeUByte(0x00u)
         buf.resetForRead()
-        assertFailsWith<IllegalArgumentException> { ControlPacketV5.from(buf) }
+        assertFailsWith<IllegalArgumentException> { decodeV5(buf) }
     }
 
     @Test
@@ -175,7 +175,7 @@ class V5PacketConnAckTests {
         buf.writeUByte(0x21u) // ReceiveMaximum prop id
         buf.writeUShort(0u) // value = 0
         buf.resetForRead()
-        val packet = ControlPacketV5.from(buf) as ConnectionAcknowledgment
+        val packet = decodeV5(buf) as ConnectionAcknowledgment
         // Decoding the packet succeeds; ProtocolError fires on the typed-accessor.
         assertFailsWith<ProtocolError> { packet.typedProperties }
     }
@@ -192,7 +192,7 @@ class V5PacketConnAckTests {
         buf.writeUByte(0x27u) // MaximumPacketSize id
         buf.writeUInt(0u) // value 0
         buf.resetForRead()
-        val packet = ControlPacketV5.from(buf) as ConnectionAcknowledgment
+        val packet = decodeV5(buf) as ConnectionAcknowledgment
         assertFailsWith<ProtocolError> { packet.typedProperties }
     }
 
@@ -234,7 +234,7 @@ class V5PacketConnAckTests {
     fun connackUnknownPropertyIdRejected() {
         // An unknown property id in the bag must fail decode. The generated MqttPropertyCodec
         // throws DecodeException for a discriminator that isn't in any @PacketType; the
-        // ControlPacketV5.from() wrapper remaps decode failures to MalformedPacketException
+        // decodeV5() wrapper remaps decode failures to MalformedPacketException
         // (spec §4.13.2 — unknown property = malformed).
         val buf = BufferFactory.Default.allocate(8)
         buf.writeUByte(0x20u)
@@ -245,6 +245,6 @@ class V5PacketConnAckTests {
         buf.writeUByte(0xFEu) // unknown property id
         buf.writeUShort(0u)
         buf.resetForRead()
-        assertFailsWith<MalformedPacketException> { ControlPacketV5.from(buf) }
+        assertFailsWith<MalformedPacketException> { decodeV5(buf) }
     }
 }

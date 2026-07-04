@@ -18,6 +18,9 @@ androidxTestRunner = "1.7.0"
 androidxTestRules = "1.7.0"
 androidxTestCore = "1.7.0"
 testcontainers = "1.20.4"
+jazzer = "0.24.0"
+junitJupiter = "5.12.2"
+junitPlatform = "1.12.2"
 
 [libraries]
 buffer = { module = "com.ditchoom:buffer", version.ref = "buffer" }
@@ -48,6 +51,9 @@ androidx-test-runner = { module = "androidx.test:runner", version.ref = "android
 androidx-test-rules = { module = "androidx.test:rules", version.ref = "androidxTestRules" }
 androidx-test-core-ktx = { module = "androidx.test:core-ktx", version.ref = "androidxTestCore" }
 testcontainers = { module = "org.testcontainers:testcontainers", version.ref = "testcontainers" }
+jazzer-junit = { module = "com.code-intelligence:jazzer-junit", version.ref = "jazzer" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junitJupiter" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junitPlatform" }
 
 [plugins]
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }

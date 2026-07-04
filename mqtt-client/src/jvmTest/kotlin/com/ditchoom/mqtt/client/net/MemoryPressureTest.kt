@@ -10,14 +10,14 @@ import com.ditchoom.buffer.pool.BufferPool
 import com.ditchoom.buffer.stream.StreamProcessor
 import com.ditchoom.buffer.stream.builder
 import com.ditchoom.buffer.withPooling
+import com.ditchoom.mqtt.client.decodeV4Opaque
+import com.ditchoom.mqtt.client.decodeV5Opaque
 import com.ditchoom.mqtt.client.toBuffer
 import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.OpaquePublishPayloadCodec
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicName
-import com.ditchoom.mqtt3.controlpacket.ControlPacketV4
 import com.ditchoom.mqtt3.controlpacket.ControlPacketV4Codec
-import com.ditchoom.mqtt5.controlpacket.ControlPacketV5
 import com.ditchoom.mqtt5.controlpacket.ControlPacketV5Codec
 import java.io.File
 import java.lang.management.ManagementFactory
@@ -204,9 +204,9 @@ class MemoryPressureTest {
         val packets = listOf(buildV4Connect(), buildV4Publish(1), buildV4Publish(2), buildV4Subscribe())
         val iterations = 50_000
 
-        roundTripDirect(packets, 1000) { ControlPacketV4.from(it) }
+        roundTripDirect(packets, 1000) { decodeV4Opaque(it) }
         val before = snapshot()
-        roundTripDirect(packets, iterations) { ControlPacketV4.from(it) }
+        roundTripDirect(packets, iterations) { decodeV4Opaque(it) }
         val after = snapshot()
 
         assertNoLeak("v4-direct ${iterations * packets.size} packets", before, after)
@@ -217,9 +217,9 @@ class MemoryPressureTest {
         val packets = listOf(buildV5Connect(), buildV5Publish(1), buildV5Publish(2), buildV5Subscribe())
         val iterations = 50_000
 
-        roundTripDirect(packets, 1000) { ControlPacketV5.from(it) }
+        roundTripDirect(packets, 1000) { decodeV5Opaque(it) }
         val before = snapshot()
-        roundTripDirect(packets, iterations) { ControlPacketV5.from(it) }
+        roundTripDirect(packets, iterations) { decodeV5Opaque(it) }
         val after = snapshot()
 
         assertNoLeak("v5-direct ${iterations * packets.size} packets", before, after)
@@ -231,9 +231,9 @@ class MemoryPressureTest {
         val iterations = 50_000
         val codec = ControlPacketV4Codec(OpaquePublishPayloadCodec)
 
-        roundTripWithPool(packets, 1000, codec::peekFrameSize) { ControlPacketV4.from(it) }
+        roundTripWithPool(packets, 1000, codec::peekFrameSize) { decodeV4Opaque(it) }
         val before = snapshot()
-        roundTripWithPool(packets, iterations, codec::peekFrameSize) { ControlPacketV4.from(it) }
+        roundTripWithPool(packets, iterations, codec::peekFrameSize) { decodeV4Opaque(it) }
         val after = snapshot()
 
         assertNoLeak("v4-pooled ${iterations * packets.size} packets", before, after)
@@ -245,9 +245,9 @@ class MemoryPressureTest {
         val iterations = 50_000
         val codec = ControlPacketV5Codec(OpaquePublishPayloadCodec)
 
-        roundTripWithPool(packets, 1000, codec::peekFrameSize) { ControlPacketV5.from(it) }
+        roundTripWithPool(packets, 1000, codec::peekFrameSize) { decodeV5Opaque(it) }
         val before = snapshot()
-        roundTripWithPool(packets, iterations, codec::peekFrameSize) { ControlPacketV5.from(it) }
+        roundTripWithPool(packets, iterations, codec::peekFrameSize) { decodeV5Opaque(it) }
         val after = snapshot()
 
         assertNoLeak("v5-pooled ${iterations * packets.size} packets", before, after)
@@ -270,7 +270,7 @@ class MemoryPressureTest {
                     packetIdentifier = 1,
                 )
             val buf = pub.serialize()
-            ControlPacketV4.from(buf)
+            decodeV4Opaque(buf)
         }
 
         val before = snapshot()
@@ -287,7 +287,7 @@ class MemoryPressureTest {
                     packetIdentifier = i % 65535 + 1,
                 )
             val buf = pub.serialize()
-            ControlPacketV4.from(buf)
+            decodeV4Opaque(buf)
         }
 
         val after = snapshot()
@@ -421,7 +421,7 @@ class MemoryPressureTest {
         repeat(1000) {
             for (packet in packets) {
                 val buf = listOf(packet).toBuffer(factory) as PlatformBuffer
-                ControlPacketV4.from(buf)
+                decodeV4Opaque(buf)
                 buf.freeNativeMemory()
             }
         }
@@ -431,7 +431,7 @@ class MemoryPressureTest {
         repeat(iterations) {
             for (packet in packets) {
                 val buf = listOf(packet).toBuffer(factory) as PlatformBuffer
-                ControlPacketV4.from(buf)
+                decodeV4Opaque(buf)
                 buf.freeNativeMemory()
             }
         }

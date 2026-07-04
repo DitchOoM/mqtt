@@ -19,7 +19,7 @@ import kotlin.test.assertTrue
  * SUBSCRIBE, SUBACK, UNSUBSCRIBE, UNSUBACK.
  *
  * Each is validated for:
- *  (a) full-wire round trip via `ControlPacket.serialize()` → `ControlPacketV5.from()`
+ *  (a) full-wire round trip via `ControlPacket.serialize()` → `decodeV5()`
  *  (b) reserved fixed-header low-nibble bits (SUBSCRIBE/UNSUBSCRIBE pin to 0010)
  *  (c) empty payload rejection (Protocol Error per §3.8.3 / §3.10.3 / §3.11.3)
  *  (d) Subscription Options bit packing — reserved bits 6-7 must be 0, retain handling != 3,
@@ -35,7 +35,7 @@ class V5PacketListShapedTests {
         val buf = pkt.serialize()
         assertEquals(0x82.toByte(), buf.readByte()) // type=8, reserved low nibble 0010
         buf.position(0)
-        val decoded = ControlPacketV5.from(buf)
+        val decoded = decodeV5(buf)
         assertIs<SubscribeRequest>(decoded)
         assertEquals(10, decoded.packetIdentifier)
         assertEquals(1, decoded.subscriptions.size)
@@ -58,7 +58,7 @@ class V5PacketListShapedTests {
                 userProperty = listOf("k" to "v"),
             )
         val buf = pkt.serialize()
-        val decoded = ControlPacketV5.from(buf) as SubscribeRequest
+        val decoded = decodeV5(buf) as SubscribeRequest
         val sub = decoded.subscriptions.first()
         assertEquals(QualityOfService.EXACTLY_ONCE, sub.maximumQos)
         assertTrue(sub.noLocal)
@@ -87,7 +87,7 @@ class V5PacketListShapedTests {
                     ),
             )
         val buf = pkt.serialize()
-        val decoded = ControlPacketV5.from(buf) as SubscribeRequest
+        val decoded = decodeV5(buf) as SubscribeRequest
         assertEquals(3, decoded.subscriptions.size)
         val sortedSubs = decoded.subscriptions.sortedBy { it.topicFilter.toString() }
         assertEquals(QualityOfService.AT_MOST_ONCE, sortedSubs[0].maximumQos)
@@ -107,7 +107,7 @@ class V5PacketListShapedTests {
         buf.writeByte('a'.code.toByte())
         buf.writeUByte(0x40u) // reserved bit 6 set
         buf.resetForRead()
-        assertFailsWith<IllegalArgumentException> { ControlPacketV5.from(buf) }
+        assertFailsWith<IllegalArgumentException> { decodeV5(buf) }
     }
 
     @Test
@@ -152,7 +152,7 @@ class V5PacketListShapedTests {
         buf.writeByte('a'.code.toByte())
         buf.writeUByte(0x00u)
         buf.resetForRead()
-        assertFailsWith<MalformedPacketException> { ControlPacketV5.from(buf) }
+        assertFailsWith<MalformedPacketException> { decodeV5(buf) }
     }
 
     // ── SUBACK ──────────────────────────────────────────────────────────────
@@ -163,7 +163,7 @@ class V5PacketListShapedTests {
         val buf = pkt.serialize()
         assertEquals(0x90.toByte(), buf.readByte())
         buf.position(0)
-        val decoded = ControlPacketV5.from(buf) as SubscribeAcknowledgement
+        val decoded = decodeV5(buf) as SubscribeAcknowledgement
         assertEquals(10, decoded.packetIdentifier)
         assertEquals(listOf(ReasonCode.GRANTED_QOS_1), decoded.payload)
     }
@@ -179,7 +179,7 @@ class V5PacketListShapedTests {
             )
         val pkt = SubscribeAcknowledgement(packetIdentifier = 1.toUShort(), reasonCodes = codes)
         val buf = pkt.serialize()
-        val decoded = ControlPacketV5.from(buf) as SubscribeAcknowledgement
+        val decoded = decodeV5(buf) as SubscribeAcknowledgement
         assertEquals(codes, decoded.payload)
     }
 
@@ -212,7 +212,7 @@ class V5PacketListShapedTests {
         buf.resetForRead()
         // Constructor's init { } validation throws ProtocolError before MalformedPacketException
         // would fire in the lazy `payload` accessor.
-        assertFailsWith<ProtocolError> { ControlPacketV5.from(buf) }
+        assertFailsWith<ProtocolError> { decodeV5(buf) }
     }
 
     // ── UNSUBSCRIBE ─────────────────────────────────────────────────────────
@@ -223,7 +223,7 @@ class V5PacketListShapedTests {
         val buf = pkt.serialize()
         assertEquals(0xA2.toByte(), buf.readByte())
         buf.position(0)
-        val decoded = ControlPacketV5.from(buf) as UnsubscribeRequest
+        val decoded = decodeV5(buf) as UnsubscribeRequest
         assertEquals(setOf(TopicFilter.fromOrThrow("a/b")), decoded.topics)
     }
 
@@ -236,7 +236,7 @@ class V5PacketListShapedTests {
                 userProperty = listOf("trace" to "abc"),
             )
         val buf = pkt.serialize()
-        val decoded = ControlPacketV5.from(buf) as UnsubscribeRequest
+        val decoded = decodeV5(buf) as UnsubscribeRequest
         assertEquals(10, decoded.packetIdentifier)
         assertEquals(2, decoded.topics.size)
         assertEquals(listOf("trace" to "abc"), decoded.properties.userProperties())
@@ -260,7 +260,7 @@ class V5PacketListShapedTests {
         buf.writeUShort(1u)
         buf.writeByte('a'.code.toByte())
         buf.resetForRead()
-        assertFailsWith<MalformedPacketException> { ControlPacketV5.from(buf) }
+        assertFailsWith<MalformedPacketException> { decodeV5(buf) }
     }
 
     // ── UNSUBACK ────────────────────────────────────────────────────────────
@@ -271,7 +271,7 @@ class V5PacketListShapedTests {
         val buf = pkt.serialize()
         assertEquals(0xB0.toByte(), buf.readByte())
         buf.position(0)
-        val decoded = ControlPacketV5.from(buf) as UnsubscribeAcknowledgment
+        val decoded = decodeV5(buf) as UnsubscribeAcknowledgment
         assertEquals(10, decoded.packetIdentifier)
         assertEquals(listOf(ReasonCode.SUCCESS), decoded.reasonCodes)
     }
@@ -292,7 +292,7 @@ class V5PacketListShapedTests {
                 reasonCodes = codes,
             )
         val buf = pkt.serialize()
-        val decoded = ControlPacketV5.from(buf) as UnsubscribeAcknowledgment
+        val decoded = decodeV5(buf) as UnsubscribeAcknowledgment
         assertEquals(codes, decoded.reasonCodes)
         assertEquals("partial", decoded.properties.reasonStringValue())
     }
@@ -321,6 +321,6 @@ class V5PacketListShapedTests {
         buf.writeUByte(0x00u) // props len
         buf.writeUByte(0x05u) // not in UNSUBACK valid set
         buf.resetForRead()
-        assertFailsWith<ProtocolError> { ControlPacketV5.from(buf) }
+        assertFailsWith<ProtocolError> { decodeV5(buf) }
     }
 }

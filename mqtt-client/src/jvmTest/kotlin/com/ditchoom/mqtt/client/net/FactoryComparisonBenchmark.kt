@@ -8,11 +8,11 @@ import com.ditchoom.buffer.managed
 import com.ditchoom.buffer.pool.BufferPool
 import com.ditchoom.buffer.pool.ThreadingMode
 import com.ditchoom.buffer.withPooling
+import com.ditchoom.mqtt.client.decodeV4Opaque
 import com.ditchoom.mqtt.client.toBuffer
 import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicName
-import com.ditchoom.mqtt3.controlpacket.ControlPacketV4
 import java.io.File
 import java.lang.management.ManagementFactory
 import javax.management.ObjectName
@@ -219,7 +219,7 @@ class FactoryComparisonBenchmark {
         repeat(2_000) {
             for (p in packets) {
                 val buf = listOf(p).toBuffer(factory) as PlatformBuffer
-                ControlPacketV4.from(buf)
+                decodeV4Opaque(buf)
                 buf.freeNativeMemory()
             }
         }
@@ -233,7 +233,7 @@ class FactoryComparisonBenchmark {
                 repeat(iterations) {
                     for (p in packets) {
                         val buf = listOf(p).toBuffer(factory) as PlatformBuffer
-                        ControlPacketV4.from(buf)
+                        decodeV4Opaque(buf)
                         buf.freeNativeMemory()
                     }
                 }

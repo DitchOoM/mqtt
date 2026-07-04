@@ -33,7 +33,7 @@ class V5PacketConnectTests {
         val buf = pkt.serialize()
         assertEquals(0x10.toByte(), buf.readByte()) // type=1, flags=0000
         buf.position(0)
-        val decoded = ControlPacketV5.from(buf) as ConnectionRequest
+        val decoded = decodeV5(buf) as ConnectionRequest
         assertEquals("client-7", decoded.clientIdentifier)
         assertEquals("MQTT", decoded.protocolName)
         assertEquals(5, decoded.protocolVersion)
@@ -48,7 +48,7 @@ class V5PacketConnectTests {
         val pkt = ConnectionRequest(clientId = "c", cleanStart = true)
         val buf = pkt.serialize()
         buf.position(0)
-        val decoded = ControlPacketV5.from(buf) as ConnectionRequest
+        val decoded = decodeV5(buf) as ConnectionRequest
         assertTrue(decoded.cleanStart)
     }
 
@@ -62,7 +62,7 @@ class V5PacketConnectTests {
             )
         val buf = pkt.serialize()
         buf.position(0)
-        val decoded = ControlPacketV5.from(buf) as ConnectionRequest
+        val decoded = decodeV5(buf) as ConnectionRequest
         assertTrue(decoded.hasUserName)
         assertTrue(decoded.hasPassword)
         assertEquals("alice", decoded.userName)
@@ -84,7 +84,7 @@ class V5PacketConnectTests {
         val pkt = ConnectionRequest(clientId = "c", props = typed)
         val buf = pkt.serialize()
         buf.position(0)
-        val decoded = ControlPacketV5.from(buf) as ConnectionRequest
+        val decoded = decodeV5(buf) as ConnectionRequest
         val out = decoded.typedProperties
         assertEquals(3600uL, out.sessionExpiryIntervalSeconds)
         assertEquals(100, out.receiveMaximum)
@@ -124,7 +124,7 @@ class V5PacketConnectTests {
             )
         val buf = pkt.serialize()
         buf.position(0)
-        val decoded = ControlPacketV5.from(buf) as ConnectionRequest
+        val decoded = decodeV5(buf) as ConnectionRequest
         val will = decoded.will
         assertIs<WillConfig.Enabled>(will)
         assertEquals("will/topic", will.topic.toString())
@@ -155,7 +155,7 @@ class V5PacketConnectTests {
         buf.writeUByte(0u) // properties length
         buf.writeUShort(0u) // empty clientId
         buf.resetForRead()
-        assertFailsWith<MalformedPacketException> { ControlPacketV5.from(buf) }
+        assertFailsWith<MalformedPacketException> { decodeV5(buf) }
     }
 
     @Test
@@ -193,7 +193,7 @@ class V5PacketConnectTests {
         buf.writeUByte(0u)
         buf.writeUShort(0u)
         buf.resetForRead()
-        assertFailsWith<MalformedPacketException> { ControlPacketV5.from(buf) }
+        assertFailsWith<MalformedPacketException> { decodeV5(buf) }
     }
 
     @Test
@@ -213,14 +213,14 @@ class V5PacketConnectTests {
         buf.writeUByte(0u)
         buf.writeUShort(0u)
         buf.resetForRead()
-        assertFailsWith<MalformedPacketException> { ControlPacketV5.from(buf) }
+        assertFailsWith<MalformedPacketException> { decodeV5(buf) }
     }
 
     @Test
     fun connectDispatchedThroughControlPacketV5() {
         val pkt = ConnectionRequest(clientId = "dispatched")
         val buf = pkt.serialize()
-        val decoded = ControlPacketV5.from(buf)
+        val decoded = decodeV5(buf)
         assertIs<ControlPacketV5.Connect>(decoded)
         assertEquals(1.toByte(), decoded.controlPacketValue)
     }
@@ -251,7 +251,7 @@ class V5PacketConnectTests {
             )
         val buf = pkt.serialize()
         buf.position(0)
-        val decoded = ControlPacketV5.from(buf) as ConnectionRequest
+        val decoded = decodeV5(buf) as ConnectionRequest
         assertEquals(listOf("k1" to "v1", "k2" to "v2"), decoded.typedProperties.userProperty)
     }
 }

@@ -118,6 +118,17 @@ val integrationTestPatterns =
 
 val runIntegrationTests = project.hasProperty("integrationTests")
 
+// Conformance tests require the eclipse-paho/paho.mqtt.testing broker on localhost:1883
+// (MQTT 3.1.1 + 5.0 spec-conformance broker; see .github/workflows/conformance.yaml).
+// Run with: ./gradlew :mqtt-client:jvmTest -PconformanceTests
+val conformanceTestPatterns =
+    listOf(
+        "com.ditchoom.mqtt.client.net.PahoConformanceV4Test",
+        "com.ditchoom.mqtt.client.net.PahoConformanceV5Test",
+    )
+
+val runConformanceTests = project.hasProperty("conformanceTests")
+
 // Filter JVM tests
 tasks.withType<Test>().configureEach {
     testLogging {
@@ -129,6 +140,11 @@ tasks.withType<Test>().configureEach {
             integrationTestPatterns.forEach { excludeTestsMatching(it) }
         }
     }
+    if (!runConformanceTests) {
+        filter {
+            conformanceTestPatterns.forEach { excludeTestsMatching(it) }
+        }
+    }
 }
 
 // Filter Kotlin/Native tests
@@ -136,12 +152,18 @@ tasks.withType<org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeTest
     if (!runIntegrationTests) {
         integrationTestPatterns.forEach { this.filter.excludeTestsMatching(it) }
     }
+    if (!runConformanceTests) {
+        conformanceTestPatterns.forEach { this.filter.excludeTestsMatching(it) }
+    }
 }
 
 // Filter Kotlin/JS tests
 tasks.withType<org.jetbrains.kotlin.gradle.targets.js.testing.KotlinJsTest>().configureEach {
     if (!runIntegrationTests) {
         integrationTestPatterns.forEach { this.filter.excludeTestsMatching(it) }
+    }
+    if (!runConformanceTests) {
+        conformanceTestPatterns.forEach { this.filter.excludeTestsMatching(it) }
     }
     // Benchmark tests are too slow for JS single-threaded event loop
     this.filter.excludeTestsMatching("com.ditchoom.mqtt.client.net.EndToEndBrokerBenchmarkTest")
@@ -162,8 +184,13 @@ android {
         // Without this, connectedDebugAndroidTest runs the broker-dependent suite by default and
         // every test that talks to a broker times out at 60s — see [[mqtt_client_integration_test_flakiness]].
         // Opt in with -PintegrationTests (and -PuseMosquittoContainer=true to actually start a broker).
-        if (!runIntegrationTests) {
-            testInstrumentationRunnerArguments["notClass"] = integrationTestPatterns.joinToString(",")
+        val instrumentedExcludes =
+            buildList {
+                if (!runIntegrationTests) addAll(integrationTestPatterns)
+                if (!runConformanceTests) addAll(conformanceTestPatterns)
+            }
+        if (instrumentedExcludes.isNotEmpty()) {
+            testInstrumentationRunnerArguments["notClass"] = instrumentedExcludes.joinToString(",")
         }
     }
     publishing {

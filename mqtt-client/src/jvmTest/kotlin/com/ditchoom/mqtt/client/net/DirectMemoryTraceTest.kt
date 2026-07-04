@@ -2,6 +2,7 @@ package com.ditchoom.mqtt.client.net
 
 import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Default
+import com.ditchoom.mqtt.client.decodeV4Opaque
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicName
 import java.lang.management.ManagementFactory
@@ -73,8 +74,7 @@ class DirectMemoryTraceTest {
         // 5. 1000 serialize/deserialize cycles
         repeat(1000) {
             val s = pub.serialize()
-            com.ditchoom.mqtt3.controlpacket.ControlPacketV4
-                .from(s)
+            decodeV4Opaque(s)
         }
         printDirect("after 1000 PUBLISH round-trips")
         System.gc()
@@ -84,8 +84,7 @@ class DirectMemoryTraceTest {
         // 6. 10000 round-trips
         repeat(10_000) {
             val s = pub.serialize()
-            com.ditchoom.mqtt3.controlpacket.ControlPacketV4
-                .from(s)
+            decodeV4Opaque(s)
         }
         printDirect("after 10000 PUBLISH round-trips")
         System.gc()
@@ -95,8 +94,7 @@ class DirectMemoryTraceTest {
         // 7. 50000 round-trips
         repeat(50_000) {
             val s = pub.serialize()
-            com.ditchoom.mqtt3.controlpacket.ControlPacketV4
-                .from(s)
+            decodeV4Opaque(s)
         }
         printDirect("after 50000 PUBLISH round-trips")
         System.gc()

@@ -6,13 +6,13 @@ import com.ditchoom.buffer.codec.PeekResult
 import com.ditchoom.buffer.pool.BufferPool
 import com.ditchoom.buffer.stream.StreamProcessor
 import com.ditchoom.buffer.stream.builder
+import com.ditchoom.mqtt.client.decodeV4Opaque
+import com.ditchoom.mqtt.client.decodeV5Opaque
 import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.OpaquePublishPayloadCodec
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicName
-import com.ditchoom.mqtt3.controlpacket.ControlPacketV4
 import com.ditchoom.mqtt3.controlpacket.ControlPacketV4Codec
-import com.ditchoom.mqtt5.controlpacket.ControlPacketV5
 import com.ditchoom.mqtt5.controlpacket.ControlPacketV5Codec
 import java.io.File
 import java.lang.management.ManagementFactory
@@ -114,7 +114,7 @@ class BeforeAfterBenchmark {
         repeat(warmupIters) {
             for (p in packets) {
                 val buf = p.serialize()
-                ControlPacketV4.from(buf)
+                decodeV4Opaque(buf)
             }
         }
 
@@ -124,7 +124,7 @@ class BeforeAfterBenchmark {
                 repeat(benchIters) {
                     for (p in packets) {
                         val buf = p.serialize()
-                        ControlPacketV4.from(buf)
+                        decodeV4Opaque(buf)
                     }
                 }
             }
@@ -153,7 +153,7 @@ class BeforeAfterBenchmark {
         repeat(warmupIters) {
             for (p in packets) {
                 val buf = p.serialize()
-                ControlPacketV5.from(buf)
+                decodeV5Opaque(buf)
             }
         }
 
@@ -163,7 +163,7 @@ class BeforeAfterBenchmark {
                 repeat(benchIters) {
                     for (p in packets) {
                         val buf = p.serialize()
-                        ControlPacketV5.from(buf)
+                        decodeV5Opaque(buf)
                     }
                 }
             }
@@ -203,7 +203,7 @@ class BeforeAfterBenchmark {
                             PeekResult.NeedsMoreData -> error("frame underflow")
                             PeekResult.NoFraming -> error("codec does not participate in framing")
                         }
-                    stream.readBufferScoped(frameSize) { ControlPacketV5.from(this) }
+                    stream.readBufferScoped(frameSize) { decodeV5Opaque(this) }
                 }
             }
             stream.release()
@@ -249,7 +249,7 @@ class BeforeAfterBenchmark {
                             PeekResult.NeedsMoreData -> error("frame underflow")
                             PeekResult.NoFraming -> error("codec does not participate in framing")
                         }
-                    stream.readBufferScoped(frameSize) { ControlPacketV4.from(this) }
+                    stream.readBufferScoped(frameSize) { decodeV4Opaque(this) }
                 }
             }
             stream.release()
@@ -291,8 +291,8 @@ class BeforeAfterBenchmark {
                 buf.writeByte(0xD0.toByte()) // PINGRESP fixed header
                 buf.writeByte(0x00) // remaining length = 0
                 buf.resetForRead()
-                ControlPacketV5.from(buf)
-                ControlPacketV5.from(buf)
+                decodeV5Opaque(buf)
+                decodeV5Opaque(buf)
             }
         }
 

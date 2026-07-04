@@ -98,7 +98,7 @@ class SpecByteTests {
         buf.writeUByte(0x00u)
         buf.writeUByte(0x00u) // clientId=""
         buf.resetForRead()
-        val packet = ControlPacketV5.from(buf)
+        val packet = decodeV5(buf)
         assertIs<ConnectionRequest>(packet)
         assertEquals("", packet.clientIdentifier)
         assertTrue(packet.cleanStart)
@@ -188,7 +188,7 @@ class SpecByteTests {
         buf.writeUByte(0x00u) // reason code = SUCCESS
         buf.writeUByte(0x00u) // props len=0
         buf.resetForRead()
-        val packet = ControlPacketV5.from(buf)
+        val packet = decodeV5(buf)
         assertIs<ConnectionAcknowledgment>(packet)
         assertFalse(packet.sessionPresent)
         assertEquals(ReasonCode.SUCCESS, packet.connectReason)
@@ -305,7 +305,7 @@ class SpecByteTests {
         buf.writeUByte(0x61u) // topic "a"
         buf.writeUByte(0x00u) // props len=0
         buf.resetForRead()
-        val packet = ControlPacketV5.from(buf)
+        val packet = decodeV5(buf)
         assertIs<ControlPacketV5.Publish<*>>(packet)
         assertEquals("a", packet.topic.toString())
         assertEquals(AT_MOST_ONCE, packet.qualityOfService)
@@ -323,7 +323,7 @@ class SpecByteTests {
         buf.writeUByte(0x01u) // packet ID=1
         buf.writeUByte(0x00u) // props len=0
         buf.resetForRead()
-        val packet = ControlPacketV5.from(buf)
+        val packet = decodeV5(buf)
         assertIs<ControlPacketV5.Publish<*>>(packet)
         assertEquals("a", packet.topic.toString())
         assertEquals(AT_LEAST_ONCE, packet.qualityOfService)
@@ -521,7 +521,7 @@ class SpecByteTests {
         buf.writeUByte(0x62u)
         buf.writeUByte(0x01u) // subscription options: QoS 1
         buf.resetForRead()
-        val packet = ControlPacketV5.from(buf)
+        val packet = decodeV5(buf)
         assertIs<SubscribeRequest>(packet)
         assertEquals(10, packet.packetIdentifier)
         assertEquals(1, packet.subscriptions.size)
@@ -562,7 +562,7 @@ class SpecByteTests {
         buf.writeUByte(0x00u) // props len=0
         buf.writeUByte(0x01u) // GRANTED_QOS_1
         buf.resetForRead()
-        val packet = ControlPacketV5.from(buf)
+        val packet = decodeV5(buf)
         assertIs<SubscribeAcknowledgement>(packet)
         assertEquals(10, packet.packetIdentifier)
         assertEquals(listOf(ReasonCode.GRANTED_QOS_1), packet.payload)
@@ -639,7 +639,7 @@ class SpecByteTests {
         buf.writeUByte(0x2Fu)
         buf.writeUByte(0x64u)
         buf.resetForRead()
-        val packet = ControlPacketV5.from(buf)
+        val packet = decodeV5(buf)
         assertIs<UnsubscribeRequest>(packet)
         assertEquals(10, packet.packetIdentifier)
         assertEquals(2, packet.topics.size)
@@ -674,7 +674,7 @@ class SpecByteTests {
         buf.writeUByte(0x00u) // props len=0
         buf.writeUByte(0x00u) // SUCCESS
         buf.resetForRead()
-        val packet = ControlPacketV5.from(buf)
+        val packet = decodeV5(buf)
         assertIs<UnsubscribeAcknowledgment>(packet)
         assertEquals(10, packet.packetIdentifier)
         assertEquals(listOf(ReasonCode.SUCCESS), packet.reasonCodes)
@@ -707,7 +707,7 @@ class SpecByteTests {
         buf.writeUByte(0xE0u)
         buf.writeUByte(0x00u)
         buf.resetForRead()
-        val packet = ControlPacketV5.from(buf)
+        val packet = decodeV5(buf)
         assertIs<DisconnectNotification>(packet)
         assertEquals(null, packet.reasonCode) // RL=0 → null reason code, decoded as default NORMAL_DISCONNECTION
     }
@@ -721,7 +721,7 @@ class SpecByteTests {
         buf.writeUByte(0x80u) // UNSPECIFIED_ERROR
         buf.writeUByte(0x00u) // props len=0
         buf.resetForRead()
-        val packet = ControlPacketV5.from(buf)
+        val packet = decodeV5(buf)
         assertIs<DisconnectNotification>(packet)
         assertEquals(ReasonCode.UNSPECIFIED_ERROR.byte, packet.reasonCode)
     }
@@ -734,7 +734,7 @@ class SpecByteTests {
         buf.writeUByte(0x01u)
         buf.writeUByte(0x04u) // DISCONNECT_WITH_WILL_MESSAGE = 0x04
         buf.resetForRead()
-        val packet = ControlPacketV5.from(buf)
+        val packet = decodeV5(buf)
         assertIs<DisconnectNotification>(packet)
         assertEquals(ReasonCode.DISCONNECT_WITH_WILL_MESSAGE.byte, packet.reasonCode)
         assertEquals(null, packet.properties) // RL=1 → no properties section on the wire
@@ -756,7 +756,7 @@ class SpecByteTests {
         buf.writeUByte(0xF0u)
         buf.writeUByte(0x00u)
         buf.resetForRead()
-        val packet = ControlPacketV5.from(buf)
+        val packet = decodeV5(buf)
         assertIs<AuthenticationExchange>(packet)
         assertEquals(null, packet.reasonCode) // RL=0 → omitted, decoded as default SUCCESS
     }

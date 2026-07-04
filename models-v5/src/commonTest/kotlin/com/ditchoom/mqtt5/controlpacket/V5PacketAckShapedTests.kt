@@ -19,7 +19,7 @@ import kotlin.test.assertNull
  *  (b) packet identifier + reason code, with property length=0 (matches legacy wire format)
  *  (c) packet identifier + reason code + non-empty property bag
  *
- * Each branch round-trips via the legacy `ControlPacket.serialize()` → `ControlPacketV5.from()`
+ * Each branch round-trips via the legacy `ControlPacket.serialize()` → `decodeV5()`
  * pipeline (full wire format including VBI). Spec-invalid reason codes are rejected at
  * construction time. PUBREL also asserts the reserved low-nibble bits are `0010`.
  */
@@ -32,7 +32,7 @@ class V5PacketAckShapedTests {
         assertEquals(0xC0.toByte(), buf.readByte()) // type=12, flags=0000
         assertEquals(0x00.toByte(), buf.readByte()) // RL=0
         buf.position(0)
-        assertEquals(PingRequest(), ControlPacketV5.from(buf))
+        assertEquals(PingRequest(), decodeV5(buf))
     }
 
     @Test
@@ -41,7 +41,7 @@ class V5PacketAckShapedTests {
         assertEquals(0xD0.toByte(), buf.readByte()) // type=13, flags=0000
         assertEquals(0x00.toByte(), buf.readByte()) // RL=0
         buf.position(0)
-        assertEquals(PingResponse(), ControlPacketV5.from(buf))
+        assertEquals(PingResponse(), decodeV5(buf))
     }
 
     @Test
@@ -51,7 +51,7 @@ class V5PacketAckShapedTests {
         buf.writeUByte(0x01u)
         buf.writeUByte(0x00u)
         buf.resetForRead()
-        assertFailsWith<MalformedPacketException> { ControlPacketV5.from(buf) }
+        assertFailsWith<MalformedPacketException> { decodeV5(buf) }
     }
 
     // ── PUBACK ──────────────────────────────────────────────────────────────
@@ -64,7 +64,7 @@ class V5PacketAckShapedTests {
         assertEquals(0x40.toByte(), buf.readByte())
         assertEquals(0x02.toByte(), buf.readByte()) // RL=2
         buf.position(0)
-        val decoded = ControlPacketV5.from(buf)
+        val decoded = decodeV5(buf)
         assertIs<PublishAcknowledgment>(decoded)
         assertEquals(7, decoded.packetIdentifier)
         assertNull(decoded.reasonCode)
@@ -83,7 +83,7 @@ class V5PacketAckShapedTests {
         assertEquals(0x10.toByte(), buf.readByte()) // NO_MATCHING_SUBSCRIBERS
         assertEquals(0x00.toByte(), buf.readByte()) // property length VBI = 0
         buf.position(0)
-        val decoded = ControlPacketV5.from(buf)
+        val decoded = decodeV5(buf)
         assertIs<PublishAcknowledgment>(decoded)
         assertEquals(7, decoded.packetIdentifier)
         assertEquals(ReasonCode.NO_MATCHING_SUBSCRIBERS.byte, decoded.reasonCode)
@@ -99,7 +99,7 @@ class V5PacketAckShapedTests {
                 userProperty = listOf("retry-after" to "60"),
             )
         val buf = pkt.serialize()
-        val decoded = ControlPacketV5.from(buf)
+        val decoded = decodeV5(buf)
         assertIs<PublishAcknowledgment>(decoded)
         assertEquals(99, decoded.packetIdentifier)
         assertEquals(ReasonCode.QUOTA_EXCEEDED.byte, decoded.reasonCode)
@@ -124,7 +124,7 @@ class V5PacketAckShapedTests {
         assertEquals(0x50.toByte(), buf.readByte()) // type=5, flags=0000
         assertEquals(0x02.toByte(), buf.readByte()) // RL=2
         buf.position(0)
-        assertEquals(pkt, ControlPacketV5.from(buf))
+        assertEquals(pkt, decodeV5(buf))
     }
 
     @Test
@@ -144,7 +144,7 @@ class V5PacketAckShapedTests {
         assertEquals(0x62.toByte(), buf.readByte())
         assertEquals(0x02.toByte(), buf.readByte()) // RL=2
         buf.position(0)
-        assertEquals(pkt, ControlPacketV5.from(buf))
+        assertEquals(pkt, decodeV5(buf))
     }
 
     @Test
@@ -153,7 +153,7 @@ class V5PacketAckShapedTests {
         val buf = pkt.serialize()
         assertEquals(0x62.toByte(), buf.readByte())
         buf.position(0)
-        val decoded = ControlPacketV5.from(buf)
+        val decoded = decodeV5(buf)
         assertIs<PublishRelease>(decoded)
         assertEquals(7, decoded.packetIdentifier)
         assertEquals(ReasonCode.PACKET_IDENTIFIER_NOT_FOUND.byte, decoded.reasonCode)
@@ -175,7 +175,7 @@ class V5PacketAckShapedTests {
         buf.writeUByte(0x02u)
         buf.writeUShort(7u)
         buf.resetForRead()
-        assertFailsWith<MalformedPacketException> { ControlPacketV5.from(buf) }
+        assertFailsWith<MalformedPacketException> { decodeV5(buf) }
     }
 
     // ── PUBCOMP ─────────────────────────────────────────────────────────────
@@ -187,7 +187,7 @@ class V5PacketAckShapedTests {
         assertEquals(0x70.toByte(), buf.readByte())
         assertEquals(0x02.toByte(), buf.readByte()) // RL=2
         buf.position(0)
-        assertEquals(pkt, ControlPacketV5.from(buf))
+        assertEquals(pkt, decodeV5(buf))
     }
 
     @Test
@@ -207,7 +207,7 @@ class V5PacketAckShapedTests {
         assertEquals(0xE0.toByte(), buf.readByte())
         assertEquals(0x00.toByte(), buf.readByte()) // RL=0
         buf.position(0)
-        val decoded = ControlPacketV5.from(buf)
+        val decoded = decodeV5(buf)
         assertIs<DisconnectNotification>(decoded)
         assertNull(decoded.reasonCode)
         assertNull(decoded.properties)
@@ -223,7 +223,7 @@ class V5PacketAckShapedTests {
         assertEquals(0x80.toByte(), buf.readByte()) // UNSPECIFIED_ERROR
         assertEquals(0x00.toByte(), buf.readByte()) // property length VBI = 0
         buf.position(0)
-        val decoded = ControlPacketV5.from(buf)
+        val decoded = decodeV5(buf)
         assertIs<DisconnectNotification>(decoded)
         assertEquals(ReasonCode.UNSPECIFIED_ERROR.byte, decoded.reasonCode)
     }
@@ -239,7 +239,7 @@ class V5PacketAckShapedTests {
                 serverReference = "mqtt://backup.example",
             )
         val buf = pkt.serialize()
-        val decoded = ControlPacketV5.from(buf)
+        val decoded = decodeV5(buf)
         assertIs<DisconnectNotification>(decoded)
         assertEquals(ReasonCode.SERVER_SHUTTING_DOWN.byte, decoded.reasonCode)
         assertEquals("graceful shutdown", decoded.properties.reasonStringValue())
@@ -254,7 +254,7 @@ class V5PacketAckShapedTests {
         buf.writeUByte(0x01u)
         buf.writeUByte(0x04u) // DISCONNECT_WITH_WILL_MESSAGE
         buf.position(0)
-        val decoded = ControlPacketV5.from(buf)
+        val decoded = decodeV5(buf)
         assertIs<DisconnectNotification>(decoded)
         assertEquals(ReasonCode.DISCONNECT_WITH_WILL_MESSAGE.byte, decoded.reasonCode)
         assertNull(decoded.properties)
@@ -280,7 +280,7 @@ class V5PacketAckShapedTests {
         assertEquals(0xF0.toByte(), buf.readByte())
         assertEquals(0x00.toByte(), buf.readByte()) // RL=0
         buf.position(0)
-        val decoded = ControlPacketV5.from(buf)
+        val decoded = decodeV5(buf)
         assertIs<AuthenticationExchange>(decoded)
         assertNull(decoded.reasonCode)
     }
@@ -294,7 +294,7 @@ class V5PacketAckShapedTests {
         assertEquals(0x18.toByte(), buf.readByte()) // CONTINUE_AUTHENTICATION
         assertEquals(0x00.toByte(), buf.readByte()) // property length VBI = 0
         buf.position(0)
-        val decoded = ControlPacketV5.from(buf)
+        val decoded = decodeV5(buf)
         assertIs<AuthenticationExchange>(decoded)
         assertEquals(ReasonCode.CONTINUE_AUTHENTICATION.byte, decoded.reasonCode)
     }
@@ -303,7 +303,7 @@ class V5PacketAckShapedTests {
     fun authReauthenticateRoundTrip() {
         val pkt = AuthenticationExchange(reasonCode = ReasonCode.REAUTHENTICATE)
         val buf = pkt.serialize()
-        val decoded = ControlPacketV5.from(buf)
+        val decoded = decodeV5(buf)
         assertIs<AuthenticationExchange>(decoded)
         assertEquals(ReasonCode.REAUTHENTICATE.byte, decoded.reasonCode)
     }
@@ -328,6 +328,6 @@ class V5PacketAckShapedTests {
         buf.writeUByte(0x9Cu) // not in PUBACK valid set
         buf.writeUByte(0x00u) // property length 0
         buf.resetForRead()
-        assertFailsWith<IllegalArgumentException> { ControlPacketV5.from(buf) }
+        assertFailsWith<IllegalArgumentException> { decodeV5(buf) }
     }
 }

@@ -25,10 +25,22 @@ kotlin {
     androidTarget {
         publishLibraryVariants("release")
     }
-    jvm()
+    jvm {
+        // jazzer-junit (JVM coverage-guided fuzzing, see fuzz targets in src/jvmTest) requires
+        // the JUnit Platform. kotlin("test") resolves to kotlin-test-junit5 accordingly.
+        testRuns["test"].executionTask.configure { useJUnitPlatform() }
+    }
     js {
-        browser()
-        nodejs()
+        browser {
+            testTask {
+                useMocha { timeout = "120s" }
+            }
+        }
+        nodejs {
+            testTask {
+                useMocha { timeout = "120s" }
+            }
+        }
     }
 
     if (hostOs.family.isAppleFamily) {
@@ -61,6 +73,11 @@ kotlin {
         commonTest.dependencies {
             implementation(kotlin("test"))
             implementation(libs.kotlinx.coroutines.test)
+        }
+        jvmTest.dependencies {
+            implementation(libs.jazzer.junit)
+            implementation(libs.junit.jupiter)
+            runtimeOnly(libs.junit.platform.launcher)
         }
         jsMain.dependencies {
             implementation(libs.kotlin.web)
@@ -99,6 +116,36 @@ android {
             withSourcesJar()
             withJavadocJar()
         }
+    }
+}
+
+// Deterministic + Jazzer fuzz tests are opt-in so default test runs stay fast; mirrors the
+// integrationTests gating in mqtt-client/build.gradle.kts.
+// Run with: ./gradlew :models-v4:jvmTest -PfuzzTests
+val fuzzTestPatterns =
+    listOf(
+        "com.ditchoom.mqtt3.controlpacket.fuzz.ControlPacketV4FuzzTest",
+        "com.ditchoom.mqtt3.controlpacket.fuzz.ControlPacketV4JazzerFuzzTest",
+    )
+val runFuzzTests = project.hasProperty("fuzzTests")
+
+tasks.withType<Test>().configureEach {
+    if (!runFuzzTests) {
+        filter {
+            fuzzTestPatterns.forEach { excludeTestsMatching(it) }
+        }
+    }
+}
+
+tasks.withType<org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeTest>().configureEach {
+    if (!runFuzzTests) {
+        fuzzTestPatterns.forEach { this.filter.excludeTestsMatching(it) }
+    }
+}
+
+tasks.withType<org.jetbrains.kotlin.gradle.targets.js.testing.KotlinJsTest>().configureEach {
+    if (!runFuzzTests) {
+        fuzzTestPatterns.forEach { this.filter.excludeTestsMatching(it) }
     }
 }
 

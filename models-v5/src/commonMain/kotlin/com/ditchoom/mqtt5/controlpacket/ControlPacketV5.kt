@@ -4,7 +4,6 @@ import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Charset
 import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.ReadBuffer
-import com.ditchoom.buffer.codec.DecodeContext
 import com.ditchoom.buffer.codec.OwnedBytesHandle
 import com.ditchoom.buffer.codec.OwnedBytesHandleCodec
 import com.ditchoom.buffer.codec.Payload
@@ -189,24 +188,6 @@ sealed interface ControlPacketV5<out P : Payload> : com.ditchoom.mqtt.controlpac
     }
 
     override fun packetSize(): Int = serialize(com.ditchoom.buffer.BufferFactory.Default).remaining()
-
-    companion object {
-        /**
-         * Decode a full v5 control-packet wire (`[byte1][VBI(remainingLength)][body]`)
-         * with PUBLISH application bytes carried in an [com.ditchoom.mqtt.controlpacket.OpaquePublishPayload]
-         * (Pattern #2 — consumer-owned `PlatformBuffer`, byte-exact). For typed payloads,
-         * construct `ControlPacketV5Codec(yourPayloadCodec)` directly.
-         */
-        fun from(buffer: ReadBuffer): ControlPacketV5<com.ditchoom.mqtt.controlpacket.OpaquePublishPayload> =
-            try {
-                ControlPacketV5OpaqueWireCodec.decode(buffer, DecodeContext.Empty)
-            } catch (e: com.ditchoom.buffer.codec.DecodeException) {
-                // Replaces the retired `@ProtocolMessage(onUnknownDiscriminator = MalformedPacketException)`
-                // mapping. The dispatcher throws DecodeException for unknown packet types and
-                // body-overrun, both of which the MQTT 5.0 spec classifies as malformed (§4.13.2).
-                throw MalformedPacketException(e.message ?: "malformed control packet")
-            }
-    }
 
     @PacketType(value = 1, wire = 0x10)
     @ProtocolMessage

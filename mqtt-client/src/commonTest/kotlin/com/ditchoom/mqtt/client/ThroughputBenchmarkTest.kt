@@ -9,7 +9,6 @@ import com.ditchoom.buffer.withPooling
 import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicName
-import com.ditchoom.mqtt3.controlpacket.ControlPacketV4
 import kotlin.test.Test
 import kotlin.time.TimeSource
 import com.ditchoom.mqtt3.controlpacket.ConnectionRequest as ConnectV4
@@ -95,7 +94,7 @@ class ThroughputBenchmarkTest {
         repeat(warmup) {
             for (p in packets) {
                 val buf = listOf(p).toBuffer(factory) as PlatformBuffer
-                ControlPacketV4.from(buf)
+                decodeV4Opaque(buf)
                 buf.freeNativeMemory()
             }
         }
@@ -104,7 +103,7 @@ class ThroughputBenchmarkTest {
         repeat(iterations) {
             for (p in packets) {
                 val buf = listOf(p).toBuffer(factory) as PlatformBuffer
-                ControlPacketV4.from(buf)
+                decodeV4Opaque(buf)
                 buf.freeNativeMemory()
             }
         }

@@ -45,6 +45,14 @@ The three canonical decode patterns (see `buffer/CLAUDE.md` §"Canonical decode 
 ./gradlew macosArm64Test          # macOS tests (requires macOS)
 ./gradlew iosSimulatorArm64Test   # iOS tests (requires macOS)
 
+# Fuzz tests (opt-in; excluded from default test runs — see .github/workflows/fuzz.yaml)
+./gradlew jvmTest jsNodeTest linuxX64Test -PfuzzTests            # deterministic fuzzers (models-base/v4/v5)
+JAZZER_FUZZ=1 ./gradlew :models-v4:jvmTest -PfuzzTests --tests '*JazzerFuzzTest'  # coverage-guided (JVM)
+
+# Conformance tests (opt-in; need the paho.mqtt.testing broker on localhost:1883 —
+# see .github/workflows/conformance.yaml for the pinned SHA + start command)
+./gradlew :mqtt-client:jvmTest -PconformanceTests
+
 # Linting
 ./gradlew ktlintCheck             # Check code style
 ./gradlew ktlintFormat            # Auto-format code
@@ -114,6 +122,7 @@ src/
 ## CI/CD
 
 - PR review triggers `build-linux` + `build-apple` + `validate-artifacts`
+- **Optional (non-required) PR checks**: `fuzz.yaml` (deterministic fuzzers on every PR; Jazzer coverage-guided fuzzing weekly/on-dispatch) and `conformance.yaml` (paho.mqtt.testing conformance broker + spec-statement coverage report). Neither is referenced by `review.yaml`, so they never gate merges.
 - PR merge to main triggers full build + publish to Maven Central
 - PR labels control version bumping: `major`, `minor`, or patch (default)
 - `skip-release` label skips publishing; `draft-release` publishes to staging only

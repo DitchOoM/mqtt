@@ -6,25 +6,54 @@ import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.WriteBuffer
 import com.ditchoom.buffer.codec.DecodeContext
+import com.ditchoom.buffer.codec.DecodeException
 import com.ditchoom.buffer.codec.EncodeContext
 import com.ditchoom.buffer.codec.asReadBuffer
 import com.ditchoom.buffer.codec.ownedBytesFrom
+import com.ditchoom.mqtt.MalformedPacketException
 import com.ditchoom.mqtt.controlpacket.OpaquePublishPayload
 import com.ditchoom.mqtt.controlpacket.OpaquePublishPayloadCodec
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 
 /**
- * Test convenience for `ControlPacketV4.from(buffer)` which buffer-v1 collapsed (the
- * companion `.from(buffer)` overloads were deleted). Tests that don't care about the
- * PUBLISH payload type (PUBACK, SUBACK, CONNECT, etc.) route through this helper.
+ * Test convenience replacing the retired `ControlPacketV4.from(buffer)` companion (the
+ * `.from(buffer)` overloads were deleted). Tests that don't care about the PUBLISH payload
+ * type (PUBACK, SUBACK, CONNECT, etc.) route through this helper.
  *
  * PUBLISH application bytes are decoded as [OpaquePublishPayload] (Pattern #2 — consumer-
  * owned `PlatformBuffer`) — spec-compliant, no UTF-8 loss. Tests asserting payload content
  * compare via `OpaquePublishPayload.handle.handleEquals(...)` or by re-decoding the bytes
  * through a specific codec.
+ *
+ * Preserves `from()`'s `DecodeException → MalformedPacketException` remap so the
+ * `assertFailsWith<MalformedPacketException>` sites keep passing. This is a **test-only**
+ * contract — production decode (`MqttCodec.decode`, exercised by [decodeProductionV4]) does
+ * not remap.
  */
 internal fun decodeV4(buffer: ReadBuffer): ControlPacketV4<OpaquePublishPayload> =
-    ControlPacketV4Codec(OpaquePublishPayloadCodec).decode(buffer, DecodeContext.Empty)
+    try {
+        ControlPacketV4Codec(OpaquePublishPayloadCodec).decode(buffer, DecodeContext.Empty)
+    } catch (e: DecodeException) {
+        throw MalformedPacketException(e.message ?: "malformed control packet")
+    }
+
+/**
+ * Production-mirroring decode: routes through the generated `decodeAggregating`
+ * companion **exactly** as `MqttCodec.decode` does — the PUBLISH branch goes through
+ * the partial-then-`complete` aggregation path (not the instance-codec `publishCodec.decode`
+ * that [decodeV4] uses). The two paths differ (the aggregation path skips the
+ * instance codec's post-body `@FramedBy` consumption check), so the fuzzers target
+ * **this** helper to harden the real production wire-decode boundary
+ * (`ConnectivityManager.receive → MqttCodec.decode → decodeAggregating`). PUBLISH
+ * application bytes are carried in [OpaquePublishPayload] (Pattern #2, byte-exact),
+ * matching `MqttCodec`'s missing-codec fallback router.
+ */
+internal fun decodeProductionV4(buffer: ReadBuffer): ControlPacketV4<OpaquePublishPayload> =
+    ControlPacketV4Codec.decodeAggregating(
+        buffer = buffer,
+        context = DecodeContext.Empty,
+        onPublishMessageV4 = { it.complete(OpaquePublishPayloadCodec) },
+    )
 
 /**
  * Test convenience replacing the now-gone `ControlPacket.serialize(WriteBuffer)` API.

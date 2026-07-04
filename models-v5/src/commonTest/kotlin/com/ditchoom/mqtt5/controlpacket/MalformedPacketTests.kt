@@ -26,7 +26,7 @@ class MalformedPacketTests {
         // Packet type 0 is reserved — MUST be treated as malformed
         val buffer = rawBuffer(0x00, 0x00)
         assertFailsWith<MalformedPacketException> {
-            ControlPacketV5.from(buffer)
+            decodeV5(buffer)
         }
     }
 
@@ -37,7 +37,7 @@ class MalformedPacketTests {
         // PUBLISH header with continuation bit set but no more bytes
         val buffer = rawBuffer(0x30, 0x80) // 0x80 has continuation bit set
         assertFailsWith<Throwable> {
-            ControlPacketV5.from(buffer)
+            decodeV5(buffer)
         }
     }
 
@@ -48,7 +48,7 @@ class MalformedPacketTests {
         // PUBLISH with remaining length = 32 but only 2 bytes of actual body
         val buffer = rawBuffer(0x30, 0x20, 0x00, 0x01)
         assertFailsWith<Throwable> {
-            ControlPacketV5.from(buffer)
+            decodeV5(buffer)
         }
     }
 
@@ -59,7 +59,7 @@ class MalformedPacketTests {
         // PUBACK needs at least 2 bytes for packet identifier
         val buffer = rawBuffer(0x40, 0x00)
         assertFailsWith<Throwable> {
-            ControlPacketV5.from(buffer)
+            decodeV5(buffer)
         }
     }
 
@@ -68,7 +68,7 @@ class MalformedPacketTests {
         // PUBACK packet ID requires 2 bytes; 1 byte is invalid
         val buffer = rawBuffer(0x40, 0x01, 0x00)
         assertFailsWith<Throwable> {
-            ControlPacketV5.from(buffer)
+            decodeV5(buffer)
         }
     }
 
@@ -80,7 +80,7 @@ class MalformedPacketTests {
         // byte1: type=3(0011), flags=0110 → 0x36
         val buffer = rawBuffer(0x36, 0x04, 0x00, 0x01, 0x61, 0x00)
         assertFailsWith<MalformedPacketException> {
-            ControlPacketV5.from(buffer)
+            decodeV5(buffer)
         }
     }
 
@@ -138,7 +138,7 @@ class MalformedPacketTests {
                 0x00, // client ID
             )
         assertFailsWith<MalformedPacketException> {
-            ControlPacketV5.from(buffer)
+            decodeV5(buffer)
         }
     }
 
@@ -167,7 +167,7 @@ class MalformedPacketTests {
                 0x00,
             )
         assertFailsWith<MalformedPacketException> {
-            ControlPacketV5.from(buffer)
+            decodeV5(buffer)
         }
     }
 }

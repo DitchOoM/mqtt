@@ -13,6 +13,7 @@ import com.ditchoom.mqtt.MissingCodecException
 import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.ControlPacketFactory
 import com.ditchoom.mqtt.controlpacket.MqttRemainingLengthCodec
+import com.ditchoom.mqtt.mappingMalformedWire
 import com.ditchoom.mqtt3.controlpacket.ControlPacketV4Codec
 import com.ditchoom.mqtt5.controlpacket.ControlPacketV5Codec
 
@@ -50,30 +51,35 @@ class MqttCodec(
         buffer: ReadBuffer,
         context: DecodeContext,
     ): ControlPacket =
-        when (val version = factory.protocolVersion) {
-            4 ->
-                ControlPacketV4Codec.decodeAggregating<Payload>(
-                    buffer = buffer,
-                    context = context,
-                    onPublishMessageV4 = { partial ->
-                        val codec =
-                            publishCodecForTopic(partial.topicName)
-                                ?: throw MissingCodecException(partial.topicName)
-                        partial.complete(codec as Codec<Payload>)
-                    },
-                )
-            5 ->
-                ControlPacketV5Codec.decodeAggregating<Payload>(
-                    buffer = buffer,
-                    context = context,
-                    onPublish = { partial ->
-                        val codec =
-                            publishCodecForTopic(partial.topicName)
-                                ?: throw MissingCodecException(partial.topicName)
-                        partial.complete(codec as Codec<Payload>)
-                    },
-                )
-            else -> error("Unsupported MQTT protocol version: $version (expected 4 or 5)")
+        // Normalize malformed wire bytes to a single MalformedPacketException at the production
+        // decode boundary so the reconnect loop can tell "broker sent garbage" from "socket died"
+        // (DitchOoM/mqtt#13). Genuine decoder bugs and cancellation propagate unwrapped.
+        mappingMalformedWire {
+            when (val version = factory.protocolVersion) {
+                4 ->
+                    ControlPacketV4Codec.decodeAggregating<Payload>(
+                        buffer = buffer,
+                        context = context,
+                        onPublishMessageV4 = { partial ->
+                            val codec =
+                                publishCodecForTopic(partial.topicName)
+                                    ?: throw MissingCodecException(partial.topicName)
+                            partial.complete(codec as Codec<Payload>)
+                        },
+                    )
+                5 ->
+                    ControlPacketV5Codec.decodeAggregating<Payload>(
+                        buffer = buffer,
+                        context = context,
+                        onPublish = { partial ->
+                            val codec =
+                                publishCodecForTopic(partial.topicName)
+                                    ?: throw MissingCodecException(partial.topicName)
+                            partial.complete(codec as Codec<Payload>)
+                        },
+                    )
+                else -> error("Unsupported MQTT protocol version: $version (expected 4 or 5)")
+            }
         }
 
     override fun encode(

@@ -14,6 +14,7 @@ import com.ditchoom.mqtt.MalformedPacketException
 import com.ditchoom.mqtt.controlpacket.OpaquePublishPayload
 import com.ditchoom.mqtt.controlpacket.OpaquePublishPayloadCodec
 import com.ditchoom.mqtt.controlpacket.QualityOfService
+import com.ditchoom.mqtt.mappingMalformedWire
 
 /**
  * Test convenience replacing the retired `ControlPacketV4.from(buffer)` companion (the
@@ -26,9 +27,10 @@ import com.ditchoom.mqtt.controlpacket.QualityOfService
  * through a specific codec.
  *
  * Preserves `from()`'s `DecodeException → MalformedPacketException` remap so the
- * `assertFailsWith<MalformedPacketException>` sites keep passing. This is a **test-only**
- * contract — production decode (`MqttCodec.decode`, exercised by [decodeProductionV4]) does
- * not remap.
+ * `assertFailsWith<MalformedPacketException>` sites keep passing. Its narrow catch differs from
+ * production's [com.ditchoom.mqtt.mappingMalformedWire] (which also remaps
+ * `IllegalArgumentException` / the buffer-underflow / charset families) — [decodeProductionV4]
+ * is the faithful production mirror.
  */
 internal fun decodeV4(buffer: ReadBuffer): ControlPacketV4<OpaquePublishPayload> =
     try {
@@ -47,13 +49,20 @@ internal fun decodeV4(buffer: ReadBuffer): ControlPacketV4<OpaquePublishPayload>
  * (`ConnectivityManager.receive → MqttCodec.decode → decodeAggregating`). PUBLISH
  * application bytes are carried in [OpaquePublishPayload] (Pattern #2, byte-exact),
  * matching `MqttCodec`'s missing-codec fallback router.
+ *
+ * Like `MqttCodec.decode`, it wraps the raw malformed-wire families into
+ * [com.ditchoom.mqtt.MalformedPacketException] via [com.ditchoom.mqtt.mappingMalformedWire]
+ * (DitchOoM/mqtt#13), so malformed input surfaces here as an [com.ditchoom.mqtt.MqttException]
+ * exactly as production does; genuine decoder bugs still propagate unwrapped.
  */
 internal fun decodeProductionV4(buffer: ReadBuffer): ControlPacketV4<OpaquePublishPayload> =
-    ControlPacketV4Codec.decodeAggregating(
-        buffer = buffer,
-        context = DecodeContext.Empty,
-        onPublishMessageV4 = { it.complete(OpaquePublishPayloadCodec) },
-    )
+    mappingMalformedWire {
+        ControlPacketV4Codec.decodeAggregating(
+            buffer = buffer,
+            context = DecodeContext.Empty,
+            onPublishMessageV4 = { it.complete(OpaquePublishPayloadCodec) },
+        )
+    }
 
 /**
  * Test convenience replacing the now-gone `ControlPacket.serialize(WriteBuffer)` API.

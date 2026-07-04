@@ -32,14 +32,18 @@ fun ByteArray.toHex(): String = joinToString("") { (it.toInt() and 0xFF).toStrin
  * Exceptions a decoder is allowed to throw on malformed/truncated input. Anything else
  * (NPE, ClassCastException, IllegalStateException, ...) is a decoder bug.
  *
- * The fuzzers point at the production wire-decode boundary (`decodeAggregating`, the same
- * path `MqttCodec.decode` runs) — which does **not** remap raw decode failures into
- * [MqttException] / `MalformedPacketException`. So the raw families a spec-malformed frame
- * naturally throws are all accepted here, matching what the reconnect loop actually sees:
+ * This predicate is a **superset** covering two different fuzz targets:
+ *   1. the models-base VBI fuzzer, which decodes `MqttRemainingLengthCodec` directly and throws the
+ *      raw families (truncation → buffer underflow) unwrapped; and
+ *   2. the v4/v5 production-mirror path (`decodeProductionV{4,5}`, which — like `MqttCodec.decode` —
+ *      now remaps malformed wire bytes to [MqttException] via `mappingMalformedWire`, DitchOoM/mqtt#13).
+ * Accepting both the wrapped [MqttException] and the raw families keeps the file identical across all
+ * three modules while matching whichever layer each fuzzer exercises:
  *
- * - [MqttException] covers MalformedPacketException / ProtocolError / MalformedInvalidVariableByteInteger.
+ * - [MqttException] covers MalformedPacketException / ProtocolError / MalformedInvalidVariableByteInteger,
+ *   plus everything the production mirror now wraps.
  * - [DecodeException]: the generated codecs' native "malformed wire" signal (unknown packet type,
- *   body-overrun, bad length prefix) — surfaces raw on the production path.
+ *   body-overrun, bad length prefix) — surfaces raw from the direct-codec VBI fuzzer.
  * - IllegalArgumentException: variant `init` validation (e.g. invalid reason codes) surfaces as IAE.
  * - The name-matched set mirrors the allowlist in the KSP-generated `peekFrameSize`: truncated
  *   input hits the platform buffer's underflow class, which has no common supertype across targets.

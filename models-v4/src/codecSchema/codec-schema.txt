@@ -1,0 +1,87 @@
+message com.ditchoom.mqtt3.controlpacket.ConnectionAcknowledgment
+  0 header valueclass:com.ditchoom.mqtt.controlpacket.MqttFixedHeader scalar:UByte wire=1B order=Default
+  1 acknowledgeFlags scalar:UByte wire=1B order=Default
+  2 returnCode scalar:UByte wire=1B order=Default
+message com.ditchoom.mqtt3.controlpacket.ConnectionRequest
+  0 header valueclass:com.ditchoom.mqtt.controlpacket.MqttFixedHeader scalar:UByte wire=1B order=Default
+  1 protocolName string len-prefix=2B/Default
+  2 protocolLevel scalar:UByte wire=1B order=Default
+  3 connectFlags valueclass:com.ditchoom.mqtt3.controlpacket.ConnectV4Flags scalar:UByte wire=1B order=Default
+  4 keepAlive scalar:UShort wire=2B order=Default
+  5 clientId string len-prefix=2B/Default
+  6 willTopicString? when(sibling:connectFlags.willFlag) string len-prefix=2B/Default
+  7 willPayloadValue? when(sibling:connectFlags.willFlag) payload:com.ditchoom.mqtt.controlpacket.OpaquePublishPayload len-prefix=2B/Default codec=com.ditchoom.mqtt.controlpacket.OpaquePublishPayloadCodec
+  8 username? when(sibling:connectFlags.usernameFlag) string len-prefix=2B/Default
+  9 passwordValue? when(sibling:connectFlags.passwordFlag) payload:com.ditchoom.buffer.codec.OwnedBytesHandle len-prefix=2B/Default codec=com.ditchoom.buffer.codec.OwnedBytesHandleCodec
+sealed com.ditchoom.mqtt3.controlpacket.ControlPacketV4 dispatch=valueclass:com.ditchoom.mqtt.controlpacket.MqttFixedHeader/1B,inner=UByte/Default,dispatchValue=packetType:Int framedBy=com.ditchoom.mqtt.controlpacket.MqttRemainingLengthCodec
+  0 Reserved
+  1 ConnectionRequest
+  2 ConnectionAcknowledgment
+  3 PublishMessageV4
+  4 PublishAcknowledgment
+  5 PublishReceived
+  6 PublishRelease
+  7 PublishComplete
+  8 SubscribeRequest
+  9 SubscribeAcknowledgement
+  10 UnsubscribeRequest
+  11 UnsubscribeAcknowledgment
+  12 PingRequest
+  13 PingResponse
+  14 DisconnectNotification
+message com.ditchoom.mqtt3.controlpacket.DisconnectNotification
+  0 header valueclass:com.ditchoom.mqtt.controlpacket.MqttFixedHeader scalar:UByte wire=1B order=Default
+message com.ditchoom.mqtt3.controlpacket.PingRequest
+  0 header valueclass:com.ditchoom.mqtt.controlpacket.MqttFixedHeader scalar:UByte wire=1B order=Default
+message com.ditchoom.mqtt3.controlpacket.PingResponse
+  0 header valueclass:com.ditchoom.mqtt.controlpacket.MqttFixedHeader scalar:UByte wire=1B order=Default
+message com.ditchoom.mqtt3.controlpacket.PublishAcknowledgment
+  0 header valueclass:com.ditchoom.mqtt.controlpacket.MqttFixedHeader scalar:UByte wire=1B order=Default
+  1 packetId scalar:UShort wire=2B order=Default
+message com.ditchoom.mqtt3.controlpacket.PublishComplete
+  0 header valueclass:com.ditchoom.mqtt.controlpacket.MqttFixedHeader scalar:UByte wire=1B order=Default
+  1 packetId scalar:UShort wire=2B order=Default
+message com.ditchoom.mqtt3.controlpacket.PublishMessageV4
+  0 header valueclass:com.ditchoom.mqtt.controlpacket.MqttFixedHeader scalar:UByte wire=1B order=Default
+  1 topicName string len-prefix=2B/Default
+  2 packetId? when(sibling:header.publishHasPacketIdentifier) scalar:UShort order=Default
+  3 payload payload:P remaining codec=injected:payloadCodec reserved=0B
+message com.ditchoom.mqtt3.controlpacket.PublishReceived
+  0 header valueclass:com.ditchoom.mqtt.controlpacket.MqttFixedHeader scalar:UByte wire=1B order=Default
+  1 packetId scalar:UShort wire=2B order=Default
+message com.ditchoom.mqtt3.controlpacket.PublishRelease
+  0 header valueclass:com.ditchoom.mqtt.controlpacket.MqttFixedHeader scalar:UByte wire=1B order=Default
+  1 packetId scalar:UShort wire=2B order=Default
+message com.ditchoom.mqtt3.controlpacket.Reserved
+  0 header valueclass:com.ditchoom.mqtt.controlpacket.MqttFixedHeader scalar:UByte wire=1B order=Default
+sealed com.ditchoom.mqtt3.controlpacket.SubAckReturnCode dispatch=valueclass:com.ditchoom.mqtt3.controlpacket.SubAckReturnCodeRaw/1B,inner=UByte/Default,dispatchValue=id:Int
+  0 SuccessMaximumQoS0
+  1 SuccessMaximumQoS1
+  2 SuccessMaximumQoS2
+  128 Failure
+message com.ditchoom.mqtt3.controlpacket.SubAckReturnCode.Failure
+message com.ditchoom.mqtt3.controlpacket.SubAckReturnCode.SuccessMaximumQoS0
+message com.ditchoom.mqtt3.controlpacket.SubAckReturnCode.SuccessMaximumQoS1
+message com.ditchoom.mqtt3.controlpacket.SubAckReturnCode.SuccessMaximumQoS2
+message com.ditchoom.mqtt3.controlpacket.SubAckReturnCodeRaw
+  0 raw scalar:UByte wire=1B order=Default
+message com.ditchoom.mqtt3.controlpacket.SubscribeAcknowledgement
+  0 header valueclass:com.ditchoom.mqtt.controlpacket.MqttFixedHeader scalar:UByte wire=1B order=Default
+  1 packetId scalar:UShort wire=2B order=Default
+  2 returnCodes list:com.ditchoom.mqtt3.controlpacket.SubAckReturnCode remaining reserved=0B
+message com.ditchoom.mqtt3.controlpacket.SubscribeRequest
+  0 header valueclass:com.ditchoom.mqtt.controlpacket.MqttFixedHeader scalar:UByte wire=1B order=Default
+  1 packetId scalar:UShort wire=2B order=Default
+  2 entries list:com.ditchoom.mqtt3.controlpacket.SubscriptionEntry remaining reserved=0B
+message com.ditchoom.mqtt3.controlpacket.SubscriptionEntry
+  0 filter string len-prefix=2B/Default
+  1 qos scalar:UByte wire=1B order=Default
+message com.ditchoom.mqtt3.controlpacket.TopicFilterEntry
+  0 filter string len-prefix=2B/Default
+message com.ditchoom.mqtt3.controlpacket.UnsubscribeAcknowledgment
+  0 header valueclass:com.ditchoom.mqtt.controlpacket.MqttFixedHeader scalar:UByte wire=1B order=Default
+  1 packetId scalar:UShort wire=2B order=Default
+message com.ditchoom.mqtt3.controlpacket.UnsubscribeRequest
+  0 header valueclass:com.ditchoom.mqtt.controlpacket.MqttFixedHeader scalar:UByte wire=1B order=Default
+  1 packetId scalar:UShort wire=2B order=Default
+  2 topicEntries list:com.ditchoom.mqtt3.controlpacket.TopicFilterEntry remaining reserved=0B

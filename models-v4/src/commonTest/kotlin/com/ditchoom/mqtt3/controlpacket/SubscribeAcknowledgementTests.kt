@@ -1,7 +1,7 @@
 package com.ditchoom.mqtt3.controlpacket
 
-import com.ditchoom.buffer.PlatformBuffer
-import com.ditchoom.buffer.allocate
+import com.ditchoom.buffer.BufferFactory
+import com.ditchoom.buffer.Default
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.GRANTED_QOS_0
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.GRANTED_QOS_1
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode.GRANTED_QOS_2
@@ -14,12 +14,12 @@ class SubscribeAcknowledgementTests {
 
     @Test
     fun successMaxQos0() {
-        val buffer = PlatformBuffer.allocate(5)
+        val buffer = BufferFactory.Default.allocate(5)
         val payload = GRANTED_QOS_0
         val puback = SubscribeAcknowledgement(packetIdentifier, listOf(payload))
-        puback.serialize(buffer)
+        serializeV4(puback, buffer)
         buffer.resetForRead()
-        val pubackResult = ControlPacketV4.from(buffer) as SubscribeAcknowledgement
+        val pubackResult = decodeV4(buffer) as SubscribeAcknowledgement
         assertEquals(pubackResult.packetIdentifier, packetIdentifier)
         assertEquals(pubackResult.payload, listOf(GRANTED_QOS_0))
     }
@@ -28,10 +28,10 @@ class SubscribeAcknowledgementTests {
     fun grantedQos1() {
         val payload = GRANTED_QOS_1
         val puback = SubscribeAcknowledgement(packetIdentifier, listOf(payload))
-        val buffer = PlatformBuffer.allocate(5)
-        puback.serialize(buffer)
+        val buffer = BufferFactory.Default.allocate(5)
+        serializeV4(puback, buffer)
         buffer.resetForRead()
-        val pubackResult = ControlPacketV4.from(buffer) as SubscribeAcknowledgement
+        val pubackResult = decodeV4(buffer) as SubscribeAcknowledgement
         assertEquals(pubackResult.packetIdentifier, packetIdentifier)
         assertEquals(pubackResult.payload, listOf(GRANTED_QOS_1))
     }
@@ -40,10 +40,10 @@ class SubscribeAcknowledgementTests {
     fun grantedQos2() {
         val payload = GRANTED_QOS_2
         val puback = SubscribeAcknowledgement(packetIdentifier, listOf(payload))
-        val buffer = PlatformBuffer.allocate(5)
-        puback.serialize(buffer)
+        val buffer = BufferFactory.Default.allocate(5)
+        serializeV4(puback, buffer)
         buffer.resetForRead()
-        val pubackResult = ControlPacketV4.from(buffer) as SubscribeAcknowledgement
+        val pubackResult = decodeV4(buffer) as SubscribeAcknowledgement
         assertEquals(pubackResult.packetIdentifier, packetIdentifier)
         assertEquals(pubackResult.payload, listOf(GRANTED_QOS_2))
     }
@@ -52,10 +52,10 @@ class SubscribeAcknowledgementTests {
     fun failure() {
         val payload = UNSPECIFIED_ERROR
         val puback = SubscribeAcknowledgement(packetIdentifier, listOf(payload))
-        val buffer = PlatformBuffer.allocate(5)
-        puback.serialize(buffer)
+        val buffer = BufferFactory.Default.allocate(5)
+        serializeV4(puback, buffer)
         buffer.resetForRead()
-        val pubackResult = ControlPacketV4.from(buffer) as SubscribeAcknowledgement
+        val pubackResult = decodeV4(buffer) as SubscribeAcknowledgement
         assertEquals(pubackResult.packetIdentifier, packetIdentifier)
         assertEquals(pubackResult.payload, listOf(UNSPECIFIED_ERROR))
     }

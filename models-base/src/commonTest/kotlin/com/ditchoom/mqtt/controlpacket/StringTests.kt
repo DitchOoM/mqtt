@@ -35,7 +35,7 @@ class StringTests {
 //    @Test
 //    @JsName("zeroWidthNoBreakSpace")
 //    fun `MQTT Conformance A UTF-8 encoded sequence 0xEF 0xBB 0xBF is always interpreted as U+FEFF ZERO WIDTH NO-BREAK SPACE wherever it appears in a string and MUST NOT be skipped over or stripped off by a packet receiver `() {
-//        val bytes = PlatformBuffer.wrap(byteArrayOf(0xEF.toByte(), 0xBB.toByte(), 0xBF.toByte()))
+//        val bytes = BufferFactory.Default.wrap(byteArrayOf(0xEF.toByte(), 0xBB.toByte(), 0xBF.toByte()))
 //        val string = bytes.readString(3, Charset.UTF8)
 //        assertEquals(0xFEFF.toChar().code, string[0].code)
 //    }

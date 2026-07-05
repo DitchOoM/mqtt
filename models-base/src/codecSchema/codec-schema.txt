@@ -1,0 +1,2 @@
+message com.ditchoom.mqtt.controlpacket.MqttFixedHeader
+  0 raw scalar:UByte wire=1B order=Default

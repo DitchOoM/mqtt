@@ -2,8 +2,8 @@
 
 package com.ditchoom.mqtt.controlpacket
 
-import com.ditchoom.buffer.PlatformBuffer
-import com.ditchoom.buffer.allocate
+import com.ditchoom.buffer.BufferFactory
+import com.ditchoom.buffer.Default
 import com.ditchoom.mqtt.MalformedInvalidVariableByteInteger
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readVariableByteInteger
 import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.variableByteSize
@@ -42,7 +42,7 @@ class VariableByteIntegerTests {
     @Test
     fun handles0() {
         val expectedValue = 0
-        val buffer = PlatformBuffer.allocate(1)
+        val buffer = BufferFactory.Default.allocate(1)
         buffer.writeVariableByteInteger(expectedValue)
         buffer.resetForRead()
         assertEquals(
@@ -55,7 +55,7 @@ class VariableByteIntegerTests {
     @Test
     fun handles1() {
         val expectedValue = 1
-        val buffer = PlatformBuffer.allocate(1)
+        val buffer = BufferFactory.Default.allocate(1)
         buffer.writeVariableByteInteger(expectedValue)
         buffer.resetForRead()
         assertEquals(
@@ -68,7 +68,7 @@ class VariableByteIntegerTests {
     @Test
     fun handles127() {
         val expectedValue = 127
-        val buffer = PlatformBuffer.allocate(1)
+        val buffer = BufferFactory.Default.allocate(1)
         buffer.writeVariableByteInteger(expectedValue)
         buffer.resetForRead()
         assertEquals(
@@ -81,7 +81,7 @@ class VariableByteIntegerTests {
     @Test
     fun handles128() {
         val expectedValue = 128
-        val buffer = PlatformBuffer.allocate(2)
+        val buffer = BufferFactory.Default.allocate(2)
         buffer.writeVariableByteInteger(expectedValue)
         buffer.resetForRead()
         assertEquals(
@@ -94,7 +94,7 @@ class VariableByteIntegerTests {
     @Test
     fun handles16383() {
         val expectedValue = 16383
-        val buffer = PlatformBuffer.allocate(2)
+        val buffer = BufferFactory.Default.allocate(2)
         buffer.writeVariableByteInteger(expectedValue)
         buffer.resetForRead()
         assertEquals(
@@ -107,7 +107,7 @@ class VariableByteIntegerTests {
     @Test
     fun handles16384() {
         val expectedValue = 16384
-        val buffer = PlatformBuffer.allocate(3)
+        val buffer = BufferFactory.Default.allocate(3)
         buffer.writeVariableByteInteger(expectedValue)
         buffer.resetForRead()
         assertEquals(
@@ -120,7 +120,7 @@ class VariableByteIntegerTests {
     @Test
     fun handles65535() {
         val expectedValue = 65535
-        val buffer = PlatformBuffer.allocate(3)
+        val buffer = BufferFactory.Default.allocate(3)
         buffer.writeVariableByteInteger(expectedValue)
         buffer.resetForRead()
         assertEquals(
@@ -133,7 +133,7 @@ class VariableByteIntegerTests {
     @Test
     fun handlesMaxMinus1() {
         val expectedValue = variableByteIntMax - 1
-        val buffer = PlatformBuffer.allocate(4)
+        val buffer = BufferFactory.Default.allocate(4)
         buffer.writeVariableByteInteger(expectedValue)
         buffer.resetForRead()
         assertEquals(
@@ -146,7 +146,7 @@ class VariableByteIntegerTests {
     @Test
     fun handlesMax() {
         val expectedValue = variableByteIntMax
-        val buffer = PlatformBuffer.allocate(4)
+        val buffer = BufferFactory.Default.allocate(4)
         buffer.writeVariableByteInteger(expectedValue)
         buffer.resetForRead()
         assertEquals(
@@ -159,7 +159,7 @@ class VariableByteIntegerTests {
     @Test
     fun handlesMaxPlus1() {
         val expectedValue = variableByteIntMax + 1
-        val buffer = PlatformBuffer.allocate(4)
+        val buffer = BufferFactory.Default.allocate(4)
         assertFailsWith(
             MalformedInvalidVariableByteInteger::class,
             "Larger than variable byte integer maximum",
@@ -168,5 +168,169 @@ class VariableByteIntegerTests {
             buffer.resetForRead()
             buffer.readVariableByteInteger()
         }
+    }
+
+    // ── MQTT 5.0 Section 1.5.5: VBI raw byte verification ──────────────────
+
+    @Test
+    fun vbiEncodeRawBytes0() {
+        val buffer = BufferFactory.Default.allocate(1)
+        buffer.writeVariableByteInteger(0)
+        buffer.resetForRead()
+        assertEquals(0x00.toByte(), buffer.readByte())
+        assertEquals(0, buffer.remaining())
+    }
+
+    @Test
+    fun vbiEncodeRawBytes127() {
+        val buffer = BufferFactory.Default.allocate(1)
+        buffer.writeVariableByteInteger(127)
+        buffer.resetForRead()
+        assertEquals(0x7F.toByte(), buffer.readByte())
+        assertEquals(0, buffer.remaining())
+    }
+
+    @Test
+    fun vbiEncodeRawBytes128() {
+        val buffer = BufferFactory.Default.allocate(2)
+        buffer.writeVariableByteInteger(128)
+        buffer.resetForRead()
+        assertEquals(0x80.toByte(), buffer.readByte())
+        assertEquals(0x01.toByte(), buffer.readByte())
+        assertEquals(0, buffer.remaining())
+    }
+
+    @Test
+    fun vbiEncodeRawBytes16383() {
+        val buffer = BufferFactory.Default.allocate(2)
+        buffer.writeVariableByteInteger(16383)
+        buffer.resetForRead()
+        assertEquals(0xFF.toByte(), buffer.readByte())
+        assertEquals(0x7F.toByte(), buffer.readByte())
+        assertEquals(0, buffer.remaining())
+    }
+
+    @Test
+    fun vbiEncodeRawBytes16384() {
+        val buffer = BufferFactory.Default.allocate(3)
+        buffer.writeVariableByteInteger(16384)
+        buffer.resetForRead()
+        assertEquals(0x80.toByte(), buffer.readByte())
+        assertEquals(0x80.toByte(), buffer.readByte())
+        assertEquals(0x01.toByte(), buffer.readByte())
+        assertEquals(0, buffer.remaining())
+    }
+
+    @Test
+    fun vbiEncodeRawBytes2097151() {
+        val buffer = BufferFactory.Default.allocate(3)
+        buffer.writeVariableByteInteger(2097151)
+        buffer.resetForRead()
+        assertEquals(0xFF.toByte(), buffer.readByte())
+        assertEquals(0xFF.toByte(), buffer.readByte())
+        assertEquals(0x7F.toByte(), buffer.readByte())
+        assertEquals(0, buffer.remaining())
+    }
+
+    @Test
+    fun vbiEncodeRawBytes2097152() {
+        val buffer = BufferFactory.Default.allocate(4)
+        buffer.writeVariableByteInteger(2097152)
+        buffer.resetForRead()
+        assertEquals(0x80.toByte(), buffer.readByte())
+        assertEquals(0x80.toByte(), buffer.readByte())
+        assertEquals(0x80.toByte(), buffer.readByte())
+        assertEquals(0x01.toByte(), buffer.readByte())
+        assertEquals(0, buffer.remaining())
+    }
+
+    @Test
+    fun vbiEncodeRawBytes268435455() {
+        val buffer = BufferFactory.Default.allocate(4)
+        buffer.writeVariableByteInteger(268435455)
+        buffer.resetForRead()
+        assertEquals(0xFF.toByte(), buffer.readByte())
+        assertEquals(0xFF.toByte(), buffer.readByte())
+        assertEquals(0xFF.toByte(), buffer.readByte())
+        assertEquals(0x7F.toByte(), buffer.readByte())
+        assertEquals(0, buffer.remaining())
+    }
+
+    // ── VBI decode from raw bytes ───────────────────────────────────────────
+
+    @Test
+    fun vbiDecodeRawBytes0x00yields0() {
+        val buffer = BufferFactory.Default.allocate(1)
+        buffer.writeByte(0x00.toByte())
+        buffer.resetForRead()
+        assertEquals(0, buffer.readVariableByteInteger())
+    }
+
+    @Test
+    fun vbiDecodeRawBytes0x7Fyields127() {
+        val buffer = BufferFactory.Default.allocate(1)
+        buffer.writeByte(0x7F.toByte())
+        buffer.resetForRead()
+        assertEquals(127, buffer.readVariableByteInteger())
+    }
+
+    @Test
+    fun vbiDecodeRawBytes0x800x01yields128() {
+        val buffer = BufferFactory.Default.allocate(2)
+        buffer.writeByte(0x80.toByte())
+        buffer.writeByte(0x01.toByte())
+        buffer.resetForRead()
+        assertEquals(128, buffer.readVariableByteInteger())
+    }
+
+    @Test
+    fun vbiDecodeRawBytes0xFF0x7Fyields16383() {
+        val buffer = BufferFactory.Default.allocate(2)
+        buffer.writeByte(0xFF.toByte())
+        buffer.writeByte(0x7F.toByte())
+        buffer.resetForRead()
+        assertEquals(16383, buffer.readVariableByteInteger())
+    }
+
+    @Test
+    fun vbiDecodeRawBytes0x800x800x01yields16384() {
+        val buffer = BufferFactory.Default.allocate(3)
+        buffer.writeByte(0x80.toByte())
+        buffer.writeByte(0x80.toByte())
+        buffer.writeByte(0x01.toByte())
+        buffer.resetForRead()
+        assertEquals(16384, buffer.readVariableByteInteger())
+    }
+
+    @Test
+    fun vbiDecodeRawBytes0xFF0xFF0x7Fyields2097151() {
+        val buffer = BufferFactory.Default.allocate(3)
+        buffer.writeByte(0xFF.toByte())
+        buffer.writeByte(0xFF.toByte())
+        buffer.writeByte(0x7F.toByte())
+        buffer.resetForRead()
+        assertEquals(2097151, buffer.readVariableByteInteger())
+    }
+
+    @Test
+    fun vbiDecodeRawBytes0x800x800x800x01yields2097152() {
+        val buffer = BufferFactory.Default.allocate(4)
+        buffer.writeByte(0x80.toByte())
+        buffer.writeByte(0x80.toByte())
+        buffer.writeByte(0x80.toByte())
+        buffer.writeByte(0x01.toByte())
+        buffer.resetForRead()
+        assertEquals(2097152, buffer.readVariableByteInteger())
+    }
+
+    @Test
+    fun vbiDecodeRawBytes0xFF0xFF0xFF0x7Fyields268435455() {
+        val buffer = BufferFactory.Default.allocate(4)
+        buffer.writeByte(0xFF.toByte())
+        buffer.writeByte(0xFF.toByte())
+        buffer.writeByte(0xFF.toByte())
+        buffer.writeByte(0x7F.toByte())
+        buffer.resetForRead()
+        assertEquals(268435455, buffer.readVariableByteInteger())
     }
 }

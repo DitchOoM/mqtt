@@ -1,7 +1,7 @@
 package com.ditchoom.mqtt3.controlpacket
 
-import com.ditchoom.buffer.PlatformBuffer
-import com.ditchoom.buffer.allocate
+import com.ditchoom.buffer.BufferFactory
+import com.ditchoom.buffer.Default
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -10,11 +10,11 @@ class UnsubscribeRequestTests {
 
     @Test
     fun basicTest() {
-        val buffer = PlatformBuffer.allocate(17)
+        val buffer = BufferFactory.Default.allocate(17)
         val unsub = UnsubscribeRequest(packetIdentifier, setOf("yolo", "yolo1"))
-        unsub.serialize(buffer)
+        serializeV4(unsub, buffer)
         buffer.resetForRead()
-        val result = ControlPacketV4.from(buffer) as UnsubscribeRequest
+        val result = decodeV4(buffer) as UnsubscribeRequest
         val topics = result.topics.sortedBy { it.toString() }
         assertEquals(topics.first().toString(), "yolo")
         assertEquals(topics[1].toString(), "yolo1")

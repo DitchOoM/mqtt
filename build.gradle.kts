@@ -1,22 +1,29 @@
-import groovy.util.Node
-import groovy.xml.XmlParser
-import java.net.URL
-
-val libraryVersionPrefix: String by project
-group "com.ditchoom"
-version "$libraryVersionPrefix.0-SNAPSHOT"
-
-allprojects {
-    repositories {
-        google()
-        mavenCentral()
-        mavenLocal()
-    }
+plugins {
+    alias(libs.plugins.sqldelight) apply false
+    id("org.jetbrains.dokka")
 }
 
-plugins {
-    kotlin("multiplatform") apply false
-    kotlin("android") apply false
-    id("com.android.application") apply false
-    id("com.android.library") apply false
+repositories {
+    mavenCentral()
+}
+
+// Aggregate tasks for convenience
+tasks.register("allTests") {
+    description = "Run tests for all modules and platforms"
+    group = "verification"
+    dependsOn(":models-base:allTests", ":models-v4:allTests", ":models-v5:allTests", ":mqtt-client:allTests")
+}
+
+tasks.register("buildAll") {
+    description = "Build all modules"
+    group = "build"
+    dependsOn(":models-base:build", ":models-v4:build", ":models-v5:build", ":mqtt-client:build")
+}
+
+tasks.register<Copy>("copyDokkaToDocusaurus") {
+    description = "Generate and copy API documentation to Docusaurus"
+    group = "documentation"
+    dependsOn("dokkaGeneratePublicationHtml")
+    from(layout.buildDirectory.dir("dokka/html"))
+    into(layout.projectDirectory.dir("docs/static/api"))
 }

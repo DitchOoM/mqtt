@@ -5,16 +5,18 @@ import com.ditchoom.mqtt.Persistence
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 
+// See commonMain/DefaultPersistence.kt for the Phase B
+// consumer-supplied-persistence rationale.
 actual suspend fun newDefaultPersistence(
     androidContext: Any?,
     name: String,
     inMemory: Boolean,
-): Persistence =
-    try {
-        SqlDatabasePersistence(sqlDriver(androidContext, name, inMemory)!!)
-    } catch (t: Throwable) {
-        InMemoryPersistence()
+): Persistence {
+    if (!inMemory) {
+        warnPersistentStorageUnavailable("v4 Android")
     }
+    return InMemoryPersistence()
+}
 
 actual fun defaultDispatcher(
     nThreads: Int,

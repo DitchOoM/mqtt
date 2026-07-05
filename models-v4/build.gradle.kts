@@ -1,82 +1,111 @@
-import groovy.util.Node
-import groovy.xml.XmlParser
-import org.apache.tools.ant.taskdefs.condition.Os
-import java.net.URL
-
 plugins {
-    kotlin("multiplatform")
+    id("org.jetbrains.kotlin.multiplatform")
     id("com.android.library")
-    `maven-publish`
+    id("org.jlleitschuh.gradle.ktlint")
+    id("com.vanniktech.maven.publish")
+    id("org.jetbrains.dokka")
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.buffer.codec.schema)
     signing
-    id("io.codearte.nexus-staging")
-    id("app.cash.sqldelight")
+    id("com.ditchoom.version")
+    id("com.ditchoom.module")
 }
 
-val isRunningOnGithub = System.getenv("GITHUB_REPOSITORY")?.isNotBlank() == true
-val isMainBranchGithub = System.getenv("GITHUB_REF") == "refs/heads/main"
-val isMacOS = Os.isFamily(Os.FAMILY_MAC)
-val loadAllPlatforms = !isRunningOnGithub || (isMacOS && isMainBranchGithub) || !isMacOS
-val libraryVersionPrefix: String by project
-group = "com.ditchoom"
-val libraryVersion = getNextVersion().toString()
-println(
-    "Version: ${libraryVersion}\nisRunningOnGithub: $isRunningOnGithub\nisMainBranchGithub: $isMainBranchGithub\n" +
-        "OS:$isMacOS\nLoad All Platforms: $loadAllPlatforms",
-)
-
-repositories {
-    google()
-    mavenCentral()
-    maven { setUrl("https://maven.pkg.jetbrains.space/kotlin/p/kotlin/kotlin-js-wrappers/") }
+// Wire-format snapshot gate — see models-base/build.gradle.kts. MQTT's wire format is fixed by the
+// v3.1.1 spec, so any breaking drift fails the build. Accept intentional changes with
+// `./gradlew updateCodecSchema` + commit src/codecSchema/codec-schema.txt.
+codecSchema {
+    failOnBreaking.set(true)
 }
+
+val hostOs = org.jetbrains.kotlin.konan.target.HostManager.host
 
 kotlin {
-    jvmToolchain(19)
+    jvmToolchain(21)
     androidTarget {
         publishLibraryVariants("release")
     }
-    jvm()
-    js {
-        browser()
-        nodejs()
+    jvm {
+        // jazzer-junit (JVM coverage-guided fuzzing, see fuzz targets in src/jvmTest) requires
+        // the JUnit Platform. kotlin("test") resolves to kotlin-test-junit5 accordingly.
+        testRuns["test"].executionTask.configure { useJUnitPlatform() }
     }
-    macosX64()
-    macosArm64()
-    iosArm64()
-    iosX64()
+    js {
+        browser {
+            testTask {
+                useMocha { timeout = "120s" }
+            }
+        }
+        nodejs {
+            testTask {
+                useMocha { timeout = "120s" }
+            }
+        }
+    }
+
+    if (hostOs.family.isAppleFamily) {
+        macosX64()
+        macosArm64()
+        iosArm64()
+        iosSimulatorArm64()
+        iosX64()
+        tvosArm64()
+        tvosSimulatorArm64()
+        tvosX64()
+        watchosArm64()
+        watchosSimulatorArm64()
+        watchosX64()
+    }
+
+    if (hostOs == org.jetbrains.kotlin.konan.target.KonanTarget.LINUX_X64) {
+        linuxX64()
+        linuxArm64()
+    }
+
     applyDefaultHierarchyTemplate()
     sourceSets {
-        val sqldelightVersion = extra["sqldelight.version"] as String
-        val bufferVersion = extra["buffer.version"] as String
-        val coroutinesVersion = extra["coroutines.version"] as String
         commonMain.dependencies {
-            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
+            implementation(libs.kotlinx.coroutines.core)
             implementation(project(":models-base"))
-            implementation("com.ditchoom:buffer:$bufferVersion")
+            implementation(libs.buffer)
+            implementation(libs.buffer.codec)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
-            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutinesVersion")
+            implementation(libs.kotlinx.coroutines.test)
         }
-        androidMain.dependencies {
-            implementation("app.cash.sqldelight:android-driver:$sqldelightVersion")
-            compileOnly("app.cash.sqldelight:sqlite-driver:$sqldelightVersion")
-        }
-
-        jvmMain.dependencies {
-            implementation("app.cash.sqldelight:sqlite-driver:$sqldelightVersion")
+        jvmTest.dependencies {
+            implementation(libs.jazzer.junit)
+            implementation(libs.junit.jupiter)
+            runtimeOnly(libs.junit.platform.launcher)
         }
         jsMain.dependencies {
-            implementation("org.jetbrains.kotlin-wrappers:kotlin-browser:1.0.0-pre.746")
+            implementation(libs.kotlin.web)
+            implementation(libs.kotlin.browser)
+            implementation(libs.kotlin.js)
         }
-        appleMain.dependencies {
-            implementation("app.cash.sqldelight:native-driver:$sqldelightVersion")
-        }
+    }
+}
+
+// KSP: generate codecs for commonMain (visible to all targets)
+dependencies {
+    add("kspCommonMainMetadata", libs.buffer.codec.processor)
+}
+
+// Wire KSP commonMain output into each target's source set
+kotlin.sourceSets.commonMain {
+    kotlin.srcDir("build/generated/ksp/metadata/commonMain/kotlin")
+}
+
+// Ensure KSP runs before compilation for all targets
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask<*>>().configureEach {
+    if (name != "kspCommonMainKotlinMetadata") {
+        dependsOn("kspCommonMainKotlinMetadata")
     }
 }
 
 android {
-    compileSdk = 34
+    compileSdk = 36
     sourceSets["main"].manifest.srcFile("src/androidMain/AndroidManifest.xml")
     defaultConfig {
         minSdk = 21
@@ -90,182 +119,42 @@ android {
     }
 }
 
-sqldelight {
-    databases {
-        create("Mqtt4") {
-            packageName.set(group.toString())
+// Deterministic + Jazzer fuzz tests are opt-in so default test runs stay fast; mirrors the
+// integrationTests gating in mqtt-client/build.gradle.kts.
+// Run with: ./gradlew :models-v4:jvmTest -PfuzzTests
+val fuzzTestPatterns =
+    listOf(
+        "com.ditchoom.mqtt3.controlpacket.fuzz.ControlPacketV4FuzzTest",
+        "com.ditchoom.mqtt3.controlpacket.fuzz.ControlPacketV4JazzerFuzzTest",
+    )
+val runFuzzTests = project.hasProperty("fuzzTests")
+
+tasks.withType<Test>().configureEach {
+    if (!runFuzzTests) {
+        filter {
+            fuzzTestPatterns.forEach { excludeTestsMatching(it) }
         }
     }
 }
 
-val javadocJar: TaskProvider<Jar> by tasks.registering(Jar::class) {
-    archiveClassifier.set("javadoc")
-}
-
-if (isRunningOnGithub) {
-    if (isMainBranchGithub) {
-        signing {
-            useInMemoryPgpKeys(
-                "56F1A973",
-                System.getenv("GPG_SECRET"),
-                System.getenv("GPG_SIGNING_PASSWORD"),
-            )
-            sign(publishing.publications)
-        }
-    }
-
-    val ossUser = System.getenv("SONATYPE_NEXUS_USERNAME")
-    val ossPassword = System.getenv("SONATYPE_NEXUS_PASSWORD")
-
-    val publishedGroupId: String by project
-    val libraryName: String by project
-    val libraryDescription: String by project
-    val siteUrl: String by project
-    val gitUrl: String by project
-    val licenseName: String by project
-    val licenseUrl: String by project
-    val developerOrg: String by project
-    val developerName: String by project
-    val developerEmail: String by project
-    val developerId: String by project
-    val artifactName: String by project
-
-    project.group = publishedGroupId
-    project.version = libraryVersion
-
-    publishing {
-        publications.withType(MavenPublication::class) {
-            groupId = publishedGroupId
-            version = libraryVersion
-            artifactId =
-                if (artifactId == "models-v4") {
-                    artifactName
-                } else {
-                    artifactId.replaceBeforeLast('-', artifactName)
-                }
-            artifact(tasks["javadocJar"])
-
-            pom {
-                name.set(libraryName)
-                description.set(libraryDescription)
-                url.set(siteUrl)
-
-                licenses {
-                    license {
-                        name.set(licenseName)
-                        url.set(licenseUrl)
-                    }
-                }
-                developers {
-                    developer {
-                        id.set(developerId)
-                        name.set(developerName)
-                        email.set(developerEmail)
-                    }
-                }
-                organization {
-                    name.set(developerOrg)
-                }
-                scm {
-                    connection.set(gitUrl)
-                    developerConnection.set(gitUrl)
-                    url.set(siteUrl)
-                }
-            }
-        }
-
-        repositories {
-            val repositoryId = System.getenv("SONATYPE_REPOSITORY_ID")
-            maven("https://oss.sonatype.org/service/local/staging/deployByRepositoryId/$repositoryId/") {
-                name = "sonatype"
-                credentials {
-                    username = ossUser
-                    password = ossPassword
-                }
-            }
-        }
-    }
-
-    nexusStaging {
-        username = ossUser
-        password = ossPassword
-        packageGroup = publishedGroupId
+tasks.withType<org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeTest>().configureEach {
+    if (!runFuzzTests) {
+        fuzzTestPatterns.forEach { this.filter.excludeTestsMatching(it) }
     }
 }
 
-class Version(val major: UInt, val minor: UInt, val patch: UInt, val snapshot: Boolean) {
-    constructor(string: String, snapshot: Boolean) :
-        this(
-            string.split('.')[0].toUInt(),
-            string.split('.')[1].toUInt(),
-            string.split('.')[2].toUInt(),
-            snapshot,
-        )
-
-    fun incrementMajor() = Version(major + 1u, 0u, 0u, snapshot)
-
-    fun incrementMinor() = Version(major, minor + 1u, 0u, snapshot)
-
-    fun incrementPatch() = Version(major, minor, patch + 1u, snapshot)
-
-    fun snapshot() = Version(major, minor, patch, true)
-
-    fun isVersionZero() = major == 0u && minor == 0u && patch == 0u
-
-    override fun toString(): String =
-        if (snapshot) {
-            "$major.$minor.$patch-SNAPSHOT"
-        } else {
-            "$major.$minor.$patch"
-        }
-}
-private var latestVersion: Version? = Version(0u, 0u, 0u, true)
-
-@Suppress("UNCHECKED_CAST")
-fun getLatestVersion(): Version {
-    val latestVersion = latestVersion
-    if (latestVersion != null && !latestVersion.isVersionZero()) {
-        return latestVersion
-    }
-    val xml = URL("https://repo1.maven.org/maven2/com/ditchoom/mqtt-4-models/maven-metadata.xml").readText()
-    val versioning = XmlParser().parseText(xml)["versioning"] as List<Node>
-    val latestStringList = versioning.first()["latest"] as List<Node>
-    val result = Version((latestStringList.first().value() as List<*>).first().toString(), false)
-    this.latestVersion = result
-    return result
-}
-
-fun getNextVersion(snapshot: Boolean = !isRunningOnGithub): Version {
-    var v = getLatestVersion()
-    if (snapshot) {
-        v = v.snapshot()
-    }
-    if (project.hasProperty("incrementMajor") && project.property("incrementMajor") == "true") {
-        return v.incrementMajor()
-    } else if (project.hasProperty("incrementMinor") && project.property("incrementMinor") == "true") {
-        return v.incrementMinor()
-    }
-    return v.incrementPatch()
-}
-
-tasks.create("nextVersion") {
-    println(getNextVersion())
-}
-
-val signingTasks = tasks.withType<Sign>()
-tasks.withType<AbstractPublishToMaven>().configureEach {
-    dependsOn(signingTasks)
-}
-
-allprojects {
-    afterEvaluate {
-        // temp fix until sqllight includes https://github.com/cashapp/sqldelight/pull/3671
-        project.extensions.findByType<org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension>()
-            ?.let { kmpExt ->
-                kmpExt.targets
-                    .filterIsInstance<org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget>()
-                    .flatMap { it.binaries }
-                    .forEach { it.linkerOpts("-lsqlite3") }
-            }
+tasks.withType<org.jetbrains.kotlin.gradle.targets.js.testing.KotlinJsTest>().configureEach {
+    if (!runFuzzTests) {
+        fuzzTestPatterns.forEach { this.filter.excludeTestsMatching(it) }
     }
 }
+
+// Gradle 8.14 strict-mode: sourcesJar / ktlint / dokka tasks consume KSP-generated sources; declare the dep explicitly.
+tasks
+    .matching {
+        it.name.endsWith("SourcesJar") ||
+            it.name == "sourcesJar" ||
+            it.name == "runKtlintCheckOverCommonMainSourceSet" ||
+            it.name == "runKtlintFormatOverCommonMainSourceSet" ||
+            it.name.startsWith("dokkaGenerate")
+    }.configureEach { dependsOn("kspCommonMainKotlinMetadata") }

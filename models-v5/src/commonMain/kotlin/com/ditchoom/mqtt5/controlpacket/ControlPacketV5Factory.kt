@@ -1,64 +1,25 @@
 package com.ditchoom.mqtt5.controlpacket
 
-import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.mqtt.Persistence
 import com.ditchoom.mqtt.controlpacket.ControlPacketFactory
 import com.ditchoom.mqtt.controlpacket.IDisconnectNotification
-import com.ditchoom.mqtt.controlpacket.IPublishMessage
 import com.ditchoom.mqtt.controlpacket.ISubscribeRequest
 import com.ditchoom.mqtt.controlpacket.ISubscription
 import com.ditchoom.mqtt.controlpacket.NO_PACKET_ID
 import com.ditchoom.mqtt.controlpacket.QualityOfService
-import com.ditchoom.mqtt.controlpacket.Topic
+import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
 import com.ditchoom.mqtt5.persistence.newDefaultPersistence
 
 object ControlPacketV5Factory : ControlPacketFactory {
     override val protocolVersion: Int = 5
 
-    override fun from(
-        buffer: ReadBuffer,
-        byte1: UByte,
-        remainingLength: Int,
-    ) = ControlPacketV5.from(buffer, byte1, remainingLength)
+    override fun pingRequest() = PingRequest()
 
-    override fun pingRequest() = PingRequest
-
-    override fun pingResponse() = PingResponse
-
-    override fun publish(
-        dup: Boolean,
-        qos: QualityOfService,
-        retain: Boolean,
-        topicName: Topic,
-        payload: ReadBuffer?,
-        payloadFormatIndicator: Boolean,
-        messageExpiryInterval: Long?,
-        topicAlias: Int?,
-        responseTopic: Topic?,
-        correlationData: ReadBuffer?,
-        userProperty: List<Pair<String, String>>,
-        subscriptionIdentifier: Set<Long>,
-        contentType: String?,
-    ): IPublishMessage {
-        val fixedHeader = PublishMessage.FixedHeader(dup, qos, retain)
-        val properties =
-            PublishMessage.VariableHeader.Properties(
-                payloadFormatIndicator,
-                messageExpiryInterval,
-                topicAlias,
-                responseTopic,
-                correlationData,
-                userProperty,
-                subscriptionIdentifier,
-                contentType,
-            )
-        val variableHeader = PublishMessage.VariableHeader(topicName, NO_PACKET_ID, properties)
-        return PublishMessage(fixedHeader, variableHeader, payload)
-    }
+    override fun pingResponse() = PingResponse()
 
     override fun subscribe(
-        topicFilter: Topic,
+        topicFilter: TopicFilter,
         maximumQos: QualityOfService,
         noLocal: Boolean,
         retainAsPublished: Boolean,
@@ -78,18 +39,15 @@ object ControlPacketV5Factory : ControlPacketFactory {
         subscriptions: Set<ISubscription>,
         serverReference: String?,
         userProperty: List<Pair<String, String>>,
-    ): ISubscribeRequest {
-        val props =
-            SubscribeRequest.VariableHeader.Properties(
-                reasonString = "",
-                userProperty = userProperty,
-            )
-        val variableHeader = SubscribeRequest.VariableHeader(NO_PACKET_ID, props)
-        return SubscribeRequest(variableHeader, subscriptions)
-    }
+    ): ISubscribeRequest =
+        SubscribeRequest(
+            packetIdentifier = NO_PACKET_ID.toUShort(),
+            subscriptions = subscriptions,
+            userProperty = userProperty,
+        )
 
     override fun unsubscribe(
-        topics: Set<Topic>,
+        topics: Set<TopicFilter>,
         userProperty: List<Pair<String, String>>,
     ) = UnsubscribeRequest(topics, userProperty)
 
@@ -98,15 +56,13 @@ object ControlPacketV5Factory : ControlPacketFactory {
         sessionExpiryIntervalSeconds: ULong?,
         reasonString: String?,
         userProperty: List<Pair<String, String>>,
-    ): IDisconnectNotification {
-        val props =
-            DisconnectNotification.VariableHeader.Properties(
-                sessionExpiryIntervalSeconds,
-                reasonString,
-                userProperty,
-            )
-        return DisconnectNotification(DisconnectNotification.VariableHeader(reasonCode, props))
-    }
+    ): IDisconnectNotification =
+        DisconnectNotification(
+            reasonCode = reasonCode,
+            sessionExpiryIntervalSeconds = sessionExpiryIntervalSeconds,
+            reasonString = reasonString,
+            userProperty = userProperty,
+        )
 
     override suspend fun defaultPersistence(
         androidContext: Any?,

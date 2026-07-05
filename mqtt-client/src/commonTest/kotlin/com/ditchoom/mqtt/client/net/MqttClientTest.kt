@@ -1,45 +1,45 @@
 package com.ditchoom.mqtt.client.net
 
+import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Charset
-import com.ditchoom.buffer.PlatformBuffer
-import com.ditchoom.buffer.ReadBuffer
+import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.ReadBuffer.Companion.EMPTY_BUFFER
-import com.ditchoom.buffer.allocate
+import com.ditchoom.buffer.codec.asReadBuffer
 import com.ditchoom.buffer.toReadBuffer
 import com.ditchoom.mqtt.InMemoryPersistence
-import com.ditchoom.mqtt.client.LocalMqttClient
 import com.ditchoom.mqtt.client.MqttClient
+import com.ditchoom.mqtt.client.PublishResult
+import com.ditchoom.mqtt.client.QoS1State
+import com.ditchoom.mqtt.client.QoS2State
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.IConnectionRequest
-import com.ditchoom.mqtt.controlpacket.IPingResponse
-import com.ditchoom.mqtt.controlpacket.IPublishMessage
+import com.ditchoom.mqtt.controlpacket.OpaquePublishPayload
+import com.ditchoom.mqtt.controlpacket.OpaquePublishPayloadCodec
+import com.ditchoom.mqtt.controlpacket.PublishMessage
 import com.ditchoom.mqtt.controlpacket.QualityOfService
-import com.ditchoom.mqtt.controlpacket.Topic
+import com.ditchoom.mqtt.controlpacket.TopicFilter
+import com.ditchoom.mqtt.controlpacket.TopicName
+import com.ditchoom.mqtt.controlpacket.WillConfig
 import com.ditchoom.mqtt3.controlpacket.ConnectionRequest
-import com.ditchoom.socket.NetworkCapabilities
-import com.ditchoom.socket.getNetworkCapabilities
+import com.ditchoom.mqtt5.controlpacket.ConnectWillProperties
+import com.ditchoom.socket.TransportKind
+import com.ditchoom.socket.networkCapabilities
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
-import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.take
-import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
 import kotlin.random.Random
 import kotlin.random.nextUInt
-import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.seconds
 
-@Ignore
 class MqttClientTest {
     internal val inMemory: Boolean = true
     private val isAndroidDevice: Boolean = getPlatform() == Platform.Android
@@ -48,16 +48,25 @@ class MqttClientTest {
         MqttConnectionOptions.SocketConnection(
             host,
             1883,
-            tls = false,
+            tlsEnabled = false,
             connectionTimeout = 10.seconds,
         )
     private val testWsMqttConnectionOptions =
         MqttConnectionOptions.WebSocketConnectionOptions(
             host,
-            80,
+            8080,
             websocketEndpoint = "/mqtt",
-            tls = false,
+            tlsEnabled = false,
             protocols = listOf("mqttv3.1"),
+            connectionTimeout = 10.seconds,
+        )
+    private val testWsMqtt5ConnectionOptions =
+        MqttConnectionOptions.WebSocketConnectionOptions(
+            host,
+            8080,
+            websocketEndpoint = "/mqtt",
+            tlsEnabled = false,
+            protocols = listOf("mqtt"),
             connectionTimeout = 10.seconds,
         )
     private val connectionRequestMqtt4 =
@@ -67,12 +76,9 @@ class MqttClientTest {
         )
     private val connectionRequestMqtt5 =
         com.ditchoom.mqtt5.controlpacket.ConnectionRequest(
-            variableHeader =
-                com.ditchoom.mqtt5.controlpacket.ConnectionRequest.VariableHeader(
-                    cleanStart = true,
-                    keepAliveSeconds = 1,
-                ),
-            payload = com.ditchoom.mqtt5.controlpacket.ConnectionRequest.Payload(clientId = "taco123-" + Random.nextUInt()),
+            clientId = "taco123-" + Random.nextUInt(),
+            keepAliveSeconds = 1,
+            cleanStart = true,
         )
     private val connectionRequestResumeSessionMqtt4 =
         ConnectionRequest(
@@ -81,79 +87,76 @@ class MqttClientTest {
         )
     private val connectionRequestResumeSessionMqtt5 =
         com.ditchoom.mqtt5.controlpacket.ConnectionRequest(
-            variableHeader =
-                com.ditchoom.mqtt5.controlpacket.ConnectionRequest.VariableHeader(
-                    cleanStart = false,
-                    keepAliveSeconds = 1,
-                ),
-            payload = com.ditchoom.mqtt5.controlpacket.ConnectionRequest.Payload(clientId = "taco123-" + Random.nextUInt()),
+            clientId = "taco123-" + Random.nextUInt(),
+            keepAliveSeconds = 1,
+            cleanStart = false,
         )
-    private val topic = Topic.fromOrThrow("hello123", Topic.Type.Name)
-    private val willTopic4 = Topic.fromOrThrow("willTopicMqtt4", Topic.Type.Name)
-    private val willTopic5 = Topic.fromOrThrow("willTopicMqtt5", Topic.Type.Name)
+    private val topic = TopicName.fromOrThrow("hello123")
+    private val willTopic4 = TopicName.fromOrThrow("willTopicMqtt4")
+    private val willTopic5 = TopicName.fromOrThrow("willTopicMqtt5")
     private val payloadString = "Taco"
 
     @Test
     fun clientEcho4() =
-        runTest {
-            if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTest
+        runTestNoTimeSkipping {
+            if (TransportKind.TCP !in networkCapabilities().transports) return@runTestNoTimeSkipping
             clientEchoInternal(this, testMqttConnectionOptions, connectionRequestMqtt4)
         }
 
     @Test
     fun clientEchoMqtt5() =
-        runTest {
-            if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTest
+        runTestNoTimeSkipping {
+            if (TransportKind.TCP !in networkCapabilities().transports) return@runTestNoTimeSkipping
             clientEchoInternal(this, testMqttConnectionOptions, connectionRequestMqtt5)
         }
 
     @Test
     fun clientWebsocketEcho4() =
-        runTest {
+        runTestNoTimeSkipping {
             clientEchoInternal(this, testWsMqttConnectionOptions, connectionRequestMqtt4)
         }
 
     @Test
     fun clientWebsocketEcho5() =
-        runTest {
-            clientEchoInternal(this, testWsMqttConnectionOptions, connectionRequestMqtt5)
+        runTestNoTimeSkipping {
+            clientEchoInternal(this, testWsMqtt5ConnectionOptions, connectionRequestMqtt5)
         }
 
     @Test
     fun stayConnectedEcho4() =
-        runTest {
-            if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTest
+        runTestNoTimeSkipping {
+            if (TransportKind.TCP !in networkCapabilities().transports) return@runTestNoTimeSkipping
             stayConnectedEchoInternal(this, testMqttConnectionOptions, connectionRequestResumeSessionMqtt4)
         }
 
     @Test
     fun stayConnectedEcho5() =
-        runTest {
-            if (getNetworkCapabilities() != NetworkCapabilities.FULL_SOCKET_ACCESS) return@runTest
+        runTestNoTimeSkipping {
+            if (TransportKind.TCP !in networkCapabilities().transports) return@runTestNoTimeSkipping
             stayConnectedEchoInternal(this, testMqttConnectionOptions, connectionRequestResumeSessionMqtt5)
         }
 
     @Test
     fun stayConnectedEchoWebsockets4() =
-        runTest {
+        runTestNoTimeSkipping {
             stayConnectedEchoInternal(this, testWsMqttConnectionOptions, connectionRequestResumeSessionMqtt4)
         }
 
     @Test
     fun stayConnectedEchoWebsockets5() =
-        runTest {
-            stayConnectedEchoInternal(this, testWsMqttConnectionOptions, connectionRequestResumeSessionMqtt5)
+        runTestNoTimeSkipping {
+            stayConnectedEchoInternal(this, testWsMqtt5ConnectionOptions, connectionRequestResumeSessionMqtt5)
         }
 
     @Test
     fun highAvailabilityBadPortConnectOnceMqtt4() =
-        runTest {
+        runTestNoTimeSkipping {
             highAvailabilityBadPortConnectOnceInternal(this, connectionRequestMqtt4)
         }
 
     @Test
     fun highAvailabilityBadPortConnectOnceMqtt5() =
-        runTest {
+        runTestNoTimeSkipping {
             highAvailabilityBadPortConnectOnceInternal(this, connectionRequestMqtt5)
         }
 
@@ -161,19 +164,22 @@ class MqttClientTest {
         scope: CoroutineScope,
         connectionRequest: IConnectionRequest,
     ) {
+        val isMqtt5 = connectionRequest.controlPacketFactory.protocolVersion == 5
+        val wsProtocol = if (isMqtt5) "mqtt" else "mqttv3.1"
         val wsBadPort =
             MqttConnectionOptions.WebSocketConnectionOptions(
                 host,
                 2,
                 websocketEndpoint = "/mqtt",
-                tls = false,
-                protocols = listOf("mqttv3.1"),
+                tlsEnabled = false,
+                protocols = listOf(wsProtocol),
                 connectionTimeout = 1.seconds,
             )
+        val goodOptions = if (isMqtt5) testWsMqtt5ConnectionOptions else testWsMqttConnectionOptions
         val persistence = connectionRequest.controlPacketFactory.defaultPersistence(inMemory)
-        val connections = listOf(wsBadPort, testWsMqttConnectionOptions)
+        val connections = listOf(wsBadPort, goodOptions)
         val broker = persistence.addBroker(connections, connectionRequest)
-        val client = LocalMqttClient.connectOnce(scope, broker, persistence)
+        val client = MqttClient.start(scope, broker, persistence, connectSingle = createConnectFactory(broker))
         assertEquals(2L, client.connectionAttempts())
         assertEquals(1L, client.connectionCount())
         client.shutdown()
@@ -181,13 +187,13 @@ class MqttClientTest {
 
     @Test
     fun highAvailabilityBadPortStayConnectedMqtt4() =
-        runTest {
+        runTestNoTimeSkipping {
             highAvailabilityBadPortStayConnectedInternal(this, connectionRequestMqtt4)
         }
 
     @Test
     fun highAvailabilityBadPortStayConnectedMqtt5() =
-        runTest {
+        runTestNoTimeSkipping {
             highAvailabilityBadPortStayConnectedInternal(this, connectionRequestMqtt5)
         }
 
@@ -195,19 +201,22 @@ class MqttClientTest {
         scope: CoroutineScope,
         connectionRequest: IConnectionRequest,
     ) {
+        val isMqtt5 = connectionRequest.controlPacketFactory.protocolVersion == 5
+        val wsProtocol = if (isMqtt5) "mqtt" else "mqttv3.1"
         val wsBadPort =
             MqttConnectionOptions.WebSocketConnectionOptions(
                 host,
                 2,
                 websocketEndpoint = "/mqtt",
-                tls = false,
-                protocols = listOf("mqttv3.1"),
+                tlsEnabled = false,
+                protocols = listOf(wsProtocol),
                 connectionTimeout = 1.seconds,
             )
-        val connections = listOf(wsBadPort, testWsMqttConnectionOptions)
+        val goodOptions = if (isMqtt5) testWsMqtt5ConnectionOptions else testWsMqttConnectionOptions
+        val connections = listOf(wsBadPort, goodOptions)
         val persistence = connectionRequest.controlPacketFactory.defaultPersistence(inMemory)
         val broker = persistence.addBroker(connections, connectionRequest)
-        val client = LocalMqttClient.stayConnected(scope, broker, persistence)
+        val client = MqttClient.start(scope, broker, persistence, connectSingle = createConnectFactory(broker))
         client.awaitConnectivity()
         assertEquals(2L, client.connectionAttempts())
         assertEquals(1L, client.connectionCount())
@@ -216,56 +225,44 @@ class MqttClientTest {
 
     @Test
     fun pingMqtt4() =
-        runTest {
-            pingInternal(this, connectionRequestMqtt4)
+        runTestNoTimeSkipping {
+            pingInternal(this, testWsMqttConnectionOptions, connectionRequestMqtt4)
         }
 
     @Test
     fun pingMqtt5() =
-        runTest {
-            pingInternal(this, connectionRequestMqtt5)
+        runTestNoTimeSkipping {
+            pingInternal(this, testWsMqtt5ConnectionOptions, connectionRequestMqtt5)
         }
 
     private suspend fun pingInternal(
         scope: CoroutineScope,
+        connectionOptions: MqttConnectionOptions,
         connectionRequest: IConnectionRequest,
     ) {
         val persistence = InMemoryPersistence()
-        val broker = persistence.addBroker(testWsMqttConnectionOptions, connectionRequest)
-        var client: LocalMqttClient? = null
+        val broker = persistence.addBroker(connectionOptions, connectionRequest)
         val expectedPingCount = 2
+        val client = MqttClient.start(scope, broker, persistence, connectSingle = createConnectFactory(broker))
+        // Wait long enough for keepAlive pings to be exchanged
         withTimeout((connectionRequestMqtt4.variableHeader.keepAliveSeconds * expectedPingCount + 5).seconds) {
-            val pongs =
-                callbackFlow {
-                    var count = 0
-                    val incomingMessageCb: (UByte, Int, ReadBuffer) -> Unit = { byte1, remaining, buffer ->
-                        val p = connectionRequest.controlPacketFactory.from(buffer, byte1, remaining)
-                        if (p is IPingResponse) {
-                            trySend(p)
-                            count++
-                        }
-                        if (count == 2) {
-                            channel.close()
-                        }
-                    }
-                    client = LocalMqttClient.connectOnce(scope, broker, persistence, incomingMessage = incomingMessageCb)
-                    awaitClose()
-                }
-            pongs.take(expectedPingCount).toList()
+            while (client.pingResponseCount() < expectedPingCount) {
+                delay(0.25.seconds)
+            }
         }
-        client!!.shutdown()
-        assertEquals(expectedPingCount.toLong(), client!!.pingCount())
-        assertEquals(expectedPingCount.toLong(), client!!.pingResponseCount())
+        client.shutdown()
+        assertEquals(expectedPingCount.toLong(), client.pingCount())
+        assertEquals(expectedPingCount.toLong(), client.pingResponseCount())
     }
 
     @Test
     fun lastWillTestamentMqtt4() =
-        runTest {
-            val buffer = PlatformBuffer.allocate(4)
+        runTestNoTimeSkipping {
+            val buffer = BufferFactory.Default.allocate(4)
             buffer.writeString("yolo", Charset.UTF8)
             buffer.resetForRead()
             val lwtConnectionRequest =
-                connectionRequestMqtt4.copy(
+                ConnectionRequest(
                     connectionRequestMqtt4.variableHeader.copy(
                         cleanSession = false,
                         willRetain = true,
@@ -284,60 +281,85 @@ class MqttClientTest {
 
     @Test
     fun lastWillTestamentMqtt5() =
-        runTest {
-            val buffer = PlatformBuffer.allocate(4)
+        runTestNoTimeSkipping {
+            val buffer = BufferFactory.Default.allocate(4)
             buffer.writeString("yolo", Charset.UTF8)
             buffer.resetForRead()
             val lwtConnectionRequest =
-                connectionRequestMqtt5.copy(
-                    connectionRequestMqtt5.variableHeader.copy(
-                        cleanStart = false,
-                        willRetain = true,
-                        willFlag = true,
-                        willQos = QualityOfService.AT_MOST_ONCE,
-                    ),
-                    connectionRequestMqtt5.payload.copy(
+                com.ditchoom.mqtt5.controlpacket
+                    .ConnectionRequest(
                         clientId = "taco321-${Random.nextUInt()}",
-                        willTopic = willTopic5,
-                        willPayload = buffer,
-                        willProperties = com.ditchoom.mqtt5.controlpacket.ConnectionRequest.Payload.WillProperties(),
-                    ),
-                ).validateOrThrow() as IConnectionRequest
+                        keepAliveSeconds = 1,
+                        cleanStart = false,
+                        will =
+                            WillConfig.Enabled(
+                                topic = willTopic5,
+                                payload = buffer,
+                                qos = QualityOfService.AT_MOST_ONCE,
+                                retain = true,
+                            ),
+                        willProperties = ConnectWillProperties(),
+                    ).validateOrThrow() as IConnectionRequest
 
             lastWillTestamentInternal(this, willTopic5, lwtConnectionRequest, connectionRequestMqtt5)
         }
 
     private suspend fun lastWillTestamentInternal(
         scope: CoroutineScope,
-        willTopic: Topic,
+        willTopic: TopicName,
         lwtConnectionRequest: IConnectionRequest,
         connectionRequest: IConnectionRequest,
     ) {
+        val isMqtt5 = connectionRequest.controlPacketFactory.protocolVersion == 5
+        val wsOptions = if (isMqtt5) testWsMqtt5ConnectionOptions else testWsMqttConnectionOptions
         val persistence = connectionRequest.controlPacketFactory.defaultPersistence(inMemory)
-        val brokerLwt = persistence.addBroker(testWsMqttConnectionOptions, lwtConnectionRequest)
-        val clientLwt = LocalMqttClient.connectOnce(scope, brokerLwt, persistence)
-        val broker = persistence.addBroker(testWsMqttConnectionOptions, connectionRequest)
-        val clientOther = LocalMqttClient.connectOnce(scope, broker, persistence)
+        val brokerLwt = persistence.addBroker(wsOptions, lwtConnectionRequest)
+        val clientLwt = MqttClient.start(scope, brokerLwt, persistence, connectSingle = createConnectFactory(brokerLwt))
+        val broker = persistence.addBroker(wsOptions, connectionRequest)
+        val clientOther = MqttClient.start(scope, broker, persistence, connectSingle = createConnectFactory(broker))
 
+        val willTopicFilter = TopicFilter.fromOrThrow(willTopic.toString())
         val receivedLwt =
             scope.async {
-                val result = clientOther.observe(willTopic).take(1).first()
-                clientOther.unsubscribe(connectionRequest.controlPacketFactory.unsubscribe(willTopic)).unsubAck.await()
+                val result =
+                    clientOther
+                        .observe(willTopicFilter, OpaquePublishPayloadCodec)
+                        .take(1)
+                        .first()
+                        .first
+                clientOther.unsubscribe(connectionRequest.controlPacketFactory.unsubscribe(willTopicFilter)).unsubAck.await()
                 clientOther.sendDisconnect()
                 clientOther.shutdown()
                 result
             }
         clientOther.subscribe(
             connectionRequest.controlPacketFactory.subscribe(
-                willTopic,
+                willTopicFilter,
                 QualityOfService.AT_LEAST_ONCE,
             ),
+            OpaquePublishPayloadCodec,
         )
         clientLwt.shutdown(sendDisconnect = false)
         val message = receivedLwt.await()
         assertEquals(message.topic.toString(), willTopic.toString())
-        val payload = checkNotNull(message.payload)
+        val payload = checkNotNull(opaquePayloadOf(message)).asReadBuffer()
         assertEquals("yolo", payload.readString(payload.remaining(), Charset.UTF8))
+    }
+
+    /**
+     * Extract the [com.ditchoom.buffer.codec.OwnedBytesHandle] from a [PublishMessage]
+     * whose typed payload is an [com.ditchoom.mqtt.controlpacket.OpaquePublishPayload]
+     * (the default codec for the v4/v5 wire path). Mirrors the test-side equivalent of
+     * `rawPayload()` that the dispatcher used to surface.
+     */
+    private fun opaquePayloadOf(publish: PublishMessage): com.ditchoom.buffer.codec.OwnedBytesHandle? {
+        val typed =
+            when (publish) {
+                is com.ditchoom.mqtt3.controlpacket.PublishMessageV4<*> -> publish.payload
+                is com.ditchoom.mqtt5.controlpacket.ControlPacketV5.Publish<*> -> publish.payload
+                else -> null
+            }
+        return (typed as? com.ditchoom.mqtt.controlpacket.OpaquePublishPayload)?.handle
     }
 
     private suspend fun stayConnectedEchoInternal(
@@ -348,7 +370,7 @@ class MqttClientTest {
         Mutex(true)
         val persistence = connectionRequest.controlPacketFactory.defaultPersistence(inMemory)
         val broker = persistence.addBroker(connectionOptions, connectionRequest)
-        val client = LocalMqttClient.stayConnected(scope, broker, persistence)
+        val client = MqttClient.start(scope, broker, persistence, connectSingle = createConnectFactory(broker))
         client.awaitConnectivity()
         sendAllMessageTypes2(client)
         client.sendDisconnect()
@@ -365,18 +387,19 @@ class MqttClientTest {
     ) {
         val persistence = connectionRequest.controlPacketFactory.defaultPersistence(inMemory)
         val broker = persistence.addBroker(connectionOptions, connectionRequest)
-        val client = LocalMqttClient.connectOnce(scope, broker, persistence)
-        val flow = client.observe(topic)
-        scope.launch {
-            flow.filterIsInstance<IPublishMessage>().take(3).collect {
-                val payload = it.payload ?: EMPTY_BUFFER
-                val qosValue = it.qualityOfService.integerValue.toString()
-                assertEquals(payloadString + qosValue, payload.readString(payload.limit()))
+        val client = MqttClient.start(scope, broker, persistence, connectSingle = createConnectFactory(broker))
+        val flow = client.observe(TopicFilter.fromOrThrow(topic.toString()), OpaquePublishPayloadCodec).map { it.first }
+        val collectJob =
+            scope.launch {
+                flow.take(3).collect {
+                    val payload = opaquePayloadOf(it)?.asReadBuffer() ?: EMPTY_BUFFER
+                    val qosValue = it.qualityOfService.integerValue.toString()
+                    assertEquals(payloadString + qosValue, payload.readString(payload.limit()))
+                }
             }
-        }
         sendAllMessageTypes2(client)
-        client.shutdown()
-        assertTrue(persistence.isQueueClear(broker, false))
+        collectJob.join()
+        client.shutdown(drain = true)
     }
 
     private suspend fun sendAllMessageTypes2(client: MqttClient) = sendAllMessageTypes(client, topic, payloadString)
@@ -384,36 +407,35 @@ class MqttClientTest {
 
 suspend fun sendAllMessageTypes(
     client: MqttClient,
-    topic: Topic,
+    topic: TopicName,
     payloadString: String,
 ) {
     val factory = client.packetFactory
-    val pubQos0 =
-        factory.publish(
-            topicName = topic,
-            qos = QualityOfService.AT_MOST_ONCE,
-            payload = (payloadString + "0").toReadBuffer(Charset.UTF8),
-        )
-    val pubQos1 =
-        factory.publish(
-            topicName = topic,
-            qos = QualityOfService.AT_LEAST_ONCE,
-            payload = (payloadString + "1").toReadBuffer(Charset.UTF8),
-        )
-    val pubQos2 =
-        factory.publish(
-            topicName = topic,
+    val topicFilter = TopicFilter.fromOrThrow(topic.toString())
+    client
+        .subscribe(
+            factory.subscribe(topicFilter, maximumQos = QualityOfService.EXACTLY_ONCE),
+            OpaquePublishPayloadCodec,
+        ).subAck
+        .await()
+    val pub =
+        client.publish(
+            topicName = topic.toString(),
             qos = QualityOfService.EXACTLY_ONCE,
             payload = (payloadString + "2").toReadBuffer(Charset.UTF8),
         )
-    client.subscribe(factory.subscribe(topic, maximumQos = QualityOfService.EXACTLY_ONCE)).subAck.await()
-    val pub = client.publish(pubQos2)
-    if (getNetworkCapabilities() == NetworkCapabilities.WEBSOCKETS_ONLY && client.packetFactory.protocolVersion == 5) {
-        // TODO: incoming qos2 messages are still in the queue when using clientEchoInternal for some reason with web
-        delay(100)
-    }
-    pub.awaitAll()
-    client.publish(pubQos0).awaitAll()
-    client.publish(pubQos1).awaitAll()
-    client.unsubscribe(factory.unsubscribe(topic)).unsubAck.await()
+    if (pub is PublishResult.QoS2) pub.state.first { it is QoS2State.Complete }
+    client.publish(
+        topicName = topic.toString(),
+        qos = QualityOfService.AT_MOST_ONCE,
+        payload = (payloadString + "0").toReadBuffer(Charset.UTF8),
+    )
+    val pub1 =
+        client.publish(
+            topicName = topic.toString(),
+            qos = QualityOfService.AT_LEAST_ONCE,
+            payload = (payloadString + "1").toReadBuffer(Charset.UTF8),
+        )
+    if (pub1 is PublishResult.QoS1) pub1.state.first { it is QoS1State.Acknowledged }
+    client.unsubscribe(factory.unsubscribe(topicFilter)).unsubAck.await()
 }

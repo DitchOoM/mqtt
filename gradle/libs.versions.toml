@@ -1,0 +1,68 @@
+
+[versions]
+kotlin = "2.4.0"
+androidGradlePlugin = "8.13.2"
+ktlint = "14.0.1"
+mavenPublish = "0.35.0"
+dokka = "2.1.0"
+kotlinxCoroutines = "1.10.2"
+kotlinWrappers = "2025.12.6"
+buffer = "6.3.0"
+ksp = "2.3.9"
+socket = "3.8.3"
+websocket = "2.0.2"
+kotlinxBenchmark = "0.4.15"
+sqldelight = "2.2.1"
+androidxStartup = "1.1.1"
+androidxTestRunner = "1.7.0"
+androidxTestRules = "1.7.0"
+androidxTestCore = "1.7.0"
+testcontainers = "1.20.4"
+jazzer = "0.24.0"
+junitJupiter = "5.12.2"
+junitPlatform = "1.12.2"
+
+[libraries]
+buffer = { module = "com.ditchoom:buffer", version.ref = "buffer" }
+buffer-codec = { module = "com.ditchoom:buffer-codec", version.ref = "buffer" }
+buffer-codec-processor = { module = "com.ditchoom:buffer-codec-processor", version.ref = "buffer" }
+buffer-flow = { module = "com.ditchoom:buffer-flow", version.ref = "buffer" }
+socket = { module = "com.ditchoom:socket", version.ref = "socket" }
+# QUIC / WebTransport transport modules (buffer-neutral byte layer, built on buffer 6).
+# Wired into the composable transport seam; QUIC/WebTransport impls are currently stubs.
+socket-quic-default = { module = "com.ditchoom:socket-quic-default", version.ref = "socket" }
+# Note: the quiche QUIC engine (socket-quic-quiche) is pulled transitively by socket-quic-default on
+# the platforms that support it; do not depend on it directly (it has no JS/wasmJs variants).
+socket-webtransport = { module = "com.ditchoom:socket-webtransport", version.ref = "socket" }
+websocket = { module = "com.ditchoom:websocket", version.ref = "websocket" }
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
+kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinxCoroutines" }
+kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlinxCoroutines" }
+kotlin-web = { module = "org.jetbrains.kotlin-wrappers:kotlin-web", version.ref = "kotlinWrappers" }
+kotlin-browser = { module = "org.jetbrains.kotlin-wrappers:kotlin-browser", version.ref = "kotlinWrappers" }
+kotlin-js = { module = "org.jetbrains.kotlin-wrappers:kotlin-js", version.ref = "kotlinWrappers" }
+sqldelight-android-driver = { module = "app.cash.sqldelight:android-driver", version.ref = "sqldelight" }
+sqldelight-sqlite-driver = { module = "app.cash.sqldelight:sqlite-driver", version.ref = "sqldelight" }
+sqldelight-native-driver = { module = "app.cash.sqldelight:native-driver", version.ref = "sqldelight" }
+sqldelight-web-worker-driver = { module = "app.cash.sqldelight:web-worker-driver", version.ref = "sqldelight" }
+kotlinx-benchmark-runtime = { module = "org.jetbrains.kotlinx:kotlinx-benchmark-runtime", version.ref = "kotlinxBenchmark" }
+androidx-startup = { module = "androidx.startup:startup-runtime", version.ref = "androidxStartup" }
+androidx-test-runner = { module = "androidx.test:runner", version.ref = "androidxTestRunner" }
+androidx-test-rules = { module = "androidx.test:rules", version.ref = "androidxTestRules" }
+androidx-test-core-ktx = { module = "androidx.test:core-ktx", version.ref = "androidxTestCore" }
+testcontainers = { module = "org.testcontainers:testcontainers", version.ref = "testcontainers" }
+jazzer-junit = { module = "com.code-intelligence:jazzer-junit", version.ref = "jazzer" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junitJupiter" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junitPlatform" }
+
+[plugins]
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+buffer-codec-schema = { id = "com.ditchoom.buffer.codec-schema", version.ref = "buffer" }
+kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+android-library = { id = "com.android.library", version.ref = "androidGradlePlugin" }
+ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint" }
+maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "mavenPublish" }
+dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
+kotlin-allopen = { id = "org.jetbrains.kotlin.plugin.allopen", version.ref = "kotlin" }
+kotlinx-benchmark = { id = "org.jetbrains.kotlinx.benchmark", version.ref = "kotlinxBenchmark" }
+sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }

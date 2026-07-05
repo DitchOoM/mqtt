@@ -4,36 +4,45 @@ import com.ditchoom.buffer.utf8Length
 import com.ditchoom.mqtt.MqttException
 import com.ditchoom.mqtt.ProtocolError
 
-data class Topic(private val root: Level, private val type: Type) {
+sealed interface Topic {
+    val root: Level
+
+    fun matches(other: Topic): Boolean = root.matches(other.root)
+
+    override fun toString(): String
+
     enum class Type {
         Name,
         Filter,
     }
 
-    fun matches(filter: Topic?): Boolean {
-        val otherRoot = filter?.root ?: return false
-        return root.matches(otherRoot)
-    }
-
-    override fun toString(): String = root.toString()
-
     companion object {
         fun fromOrNull(
             topic: String,
             type: Type,
-        ): Topic? {
-            return try {
+        ): Topic? =
+            try {
                 fromOrThrow(topic, type)
             } catch (e: MqttException) {
                 null
             }
-        }
 
         @Throws(MqttException::class)
         fun fromOrThrow(
             topic: String,
             type: Type,
         ): Topic {
+            val root = parseRoot(topic, type)
+            return when (type) {
+                Type.Name -> TopicName(root)
+                Type.Filter -> TopicFilter(root)
+            }
+        }
+
+        internal fun parseRoot(
+            topic: String,
+            type: Type,
+        ): Level {
             val topicUtf8Length = topic.utf8Length()
             if (topicUtf8Length !in 1..65535) {
                 val message =
@@ -113,12 +122,64 @@ data class Topic(private val root: Level, private val type: Type) {
                 currentLevel.isPostfixedWithSlash = index == 0 && topic.endsWith('/')
                 previousLevel = currentLevel
             }
-            val rootLevel =
-                previousLevel ?: throw IllegalStateException(
-                    "Invalid state, should have " +
-                        "thrown before this. $topic",
-                )
-            return Topic(rootLevel, type)
+            return previousLevel ?: throw IllegalStateException(
+                "Invalid state, should have " +
+                    "thrown before this. $topic",
+            )
         }
+    }
+}
+
+/**
+ * A concrete topic name — no wildcards allowed.
+ * Used for publish targets and incoming message topics.
+ */
+class TopicName internal constructor(
+    override val root: Level,
+) : Topic {
+    override fun toString(): String = root.toString()
+
+    override fun equals(other: Any?): Boolean = other is TopicName && root == other.root
+
+    override fun hashCode(): Int = root.hashCode()
+
+    companion object {
+        fun fromOrNull(topic: String): TopicName? =
+            try {
+                fromOrThrow(topic)
+            } catch (e: MqttException) {
+                null
+            }
+
+        @Throws(MqttException::class)
+        fun fromOrThrow(topic: String): TopicName = TopicName(Topic.parseRoot(topic, Topic.Type.Name))
+    }
+}
+
+/**
+ * A topic filter — may contain + (single-level) and # (multi-level) wildcards.
+ * Used for subscriptions and message filtering.
+ */
+class TopicFilter internal constructor(
+    override val root: Level,
+) : Topic {
+    fun matches(name: TopicName): Boolean = root.matches(name.root)
+
+    override fun toString(): String = root.toString()
+
+    override fun equals(other: Any?): Boolean = other is TopicFilter && root == other.root
+
+    override fun hashCode(): Int = root.hashCode()
+
+    companion object {
+        fun fromOrNull(topic: String): TopicFilter? =
+            try {
+                fromOrThrow(topic)
+            } catch (e: MqttException) {
+                null
+            }
+
+        @Throws(MqttException::class)
+        fun fromOrThrow(topic: String): TopicFilter = TopicFilter(Topic.parseRoot(topic, Topic.Type.Filter))
     }
 }

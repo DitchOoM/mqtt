@@ -1,32 +1,31 @@
 package com.ditchoom.mqtt.controlpacket
 
-import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.mqtt.Persistence
-import com.ditchoom.mqtt.controlpacket.ControlPacket.Companion.readVariableByteInteger
 import com.ditchoom.mqtt.controlpacket.ISubscription.RetainHandling
 import com.ditchoom.mqtt.controlpacket.format.ReasonCode
 
+/**
+ * Polymorphic constructors for the protocol packets that are *not* version-typed by
+ * a `<P : Payload>` parameter — SUBSCRIBE / UNSUBSCRIBE / DISCONNECT / PING. Each
+ * call site otherwise needs a `when (broker.protocolVersion)` to choose between the
+ * v4 and v5 concrete types; routing through this factory keeps the version dispatch
+ * at one site per packet kind.
+ *
+ * Version-typed packets (PUBLISH) construct via the typed [MqttClient.publish]
+ * overload directly; wire-bytes decode flows through [MqttCodec] / the generated
+ * `ControlPacketV*Codec.decodeAggregating`. Both used to live here too as a generic
+ * `from(buffer) / publish(payload: ReadBuffer?)` pair — moved out under buffer-v1
+ * because they duplicated the more direct paths.
+ */
 interface ControlPacketFactory {
     val protocolVersion: Int
-
-    fun from(buffer: ReadBuffer): ControlPacket {
-        val byte1 = buffer.readUnsignedByte()
-        val remainingLength = buffer.readVariableByteInteger()
-        return from(buffer, byte1, remainingLength)
-    }
-
-    fun from(
-        buffer: ReadBuffer,
-        byte1: UByte,
-        remainingLength: Int,
-    ): ControlPacket
 
     fun pingRequest(): IPingRequest
 
     fun pingResponse(): IPingResponse
 
     fun subscribe(
-        topicFilter: Topic,
+        topicFilter: TopicFilter,
         maximumQos: QualityOfService = QualityOfService.AT_LEAST_ONCE,
         noLocal: Boolean = false,
         retainAsPublished: Boolean = false,
@@ -41,30 +40,13 @@ interface ControlPacketFactory {
         userProperty: List<Pair<String, String>> = emptyList(),
     ): ISubscribeRequest
 
-    fun publish(
-        dup: Boolean = false,
-        qos: QualityOfService = QualityOfService.AT_MOST_ONCE,
-        retain: Boolean = false,
-        topicName: Topic,
-        payload: ReadBuffer? = null,
-        // MQTT 5 Properties
-        payloadFormatIndicator: Boolean = false,
-        messageExpiryInterval: Long? = null,
-        topicAlias: Int? = null,
-        responseTopic: Topic? = null,
-        correlationData: ReadBuffer? = null,
-        userProperty: List<Pair<String, String>> = emptyList(),
-        subscriptionIdentifier: Set<Long> = emptySet(),
-        contentType: String? = null,
-    ): IPublishMessage
-
     fun unsubscribe(
-        topic: Topic,
+        topic: TopicFilter,
         userProperty: List<Pair<String, String>> = emptyList(),
     ) = unsubscribe(setOf(topic), userProperty)
 
     fun unsubscribe(
-        topics: Set<Topic>,
+        topics: Set<TopicFilter>,
         userProperty: List<Pair<String, String>> = emptyList(),
     ): IUnsubscribeRequest
 

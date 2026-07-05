@@ -1,8 +1,7 @@
 package com.ditchoom.mqtt3.controlpacket
 
-import com.ditchoom.buffer.PlatformBuffer
-import com.ditchoom.buffer.allocate
-import com.ditchoom.mqtt.controlpacket.format.fixed.get
+import com.ditchoom.buffer.BufferFactory
+import com.ditchoom.buffer.Default
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -11,36 +10,31 @@ import kotlin.test.assertTrue
 class ConnectionAcknowledgmentTests {
     @Test
     fun serializeDeserializeDefault() {
-        val buffer = PlatformBuffer.allocate(4)
+        val buffer = BufferFactory.Default.allocate(4)
         val actual = ConnectionAcknowledgment()
-        actual.serialize(buffer)
+        serializeV4(actual, buffer)
         buffer.resetForRead()
-        val expected = ControlPacketV4.from(buffer)
+        val expected = decodeV4(buffer)
         assertEquals(expected, actual)
     }
 
     @Test
     fun bit0SessionPresentFalseFlags() {
-        val buffer = PlatformBuffer.allocate(4)
+        val buffer = BufferFactory.Default.allocate(4)
         val model = ConnectionAcknowledgment()
-        model.header.serialize(buffer)
+        serializeV4(model, buffer)
         buffer.resetForRead()
-        val sessionPresentBit = buffer.readUnsignedByte().get(0)
-        assertFalse(sessionPresentBit)
-
-        val buffer2 = PlatformBuffer.allocate(4)
-        model.serialize(buffer2)
-        buffer2.resetForRead()
-        val result = ControlPacketV4.from(buffer2) as ConnectionAcknowledgment
-        assertFalse(result.header.sessionPresent)
+        val result = decodeV4(buffer) as ConnectionAcknowledgment
+        assertFalse(result.sessionPresent)
     }
 
     @Test
     fun bit0SessionPresentFlags() {
-        val buffer = PlatformBuffer.allocate(4)
+        val buffer = BufferFactory.Default.allocate(4)
         val model = ConnectionAcknowledgment(ConnectionAcknowledgment.VariableHeader(true))
-        model.header.serialize(buffer)
+        serializeV4(model, buffer)
         buffer.resetForRead()
-        assertTrue(buffer.readUnsignedByte().get(0))
+        val result = decodeV4(buffer) as ConnectionAcknowledgment
+        assertTrue(result.sessionPresent)
     }
 }

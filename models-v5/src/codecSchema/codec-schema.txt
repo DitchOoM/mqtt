@@ -1,0 +1,213 @@
+sealed com.ditchoom.mqtt5.controlpacket.ControlPacketV5 dispatch=valueclass:com.ditchoom.mqtt.controlpacket.MqttFixedHeader/1B,inner=UByte/Default,dispatchValue=packetType:Int framedBy=com.ditchoom.mqtt.controlpacket.MqttRemainingLengthCodec
+  1 Connect
+  2 ConnAck
+  3 Publish
+  4 PubAck
+  5 PubRec
+  6 PubRel
+  7 PubComp
+  8 Subscribe
+  9 SubAck
+  10 Unsubscribe
+  11 UnsubAck
+  12 PingReq
+  13 PingResp
+  14 Disconnect
+  15 Auth
+message com.ditchoom.mqtt5.controlpacket.ControlPacketV5.Auth
+  0 header valueclass:com.ditchoom.mqtt.controlpacket.MqttFixedHeader scalar:UByte wire=1B order=Default
+  1 reasonCode? when(remaining>=1) scalar:UByte order=Default
+  2 properties? when(remaining>=1) list:com.ditchoom.mqtt5.controlpacket.properties.MqttProperty len-prefix-codec=com.ditchoom.mqtt.controlpacket.MqttRemainingLengthCodec
+message com.ditchoom.mqtt5.controlpacket.ControlPacketV5.ConnAck
+  0 header valueclass:com.ditchoom.mqtt.controlpacket.MqttFixedHeader scalar:UByte wire=1B order=Default
+  1 acknowledgeFlags scalar:UByte wire=1B order=Default
+  2 connectReasonCode scalar:UByte wire=1B order=Default
+  3 properties list:com.ditchoom.mqtt5.controlpacket.properties.MqttProperty len-prefix-codec=com.ditchoom.mqtt.controlpacket.MqttRemainingLengthCodec
+message com.ditchoom.mqtt5.controlpacket.ControlPacketV5.Connect
+  0 header valueclass:com.ditchoom.mqtt.controlpacket.MqttFixedHeader scalar:UByte wire=1B order=Default
+  1 protocolName string len-prefix=2B/Default
+  2 protocolLevel scalar:UByte wire=1B order=Default
+  3 connectFlags valueclass:com.ditchoom.mqtt5.controlpacket.ConnectFlagsV5 scalar:UByte wire=1B order=Default
+  4 keepAlive scalar:UShort wire=2B order=Default
+  5 properties list:com.ditchoom.mqtt5.controlpacket.properties.MqttProperty len-prefix-codec=com.ditchoom.mqtt.controlpacket.MqttRemainingLengthCodec
+  6 clientId string len-prefix=2B/Default
+  7 willProperties? when(sibling:connectFlags.willFlag) list:com.ditchoom.mqtt5.controlpacket.properties.MqttProperty len-prefix-codec=com.ditchoom.mqtt.controlpacket.MqttRemainingLengthCodec
+  8 willTopicString? when(sibling:connectFlags.willFlag) string len-prefix=2B/Default
+  9 willPayloadValue? when(sibling:connectFlags.willFlag) payload:com.ditchoom.mqtt.controlpacket.OpaquePublishPayload len-prefix=2B/Default codec=com.ditchoom.mqtt.controlpacket.OpaquePublishPayloadCodec
+  10 username? when(sibling:connectFlags.usernameFlag) string len-prefix=2B/Default
+  11 passwordValue? when(sibling:connectFlags.passwordFlag) payload:com.ditchoom.buffer.codec.OwnedBytesHandle len-prefix=2B/Default codec=com.ditchoom.buffer.codec.OwnedBytesHandleCodec
+message com.ditchoom.mqtt5.controlpacket.ControlPacketV5.Disconnect
+  0 header valueclass:com.ditchoom.mqtt.controlpacket.MqttFixedHeader scalar:UByte wire=1B order=Default
+  1 reasonCode? when(remaining>=1) scalar:UByte order=Default
+  2 properties? when(remaining>=1) list:com.ditchoom.mqtt5.controlpacket.properties.MqttProperty len-prefix-codec=com.ditchoom.mqtt.controlpacket.MqttRemainingLengthCodec
+message com.ditchoom.mqtt5.controlpacket.ControlPacketV5.PingReq
+  0 header valueclass:com.ditchoom.mqtt.controlpacket.MqttFixedHeader scalar:UByte wire=1B order=Default
+message com.ditchoom.mqtt5.controlpacket.ControlPacketV5.PingResp
+  0 header valueclass:com.ditchoom.mqtt.controlpacket.MqttFixedHeader scalar:UByte wire=1B order=Default
+message com.ditchoom.mqtt5.controlpacket.ControlPacketV5.PubAck
+  0 header valueclass:com.ditchoom.mqtt.controlpacket.MqttFixedHeader scalar:UByte wire=1B order=Default
+  1 packetId scalar:UShort wire=2B order=Default
+  2 reasonCode? when(remaining>=1) scalar:UByte order=Default
+  3 properties? when(remaining>=1) list:com.ditchoom.mqtt5.controlpacket.properties.MqttProperty len-prefix-codec=com.ditchoom.mqtt.controlpacket.MqttRemainingLengthCodec
+message com.ditchoom.mqtt5.controlpacket.ControlPacketV5.PubComp
+  0 header valueclass:com.ditchoom.mqtt.controlpacket.MqttFixedHeader scalar:UByte wire=1B order=Default
+  1 packetId scalar:UShort wire=2B order=Default
+  2 reasonCode? when(remaining>=1) scalar:UByte order=Default
+  3 properties? when(remaining>=1) list:com.ditchoom.mqtt5.controlpacket.properties.MqttProperty len-prefix-codec=com.ditchoom.mqtt.controlpacket.MqttRemainingLengthCodec
+message com.ditchoom.mqtt5.controlpacket.ControlPacketV5.PubRec
+  0 header valueclass:com.ditchoom.mqtt.controlpacket.MqttFixedHeader scalar:UByte wire=1B order=Default
+  1 packetId scalar:UShort wire=2B order=Default
+  2 reasonCode? when(remaining>=1) scalar:UByte order=Default
+  3 properties? when(remaining>=1) list:com.ditchoom.mqtt5.controlpacket.properties.MqttProperty len-prefix-codec=com.ditchoom.mqtt.controlpacket.MqttRemainingLengthCodec
+message com.ditchoom.mqtt5.controlpacket.ControlPacketV5.PubRel
+  0 header valueclass:com.ditchoom.mqtt.controlpacket.MqttFixedHeader scalar:UByte wire=1B order=Default
+  1 packetId scalar:UShort wire=2B order=Default
+  2 reasonCode? when(remaining>=1) scalar:UByte order=Default
+  3 properties? when(remaining>=1) list:com.ditchoom.mqtt5.controlpacket.properties.MqttProperty len-prefix-codec=com.ditchoom.mqtt.controlpacket.MqttRemainingLengthCodec
+message com.ditchoom.mqtt5.controlpacket.ControlPacketV5.Publish
+  0 header valueclass:com.ditchoom.mqtt.controlpacket.MqttFixedHeader scalar:UByte wire=1B order=Default
+  1 topicName string len-prefix=2B/Default
+  2 packetId? when(sibling:header.publishHasPacketIdentifier) scalar:UShort order=Default
+  3 properties list:com.ditchoom.mqtt5.controlpacket.properties.MqttProperty len-prefix-codec=com.ditchoom.mqtt.controlpacket.MqttRemainingLengthCodec
+  4 payload payload:P remaining codec=injected:payloadCodec reserved=0B
+message com.ditchoom.mqtt5.controlpacket.ControlPacketV5.SubAck
+  0 header valueclass:com.ditchoom.mqtt.controlpacket.MqttFixedHeader scalar:UByte wire=1B order=Default
+  1 packetId scalar:UShort wire=2B order=Default
+  2 properties list:com.ditchoom.mqtt5.controlpacket.properties.MqttProperty len-prefix-codec=com.ditchoom.mqtt.controlpacket.MqttRemainingLengthCodec
+  3 reasonCodeEntries list:com.ditchoom.mqtt5.controlpacket.SubAckReasonCodeV5 remaining reserved=0B
+message com.ditchoom.mqtt5.controlpacket.ControlPacketV5.Subscribe
+  0 header valueclass:com.ditchoom.mqtt.controlpacket.MqttFixedHeader scalar:UByte wire=1B order=Default
+  1 packetId scalar:UShort wire=2B order=Default
+  2 properties list:com.ditchoom.mqtt5.controlpacket.properties.MqttProperty len-prefix-codec=com.ditchoom.mqtt.controlpacket.MqttRemainingLengthCodec
+  3 subscriptionEntries list:com.ditchoom.mqtt5.controlpacket.SubscriptionV5Entry remaining reserved=0B
+message com.ditchoom.mqtt5.controlpacket.ControlPacketV5.UnsubAck
+  0 header valueclass:com.ditchoom.mqtt.controlpacket.MqttFixedHeader scalar:UByte wire=1B order=Default
+  1 packetId scalar:UShort wire=2B order=Default
+  2 properties list:com.ditchoom.mqtt5.controlpacket.properties.MqttProperty len-prefix-codec=com.ditchoom.mqtt.controlpacket.MqttRemainingLengthCodec
+  3 reasonCodeEntries list:com.ditchoom.mqtt5.controlpacket.UnsubAckReasonCodeV5 remaining reserved=0B
+message com.ditchoom.mqtt5.controlpacket.ControlPacketV5.Unsubscribe
+  0 header valueclass:com.ditchoom.mqtt.controlpacket.MqttFixedHeader scalar:UByte wire=1B order=Default
+  1 packetId scalar:UShort wire=2B order=Default
+  2 properties list:com.ditchoom.mqtt5.controlpacket.properties.MqttProperty len-prefix-codec=com.ditchoom.mqtt.controlpacket.MqttRemainingLengthCodec
+  3 topicEntries list:com.ditchoom.mqtt5.controlpacket.TopicFilterV5Entry remaining reserved=0B
+message com.ditchoom.mqtt5.controlpacket.SubAckReasonCodeV5
+  0 raw scalar:UByte wire=1B order=Default
+message com.ditchoom.mqtt5.controlpacket.SubscriptionV5Entry
+  0 topicFilter string len-prefix=2B/Default
+  1 subscriptionOptions scalar:UByte wire=1B order=Default
+message com.ditchoom.mqtt5.controlpacket.TopicFilterV5Entry
+  0 topicFilter string len-prefix=2B/Default
+message com.ditchoom.mqtt5.controlpacket.UnsubAckReasonCodeV5
+  0 raw scalar:UByte wire=1B order=Default
+message com.ditchoom.mqtt5.controlpacket.properties.AssignedClientIdentifier
+  0 id valueclass:com.ditchoom.mqtt5.controlpacket.properties.PropertyId scalar:UByte wire=1B order=Default
+  1 value string len-prefix=2B/Default
+message com.ditchoom.mqtt5.controlpacket.properties.AuthenticationData
+  0 id valueclass:com.ditchoom.mqtt5.controlpacket.properties.PropertyId scalar:UByte wire=1B order=Default
+  1 value payload:com.ditchoom.buffer.codec.OwnedBytesHandle len-prefix=2B/Default codec=com.ditchoom.buffer.codec.OwnedBytesHandleCodec
+message com.ditchoom.mqtt5.controlpacket.properties.AuthenticationMethod
+  0 id valueclass:com.ditchoom.mqtt5.controlpacket.properties.PropertyId scalar:UByte wire=1B order=Default
+  1 value string len-prefix=2B/Default
+message com.ditchoom.mqtt5.controlpacket.properties.ContentType
+  0 id valueclass:com.ditchoom.mqtt5.controlpacket.properties.PropertyId scalar:UByte wire=1B order=Default
+  1 value string len-prefix=2B/Default
+message com.ditchoom.mqtt5.controlpacket.properties.CorrelationData
+  0 id valueclass:com.ditchoom.mqtt5.controlpacket.properties.PropertyId scalar:UByte wire=1B order=Default
+  1 value payload:com.ditchoom.buffer.codec.OwnedBytesHandle len-prefix=2B/Default codec=com.ditchoom.buffer.codec.OwnedBytesHandleCodec
+message com.ditchoom.mqtt5.controlpacket.properties.MaximumPacketSize
+  0 id valueclass:com.ditchoom.mqtt5.controlpacket.properties.PropertyId scalar:UByte wire=1B order=Default
+  1 bytes scalar:UInt wire=4B order=Default
+message com.ditchoom.mqtt5.controlpacket.properties.MaximumQos
+  0 id valueclass:com.ditchoom.mqtt5.controlpacket.properties.PropertyId scalar:UByte wire=1B order=Default
+  1 qos1Allowed scalar:Boolean wire=1B order=Default
+message com.ditchoom.mqtt5.controlpacket.properties.MessageExpiryInterval
+  0 id valueclass:com.ditchoom.mqtt5.controlpacket.properties.PropertyId scalar:UByte wire=1B order=Default
+  1 seconds scalar:UInt wire=4B order=Default
+sealed com.ditchoom.mqtt5.controlpacket.properties.MqttProperty dispatch=valueclass:com.ditchoom.mqtt5.controlpacket.properties.PropertyId/1B,inner=UByte/Default,dispatchValue=id:Int
+  1 PayloadFormatIndicator
+  2 MessageExpiryInterval
+  3 ContentType
+  8 ResponseTopic
+  9 CorrelationData
+  11 SubscriptionIdentifier
+  17 SessionExpiryInterval
+  18 AssignedClientIdentifier
+  19 ServerKeepAlive
+  21 AuthenticationMethod
+  22 AuthenticationData
+  23 RequestProblemInformation
+  24 WillDelayInterval
+  25 RequestResponseInformation
+  26 ResponseInformation
+  28 ServerReference
+  31 ReasonString
+  33 ReceiveMaximum
+  34 TopicAlias
+  35 TopicAliasMaximum
+  36 MaximumQos
+  37 RetainAvailable
+  38 UserProperty
+  39 MaximumPacketSize
+  40 WildcardSubscriptionAvailable
+  41 SubscriptionIdentifierAvailable
+  42 SharedSubscriptionAvailable
+message com.ditchoom.mqtt5.controlpacket.properties.PayloadFormatIndicator
+  0 id valueclass:com.ditchoom.mqtt5.controlpacket.properties.PropertyId scalar:UByte wire=1B order=Default
+  1 isUtf8 scalar:Boolean wire=1B order=Default
+message com.ditchoom.mqtt5.controlpacket.properties.PropertyId
+  0 raw scalar:UByte wire=1B order=Default
+message com.ditchoom.mqtt5.controlpacket.properties.ReasonString
+  0 id valueclass:com.ditchoom.mqtt5.controlpacket.properties.PropertyId scalar:UByte wire=1B order=Default
+  1 value string len-prefix=2B/Default
+message com.ditchoom.mqtt5.controlpacket.properties.ReceiveMaximum
+  0 id valueclass:com.ditchoom.mqtt5.controlpacket.properties.PropertyId scalar:UByte wire=1B order=Default
+  1 max scalar:UShort wire=2B order=Default
+message com.ditchoom.mqtt5.controlpacket.properties.RequestProblemInformation
+  0 id valueclass:com.ditchoom.mqtt5.controlpacket.properties.PropertyId scalar:UByte wire=1B order=Default
+  1 enabled scalar:Boolean wire=1B order=Default
+message com.ditchoom.mqtt5.controlpacket.properties.RequestResponseInformation
+  0 id valueclass:com.ditchoom.mqtt5.controlpacket.properties.PropertyId scalar:UByte wire=1B order=Default
+  1 enabled scalar:Boolean wire=1B order=Default
+message com.ditchoom.mqtt5.controlpacket.properties.ResponseInformation
+  0 id valueclass:com.ditchoom.mqtt5.controlpacket.properties.PropertyId scalar:UByte wire=1B order=Default
+  1 value string len-prefix=2B/Default
+message com.ditchoom.mqtt5.controlpacket.properties.ResponseTopic
+  0 id valueclass:com.ditchoom.mqtt5.controlpacket.properties.PropertyId scalar:UByte wire=1B order=Default
+  1 value string len-prefix=2B/Default
+message com.ditchoom.mqtt5.controlpacket.properties.RetainAvailable
+  0 id valueclass:com.ditchoom.mqtt5.controlpacket.properties.PropertyId scalar:UByte wire=1B order=Default
+  1 supported scalar:Boolean wire=1B order=Default
+message com.ditchoom.mqtt5.controlpacket.properties.ServerKeepAlive
+  0 id valueclass:com.ditchoom.mqtt5.controlpacket.properties.PropertyId scalar:UByte wire=1B order=Default
+  1 seconds scalar:UShort wire=2B order=Default
+message com.ditchoom.mqtt5.controlpacket.properties.ServerReference
+  0 id valueclass:com.ditchoom.mqtt5.controlpacket.properties.PropertyId scalar:UByte wire=1B order=Default
+  1 value string len-prefix=2B/Default
+message com.ditchoom.mqtt5.controlpacket.properties.SessionExpiryInterval
+  0 id valueclass:com.ditchoom.mqtt5.controlpacket.properties.PropertyId scalar:UByte wire=1B order=Default
+  1 seconds scalar:UInt wire=4B order=Default
+message com.ditchoom.mqtt5.controlpacket.properties.SharedSubscriptionAvailable
+  0 id valueclass:com.ditchoom.mqtt5.controlpacket.properties.PropertyId scalar:UByte wire=1B order=Default
+  1 supported scalar:Boolean wire=1B order=Default
+message com.ditchoom.mqtt5.controlpacket.properties.SubscriptionIdentifier
+  0 id valueclass:com.ditchoom.mqtt5.controlpacket.properties.PropertyId scalar:UByte wire=1B order=Default
+  1 value codec:com.ditchoom.mqtt.controlpacket.VariableByteIntegerCodec bounding=false variable=false
+message com.ditchoom.mqtt5.controlpacket.properties.SubscriptionIdentifierAvailable
+  0 id valueclass:com.ditchoom.mqtt5.controlpacket.properties.PropertyId scalar:UByte wire=1B order=Default
+  1 supported scalar:Boolean wire=1B order=Default
+message com.ditchoom.mqtt5.controlpacket.properties.TopicAlias
+  0 id valueclass:com.ditchoom.mqtt5.controlpacket.properties.PropertyId scalar:UByte wire=1B order=Default
+  1 value scalar:UShort wire=2B order=Default
+message com.ditchoom.mqtt5.controlpacket.properties.TopicAliasMaximum
+  0 id valueclass:com.ditchoom.mqtt5.controlpacket.properties.PropertyId scalar:UByte wire=1B order=Default
+  1 max scalar:UShort wire=2B order=Default
+message com.ditchoom.mqtt5.controlpacket.properties.UserProperty
+  0 id valueclass:com.ditchoom.mqtt5.controlpacket.properties.PropertyId scalar:UByte wire=1B order=Default
+  1 key string len-prefix=2B/Default
+  2 value string len-prefix=2B/Default
+message com.ditchoom.mqtt5.controlpacket.properties.WildcardSubscriptionAvailable
+  0 id valueclass:com.ditchoom.mqtt5.controlpacket.properties.PropertyId scalar:UByte wire=1B order=Default
+  1 supported scalar:Boolean wire=1B order=Default
+message com.ditchoom.mqtt5.controlpacket.properties.WillDelayInterval
+  0 id valueclass:com.ditchoom.mqtt5.controlpacket.properties.PropertyId scalar:UByte wire=1B order=Default
+  1 seconds scalar:UInt wire=4B order=Default

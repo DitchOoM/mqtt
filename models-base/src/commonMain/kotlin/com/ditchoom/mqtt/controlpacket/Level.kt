@@ -25,7 +25,10 @@ sealed class Level {
         return value + postFix
     }
 
-    data class StringLevel(override val value: String, override val nextLevel: Level?) : Level() {
+    data class StringLevel(
+        override val value: String,
+        override val nextLevel: Level?,
+    ) : Level() {
         override fun matches(other: Level): Boolean {
             val otherNextLevel = other.nextLevel
             return when (other) {
@@ -62,7 +65,9 @@ sealed class Level {
         override fun toString(): String = stringValue()
     }
 
-    data class SingleLevelWildcard(override val nextLevel: Level? = null) : Level() {
+    data class SingleLevelWildcard(
+        override val nextLevel: Level? = null,
+    ) : Level() {
         override val value: String = "+"
 
         override fun matches(other: Level): Boolean =

@@ -29,12 +29,16 @@ jobs:
   publish:
     name: "Sign, Bundle & Upload"
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Must exceed the "Poll deployment status" ceiling (240 × 30s = 2h) plus the
+    # sign/bundle/upload steps. At 30 the job risks being killed mid-poll while
+    # Central is still PUBLISHING — the deploy would publish itself
+    # (publishingType=AUTOMATIC) but CI would report it as failed. 150 = 2h poll + headroom.
+    timeout-minutes: 150
     outputs:
       deployment-id: ${{ steps.upload.outputs.deployment-id }}
     steps:
       - name: Download merged artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: maven-local-merged
           path: /tmp/maven-repo
@@ -113,7 +117,11 @@ jobs:
         run: |
           TOKEN=$(echo -n "${MAVEN_CENTRAL_USERNAME}:${MAVEN_CENTRAL_PASSWORD}" | base64)
           DEPLOYMENT_ID="${{ steps.upload.outputs.deployment-id }}"
-          MAX_ATTEMPTS=50
+          # 240 × 30s = 2h ceiling. First-time-namespace publications (e.g. a
+          # newly added artifactId under com.ditchoom) sometimes sit in
+          # PUBLISHING for 40+ minutes while Central runs extra validation;
+          # a 50 × 30s = 25min limit timed those out spuriously.
+          MAX_ATTEMPTS=240
           ATTEMPT=0
 
           while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
@@ -125,7 +133,14 @@ jobs:
               -H "Authorization: Bearer $TOKEN" \
               -H "Content-Type: application/json")
 
-            STATE=$(echo "$STATUS_RESPONSE" | jq -r '.deploymentState // empty')
+            # The Central status endpoint occasionally returns non-JSON: a CDN
+            # error page (HTML), a plain "Origin error" text response, or a
+            # rate-limit body. Without the stderr redirect + empty fallback,
+            # jq's parse-error exit code propagates under `set -e` and kills the
+            # whole step even though Central is still PUBLISHING normally. With
+            # the fallback STATE becomes empty and the "Unable to parse" branch
+            # below handles the transient cleanly — the loop keeps polling.
+            STATE=$(echo "$STATUS_RESPONSE" | jq -r '.deploymentState // empty' 2>/dev/null || true)
 
             if [ -z "$STATE" ]; then
               echo "Attempt ${ATTEMPT}/${MAX_ATTEMPTS}: Unable to parse status response"
@@ -142,7 +157,7 @@ jobs:
                 ;;
               FAILED)
                 echo "Deployment FAILED!"
-                echo "$STATUS_RESPONSE" | jq '.errors // empty'
+                echo "$STATUS_RESPONSE" | jq '.errors // empty' 2>/dev/null || echo "$STATUS_RESPONSE"
                 exit 1
                 ;;
               *)

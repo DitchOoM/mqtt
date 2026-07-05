@@ -57,11 +57,20 @@ jobs:
           mkdir -p /tmp/maven-local/com
           cp -r "$LINUX_BASE" /tmp/maven-local/com/
 
-          # Copy Apple per-target artifact directories
+          # Copy Apple per-target artifact directories.
+          # Copy the directory CONTENTS ("$dir".) into the target, never the
+          # directory itself. The macOS host also publishes the cross-platform
+          # publications (-js / -jvm / -android), so those dirs already exist in
+          # the merged tree from the Linux base. `cp -r "$dir" "$MERGED/$name"`
+          # into an existing target NESTS it as com/ditchoom/<a>/<a>/<version>/,
+          # a malformed Maven path that Central Portal validation rejects
+          # ("File path ... is not valid for file ..."). Copying contents merges
+          # in place. See the "no doubled paths" guard below.
           for dir in "$APPLE_BASE"/mqtt-*-*/; do
             [ -d "$dir" ] || continue
             target_name=$(basename "$dir")
-            cp -r "$dir" "$MERGED/$target_name"
+            mkdir -p "$MERGED/$target_name"
+            cp -r "$dir". "$MERGED/$target_name/"
           done
 
           # Merge root module metadata for each module
@@ -85,6 +94,24 @@ jobs:
               echo "WARN: Could not merge $module metadata (linux=$([ -f "$LINUX_MODULE" ] && echo yes || echo no), apple=$([ -f "$APPLE_MODULE" ] && echo yes || echo no))"
             fi
           done
+
+      # Central Portal validates every file's path against its Maven coordinates
+      # and rejects the whole deployment on the first mismatch. Our Gradle
+      # `resolveAll` check only confirms the RIGHT artifacts resolve — it never
+      # sees STRAY/malformed dirs. Catch them here, before the 128MB sign+upload,
+      # instead of after Central rejects the deployment.
+      - name: Assert no malformed (doubled) artifact paths
+        run: |
+          BASE="/tmp/maven-local/com/ditchoom"
+          # A directory nested directly under another of the same name
+          # (com/ditchoom/<a>/<a>/) is the doubled-path signature.
+          STRAY=$(find "$BASE" -type d -regextype posix-extended -regex '.*/([^/]+)/\1$' || true)
+          if [ -n "$STRAY" ]; then
+            echo "::error::Malformed artifact paths (artifactId nested under itself) — Central Portal will reject these:"
+            echo "$STRAY"
+            exit 1
+          fi
+          echo "No doubled/malformed artifact paths in the merged repo."
 
       - name: Upload merged artifacts
         uses: actions/upload-artifact@v7

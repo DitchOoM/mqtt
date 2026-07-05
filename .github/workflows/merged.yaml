@@ -4,6 +4,24 @@ on:
     branches: [ main ]
     types:
       - closed
+  workflow_dispatch:
+    inputs:
+      version-bump:
+        description: "Version bump"
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+        default: patch
+      flow:
+        description: "Release flow"
+        type: choice
+        options:
+          - release
+          - draft
+          - dry-run
+        default: release
 
 permissions:
   contents: write
@@ -15,13 +33,13 @@ concurrency:
 jobs:
   check-release:
     name: Check if release is needed
-    if: github.event.pull_request.merged == true
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     outputs:
       flow: ${{ steps.check.outputs.flow }}
       gradle-args: ${{ steps.check.outputs.gradle-args }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: Determine release flow
@@ -29,6 +47,21 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # Manual dispatch has no PR to inspect — take flow and version
+          # bump straight from the workflow inputs. Lets us recover from a
+          # failed publish (e.g. transient Central API hiccup, or a merge
+          # whose deploy was blocked) without opening a sham PR to flip the
+          # classifier.
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            case "${{ inputs.version-bump }}" in
+              major) echo "gradle-args=-PincrementMajor=true" >> $GITHUB_OUTPUT ;;
+              minor) echo "gradle-args=-PincrementMinor=true" >> $GITHUB_OUTPUT ;;
+              *)     echo "gradle-args=" >> $GITHUB_OUTPUT ;;
+            esac
+            echo "flow=${{ inputs.flow }}" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
           gradle_args=""
           if ${{ contains(github.event.pull_request.labels.*.name, 'major') }}; then
             gradle_args="-PincrementMajor=true"
@@ -37,17 +70,28 @@ jobs:
           fi
           echo "gradle-args=${gradle_args}" >> $GITHUB_OUTPUT
 
+          # Check for skip-release label
           if ${{ contains(github.event.pull_request.labels.*.name, 'skip-release') }}; then
             echo "flow=dry-run" >> $GITHUB_OUTPUT
             exit 0
           fi
 
+          # Check for draft-release label
           if ${{ contains(github.event.pull_request.labels.*.name, 'draft-release') }}; then
             echo "flow=draft" >> $GITHUB_OUTPUT
             exit 0
           fi
 
-          changed_files=$(gh pr diff ${{ github.event.pull_request.number }} --name-only)
+          # Check if only non-code files changed.
+          # Use the paginated "list PR files" API rather than `gh pr diff`:
+          # the latter hits the .diff endpoint, which GitHub caps at ~20k
+          # lines / 300 files and returns HTTP 406 for larger PRs (this is
+          # exactly what blocked PR #14's deploy — 373 changed files, diff
+          # rejected, script exited 1). The PR-files API returns objects with
+          # a `filename` field and is paginated, so size-of-change doesn't matter.
+          changed_files=$(gh api --paginate \
+            "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
+            --jq '.[].filename')
           for file in $changed_files; do
             case "$file" in
               .github/*|*.md|.gitignore|.editorconfig|CLAUDE.md|LICENSE|*.txt)
@@ -103,14 +147,21 @@ jobs:
     if: always() && needs.check-release.outputs.flow != 'skip' && needs.check-release.outputs.flow != 'dry-run'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      # Checkout with RELEASE_PAT (workflow scope) so the tag push in
+      # "Create tag and GitHub release" can succeed when the release commit's
+      # tree contains .github/workflows/* changes. Default GITHUB_TOKEN lacks
+      # the workflow scope and silently rejects such tag pushes.
+      # Falls back to GITHUB_TOKEN if RELEASE_PAT is not configured.
+      - uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.RELEASE_PAT || secrets.GITHUB_TOKEN }}
 
       - name: Create draft GitHub release
         if: needs.check-release.outputs.flow == 'draft' && needs.publish.result == 'success'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_TITLE: ${{ github.event.pull_request.title }}
-          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_TITLE: ${{ github.event.pull_request.title || 'Manual release' }}
+          PR_URL: ${{ github.event.pull_request.html_url || format('{0}/{1}', github.server_url, github.repository) }}
         run: |
           version="${{ needs.build-linux.outputs.version }}"
           deployment_id="${{ needs.publish.outputs.deployment-id }}"
@@ -140,20 +191,23 @@ jobs:
         if: needs.check-release.outputs.flow == 'release' && needs.publish.result == 'success'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_TITLE: ${{ github.event.pull_request.title }}
-          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_TITLE: ${{ github.event.pull_request.title || 'Manual release' }}
+          PR_URL: ${{ github.event.pull_request.html_url || format('{0}/{1}', github.server_url, github.repository) }}
         run: |
           version="${{ needs.build-linux.outputs.version }}"
           tag="v${version}"
 
+          # Check if tag already exists
           if git rev-parse "$tag" >/dev/null 2>&1; then
             echo "Tag $tag already exists, skipping"
             exit 0
           fi
 
+          # Create and push tag
           git tag "$tag"
           git push origin "$tag"
 
+          # Create release
           maven_url="https://central.sonatype.com/artifact/com.ditchoom/mqtt-client/${version}"
           gh release create "$tag" \
               --repo="$GITHUB_REPOSITORY" \

@@ -15,20 +15,40 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Download Linux artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: maven-local-linux
           path: /tmp/linux-repo/com/ditchoom
 
       - name: Download Apple artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: maven-local-apple
           path: /tmp/apple-repo/com/ditchoom
 
+      # Validate the version that was ACTUALLY built into maven-local, not the
+      # workflow input. build-linux's getNextVersion reads Maven Central, and if a
+      # release publishes mid-CI the input version can diverge from the version
+      # build-linux actually stamped onto the artifacts here — then every resolution
+      # below looks for a version that was never published and fails spuriously.
+      # Deriving from the downloaded artifacts is race-proof: we validate whatever
+      # was genuinely built.
+      - name: Resolve built version
+        run: |
+          version=$(ls /tmp/linux-repo/com/ditchoom/mqtt-client/ 2>/dev/null \
+            | grep -E '^[0-9]+\.[0-9]+\.[0-9]+' | sort -V | tail -1)
+          if [ -z "$version" ]; then
+            echo "::error::No mqtt-client version present in the downloaded maven-local " \
+              "(/tmp/linux-repo/com/ditchoom/mqtt-client/). build-linux's publish didn't produce " \
+              "the artifacts — failing loudly rather than guessing a version to validate."
+            exit 1
+          fi
+          echo "RESOLVED_VERSION=${version}" >> "$GITHUB_ENV"
+          echo "Validating version: ${version} (workflow input was '${{ inputs.version }}')"
+
       - name: Merge artifacts and module metadata
         run: |
-          version="${{ inputs.version }}"
+          version="${RESOLVED_VERSION}"
           LINUX_BASE="/tmp/linux-repo/com/ditchoom"
           APPLE_BASE="/tmp/apple-repo/com/ditchoom"
           MERGED="/tmp/maven-local/com/ditchoom"
@@ -67,7 +87,7 @@ jobs:
           done
 
       - name: Upload merged artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: maven-local-merged
           path: /tmp/maven-local
@@ -75,7 +95,7 @@ jobs:
 
       - name: Validate artifacts
         run: |
-          version="${{ inputs.version }}"
+          version="${RESOLVED_VERSION}"
           FAILED=false
           BASE="/tmp/maven-local/com/ditchoom"
 
@@ -173,7 +193,7 @@ jobs:
           echo "=== ALL VALIDATIONS PASSED ==="
 
       - name: Checkout validation project
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           sparse-checkout: |
             .ci/validate-resolution
@@ -181,17 +201,17 @@ jobs:
           sparse-checkout-cone-mode: false
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'zulu'
           java-version: '21'
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6
 
       - name: Validate with Gradle resolution
         run: |
           gradle -p .ci/validate-resolution resolveAll \
-            -PmqttVersion=${{ inputs.version }} \
+            -PmqttVersion=${{ env.RESOLVED_VERSION }} \
             -PmavenRepoPath=/tmp/maven-local \
             --no-daemon

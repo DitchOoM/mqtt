@@ -40,6 +40,19 @@ kotlin {
             }
         }
     }
+    @OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class)
+    wasmJs {
+        browser {
+            testTask {
+                useMocha { timeout = "120s" }
+            }
+        }
+        nodejs {
+            testTask {
+                useMocha { timeout = "120s" }
+            }
+        }
+    }
 
     if (hostOs.family.isAppleFamily) {
         macosX64()

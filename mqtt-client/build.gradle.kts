@@ -57,7 +57,11 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(libs.kotlinx.coroutines.core)
-            implementation(project(":models-base"))
+            // Only models-base is api: its shared types (IConnectionRequest, etc.) surface in the
+            // client's public API, so consumers get them transitively. v4/v5 stay implementation —
+            // they're internal wiring, and a consumer shouldn't be forced to compile against a
+            // protocol version they don't use.
+            api(project(":models-base"))
             implementation(project(":models-v4"))
             implementation(project(":models-v5"))
             implementation(libs.buffer)

@@ -42,6 +42,19 @@ kotlin {
             }
         }
     }
+    @OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class)
+    wasmJs {
+        browser {
+            testTask {
+                useMocha { timeout = "120s" }
+            }
+        }
+        nodejs {
+            testTask {
+                useMocha { timeout = "120s" }
+            }
+        }
+    }
 
     if (hostOs.family.isAppleFamily) {
         macosX64()
@@ -66,7 +79,9 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(libs.kotlinx.coroutines.core)
-            implementation(project(":models-base"))
+            // api so consumers of models-v5 get models-base on their compile classpath
+            // transitively (models-v5's public API exposes models-base types).
+            api(project(":models-base"))
             implementation(libs.buffer)
             implementation(libs.buffer.codec)
         }

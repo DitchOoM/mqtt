@@ -100,8 +100,8 @@ src/
 
 ### Dependencies
 
-- **buffer** (`com.ditchoom:buffer` **6.8.2**, + `buffer-codec` / `buffer-flow`) - Native byte buffer management. v6 reshaped `buffer-flow` into the `ByteSource`/`ByteSink`/`ByteStream` trichotomy with `ReadPolicy`/`WritePolicy` and `ReadResult.End`/`Reset`; the core buffer types and codec annotations are unchanged/additive.
-- **socket** (`com.ditchoom:socket` **3.8.12**) - Buffer-neutral byte layer built on buffer 6. `SocketOptions`+`ConnectionOptions` collapsed into one immutable `TransportConfig`; the socket **is** a `ByteStream`. Sister transport modules (on the composable seam, currently stubs): `socket-quic-default`/`socket-quic-quiche` (QUIC — native only; JS/wasmJs have no raw UDP) and `socket-webtransport` (WebTransport — all targets incl. browser; the web substitute for QUIC).
+- **buffer** (`com.ditchoom:buffer` **6.13.1**, + `buffer-codec` / `buffer-flow`) - Native byte buffer management. v6 reshaped `buffer-flow` into the `ByteSource`/`ByteSink`/`ByteStream` trichotomy with `ReadPolicy`/`WritePolicy` and `ReadResult.End`/`Reset`; the core buffer types and codec annotations are unchanged/additive.
+- **socket** (`com.ditchoom:socket` **3.11.0**) - Buffer-neutral byte layer built on buffer 6. `SocketOptions`+`ConnectionOptions` collapsed into one immutable `TransportConfig`; the socket **is** a `ByteStream`. Sister transport modules (on the composable seam, currently stubs): `socket-quic-default`/`socket-quic-quiche` (QUIC — native only; JS/wasmJs have no raw UDP) and `socket-webtransport` (WebTransport — all targets incl. browser; the web substitute for QUIC).
 - **websocket** (`com.ditchoom:websocket` **2.0.5**) - WebSocket connections. **Ready**: built against buffer 6, so the transport is un-gated and wired into `mqtt-client` (common + test). See `WebSocketMqttTransport`.
 - **kotlinx-coroutines** - Async/coroutines support
 - **sqldelight** - SQLite persistence for models-v4 and models-v5

@@ -29,13 +29,10 @@ jobs:
             runner: macos-15-intel
             tasks: macosX64Test
             known-failure: false
-          # Known failure, so it reports without gating: under Kotlin 2.4.21 buffer 6.30.8's wasm
-          # allocator calls WebAssembly.Memory.grow on a receiver that is not the module's memory
-          # (green on Kotlin 2.4.0). Flip known-failure to false once buffer ships the fix.
           - name: "Linux / wasmJs (node + browser)"
             runner: ubuntu-24.04
             tasks: wasmJsNodeTest wasmJsBrowserTest
-            known-failure: true
+            known-failure: false
     steps:
       - uses: actions/checkout@v6
 

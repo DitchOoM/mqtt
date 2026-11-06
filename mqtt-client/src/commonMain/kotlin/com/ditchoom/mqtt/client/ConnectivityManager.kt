@@ -10,6 +10,7 @@ import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.IConnectionAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IDisconnectNotification
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
@@ -49,7 +50,12 @@ class ConnectivityManager internal constructor(
     internal val persistence: Persistence,
     internal val broker: MqttBroker,
     private val publishCodecForTopic: (topicName: String) -> Codec<out Payload>?,
-    private val connectSingle: suspend (MqttConnectionOptions, (topicName: String) -> Codec<out Payload>?) -> Connection<ControlPacket>,
+    private val connectionScope: CoroutineScope,
+    private val connectSingle: suspend (
+        CoroutineScope,
+        MqttConnectionOptions,
+        (topicName: String) -> Codec<out Payload>?,
+    ) -> Connection<ControlPacket>,
     inFlightLimit: InFlightLimit,
     timeSource: TimeSource,
 ) {
@@ -138,7 +144,7 @@ class ConnectivityManager internal constructor(
             connectionAttempts++
             val conn =
                 try {
-                    connectSingle(connectionOp, publishCodecForTopic)
+                    connectSingle(connectionScope, connectionOp, publishCodecForTopic)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (

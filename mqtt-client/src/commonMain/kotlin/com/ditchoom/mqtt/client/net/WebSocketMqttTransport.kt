@@ -11,6 +11,7 @@ import com.ditchoom.mqtt.controlpacket.ControlPacketFactory
 import com.ditchoom.socket.transport.TcpTransport
 import com.ditchoom.websocket.WebSocketMessage
 import com.ditchoom.websocket.connectWebSocket
+import kotlinx.coroutines.CoroutineScope
 import com.ditchoom.websocket.WebSocketConnectionOptions as WsLibOptions
 
 /**
@@ -21,6 +22,7 @@ import com.ditchoom.websocket.WebSocketConnectionOptions as WsLibOptions
  */
 object WebSocketMqttTransport : MqttTransport {
     override suspend fun connect(
+        scope: CoroutineScope,
         options: MqttConnectionOptions,
         factory: ControlPacketFactory,
         publishCodecForTopic: (topicName: String) -> Codec<out Payload>?,

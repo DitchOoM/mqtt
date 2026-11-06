@@ -48,6 +48,10 @@ jobs:
           java-version: '21'
           cache: gradle
 
+      # TEMPORARY: websocket 2.1.0 is not on Maven Central yet (see gradle/libs.versions.toml).
+      - name: Build websocket 2.1.0 preview
+        uses: ./.github/actions/websocket-preview
+
       - name: Cache Gradle build outputs
         uses: actions/cache@v4
         with:

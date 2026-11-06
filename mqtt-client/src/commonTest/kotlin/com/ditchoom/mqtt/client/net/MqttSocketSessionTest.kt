@@ -8,6 +8,7 @@ import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt3.controlpacket.ConnectionRequest
 import com.ditchoom.socket.TransportKind
 import com.ditchoom.socket.networkCapabilities
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.first
 import kotlin.random.Random
 import kotlin.test.Test
@@ -79,7 +80,7 @@ class MqttSocketSessionTest {
             connectTest(connectionOptions)
         }
 
-    private suspend fun connectTest(
+    private suspend fun CoroutineScope.connectTest(
         connectionOptions: MqttConnectionOptions,
         version: Int = 4,
     ) {
@@ -93,7 +94,7 @@ class MqttSocketSessionTest {
                         .ConnectionRequest(clientId = "taco123-" + Random.nextInt())
                 }
             val factory = connectionRequest.controlPacketFactory
-            val connection = defaultSingleConnection(connectionOptions, factory)
+            val connection = defaultSingleConnection(this, connectionOptions, factory)
             // Send CONNECT and read CONNACK
             connection.send(connectionRequest)
             val connack = connection.receive().first()

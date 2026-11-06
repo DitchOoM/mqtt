@@ -52,7 +52,7 @@ class DefaultConnectionFactoryWsIntegrationTest {
                     connectionTimeout = 15.seconds,
                 )
             val connectionRequest = ConnectionRequest(clientId = "ditchoom-ws-${Random.nextInt()}")
-            val connection = defaultSingleConnection(options, connectionRequest.controlPacketFactory)
+            val connection = defaultSingleConnection(this, options, connectionRequest.controlPacketFactory)
 
             connection.send(connectionRequest)
             val connack = connection.receive().first()

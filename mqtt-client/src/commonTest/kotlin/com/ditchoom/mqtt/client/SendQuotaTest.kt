@@ -184,7 +184,7 @@ private class ScriptedBroker(
             scope = CoroutineScope(scope.coroutineContext + Dispatchers.Default),
             broker = brokerRecord,
             persistence = persistence,
-            connectSingle = { _, _ -> connect() },
+            connectSingle = { _, _, _ -> connect() },
         )
     }
 

@@ -92,7 +92,7 @@ class WsConnectIsolationTest {
                         tlsEnabled = false,
                         connectionTimeout = 10.seconds,
                     )
-                val conn = defaultSingleConnection(options, connectionRequest.controlPacketFactory)
+                val conn = defaultSingleConnection(this, options, connectionRequest.controlPacketFactory)
                 try {
                     conn.send(connectionRequest)
                     val connack = conn.receive().first()
@@ -118,7 +118,7 @@ class WsConnectIsolationTest {
                         protocols = listOf("mqtt"),
                         connectionTimeout = 10.seconds,
                     )
-                val conn = defaultSingleConnection(options, connectionRequest.controlPacketFactory)
+                val conn = defaultSingleConnection(this, options, connectionRequest.controlPacketFactory)
                 try {
                     conn.send(connectionRequest)
                     val connack = conn.receive().first()

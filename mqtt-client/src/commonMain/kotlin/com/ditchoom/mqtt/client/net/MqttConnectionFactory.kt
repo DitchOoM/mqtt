@@ -7,6 +7,7 @@ import com.ditchoom.mqtt.connection.MqttBroker
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.ControlPacketFactory
+import kotlinx.coroutines.CoroutineScope
 
 /**
  * Opens one connection for [connectionOp] and wraps it in an `MqttCodec`-typed [Connection] by
@@ -19,11 +20,12 @@ import com.ditchoom.mqtt.controlpacket.ControlPacketFactory
  * [WebTransportMqttTransport] — are the composable seam.
  */
 suspend fun defaultSingleConnection(
+    scope: CoroutineScope,
     connectionOp: MqttConnectionOptions,
     factory: ControlPacketFactory,
     publishCodecForTopic: (topicName: String) -> Codec<out Payload>? = { null },
     resolver: MqttTransportResolver = DefaultMqttTransportResolver,
-): Connection<ControlPacket> = resolver.resolve(connectionOp).connect(connectionOp, factory, publishCodecForTopic)
+): Connection<ControlPacket> = resolver.resolve(connectionOp).connect(scope, connectionOp, factory, publishCodecForTopic)
 
 /**
  * Curries [defaultSingleConnection] against [broker]'s control-packet factory. The
@@ -34,9 +36,10 @@ suspend fun defaultSingleConnection(
  */
 fun defaultSingleConnection(
     broker: MqttBroker,
-): suspend (MqttConnectionOptions, (topicName: String) -> Codec<out Payload>?) -> Connection<ControlPacket> =
-    { op, publishCodecForTopic ->
+): suspend (CoroutineScope, MqttConnectionOptions, (topicName: String) -> Codec<out Payload>?) -> Connection<ControlPacket> =
+    { scope, op, publishCodecForTopic ->
         defaultSingleConnection(
+            scope,
             op,
             broker.connectionRequest.controlPacketFactory,
             publishCodecForTopic,

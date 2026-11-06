@@ -537,6 +537,7 @@ class MqttClient internal constructor(
             timeSource: TimeSource = TimeSource.Monotonic,
             connectSingle: (
                 suspend (
+                    CoroutineScope,
                     MqttConnectionOptions,
                     (topicName: String) -> Codec<out Payload>?,
                 ) -> Connection<ControlPacket>
@@ -549,7 +550,7 @@ class MqttClient internal constructor(
             val publishCodecForTopic: (String) -> Codec<out Payload>? = { topic ->
                 registry.codecForTopicName(TopicName.fromOrThrow(topic))
             }
-            val cm = ConnectivityManager(persistence, broker, publishCodecForTopic, effectiveConnect, inFlightLimit, timeSource)
+            val cm = ConnectivityManager(persistence, broker, publishCodecForTopic, scope, effectiveConnect, inFlightLimit, timeSource)
             val client = MqttClient(cm, scope, registry, bufferFactory)
             client.connectionJob =
                 scope.launch {

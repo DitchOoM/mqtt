@@ -7,9 +7,10 @@ import com.ditchoom.mqtt.connection.MqttBroker
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.ControlPacketFactory
+import kotlinx.coroutines.CoroutineScope
 
 internal typealias TestConnectSingle =
-    suspend (MqttConnectionOptions, (topicName: String) -> Codec<out Payload>?) -> Connection<ControlPacket>
+    suspend (CoroutineScope, MqttConnectionOptions, (topicName: String) -> Codec<out Payload>?) -> Connection<ControlPacket>
 
 /**
  * Test-facing alias for [defaultSingleConnection] — the production per-option connector lives
@@ -22,4 +23,4 @@ internal typealias TestConnectSingle =
 fun createConnectFactory(broker: MqttBroker): TestConnectSingle = defaultSingleConnection(broker)
 
 fun createConnectFactory(factory: ControlPacketFactory): TestConnectSingle =
-    { op, publishCodecForTopic -> defaultSingleConnection(op, factory, publishCodecForTopic) }
+    { scope, op, publishCodecForTopic -> defaultSingleConnection(scope, op, factory, publishCodecForTopic) }

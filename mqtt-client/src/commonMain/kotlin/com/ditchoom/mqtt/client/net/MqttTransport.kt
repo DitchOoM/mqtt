@@ -6,6 +6,7 @@ import com.ditchoom.buffer.flow.Connection
 import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.ControlPacketFactory
+import kotlinx.coroutines.CoroutineScope
 
 /**
  * Opens exactly ONE transport connection for [options] and returns it as an `MqttCodec`-typed
@@ -24,9 +25,13 @@ import com.ditchoom.mqtt.controlpacket.ControlPacketFactory
  * [defaultSingleConnection], or a custom `connectSingle` to `MqttClient.start`. For example, route
  * [MqttConnectionOptions.QuicConnectionOptions] to [WebTransportMqttTransport] on web targets, where
  * raw UDP (and therefore QUIC) is unavailable.
+ *
+ * [scope] owns the connection's writer coroutine: the returned [Connection] hands each `send` to a
+ * writer launched in [scope], so the writer lives exactly as long as the client that owns it.
  */
 fun interface MqttTransport {
     suspend fun connect(
+        scope: CoroutineScope,
         options: MqttConnectionOptions,
         factory: ControlPacketFactory,
         publishCodecForTopic: (topicName: String) -> Codec<out Payload>?,

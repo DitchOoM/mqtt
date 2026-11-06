@@ -10,6 +10,8 @@ import com.ditchoom.mqtt.controlpacket.ControlPacketFactory
 import com.ditchoom.socket.quic.QuicOptions
 import com.ditchoom.socket.quic.QuicTransport
 import com.ditchoom.socket.transport.CodecConnection
+import com.ditchoom.socket.transport.OverflowPolicy
+import kotlinx.coroutines.CoroutineScope
 
 /**
  * MQTT over QUIC (**experimental, non-standard** — mirrors EMQX's mapping). The whole MQTT byte
@@ -28,6 +30,7 @@ import com.ditchoom.socket.transport.CodecConnection
  */
 object QuicMqttTransport : MqttTransport {
     override suspend fun connect(
+        scope: CoroutineScope,
         options: MqttConnectionOptions,
         factory: ControlPacketFactory,
         publishCodecForTopic: (topicName: String) -> Codec<out Payload>?,
@@ -37,6 +40,9 @@ object QuicMqttTransport : MqttTransport {
             op.host,
             op.port,
             MqttCodec(factory, publishCodecForTopic),
+            scope,
+            MQTT_OUTBOUND_QUEUE_CAPACITY,
+            OverflowPolicy.Suspend,
             QuicTransport(
                 QuicOptions(
                     alpnProtocols = op.alpnProtocols,

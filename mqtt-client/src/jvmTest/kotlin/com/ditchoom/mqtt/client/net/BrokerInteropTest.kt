@@ -4,6 +4,7 @@ import com.ditchoom.buffer.Charset
 import com.ditchoom.buffer.codec.asReadBuffer
 import com.ditchoom.buffer.toReadBuffer
 import com.ditchoom.mqtt.InMemoryPersistence
+import com.ditchoom.mqtt.client.InFlightLimit
 import com.ditchoom.mqtt.client.MqttClient
 import com.ditchoom.mqtt.client.MqttEndpoint
 import com.ditchoom.mqtt.client.PublishResult
@@ -159,7 +160,14 @@ class BrokerInteropTest {
     ): MqttClient {
         val request = target.protocol.connectionRequest("interop-$role-${Random.nextUInt()}", persistentSession)
         val persistence = InMemoryPersistence()
-        val client = MqttClient.start(scope, persistence.addBroker(request), persistence, target.endpoint())
+        val client =
+            MqttClient.start(
+                scope,
+                persistence.addBroker(request),
+                persistence,
+                target.endpoint(),
+                inFlightLimit = target.protocol.inFlightLimit,
+            )
         clients += client
         client.awaitConnectivity()
         return client
@@ -213,12 +221,22 @@ class BrokerInteropTest {
 
 /** The MQTT protocol version a matrix cell speaks. */
 sealed interface MqttProtocol {
+    /** The client-side send window this cell runs with. */
+    val inFlightLimit: InFlightLimit
+
     fun connectionRequest(
         clientId: String,
         persistentSession: Boolean,
     ): IConnectionRequest
 
+    /**
+     * MQTT 3.1.1 has no Receive Maximum, so the client's own limit is the only flow control. Brokers
+     * still bound in-flight QoS 1/2 per client and may drop what exceeds that (mosquitto acknowledges
+     * and then discards it), so a v3.1.1 deployment configures a window the broker accepts.
+     */
     data object V4 : MqttProtocol {
+        override val inFlightLimit = InFlightLimit(10)
+
         override fun connectionRequest(
             clientId: String,
             persistentSession: Boolean,
@@ -230,7 +248,10 @@ sealed interface MqttProtocol {
             )
     }
 
+    /** MQTT 5 brokers advertise Receive Maximum in CONNACK, and the client honours it. */
     data object V5 : MqttProtocol {
+        override val inFlightLimit = InFlightLimit.ProtocolMaximum
+
         override fun connectionRequest(
             clientId: String,
             persistentSession: Boolean,

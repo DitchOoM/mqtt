@@ -1,7 +1,8 @@
 name: "Extra platforms"
 
-# Hosts the main Linux and Apple builds do not cover: arm64 Linux (JVM, JS and Wasm on an arm64
-# JDK and Node) and x86_64 macOS (the macosX64 native target). There is no Windows leg because
+# Hosts and targets the main Linux and Apple builds do not cover: arm64 Linux (JVM and JS on an
+# arm64 JDK and Node; Kotlin/Native has no linux arm64 host), x86_64 macOS (the macosX64 native
+# target), and the wasmJs targets. There is no Windows leg because
 # mqtt declares no mingw target.
 
 on:
@@ -12,16 +13,26 @@ jobs:
     name: "${{ matrix.name }}"
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 45
+    continue-on-error: ${{ matrix.known-failure }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - name: "Linux arm64 / JVM / JS / Wasm"
+          - name: "Linux arm64 / JVM / JS"
             runner: ubuntu-24.04-arm
-            tasks: jvmTest jsNodeTest wasmJsNodeTest
+            tasks: jvmTest jsNodeTest
+            known-failure: false
           - name: "macOS x86_64 / macosX64"
             runner: macos-15-intel
             tasks: macosX64Test
+            known-failure: false
+          # Known failure, so it reports without gating: under Kotlin 2.4.21 buffer 6.30.8's wasm
+          # allocator calls WebAssembly.Memory.grow on a receiver that is not the module's memory
+          # (green on Kotlin 2.4.0). Flip known-failure to false once buffer ships the fix.
+          - name: "Linux / wasmJs (node + browser)"
+            runner: ubuntu-24.04
+            tasks: wasmJsNodeTest wasmJsBrowserTest
+            known-failure: true
     steps:
       - uses: actions/checkout@v6
 

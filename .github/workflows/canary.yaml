@@ -46,6 +46,10 @@ jobs:
           key: konan-linux-canary-${{ hashFiles('gradle/libs.versions.toml') }}
           restore-keys: konan-linux-
 
+      # socket's linuxArm64 target cross-compiles liburing.
+      - name: Install the arm64 cross compiler
+        run: sudo apt-get update -q && sudo apt-get install -yq gcc-aarch64-linux-gnu
+
       # buffer and socket publish as 999.0.0-SNAPSHOT so that Gradle's conflict resolution picks
       # them over the releases websocket (and socket) were compiled against; websocket has no
       # downstream inside this build, so it keeps the snapshot version it computes itself.

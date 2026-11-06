@@ -62,11 +62,10 @@ jobs:
         run: echo "version=$(./gradlew -q :mqtt-client:nextVersion ${{ inputs.gradle-args }})" >> $GITHUB_OUTPUT
 
       # linuxX64Test for native test-execution parity (JVM behaviour differs from native memory/lifecycle).
-      - name: Run JVM / JS / Wasm / Android / Linux-native tests
+      - name: Run JVM / JS / Android / Linux-native tests
         run: >-
           ./gradlew ktlintCheck
           jvmTest jsNodeTest jsBrowserTest
-          wasmJsNodeTest wasmJsBrowserTest
           testDebugUnitTest
           linuxX64Test
           ${{ inputs.gradle-args }}

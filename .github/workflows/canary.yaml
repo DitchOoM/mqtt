@@ -66,7 +66,8 @@ jobs:
             cd "$RUNNER_TEMP/$repo"
             case "$repo" in
               buffer) GITHUB_REPOSITORY=local/local ./gradlew publishToMavenLocal -x test -Pversion="$CANARY_VERSION" --no-configuration-cache ;;
-              socket) ./gradlew publishToMavenLocal -x test -Pversion="$CANARY_VERSION" --no-configuration-cache ;;
+              # Only the modules mqtt resolves: socket itself and network-monitor (QUIC is opt-in).
+              socket) ./gradlew :publishToMavenLocal :network-monitor:publishToMavenLocal -x test -Pversion="$CANARY_VERSION" --no-configuration-cache ;;
               websocket) env -u GITHUB_REPOSITORY ./gradlew publishToMavenLocal -x test --no-configuration-cache ;;
             esac
             cd "$GITHUB_WORKSPACE"

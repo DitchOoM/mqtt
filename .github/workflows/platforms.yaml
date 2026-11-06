@@ -18,10 +18,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Known failure only while the websocket 2.1.0 preview is built from source: websocket's
+          # own build cannot configure on a linux aarch64 host. mqtt's build can (NativeHost), so
+          # flip known-failure to false when the preview action is deleted.
           - name: "Linux arm64 / JVM / JS"
             runner: ubuntu-24.04-arm
             tasks: jvmTest jsNodeTest
-            known-failure: false
+            known-failure: true
           - name: "macOS x86_64 / macosX64"
             runner: macos-15-intel
             tasks: macosX64Test

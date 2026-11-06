@@ -67,14 +67,9 @@ kotlin {
             implementation(libs.buffer)
             implementation(libs.buffer.codec)
             implementation(libs.buffer.flow)
-            implementation(libs.socket)
-            implementation(libs.websocket)
-            // Experimental MQTT-over-QUIC / -WebTransport transports (single bidirectional stream).
-            // socket-quic-default pulls the per-platform QUIC engine transitively (quiche on JVM/native;
-            // an UnsupportedQuicEngine that throws on JS/wasmJs/tvOS/watchOS — no raw UDP there).
-            // socket-webtransport works on every target, including the browser.
-            implementation(libs.socket.quic.default)
-            implementation(libs.socket.webtransport)
+            // api: MqttEndpoint exposes socket's Transport and TransportConfig. Which transport
+            // modules ride along (websocket-tcp, socket-quic-default, ...) is the consumer's choice.
+            api(libs.socket)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
@@ -82,7 +77,7 @@ kotlin {
             implementation(project(":models-v4"))
             implementation(project(":models-v5"))
             implementation(libs.socket)
-            implementation(libs.websocket)
+            implementation(libs.websocket.tcp)
         }
 
         jsMain.dependencies {

@@ -18,7 +18,7 @@ import kotlin.test.assertTrue
  * the actual `MqttCodec.decode` call site over `decodeAggregating`.
  */
 class MqttCodecDecodeBoundaryTest {
-    private val codec = MqttCodec(ControlPacketV5Factory)
+    private val codec = MqttCodec(ControlPacketV5Factory) { TopicCodec.Unrouted }
 
     private fun bufferOf(vararg bytes: Int): ReadBuffer {
         val array = ByteArray(bytes.size) { bytes[it].toByte() }

@@ -1,7 +1,7 @@
 package com.ditchoom.mqtt.client.net
 
 import com.ditchoom.buffer.flow.Connection
-import com.ditchoom.mqtt.connection.MqttConnectionOptions
+import com.ditchoom.mqtt.client.MqttEndpoint
 import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.IConnectionAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IConnectionRequest
@@ -12,6 +12,7 @@ import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt3.controlpacket.ConnectionRequest
+import com.ditchoom.socket.TlsConfig
 import com.ditchoom.socket.TransportKind
 import com.ditchoom.socket.networkCapabilities
 import kotlinx.coroutines.CoroutineScope
@@ -38,7 +39,7 @@ import com.ditchoom.mqtt5.controlpacket.ConnectionRequest as ConnectionRequestV5
  * - 8080: MQTT over WebSocket unencrypted
  * - 8081: MQTT over WebSocket TLS
  *
- * [openConnection] delegates to the production [defaultSingleConnection] factory, so TCP
+ * [openConnection] goes through the production connector, so TCP
  * and WebSocket paths go through exactly the same code as runtime clients. The only tests
  * still `@Ignore`d are the `test.mosquitto.org` variants (`mosquittoTcpPlaintext(V5)`,
  * `mosquittoWebsocketPlaintext(V5)`, `mosquittoWebsocketTls(V5)`) — that endpoint flakes
@@ -54,7 +55,7 @@ class PublicBrokerValidationTest {
         runTestNoTimeSkipping(timeout = 30.seconds) {
             if (TransportKind.TCP !in networkCapabilities().transports) return@runTestNoTimeSkipping
             connectPublishDisconnect(
-                MqttConnectionOptions.SocketConnection("broker.hivemq.com", 1883, tlsEnabled = false, connectionTimeout = 15.seconds),
+                tcpEndpoint("broker.hivemq.com", 1883, timeout = 15.seconds),
             )
         }
 
@@ -63,7 +64,7 @@ class PublicBrokerValidationTest {
         runTestNoTimeSkipping(timeout = 30.seconds) {
             if (TransportKind.TCP !in networkCapabilities().transports) return@runTestNoTimeSkipping
             connectPublishDisconnect(
-                MqttConnectionOptions.SocketConnection("broker.hivemq.com", 8883, tlsEnabled = true, connectionTimeout = 15.seconds),
+                tcpEndpoint("broker.hivemq.com", 8883, tls = TlsConfig.DEFAULT, timeout = 15.seconds),
             )
         }
 
@@ -71,14 +72,7 @@ class PublicBrokerValidationTest {
     fun hivemqWebsocketPlaintext() =
         runTestNoTimeSkipping(timeout = 30.seconds) {
             connectPublishDisconnect(
-                MqttConnectionOptions.WebSocketConnectionOptions(
-                    "broker.hivemq.com",
-                    8000,
-                    websocketEndpoint = "/mqtt",
-                    tlsEnabled = false,
-                    protocols = listOf("mqtt"),
-                    connectionTimeout = 15.seconds,
-                ),
+                webSocketEndpoint("broker.hivemq.com", 8000, path = "/mqtt", protocols = listOf("mqtt"), timeout = 15.seconds),
             )
         }
 
@@ -86,13 +80,13 @@ class PublicBrokerValidationTest {
     fun hivemqWebsocketTls() =
         runTestNoTimeSkipping(timeout = 30.seconds) {
             connectPublishDisconnect(
-                MqttConnectionOptions.WebSocketConnectionOptions(
+                webSocketEndpoint(
                     "broker.hivemq.com",
                     8884,
-                    websocketEndpoint = "/mqtt",
-                    tlsEnabled = true,
+                    path = "/mqtt",
                     protocols = listOf("mqtt"),
-                    connectionTimeout = 15.seconds,
+                    tls = TlsConfig.DEFAULT,
+                    timeout = 15.seconds,
                 ),
             )
         }
@@ -108,7 +102,7 @@ class PublicBrokerValidationTest {
         runTestNoTimeSkipping(timeout = 30.seconds) {
             if (TransportKind.TCP !in networkCapabilities().transports) return@runTestNoTimeSkipping
             connectPublishDisconnect(
-                MqttConnectionOptions.SocketConnection("test.mosquitto.org", 1883, tlsEnabled = false, connectionTimeout = 15.seconds),
+                tcpEndpoint("test.mosquitto.org", 1883, timeout = 15.seconds),
             )
         }
 
@@ -117,14 +111,7 @@ class PublicBrokerValidationTest {
     fun mosquittoWebsocketPlaintext() =
         runTestNoTimeSkipping(timeout = 30.seconds) {
             connectPublishDisconnect(
-                MqttConnectionOptions.WebSocketConnectionOptions(
-                    "test.mosquitto.org",
-                    8080,
-                    websocketEndpoint = "/",
-                    tlsEnabled = false,
-                    protocols = listOf("mqtt"),
-                    connectionTimeout = 15.seconds,
-                ),
+                webSocketEndpoint("test.mosquitto.org", 8080, path = "/", protocols = listOf("mqtt"), timeout = 15.seconds),
             )
         }
 
@@ -133,13 +120,13 @@ class PublicBrokerValidationTest {
     fun mosquittoWebsocketTls() =
         runTestNoTimeSkipping(timeout = 30.seconds) {
             connectPublishDisconnect(
-                MqttConnectionOptions.WebSocketConnectionOptions(
+                webSocketEndpoint(
                     "test.mosquitto.org",
                     8081,
-                    websocketEndpoint = "/",
-                    tlsEnabled = true,
+                    path = "/",
                     protocols = listOf("mqtt"),
-                    connectionTimeout = 15.seconds,
+                    tls = TlsConfig.DEFAULT,
+                    timeout = 15.seconds,
                 ),
             )
         }
@@ -155,7 +142,7 @@ class PublicBrokerValidationTest {
         runTestNoTimeSkipping(timeout = 30.seconds) {
             if (TransportKind.TCP !in networkCapabilities().transports) return@runTestNoTimeSkipping
             connectMultiplePublishes(
-                MqttConnectionOptions.SocketConnection("broker.hivemq.com", 8883, tlsEnabled = true, connectionTimeout = 15.seconds),
+                tcpEndpoint("broker.hivemq.com", 8883, tls = TlsConfig.DEFAULT, timeout = 15.seconds),
                 publishCount = 5,
             )
         }
@@ -164,13 +151,13 @@ class PublicBrokerValidationTest {
     fun hivemqWebsocketTlsMultiplePublishes() =
         runTestNoTimeSkipping(timeout = 30.seconds) {
             connectMultiplePublishes(
-                MqttConnectionOptions.WebSocketConnectionOptions(
+                webSocketEndpoint(
                     "broker.hivemq.com",
                     8884,
-                    websocketEndpoint = "/mqtt",
-                    tlsEnabled = true,
+                    path = "/mqtt",
                     protocols = listOf("mqtt"),
-                    connectionTimeout = 15.seconds,
+                    tls = TlsConfig.DEFAULT,
+                    timeout = 15.seconds,
                 ),
                 publishCount = 5,
             )
@@ -186,7 +173,7 @@ class PublicBrokerValidationTest {
         runTestNoTimeSkipping(timeout = 30.seconds) {
             if (TransportKind.TCP !in networkCapabilities().transports) return@runTestNoTimeSkipping
             connectSubscribeReceive(
-                MqttConnectionOptions.SocketConnection("broker.hivemq.com", 8883, tlsEnabled = true, connectionTimeout = 15.seconds),
+                tcpEndpoint("broker.hivemq.com", 8883, tls = TlsConfig.DEFAULT, timeout = 15.seconds),
             )
         }
 
@@ -194,13 +181,13 @@ class PublicBrokerValidationTest {
     fun hivemqWebsocketTlsSubscribeReceive() =
         runTestNoTimeSkipping(timeout = 30.seconds) {
             connectSubscribeReceive(
-                MqttConnectionOptions.WebSocketConnectionOptions(
+                webSocketEndpoint(
                     "broker.hivemq.com",
                     8884,
-                    websocketEndpoint = "/mqtt",
-                    tlsEnabled = true,
+                    path = "/mqtt",
                     protocols = listOf("mqtt"),
-                    connectionTimeout = 15.seconds,
+                    tls = TlsConfig.DEFAULT,
+                    timeout = 15.seconds,
                 ),
             )
         }
@@ -212,7 +199,7 @@ class PublicBrokerValidationTest {
         runTestNoTimeSkipping(timeout = 30.seconds) {
             if (TransportKind.TCP !in networkCapabilities().transports) return@runTestNoTimeSkipping
             connectPublishDisconnect(
-                MqttConnectionOptions.SocketConnection("broker.hivemq.com", 1883, tlsEnabled = false, connectionTimeout = 15.seconds),
+                tcpEndpoint("broker.hivemq.com", 1883, timeout = 15.seconds),
                 mqttV5 = true,
             )
         }
@@ -222,7 +209,7 @@ class PublicBrokerValidationTest {
         runTestNoTimeSkipping(timeout = 30.seconds) {
             if (TransportKind.TCP !in networkCapabilities().transports) return@runTestNoTimeSkipping
             connectPublishDisconnect(
-                MqttConnectionOptions.SocketConnection("broker.hivemq.com", 8883, tlsEnabled = true, connectionTimeout = 15.seconds),
+                tcpEndpoint("broker.hivemq.com", 8883, tls = TlsConfig.DEFAULT, timeout = 15.seconds),
                 mqttV5 = true,
             )
         }
@@ -231,14 +218,7 @@ class PublicBrokerValidationTest {
     fun hivemqWebsocketPlaintextV5() =
         runTestNoTimeSkipping(timeout = 30.seconds) {
             connectPublishDisconnect(
-                MqttConnectionOptions.WebSocketConnectionOptions(
-                    "broker.hivemq.com",
-                    8000,
-                    websocketEndpoint = "/mqtt",
-                    tlsEnabled = false,
-                    protocols = listOf("mqtt"),
-                    connectionTimeout = 15.seconds,
-                ),
+                webSocketEndpoint("broker.hivemq.com", 8000, path = "/mqtt", protocols = listOf("mqtt"), timeout = 15.seconds),
                 mqttV5 = true,
             )
         }
@@ -247,13 +227,13 @@ class PublicBrokerValidationTest {
     fun hivemqWebsocketTlsV5() =
         runTestNoTimeSkipping(timeout = 30.seconds) {
             connectPublishDisconnect(
-                MqttConnectionOptions.WebSocketConnectionOptions(
+                webSocketEndpoint(
                     "broker.hivemq.com",
                     8884,
-                    websocketEndpoint = "/mqtt",
-                    tlsEnabled = true,
+                    path = "/mqtt",
                     protocols = listOf("mqtt"),
-                    connectionTimeout = 15.seconds,
+                    tls = TlsConfig.DEFAULT,
+                    timeout = 15.seconds,
                 ),
                 mqttV5 = true,
             )
@@ -264,7 +244,7 @@ class PublicBrokerValidationTest {
         runTestNoTimeSkipping(timeout = 30.seconds) {
             if (TransportKind.TCP !in networkCapabilities().transports) return@runTestNoTimeSkipping
             connectSubscribeReceive(
-                MqttConnectionOptions.SocketConnection("broker.hivemq.com", 8883, tlsEnabled = true, connectionTimeout = 15.seconds),
+                tcpEndpoint("broker.hivemq.com", 8883, tls = TlsConfig.DEFAULT, timeout = 15.seconds),
                 mqttV5 = true,
             )
         }
@@ -273,13 +253,13 @@ class PublicBrokerValidationTest {
     fun hivemqWebsocketTlsSubscribeReceiveV5() =
         runTestNoTimeSkipping(timeout = 30.seconds) {
             connectSubscribeReceive(
-                MqttConnectionOptions.WebSocketConnectionOptions(
+                webSocketEndpoint(
                     "broker.hivemq.com",
                     8884,
-                    websocketEndpoint = "/mqtt",
-                    tlsEnabled = true,
+                    path = "/mqtt",
                     protocols = listOf("mqtt"),
-                    connectionTimeout = 15.seconds,
+                    tls = TlsConfig.DEFAULT,
+                    timeout = 15.seconds,
                 ),
                 mqttV5 = true,
             )
@@ -292,7 +272,7 @@ class PublicBrokerValidationTest {
         runTestNoTimeSkipping(timeout = 30.seconds) {
             if (TransportKind.TCP !in networkCapabilities().transports) return@runTestNoTimeSkipping
             connectPublishDisconnect(
-                MqttConnectionOptions.SocketConnection("test.mosquitto.org", 1883, tlsEnabled = false, connectionTimeout = 15.seconds),
+                tcpEndpoint("test.mosquitto.org", 1883, timeout = 15.seconds),
                 mqttV5 = true,
             )
         }
@@ -302,14 +282,7 @@ class PublicBrokerValidationTest {
     fun mosquittoWebsocketPlaintextV5() =
         runTestNoTimeSkipping(timeout = 30.seconds) {
             connectPublishDisconnect(
-                MqttConnectionOptions.WebSocketConnectionOptions(
-                    "test.mosquitto.org",
-                    8080,
-                    websocketEndpoint = "/",
-                    tlsEnabled = false,
-                    protocols = listOf("mqtt"),
-                    connectionTimeout = 15.seconds,
-                ),
+                webSocketEndpoint("test.mosquitto.org", 8080, path = "/", protocols = listOf("mqtt"), timeout = 15.seconds),
                 mqttV5 = true,
             )
         }
@@ -319,13 +292,13 @@ class PublicBrokerValidationTest {
     fun mosquittoWebsocketTlsV5() =
         runTestNoTimeSkipping(timeout = 30.seconds) {
             connectPublishDisconnect(
-                MqttConnectionOptions.WebSocketConnectionOptions(
+                webSocketEndpoint(
                     "test.mosquitto.org",
                     8081,
-                    websocketEndpoint = "/",
-                    tlsEnabled = true,
+                    path = "/",
                     protocols = listOf("mqtt"),
-                    connectionTimeout = 15.seconds,
+                    tls = TlsConfig.DEFAULT,
+                    timeout = 15.seconds,
                 ),
                 mqttV5 = true,
             )
@@ -364,29 +337,19 @@ class PublicBrokerValidationTest {
         }
 
     /**
-     * Opens a [Connection] for the given [MqttConnectionOptions]. Delegates to the production
-     * [defaultSingleConnection] factory so tests exercise the same TCP / WebSocket code paths
-     * that [MqttClient] uses — no parallel test-only transport adapter to maintain.
+     * Opens a raw [Connection] through the same connector [MqttClient] uses, so these tests
+     * exercise the production TCP / WebSocket paths.
      */
     private suspend fun CoroutineScope.openConnection(
-        connectionOptions: MqttConnectionOptions,
+        connectionOptions: MqttEndpoint,
         connectionRequest: IConnectionRequest,
-    ): Connection<ControlPacket> =
-        defaultSingleConnection(
-            this,
-            connectionOptions,
-            connectionRequest.controlPacketFactory,
-            // No MqttClient here — the raw-connection test path has no TopicCodecRegistry,
-            // so decode every PUBLISH as opaque bytes. Validation tests only inspect the
-            // PublishMessage shape, never its typed payload.
-            publishCodecForTopic = { _ -> com.ditchoom.mqtt.controlpacket.OpaquePublishPayloadCodec },
-        )
+    ): Connection<ControlPacket> = openRawConnection(connectionOptions, connectionRequest.controlPacketFactory)
 
     /**
      * Sends CONNECT, validates CONNACK, and returns the connection.
      */
     private suspend fun CoroutineScope.connectAndValidate(
-        connectionOptions: MqttConnectionOptions,
+        connectionOptions: MqttEndpoint,
         connectionRequest: IConnectionRequest,
         clientId: String,
     ): Connection<ControlPacket> {
@@ -399,7 +362,7 @@ class PublicBrokerValidationTest {
     }
 
     private suspend fun CoroutineScope.connectPublishDisconnect(
-        connectionOptions: MqttConnectionOptions,
+        connectionOptions: MqttEndpoint,
         mqttV5: Boolean = false,
     ) {
         val clientId = "ditchoom-test-${Random.nextInt()}"
@@ -416,7 +379,7 @@ class PublicBrokerValidationTest {
     }
 
     private suspend fun CoroutineScope.connectMultiplePublishes(
-        connectionOptions: MqttConnectionOptions,
+        connectionOptions: MqttEndpoint,
         publishCount: Int,
         mqttV5: Boolean = false,
     ) {
@@ -436,7 +399,7 @@ class PublicBrokerValidationTest {
     }
 
     private suspend fun CoroutineScope.connectSubscribeReceive(
-        connectionOptions: MqttConnectionOptions,
+        connectionOptions: MqttEndpoint,
         mqttV5: Boolean = false,
     ) {
         val clientId = "ditchoom-sub-${Random.nextInt()}"

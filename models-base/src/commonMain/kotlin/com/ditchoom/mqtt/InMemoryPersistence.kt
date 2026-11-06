@@ -3,7 +3,6 @@
 package com.ditchoom.mqtt
 
 import com.ditchoom.mqtt.connection.MqttBroker
-import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.IConnectionRequest
 import com.ditchoom.mqtt.controlpacket.IPublishAcknowledgment
@@ -185,12 +184,9 @@ class InMemoryPersistence : Persistence {
         }
     }
 
-    override suspend fun addBroker(
-        connectionOps: Collection<MqttConnectionOptions>,
-        connectionRequest: IConnectionRequest,
-    ): MqttBroker =
+    override suspend fun addBroker(connectionRequest: IConnectionRequest): MqttBroker =
         transact { current ->
-            val broker = MqttBroker(current.brokers.size, connectionOps, connectionRequest)
+            val broker = MqttBroker(current.brokers.size, connectionRequest)
             current.copy(brokers = current.brokers + (broker.identifier to broker)) to broker
         }
 

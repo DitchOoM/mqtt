@@ -57,7 +57,7 @@ internal class OutboundWindow(
         resumption: Resumption,
     ) {
         val adopted = CompletableDeferred<Unit>()
-        events.send(Event.SessionStarted(configuredLimit.constrainedBy(receiveMaximum), resumption, adopted))
+        events.send(Event.SessionStarted(configuredLimit, resumption, adopted))
         adopted.await()
     }
 

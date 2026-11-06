@@ -10,11 +10,11 @@ import com.ditchoom.mqtt.controlpacket.PacketId
 import com.ditchoom.mqtt.controlpacket.PacketIdParse
 import com.ditchoom.mqtt.controlpacket.PublishMessage
 import com.ditchoom.mqtt.controlpacket.QualityOfService
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Owns every outbound QoS 1/2 PUBLISH from admission to final acknowledgement. A single

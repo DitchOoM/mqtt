@@ -8,7 +8,6 @@ import com.ditchoom.mqtt.InMemoryPersistence
 import com.ditchoom.mqtt.client.net.awaitPublishComplete
 import com.ditchoom.mqtt.client.net.opaquePayloadUtf8
 import com.ditchoom.mqtt.client.net.runTestNoTimeSkipping
-import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt5.controlpacket.ConnAckProperties
@@ -179,13 +178,12 @@ private class ScriptedBroker(
     suspend fun startClient(): MqttClient {
         val persistence = InMemoryPersistence()
         val request = ConnectionRequest(clientId = "send-quota", keepAliveSeconds = 60, cleanStart = false)
-        val brokerRecord = persistence.addBroker(listOf(MqttConnectionOptions.SocketConnection("scripted", 1883)), request)
-        return MqttClient.start(
-            scope = CoroutineScope(scope.coroutineContext + Dispatchers.Default),
-            broker = brokerRecord,
-            persistence = persistence,
-            connectSingle = { _, _, _ -> connect() },
-        )
+        val brokerRecord = persistence.addBroker(request)
+        return startScriptedClient(
+            CoroutineScope(scope.coroutineContext + Dispatchers.Default),
+            brokerRecord,
+            persistence,
+        ) { _, _, _, _ -> connect() }
     }
 
     private fun connect(): Connection<ControlPacket> {

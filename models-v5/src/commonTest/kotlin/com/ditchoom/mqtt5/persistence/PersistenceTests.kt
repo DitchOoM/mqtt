@@ -4,7 +4,6 @@ import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Default
 import com.ditchoom.mqtt.Persistence
 import com.ditchoom.mqtt.connection.MqttBroker
-import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.ISubscription
 import com.ditchoom.mqtt.controlpacket.NO_PACKET_ID
 import com.ditchoom.mqtt.controlpacket.QualityOfService
@@ -28,7 +27,6 @@ import kotlin.random.Random
 import kotlin.random.nextUInt
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.time.Duration.Companion.seconds
 
 // Ignore reason: v5 SQL / IDB persistence implementations were removed pending
 // the Phase B consumer-supplied Persistence design — every newDefaultPersistence
@@ -47,7 +45,7 @@ class PersistenceTests {
         }
         return Pair(
             p,
-            p.addBroker(setOf(testMqttConnectionOptions, testWsMqttConnectionOptions), connectionRequestMqtt5),
+            p.addBroker(connectionRequestMqtt5),
         )
     }
 
@@ -293,11 +291,10 @@ class PersistenceTests {
         runTest {
             val p = newDefaultPersistence(inMemory = true)
             assertEquals(0, p.allBrokers().size, "initial broker size")
-            val broker = p.addBroker(setOf(testMqttConnectionOptions, testWsMqttConnectionOptions), connectionRequestMqtt5)
+            val broker = p.addBroker(connectionRequestMqtt5)
             assertEquals(broker, p.brokerWithId(broker.identifier))
             val allBrokers = p.allBrokers()
             assertEquals(1, allBrokers.size, "single broker size")
-            assertEquals(broker.connectionOps, allBrokers.first().connectionOps.toSet(), "broker match connection ops")
             assertEquals(broker.connectionRequest, allBrokers.first().connectionRequest, "broker match connection request")
             assertEquals(broker.identifier, allBrokers.first().identifier, "broker match id")
             p.removeBroker(broker.identifier)
@@ -305,22 +302,6 @@ class PersistenceTests {
         }
 
     companion object {
-        private val testMqttConnectionOptions =
-            MqttConnectionOptions.SocketConnection(
-                "localhost",
-                1883,
-                tlsEnabled = false,
-                connectionTimeout = 10.seconds,
-            )
-        private val testWsMqttConnectionOptions =
-            MqttConnectionOptions.WebSocketConnectionOptions(
-                "localhost",
-                80,
-                tlsEnabled = false,
-                protocols = listOf("mqttv3.1"),
-                websocketEndpoint = "/mqtt",
-                connectionTimeout = 10.seconds,
-            )
         private val connectionRequestMqtt5 =
             ConnectionRequest(
                 clientId = "taco123-" + Random.nextUInt(),

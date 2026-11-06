@@ -8,7 +8,6 @@ import com.ditchoom.buffer.withPooling
 import com.ditchoom.mqtt.InMemoryPersistence
 import com.ditchoom.mqtt.client.MqttClient
 import com.ditchoom.mqtt.connection.MqttBroker
-import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.OpaquePublishPayloadCodec
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
@@ -48,14 +47,7 @@ class EndToEndBenchmark {
     private val port = 1883
     private val messageCount = 200
 
-    private fun connectionOptions() =
-        MqttConnectionOptions.SocketConnection(
-            host,
-            port,
-            tlsEnabled = false,
-            connectionTimeout = 10.seconds,
-            readTimeout = 30.seconds,
-        )
+    private fun connectionOptions() = tcpEndpoint(host, port, timeout = 10.seconds)
 
     private fun connectionRequest() =
         ConnectionRequest(
@@ -72,7 +64,7 @@ class EndToEndBenchmark {
         var lastException: Exception? = null
         for (attempt in 1..maxAttempts) {
             try {
-                return MqttClient.start(scope, broker, persistence, connectSingle = createConnectFactory(broker))
+                return startClient(scope, broker, persistence, connectionOptions())
             } catch (e: Exception) {
                 lastException = e
                 if (attempt < maxAttempts) {
@@ -98,7 +90,7 @@ class EndToEndBenchmark {
             val filter = TopicFilter.fromOrThrow(topicStr)
             val persistence = InMemoryPersistence()
             val connReq = connectionRequest()
-            val broker = persistence.addBroker(listOf(connectionOptions()), connReq)
+            val broker = persistence.addBroker(connReq)
             val scope = CoroutineScope(Dispatchers.Default)
             val client = connectWithRetry(scope, broker, persistence)
 

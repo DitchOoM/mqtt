@@ -1,11 +1,9 @@
 package com.ditchoom.mqtt.client
 
-import com.ditchoom.buffer.codec.Codec
-import com.ditchoom.buffer.codec.Payload
 import com.ditchoom.buffer.flow.Connection
 import com.ditchoom.mqtt.Persistence
+import com.ditchoom.mqtt.client.net.MqttConnector
 import com.ditchoom.mqtt.connection.MqttBroker
-import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.IConnectionAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IDisconnectNotification
@@ -33,29 +31,25 @@ import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeSource
 
 /**
- * Owns a single MQTT broker connection: iterates [MqttBroker.connectionOps] for failover,
+ * Owns a single MQTT broker connection: iterates [endpoints] in order for failover,
  * performs the CONNECT/CONNACK handshake, runs read/write loops, and surfaces session state.
  *
  * The caller — [MqttClient] — is responsible for re-invoking [run] when the underlying
  * connection ends (session-resume / "stay connected" pattern). That outer loop keeps the
  * reconnection policy in one place; [run] itself is a single-session body.
  *
- * [connectSingle] is atomic: given a [MqttConnectionOptions] and the per-topic codec lookup,
- * establish one transport. Option iteration happens here so each attempted option is counted
- * in [connectionAttempts]. The lookup is invoked by the wire-decoder for every incoming
- * PUBLISH, so threading it through the call (rather than capturing at construction) means
- * a caller-supplied [connectSingle] cannot bypass the per-client [TopicCodecRegistry].
+ * [connector] opens one transport to one endpoint. Endpoint iteration happens here so each
+ * attempt is counted in [connectionAttempts]. The connector receives the per-client
+ * [TopicCodecRegistry] lookup on every call, so no connection can decode PUBLISH payloads with
+ * anything else.
  */
 class ConnectivityManager internal constructor(
     internal val persistence: Persistence,
     internal val broker: MqttBroker,
-    private val publishCodecForTopic: (topicName: String) -> Codec<out Payload>?,
+    private val endpoints: List<MqttEndpoint>,
+    private val codecForTopic: (topicName: String) -> TopicCodec,
     private val connectionScope: CoroutineScope,
-    private val connectSingle: suspend (
-        CoroutineScope,
-        MqttConnectionOptions,
-        (topicName: String) -> Codec<out Payload>?,
-    ) -> Connection<ControlPacket>,
+    private val connector: MqttConnector,
     inFlightLimit: InFlightLimit,
     timeSource: TimeSource,
 ) {
@@ -140,11 +134,11 @@ class ConnectivityManager internal constructor(
 
     private suspend fun connectAndHandshake(): Connection<ControlPacket> {
         var lastException: Throwable? = null
-        for (connectionOp in broker.connectionOps) {
+        for (endpoint in endpoints) {
             connectionAttempts++
             val conn =
                 try {
-                    connectSingle(connectionScope, connectionOp, publishCodecForTopic)
+                    connector.connect(connectionScope, endpoint, broker.connectionRequest.controlPacketFactory, codecForTopic)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (
@@ -160,12 +154,12 @@ class ConnectivityManager internal constructor(
                 // persistent MQTT stream has no per-read deadline), so the handshake would otherwise
                 // block forever against an unresponsive broker. withTimeoutOrNull (not withTimeout)
                 // so a slow option falls through to the next failover option instead of cancelling.
-                val response = withTimeoutOrNull(connectionOp.connectionTimeout) { conn.receive().first() }
+                val response = withTimeoutOrNull(endpoint.connackTimeout) { conn.receive().first() }
                 if (response == null) {
                     conn.close()
                     lastException =
                         MqttConnectionException.ProtocolError(
-                            "Timed out after ${connectionOp.connectionTimeout} awaiting CONNACK",
+                            "Timed out after ${endpoint.connackTimeout} awaiting CONNACK",
                         )
                     continue
                 }
@@ -202,7 +196,7 @@ class ConnectivityManager internal constructor(
                 lastException = e
             }
         }
-        throw lastException ?: IllegalStateException("No connection options configured for broker ${broker.brokerId}")
+        throw lastException ?: IllegalStateException("No endpoints configured for broker ${broker.brokerId}")
     }
 
     /** The only caller of [Connection.send] once the session is up, so frames never interleave. */

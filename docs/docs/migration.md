@@ -316,7 +316,7 @@ dependencies {
 }
 ```
 
-- Built with Kotlin 2.4.21, socket 4.24.0 and buffer 6.30.8.
+- Built with Kotlin 2.4.21, socket 4.24.0 and buffer 6.30.9.
 - Android `minSdk` is now **23**, and the library is compiled against SDK 37.
 
 ### Publishing and QoS changes

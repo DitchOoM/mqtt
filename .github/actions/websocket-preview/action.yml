@@ -35,19 +35,18 @@ runs:
         ref: ${{ steps.sha.outputs.sha }}
         path: .websocket-preview
 
-    # Snapshot mode (no GITHUB_REPOSITORY) plus incrementMinor yields 2.1.0-SNAPSHOT. The AAR
-    # metadata check is skipped because that branch still compiles Android against SDK 36 while
-    # socket 4.24 asks for 37; mqtt itself compiles against 37 and runs the check.
+    # Snapshot mode (no GITHUB_REPOSITORY) plus incrementMinor yields 2.1.0-SNAPSHOT. That branch
+    # still compiles Android against SDK 36 while socket 4.24's AARs require 37, so this throwaway
+    # checkout is built against 37, as mqtt is.
     - name: Publish websocket preview to mavenLocal
       if: steps.cache.outputs.cache-hit != 'true'
       shell: bash
       working-directory: .websocket-preview
       env:
         LOCAL_SINGLE_HOST_PUBLISH: "true"
-      run: >-
-        env -u GITHUB_REPOSITORY ./gradlew publishToMavenLocal -PincrementMinor=true
-        -x test -x checkReleaseAarMetadata -x :websocket-tcp:checkReleaseAarMetadata
-        --no-configuration-cache
+      run: |
+        sed -i.bak 's/compileSdk = 36/compileSdk = 37/' build.gradle.kts websocket-tcp/build.gradle.kts
+        env -u GITHUB_REPOSITORY ./gradlew publishToMavenLocal -PincrementMinor=true -x test --no-configuration-cache
 
     - name: Point Gradle at the preview
       shell: bash

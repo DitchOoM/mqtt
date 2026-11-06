@@ -1,5 +1,6 @@
 package com.ditchoom.mqtt
 
+import com.ditchoom.buffer.MalformedTextException
 import com.ditchoom.buffer.codec.DecodeException
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -52,6 +53,13 @@ class DecodeBoundaryTest {
     fun wrapsCharsetFamilyByName() {
         assertFailsWith<MalformedPacketException> {
             mappingMalformedWire { throw MalformedInputException() }
+        }
+    }
+
+    @Test
+    fun wrapsIllFormedUtf8() {
+        assertFailsWith<MalformedPacketException> {
+            mappingMalformedWire { throw MalformedTextException.IllFormedBytes(3) }
         }
     }
 

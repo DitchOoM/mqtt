@@ -1,0 +1,55 @@
+name: "Extra platforms"
+
+# Hosts the main Linux and Apple builds do not cover: arm64 Linux (JVM, JS and Wasm on an arm64
+# JDK and Node) and x86_64 macOS (the macosX64 native target). There is no Windows leg because
+# mqtt declares no mingw target.
+
+on:
+  workflow_call:
+
+jobs:
+  platform:
+    name: "${{ matrix.name }}"
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: "Linux arm64 / JVM / JS / Wasm"
+            runner: ubuntu-24.04-arm
+            tasks: jvmTest jsNodeTest wasmJsNodeTest
+          - name: "macOS x86_64 / macosX64"
+            runner: macos-15-intel
+            tasks: macosX64Test
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'zulu'
+          java-version: '21'
+          cache: gradle
+
+      # TEMPORARY: websocket 2.1.0 is not on Maven Central yet (see gradle/libs.versions.toml).
+      - name: Build websocket 2.1.0 preview
+        uses: ./.github/actions/websocket-preview
+
+      - name: Cache Konan
+        uses: actions/cache@v5
+        with:
+          path: ~/.konan
+          key: konan-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('gradle/libs.versions.toml') }}
+          restore-keys: konan-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: Test
+        run: ./gradlew ${{ matrix.tasks }}
+
+      - name: Upload reports
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: platform-reports-${{ runner.os }}-${{ runner.arch }}
+          path: "*/build/reports/tests"
+          retention-days: 7

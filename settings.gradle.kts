@@ -1,5 +1,8 @@
 pluginManagement {
     repositories {
+        // A buffer snapshot override (see dependencyResolutionManagement below) also moves the
+        // codec-schema plugin, which is then only in mavenLocal.
+        if (providers.gradleProperty("ditchoomBufferVersion").isPresent) mavenLocal()
         google()
         gradlePluginPortal()
         mavenCentral()

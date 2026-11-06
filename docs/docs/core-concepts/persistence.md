@@ -25,13 +25,17 @@ val persistence = connectionRequest.controlPacketFactory.defaultPersistence(inMe
 
 ## Registering a broker
 
-Register the broker in the persistence you'll pass to `MqttClient.start`. `addBroker` takes a single
-connection option or a collection (for [failover](../recipes/reconnection-and-high-availability.md)),
-plus the CONNECT:
+Register the broker in the persistence you'll pass to `MqttClient.start`. `addBroker` takes the
+CONNECT and returns an `MqttBroker`, the session identity that the stored state is keyed by:
 
 ```kotlin
-val broker = persistence.addBroker(connection, connectionRequest)
+val broker = persistence.addBroker(connectionRequest)
 ```
+
+The broker does not record how it is reached. Pass the [`MqttEndpoint`](./connection-options.md)
+(and any failover endpoints) to `MqttClient.start` each time you start the client. Use
+`allBrokers()`, `brokerWithId(identifier)` and `removeBroker(identifier)` to find or delete stored
+brokers.
 
 ## What survives a restart
 

@@ -12,7 +12,8 @@ class DitchoomVersionPlugin : Plugin<Project> {
                 project.hasProperty("incrementMajor") && project.property("incrementMajor") == "true"
             val incrementMinor =
                 project.hasProperty("incrementMinor") && project.property("incrementMinor") == "true"
-            VersionCalculator.getNextVersion(artifact, snapshot, incrementMajor, incrementMinor)
+            val floor = Version(project.property("releaseVersionFloor") as String, snapshot = false)
+            VersionCalculator.getNextVersion(artifact, snapshot, incrementMajor, incrementMinor, floor)
         }
 
         project.extensions.extraProperties.set("getNextVersion", getNextVersion)

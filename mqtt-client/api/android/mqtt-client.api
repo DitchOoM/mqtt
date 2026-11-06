@@ -1,0 +1,307 @@
+public abstract interface class com/ditchoom/mqtt/client/ConnectionState {
+}
+
+public final class com/ditchoom/mqtt/client/ConnectionState$Connected : com/ditchoom/mqtt/client/ConnectionState {
+	public fun <init> (Lcom/ditchoom/mqtt/controlpacket/IConnectionAcknowledgment;)V
+	public final fun component1 ()Lcom/ditchoom/mqtt/controlpacket/IConnectionAcknowledgment;
+	public final fun copy (Lcom/ditchoom/mqtt/controlpacket/IConnectionAcknowledgment;)Lcom/ditchoom/mqtt/client/ConnectionState$Connected;
+	public static synthetic fun copy$default (Lcom/ditchoom/mqtt/client/ConnectionState$Connected;Lcom/ditchoom/mqtt/controlpacket/IConnectionAcknowledgment;ILjava/lang/Object;)Lcom/ditchoom/mqtt/client/ConnectionState$Connected;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getConnack ()Lcom/ditchoom/mqtt/controlpacket/IConnectionAcknowledgment;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt/client/ConnectionState$Disconnected : com/ditchoom/mqtt/client/ConnectionState {
+	public static final field INSTANCE Lcom/ditchoom/mqtt/client/ConnectionState$Disconnected;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt/client/ConnectionState$Handshaking : com/ditchoom/mqtt/client/ConnectionState {
+	public static final field INSTANCE Lcom/ditchoom/mqtt/client/ConnectionState$Handshaking;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt/client/ConnectivityManager {
+	public final fun currentConnack ()Lcom/ditchoom/mqtt/controlpacket/IConnectionAcknowledgment;
+	public final fun getConnectionAttempts ()J
+	public final fun getConnectionBroadcastChannel ()Lkotlinx/coroutines/flow/SharedFlow;
+	public final fun getConnectionCount ()J
+	public final fun getConnectionState ()Lkotlinx/coroutines/flow/StateFlow;
+	public final fun getProcessor ()Lcom/ditchoom/mqtt/client/ControlPacketProcessor;
+	public final fun run (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun sendDisconnect (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun shutdown (ZZLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun shutdown$default (Lcom/ditchoom/mqtt/client/ConnectivityManager;ZZLkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+}
+
+public final class com/ditchoom/mqtt/client/ControlPacketHelperKt {
+	public static final fun toBuffer (Lcom/ditchoom/mqtt/controlpacket/ControlPacket;Lcom/ditchoom/buffer/BufferFactory;)Lcom/ditchoom/buffer/ReadBuffer;
+	public static final fun toBuffer (Ljava/util/Collection;Lcom/ditchoom/buffer/BufferFactory;)Lcom/ditchoom/buffer/ReadBuffer;
+	public static synthetic fun toBuffer$default (Lcom/ditchoom/mqtt/controlpacket/ControlPacket;Lcom/ditchoom/buffer/BufferFactory;ILjava/lang/Object;)Lcom/ditchoom/buffer/ReadBuffer;
+	public static synthetic fun toBuffer$default (Ljava/util/Collection;Lcom/ditchoom/buffer/BufferFactory;ILjava/lang/Object;)Lcom/ditchoom/buffer/ReadBuffer;
+}
+
+public final class com/ditchoom/mqtt/client/ControlPacketProcessor {
+	public final fun getPingCount ()J
+	public final fun getPingResponseCount ()J
+	public final fun noteActivity ()V
+	public final fun processIncomingMessages (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun queueMessagesOnReconnect (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun replayIncomingMessagesOnReconnect (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun runPingTimer (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun subscribe (Lcom/ditchoom/mqtt/controlpacket/ISubscribeRequest;ZLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun subscribe$default (Lcom/ditchoom/mqtt/client/ControlPacketProcessor;Lcom/ditchoom/mqtt/controlpacket/ISubscribeRequest;ZLkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public final fun unsubscribe (Lcom/ditchoom/mqtt/controlpacket/IUnsubscribeRequest;ZLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun unsubscribe$default (Lcom/ditchoom/mqtt/client/ControlPacketProcessor;Lcom/ditchoom/mqtt/controlpacket/IUnsubscribeRequest;ZLkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+}
+
+public final class com/ditchoom/mqtt/client/InFlightLimit {
+	public static final field Companion Lcom/ditchoom/mqtt/client/InFlightLimit$Companion;
+	public static final field MAX I
+	public static final synthetic fun box-impl (I)Lcom/ditchoom/mqtt/client/InFlightLimit;
+	public static final fun constrainedBy-ZAeiIP8 (II)I
+	public static fun constructor-impl (I)I
+	public fun equals (Ljava/lang/Object;)Z
+	public static fun equals-impl (ILjava/lang/Object;)Z
+	public static final fun equals-impl0 (II)Z
+	public final fun getValue ()I
+	public fun hashCode ()I
+	public static fun hashCode-impl (I)I
+	public fun toString ()Ljava/lang/String;
+	public static fun toString-impl (I)Ljava/lang/String;
+	public final synthetic fun unbox-impl ()I
+}
+
+public final class com/ditchoom/mqtt/client/InFlightLimit$Companion {
+	public final fun getProtocolMaximum-JC5oDVQ ()I
+}
+
+public final class com/ditchoom/mqtt/client/MqttClient {
+	public static final field Companion Lcom/ditchoom/mqtt/client/MqttClient$Companion;
+	public final fun awaitConnectivity (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun connectionAttempts (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun connectionCount (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun currentConnectionAcknowledgment (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun getBroker ()Lcom/ditchoom/mqtt/connection/MqttBroker;
+	public final fun getConnectionState ()Lkotlinx/coroutines/flow/StateFlow;
+	public final fun getPacketFactory ()Lcom/ditchoom/mqtt/controlpacket/ControlPacketFactory;
+	public final fun observe (Lcom/ditchoom/mqtt/controlpacket/TopicFilter;Lcom/ditchoom/buffer/codec/Codec;)Lkotlinx/coroutines/flow/Flow;
+	public final fun pendingPublishes (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun pingCount (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun pingResponseCount (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun publish (Lcom/ditchoom/mqtt/controlpacket/PublishMessage;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun publish (Ljava/lang/String;Lcom/ditchoom/mqtt/controlpacket/QualityOfService;Lcom/ditchoom/buffer/ReadBuffer;ZLcom/ditchoom/buffer/BufferFactory;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun publish (Ljava/lang/String;Ljava/lang/Object;Lcom/ditchoom/buffer/codec/Codec;Lcom/ditchoom/mqtt/controlpacket/QualityOfService;ZLcom/ditchoom/buffer/BufferFactory;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun publish$default (Lcom/ditchoom/mqtt/client/MqttClient;Ljava/lang/String;Lcom/ditchoom/mqtt/controlpacket/QualityOfService;Lcom/ditchoom/buffer/ReadBuffer;ZLcom/ditchoom/buffer/BufferFactory;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static synthetic fun publish$default (Lcom/ditchoom/mqtt/client/MqttClient;Ljava/lang/String;Ljava/lang/Object;Lcom/ditchoom/buffer/codec/Codec;Lcom/ditchoom/mqtt/controlpacket/QualityOfService;ZLcom/ditchoom/buffer/BufferFactory;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public final fun sendDisconnect (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun sendQueuedPublishMessage (ILcom/ditchoom/mqtt/controlpacket/PublishMessage;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun sendQueuedSubscribeMessage (ILkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun sendQueuedUnsubscribeMessage (ILkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun shutdown (ZZLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun shutdown$default (Lcom/ditchoom/mqtt/client/MqttClient;ZZLkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public final fun subscribe (Lcom/ditchoom/mqtt/controlpacket/ISubscribeRequest;Lcom/ditchoom/buffer/codec/Codec;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun subscribe (Ljava/lang/String;Lcom/ditchoom/buffer/codec/Codec;Lcom/ditchoom/mqtt/controlpacket/QualityOfService;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun subscribe (Ljava/lang/String;Lcom/ditchoom/buffer/codec/Codec;Lcom/ditchoom/mqtt/controlpacket/QualityOfService;Lkotlin/jvm/functions/Function3;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun subscribe (Ljava/util/Set;Lcom/ditchoom/buffer/codec/Codec;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun subscribe$default (Lcom/ditchoom/mqtt/client/MqttClient;Ljava/lang/String;Lcom/ditchoom/buffer/codec/Codec;Lcom/ditchoom/mqtt/controlpacket/QualityOfService;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static synthetic fun subscribe$default (Lcom/ditchoom/mqtt/client/MqttClient;Ljava/lang/String;Lcom/ditchoom/buffer/codec/Codec;Lcom/ditchoom/mqtt/controlpacket/QualityOfService;Lkotlin/jvm/functions/Function3;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public final fun unsubscribe (Lcom/ditchoom/mqtt/controlpacket/IUnsubscribeRequest;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun unsubscribe (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun unsubscribe (Ljava/util/Set;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public final class com/ditchoom/mqtt/client/MqttClient$Companion {
+	public final fun start-CZBXsE8 (Lkotlinx/coroutines/CoroutineScope;Lcom/ditchoom/mqtt/connection/MqttBroker;Lcom/ditchoom/mqtt/Persistence;Lcom/ditchoom/mqtt/client/MqttEndpoint;Ljava/util/List;Lcom/ditchoom/buffer/BufferFactory;ILkotlin/time/TimeSource;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun start-CZBXsE8$default (Lcom/ditchoom/mqtt/client/MqttClient$Companion;Lkotlinx/coroutines/CoroutineScope;Lcom/ditchoom/mqtt/connection/MqttBroker;Lcom/ditchoom/mqtt/Persistence;Lcom/ditchoom/mqtt/client/MqttEndpoint;Ljava/util/List;Lcom/ditchoom/buffer/BufferFactory;ILkotlin/time/TimeSource;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+}
+
+public abstract class com/ditchoom/mqtt/client/MqttConnectionException : java/lang/Exception {
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/Throwable;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+}
+
+public final class com/ditchoom/mqtt/client/MqttConnectionException$ConnackRejected : com/ditchoom/mqtt/client/MqttConnectionException {
+	public synthetic fun <init> (Ljava/lang/String;BLjava/lang/Throwable;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Ljava/lang/String;BLjava/lang/Throwable;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getReasonCode-w2LRezQ ()B
+}
+
+public final class com/ditchoom/mqtt/client/MqttConnectionException$ProtocolError : com/ditchoom/mqtt/client/MqttConnectionException {
+	public fun <init> (Ljava/lang/String;Ljava/lang/Throwable;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/Throwable;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+}
+
+public final class com/ditchoom/mqtt/client/MqttEndpoint {
+	public synthetic fun <init> (Ljava/lang/String;ILcom/ditchoom/socket/transport/Transport;Lcom/ditchoom/socket/TransportConfig;JILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Ljava/lang/String;ILcom/ditchoom/socket/transport/Transport;Lcom/ditchoom/socket/TransportConfig;JLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()I
+	public final fun component3 ()Lcom/ditchoom/socket/transport/Transport;
+	public final fun component4 ()Lcom/ditchoom/socket/TransportConfig;
+	public final fun component5-UwyO8pc ()J
+	public final fun copy-9VgGkz4 (Ljava/lang/String;ILcom/ditchoom/socket/transport/Transport;Lcom/ditchoom/socket/TransportConfig;J)Lcom/ditchoom/mqtt/client/MqttEndpoint;
+	public static synthetic fun copy-9VgGkz4$default (Lcom/ditchoom/mqtt/client/MqttEndpoint;Ljava/lang/String;ILcom/ditchoom/socket/transport/Transport;Lcom/ditchoom/socket/TransportConfig;JILjava/lang/Object;)Lcom/ditchoom/mqtt/client/MqttEndpoint;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getConfig ()Lcom/ditchoom/socket/TransportConfig;
+	public final fun getConnackTimeout-UwyO8pc ()J
+	public final fun getHost ()Ljava/lang/String;
+	public final fun getPort ()I
+	public final fun getTransport ()Lcom/ditchoom/socket/transport/Transport;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class com/ditchoom/mqtt/client/PublishResult {
+}
+
+public final class com/ditchoom/mqtt/client/PublishResult$QoS0Sent : com/ditchoom/mqtt/client/PublishResult {
+	public static final field INSTANCE Lcom/ditchoom/mqtt/client/PublishResult$QoS0Sent;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt/client/PublishResult$QoS1 : com/ditchoom/mqtt/client/PublishResult {
+	public synthetic fun <init> (ILkotlinx/coroutines/flow/StateFlow;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-MDr8GFc ()I
+	public final fun component2 ()Lkotlinx/coroutines/flow/StateFlow;
+	public final fun copy-qaHEy4E (ILkotlinx/coroutines/flow/StateFlow;)Lcom/ditchoom/mqtt/client/PublishResult$QoS1;
+	public static synthetic fun copy-qaHEy4E$default (Lcom/ditchoom/mqtt/client/PublishResult$QoS1;ILkotlinx/coroutines/flow/StateFlow;ILjava/lang/Object;)Lcom/ditchoom/mqtt/client/PublishResult$QoS1;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getPacketId-MDr8GFc ()I
+	public final fun getState ()Lkotlinx/coroutines/flow/StateFlow;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt/client/PublishResult$QoS2 : com/ditchoom/mqtt/client/PublishResult {
+	public synthetic fun <init> (ILkotlinx/coroutines/flow/StateFlow;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-MDr8GFc ()I
+	public final fun component2 ()Lkotlinx/coroutines/flow/StateFlow;
+	public final fun copy-qaHEy4E (ILkotlinx/coroutines/flow/StateFlow;)Lcom/ditchoom/mqtt/client/PublishResult$QoS2;
+	public static synthetic fun copy-qaHEy4E$default (Lcom/ditchoom/mqtt/client/PublishResult$QoS2;ILkotlinx/coroutines/flow/StateFlow;ILjava/lang/Object;)Lcom/ditchoom/mqtt/client/PublishResult$QoS2;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getPacketId-MDr8GFc ()I
+	public final fun getState ()Lkotlinx/coroutines/flow/StateFlow;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class com/ditchoom/mqtt/client/QoS1State {
+}
+
+public final class com/ditchoom/mqtt/client/QoS1State$Acknowledged : com/ditchoom/mqtt/client/QoS1State {
+	public fun <init> (Lcom/ditchoom/mqtt/controlpacket/IPublishAcknowledgment;)V
+	public final fun component1 ()Lcom/ditchoom/mqtt/controlpacket/IPublishAcknowledgment;
+	public final fun copy (Lcom/ditchoom/mqtt/controlpacket/IPublishAcknowledgment;)Lcom/ditchoom/mqtt/client/QoS1State$Acknowledged;
+	public static synthetic fun copy$default (Lcom/ditchoom/mqtt/client/QoS1State$Acknowledged;Lcom/ditchoom/mqtt/controlpacket/IPublishAcknowledgment;ILjava/lang/Object;)Lcom/ditchoom/mqtt/client/QoS1State$Acknowledged;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAck ()Lcom/ditchoom/mqtt/controlpacket/IPublishAcknowledgment;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt/client/QoS1State$Queued : com/ditchoom/mqtt/client/QoS1State {
+	public static final field INSTANCE Lcom/ditchoom/mqtt/client/QoS1State$Queued;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt/client/QoS1State$Sent : com/ditchoom/mqtt/client/QoS1State {
+	public static final field INSTANCE Lcom/ditchoom/mqtt/client/QoS1State$Sent;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt/client/QoS1State$SessionDiscarded : com/ditchoom/mqtt/client/QoS1State {
+	public static final field INSTANCE Lcom/ditchoom/mqtt/client/QoS1State$SessionDiscarded;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class com/ditchoom/mqtt/client/QoS2State {
+}
+
+public final class com/ditchoom/mqtt/client/QoS2State$Complete : com/ditchoom/mqtt/client/QoS2State {
+	public fun <init> (Lcom/ditchoom/mqtt/controlpacket/IPublishComplete;)V
+	public final fun component1 ()Lcom/ditchoom/mqtt/controlpacket/IPublishComplete;
+	public final fun copy (Lcom/ditchoom/mqtt/controlpacket/IPublishComplete;)Lcom/ditchoom/mqtt/client/QoS2State$Complete;
+	public static synthetic fun copy$default (Lcom/ditchoom/mqtt/client/QoS2State$Complete;Lcom/ditchoom/mqtt/controlpacket/IPublishComplete;ILjava/lang/Object;)Lcom/ditchoom/mqtt/client/QoS2State$Complete;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getComp ()Lcom/ditchoom/mqtt/controlpacket/IPublishComplete;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt/client/QoS2State$Queued : com/ditchoom/mqtt/client/QoS2State {
+	public static final field INSTANCE Lcom/ditchoom/mqtt/client/QoS2State$Queued;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt/client/QoS2State$Received : com/ditchoom/mqtt/client/QoS2State {
+	public static final field INSTANCE Lcom/ditchoom/mqtt/client/QoS2State$Received;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt/client/QoS2State$Released : com/ditchoom/mqtt/client/QoS2State {
+	public static final field INSTANCE Lcom/ditchoom/mqtt/client/QoS2State$Released;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt/client/QoS2State$Sent : com/ditchoom/mqtt/client/QoS2State {
+	public static final field INSTANCE Lcom/ditchoom/mqtt/client/QoS2State$Sent;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt/client/QoS2State$SessionDiscarded : com/ditchoom/mqtt/client/QoS2State {
+	public static final field INSTANCE Lcom/ditchoom/mqtt/client/QoS2State$SessionDiscarded;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt/client/SubscribeOperation : kotlinx/coroutines/flow/Flow {
+	public fun <init> (ILjava/util/Map;Lkotlinx/coroutines/Deferred;)V
+	public fun collect (Lkotlinx/coroutines/flow/FlowCollector;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun component1 ()I
+	public final fun component2 ()Ljava/util/Map;
+	public final fun component3 ()Lkotlinx/coroutines/Deferred;
+	public final fun copy (ILjava/util/Map;Lkotlinx/coroutines/Deferred;)Lcom/ditchoom/mqtt/client/SubscribeOperation;
+	public static synthetic fun copy$default (Lcom/ditchoom/mqtt/client/SubscribeOperation;ILjava/util/Map;Lkotlinx/coroutines/Deferred;ILjava/lang/Object;)Lcom/ditchoom/mqtt/client/SubscribeOperation;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getPacketId ()I
+	public final fun getSubAck ()Lkotlinx/coroutines/Deferred;
+	public final fun getSubscriptions ()Ljava/util/Map;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt/client/UnsubscribeOperation {
+	public fun <init> (ILkotlinx/coroutines/Deferred;)V
+	public final fun component1 ()I
+	public final fun component2 ()Lkotlinx/coroutines/Deferred;
+	public final fun copy (ILkotlinx/coroutines/Deferred;)Lcom/ditchoom/mqtt/client/UnsubscribeOperation;
+	public static synthetic fun copy$default (Lcom/ditchoom/mqtt/client/UnsubscribeOperation;ILkotlinx/coroutines/Deferred;ILjava/lang/Object;)Lcom/ditchoom/mqtt/client/UnsubscribeOperation;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getPacketId ()I
+	public final fun getUnsubAck ()Lkotlinx/coroutines/Deferred;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+

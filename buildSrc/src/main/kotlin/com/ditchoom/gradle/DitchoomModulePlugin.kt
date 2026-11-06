@@ -8,6 +8,8 @@ import org.gradle.api.tasks.bundling.Jar
 import org.gradle.kotlin.dsl.configure
 import org.gradle.kotlin.dsl.register
 import org.gradle.plugins.signing.SigningExtension
+import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
+import org.jetbrains.kotlin.gradle.dsl.abi.ExperimentalAbiValidation
 import org.jetbrains.kotlin.konan.target.HostManager
 
 class DitchoomModulePlugin : Plugin<Project> {
@@ -104,6 +106,20 @@ class DitchoomModulePlugin : Plugin<Project> {
             filter {
                 exclude { element ->
                     element.file.path.contains("/build/")
+                }
+            }
+        }
+
+        // Binary-compatibility gate: `checkKotlinAbi` (part of `check`) compares the public ABI with
+        // the dumps committed under each module's `api/` directory, and `updateKotlinAbi` rewrites
+        // them after an intentional change. A klib dump records the exact target set it was taken
+        // from, and only a macOS host declares the full set (JVM, Android, JS, Wasm and every Apple
+        // target), so validation is configured there and nowhere else.
+        if (HostManager.hostIsMac) {
+            project.pluginManager.withPlugin("org.jetbrains.kotlin.multiplatform") {
+                project.extensions.configure<KotlinMultiplatformExtension> {
+                    @OptIn(ExperimentalAbiValidation::class)
+                    abiValidation()
                 }
             }
         }

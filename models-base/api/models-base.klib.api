@@ -1,0 +1,814 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, iosX64, js, macosArm64, macosX64, tvosArm64, tvosSimulatorArm64, tvosX64, wasmJs, watchosArm64, watchosSimulatorArm64, watchosX64]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <com.ditchoom:models-base>
+final enum class com.ditchoom.mqtt.controlpacket.format.fixed/DirectionOfFlow : kotlin/Enum<com.ditchoom.mqtt.controlpacket.format.fixed/DirectionOfFlow> { // com.ditchoom.mqtt.controlpacket.format.fixed/DirectionOfFlow|null[0]
+    enum entry BIDIRECTIONAL // com.ditchoom.mqtt.controlpacket.format.fixed/DirectionOfFlow.BIDIRECTIONAL|null[0]
+    enum entry CLIENT_TO_SERVER // com.ditchoom.mqtt.controlpacket.format.fixed/DirectionOfFlow.CLIENT_TO_SERVER|null[0]
+    enum entry FORBIDDEN // com.ditchoom.mqtt.controlpacket.format.fixed/DirectionOfFlow.FORBIDDEN|null[0]
+    enum entry SERVER_TO_CLIENT // com.ditchoom.mqtt.controlpacket.format.fixed/DirectionOfFlow.SERVER_TO_CLIENT|null[0]
+
+    final val entries // com.ditchoom.mqtt.controlpacket.format.fixed/DirectionOfFlow.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<com.ditchoom.mqtt.controlpacket.format.fixed/DirectionOfFlow> // com.ditchoom.mqtt.controlpacket.format.fixed/DirectionOfFlow.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): com.ditchoom.mqtt.controlpacket.format.fixed/DirectionOfFlow // com.ditchoom.mqtt.controlpacket.format.fixed/DirectionOfFlow.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<com.ditchoom.mqtt.controlpacket.format.fixed/DirectionOfFlow> // com.ditchoom.mqtt.controlpacket.format.fixed/DirectionOfFlow.values|values#static(){}[0]
+}
+
+final enum class com.ditchoom.mqtt.controlpacket.format/ReasonCode : kotlin/Enum<com.ditchoom.mqtt.controlpacket.format/ReasonCode> { // com.ditchoom.mqtt.controlpacket.format/ReasonCode|null[0]
+    enum entry ADMINISTRATIVE_ACTION // com.ditchoom.mqtt.controlpacket.format/ReasonCode.ADMINISTRATIVE_ACTION|null[0]
+    enum entry BAD_AUTHENTICATION_METHOD // com.ditchoom.mqtt.controlpacket.format/ReasonCode.BAD_AUTHENTICATION_METHOD|null[0]
+    enum entry BAD_USER_NAME_OR_PASSWORD // com.ditchoom.mqtt.controlpacket.format/ReasonCode.BAD_USER_NAME_OR_PASSWORD|null[0]
+    enum entry BANNED // com.ditchoom.mqtt.controlpacket.format/ReasonCode.BANNED|null[0]
+    enum entry CLIENT_IDENTIFIER_NOT_VALID // com.ditchoom.mqtt.controlpacket.format/ReasonCode.CLIENT_IDENTIFIER_NOT_VALID|null[0]
+    enum entry CONNECTION_RATE_EXCEEDED // com.ditchoom.mqtt.controlpacket.format/ReasonCode.CONNECTION_RATE_EXCEEDED|null[0]
+    enum entry CONTINUE_AUTHENTICATION // com.ditchoom.mqtt.controlpacket.format/ReasonCode.CONTINUE_AUTHENTICATION|null[0]
+    enum entry DISCONNECT_WITH_WILL_MESSAGE // com.ditchoom.mqtt.controlpacket.format/ReasonCode.DISCONNECT_WITH_WILL_MESSAGE|null[0]
+    enum entry GRANTED_QOS_0 // com.ditchoom.mqtt.controlpacket.format/ReasonCode.GRANTED_QOS_0|null[0]
+    enum entry GRANTED_QOS_1 // com.ditchoom.mqtt.controlpacket.format/ReasonCode.GRANTED_QOS_1|null[0]
+    enum entry GRANTED_QOS_2 // com.ditchoom.mqtt.controlpacket.format/ReasonCode.GRANTED_QOS_2|null[0]
+    enum entry IMPLEMENTATION_SPECIFIC_ERROR // com.ditchoom.mqtt.controlpacket.format/ReasonCode.IMPLEMENTATION_SPECIFIC_ERROR|null[0]
+    enum entry KEEP_ALIVE_TIMEOUT // com.ditchoom.mqtt.controlpacket.format/ReasonCode.KEEP_ALIVE_TIMEOUT|null[0]
+    enum entry MALFORMED_PACKET // com.ditchoom.mqtt.controlpacket.format/ReasonCode.MALFORMED_PACKET|null[0]
+    enum entry MAXIMUM_CONNECTION_TIME // com.ditchoom.mqtt.controlpacket.format/ReasonCode.MAXIMUM_CONNECTION_TIME|null[0]
+    enum entry MESSAGE_RATE_TOO_HIGH // com.ditchoom.mqtt.controlpacket.format/ReasonCode.MESSAGE_RATE_TOO_HIGH|null[0]
+    enum entry NORMAL_DISCONNECTION // com.ditchoom.mqtt.controlpacket.format/ReasonCode.NORMAL_DISCONNECTION|null[0]
+    enum entry NOT_AUTHORIZED // com.ditchoom.mqtt.controlpacket.format/ReasonCode.NOT_AUTHORIZED|null[0]
+    enum entry NO_MATCHING_SUBSCRIBERS // com.ditchoom.mqtt.controlpacket.format/ReasonCode.NO_MATCHING_SUBSCRIBERS|null[0]
+    enum entry NO_SUBSCRIPTIONS_EXISTED // com.ditchoom.mqtt.controlpacket.format/ReasonCode.NO_SUBSCRIPTIONS_EXISTED|null[0]
+    enum entry PACKET_IDENTIFIER_IN_USE // com.ditchoom.mqtt.controlpacket.format/ReasonCode.PACKET_IDENTIFIER_IN_USE|null[0]
+    enum entry PACKET_IDENTIFIER_NOT_FOUND // com.ditchoom.mqtt.controlpacket.format/ReasonCode.PACKET_IDENTIFIER_NOT_FOUND|null[0]
+    enum entry PACKET_TOO_LARGE // com.ditchoom.mqtt.controlpacket.format/ReasonCode.PACKET_TOO_LARGE|null[0]
+    enum entry PAYLOAD_FORMAT_INVALID // com.ditchoom.mqtt.controlpacket.format/ReasonCode.PAYLOAD_FORMAT_INVALID|null[0]
+    enum entry PROTOCOL_ERROR // com.ditchoom.mqtt.controlpacket.format/ReasonCode.PROTOCOL_ERROR|null[0]
+    enum entry QOS_NOT_SUPPORTED // com.ditchoom.mqtt.controlpacket.format/ReasonCode.QOS_NOT_SUPPORTED|null[0]
+    enum entry QUOTA_EXCEEDED // com.ditchoom.mqtt.controlpacket.format/ReasonCode.QUOTA_EXCEEDED|null[0]
+    enum entry REAUTHENTICATE // com.ditchoom.mqtt.controlpacket.format/ReasonCode.REAUTHENTICATE|null[0]
+    enum entry RECEIVE_MAXIMUM_EXCEEDED // com.ditchoom.mqtt.controlpacket.format/ReasonCode.RECEIVE_MAXIMUM_EXCEEDED|null[0]
+    enum entry RETAIN_NOT_SUPPORTED // com.ditchoom.mqtt.controlpacket.format/ReasonCode.RETAIN_NOT_SUPPORTED|null[0]
+    enum entry SERVER_BUSY // com.ditchoom.mqtt.controlpacket.format/ReasonCode.SERVER_BUSY|null[0]
+    enum entry SERVER_MOVED // com.ditchoom.mqtt.controlpacket.format/ReasonCode.SERVER_MOVED|null[0]
+    enum entry SERVER_SHUTTING_DOWN // com.ditchoom.mqtt.controlpacket.format/ReasonCode.SERVER_SHUTTING_DOWN|null[0]
+    enum entry SERVER_UNAVAILABLE // com.ditchoom.mqtt.controlpacket.format/ReasonCode.SERVER_UNAVAILABLE|null[0]
+    enum entry SESSION_TAKE_OVER // com.ditchoom.mqtt.controlpacket.format/ReasonCode.SESSION_TAKE_OVER|null[0]
+    enum entry SHARED_SUBSCRIPTIONS_NOT_SUPPORTED // com.ditchoom.mqtt.controlpacket.format/ReasonCode.SHARED_SUBSCRIPTIONS_NOT_SUPPORTED|null[0]
+    enum entry SUBSCRIPTION_IDENTIFIERS_NOT_SUPPORTED // com.ditchoom.mqtt.controlpacket.format/ReasonCode.SUBSCRIPTION_IDENTIFIERS_NOT_SUPPORTED|null[0]
+    enum entry SUCCESS // com.ditchoom.mqtt.controlpacket.format/ReasonCode.SUCCESS|null[0]
+    enum entry TOPIC_ALIAS_INVALID // com.ditchoom.mqtt.controlpacket.format/ReasonCode.TOPIC_ALIAS_INVALID|null[0]
+    enum entry TOPIC_FILTER_INVALID // com.ditchoom.mqtt.controlpacket.format/ReasonCode.TOPIC_FILTER_INVALID|null[0]
+    enum entry TOPIC_NAME_INVALID // com.ditchoom.mqtt.controlpacket.format/ReasonCode.TOPIC_NAME_INVALID|null[0]
+    enum entry UNSPECIFIED_ERROR // com.ditchoom.mqtt.controlpacket.format/ReasonCode.UNSPECIFIED_ERROR|null[0]
+    enum entry UNSUPPORTED_PROTOCOL_VERSION // com.ditchoom.mqtt.controlpacket.format/ReasonCode.UNSUPPORTED_PROTOCOL_VERSION|null[0]
+    enum entry USE_ANOTHER_SERVER // com.ditchoom.mqtt.controlpacket.format/ReasonCode.USE_ANOTHER_SERVER|null[0]
+    enum entry WILDCARD_SUBSCRIPTIONS_NOT_SUPPORTED // com.ditchoom.mqtt.controlpacket.format/ReasonCode.WILDCARD_SUBSCRIPTIONS_NOT_SUPPORTED|null[0]
+
+    final val byte // com.ditchoom.mqtt.controlpacket.format/ReasonCode.byte|{}byte[0]
+        final fun <get-byte>(): kotlin/UByte // com.ditchoom.mqtt.controlpacket.format/ReasonCode.byte.<get-byte>|<get-byte>(){}[0]
+    final val entries // com.ditchoom.mqtt.controlpacket.format/ReasonCode.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<com.ditchoom.mqtt.controlpacket.format/ReasonCode> // com.ditchoom.mqtt.controlpacket.format/ReasonCode.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): com.ditchoom.mqtt.controlpacket.format/ReasonCode // com.ditchoom.mqtt.controlpacket.format/ReasonCode.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<com.ditchoom.mqtt.controlpacket.format/ReasonCode> // com.ditchoom.mqtt.controlpacket.format/ReasonCode.values|values#static(){}[0]
+}
+
+final enum class com.ditchoom.mqtt.controlpacket/QualityOfService : kotlin/Enum<com.ditchoom.mqtt.controlpacket/QualityOfService> { // com.ditchoom.mqtt.controlpacket/QualityOfService|null[0]
+    enum entry AT_LEAST_ONCE // com.ditchoom.mqtt.controlpacket/QualityOfService.AT_LEAST_ONCE|null[0]
+    enum entry AT_MOST_ONCE // com.ditchoom.mqtt.controlpacket/QualityOfService.AT_MOST_ONCE|null[0]
+    enum entry EXACTLY_ONCE // com.ditchoom.mqtt.controlpacket/QualityOfService.EXACTLY_ONCE|null[0]
+
+    final val entries // com.ditchoom.mqtt.controlpacket/QualityOfService.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<com.ditchoom.mqtt.controlpacket/QualityOfService> // com.ditchoom.mqtt.controlpacket/QualityOfService.entries.<get-entries>|<get-entries>#static(){}[0]
+    final val integerValue // com.ditchoom.mqtt.controlpacket/QualityOfService.integerValue|{}integerValue[0]
+        final fun <get-integerValue>(): kotlin/Byte // com.ditchoom.mqtt.controlpacket/QualityOfService.integerValue.<get-integerValue>|<get-integerValue>(){}[0]
+
+    final fun isGreaterThan(com.ditchoom.mqtt.controlpacket/QualityOfService): kotlin/Boolean // com.ditchoom.mqtt.controlpacket/QualityOfService.isGreaterThan|isGreaterThan(com.ditchoom.mqtt.controlpacket.QualityOfService){}[0]
+    final fun valueOf(kotlin/String): com.ditchoom.mqtt.controlpacket/QualityOfService // com.ditchoom.mqtt.controlpacket/QualityOfService.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<com.ditchoom.mqtt.controlpacket/QualityOfService> // com.ditchoom.mqtt.controlpacket/QualityOfService.values|values#static(){}[0]
+
+    final object Companion { // com.ditchoom.mqtt.controlpacket/QualityOfService.Companion|null[0]
+        final fun fromBooleans(kotlin/Boolean, kotlin/Boolean): com.ditchoom.mqtt.controlpacket/QualityOfService // com.ditchoom.mqtt.controlpacket/QualityOfService.Companion.fromBooleans|fromBooleans(kotlin.Boolean;kotlin.Boolean){}[0]
+    }
+}
+
+final enum class com.ditchoom.mqtt.controlpacket/Type : kotlin/Enum<com.ditchoom.mqtt.controlpacket/Type> { // com.ditchoom.mqtt.controlpacket/Type|null[0]
+    enum entry BINARY_DATA // com.ditchoom.mqtt.controlpacket/Type.BINARY_DATA|null[0]
+    enum entry BYTE // com.ditchoom.mqtt.controlpacket/Type.BYTE|null[0]
+    enum entry FOUR_BYTE_INTEGER // com.ditchoom.mqtt.controlpacket/Type.FOUR_BYTE_INTEGER|null[0]
+    enum entry TWO_BYTE_INTEGER // com.ditchoom.mqtt.controlpacket/Type.TWO_BYTE_INTEGER|null[0]
+    enum entry UTF_8_ENCODED_STRING // com.ditchoom.mqtt.controlpacket/Type.UTF_8_ENCODED_STRING|null[0]
+    enum entry UTF_8_STRING_PAIR // com.ditchoom.mqtt.controlpacket/Type.UTF_8_STRING_PAIR|null[0]
+    enum entry VARIABLE_BYTE_INTEGER // com.ditchoom.mqtt.controlpacket/Type.VARIABLE_BYTE_INTEGER|null[0]
+
+    final val entries // com.ditchoom.mqtt.controlpacket/Type.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<com.ditchoom.mqtt.controlpacket/Type> // com.ditchoom.mqtt.controlpacket/Type.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): com.ditchoom.mqtt.controlpacket/Type // com.ditchoom.mqtt.controlpacket/Type.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<com.ditchoom.mqtt.controlpacket/Type> // com.ditchoom.mqtt.controlpacket/Type.values|values#static(){}[0]
+}
+
+abstract interface com.ditchoom.mqtt.controlpacket/ControlPacket { // com.ditchoom.mqtt.controlpacket/ControlPacket|null[0]
+    abstract val controlPacketFactory // com.ditchoom.mqtt.controlpacket/ControlPacket.controlPacketFactory|{}controlPacketFactory[0]
+        abstract fun <get-controlPacketFactory>(): com.ditchoom.mqtt.controlpacket/ControlPacketFactory // com.ditchoom.mqtt.controlpacket/ControlPacket.controlPacketFactory.<get-controlPacketFactory>|<get-controlPacketFactory>(){}[0]
+    abstract val controlPacketValue // com.ditchoom.mqtt.controlpacket/ControlPacket.controlPacketValue|{}controlPacketValue[0]
+        abstract fun <get-controlPacketValue>(): kotlin/Byte // com.ditchoom.mqtt.controlpacket/ControlPacket.controlPacketValue.<get-controlPacketValue>|<get-controlPacketValue>(){}[0]
+    abstract val direction // com.ditchoom.mqtt.controlpacket/ControlPacket.direction|{}direction[0]
+        abstract fun <get-direction>(): com.ditchoom.mqtt.controlpacket.format.fixed/DirectionOfFlow // com.ditchoom.mqtt.controlpacket/ControlPacket.direction.<get-direction>|<get-direction>(){}[0]
+    abstract val mqttVersion // com.ditchoom.mqtt.controlpacket/ControlPacket.mqttVersion|{}mqttVersion[0]
+        abstract fun <get-mqttVersion>(): kotlin/Byte // com.ditchoom.mqtt.controlpacket/ControlPacket.mqttVersion.<get-mqttVersion>|<get-mqttVersion>(){}[0]
+    open val byte1 // com.ditchoom.mqtt.controlpacket/ControlPacket.byte1|{}byte1[0]
+        open fun <get-byte1>(): kotlin/UByte // com.ditchoom.mqtt.controlpacket/ControlPacket.byte1.<get-byte1>|<get-byte1>(){}[0]
+    open val flags // com.ditchoom.mqtt.controlpacket/ControlPacket.flags|{}flags[0]
+        open fun <get-flags>(): kotlin/Byte // com.ditchoom.mqtt.controlpacket/ControlPacket.flags.<get-flags>|<get-flags>(){}[0]
+    open val packetIdentifier // com.ditchoom.mqtt.controlpacket/ControlPacket.packetIdentifier|{}packetIdentifier[0]
+        open fun <get-packetIdentifier>(): kotlin/Int // com.ditchoom.mqtt.controlpacket/ControlPacket.packetIdentifier.<get-packetIdentifier>|<get-packetIdentifier>(){}[0]
+
+    open fun encodeBody(com.ditchoom.buffer/WriteBuffer) // com.ditchoom.mqtt.controlpacket/ControlPacket.encodeBody|encodeBody(com.ditchoom.buffer.WriteBuffer){}[0]
+    open fun packetSize(): kotlin/Int // com.ditchoom.mqtt.controlpacket/ControlPacket.packetSize|packetSize(){}[0]
+    open fun payload(com.ditchoom.buffer/WriteBuffer) // com.ditchoom.mqtt.controlpacket/ControlPacket.payload|payload(com.ditchoom.buffer.WriteBuffer){}[0]
+    open fun remainingLength(): kotlin/Int // com.ditchoom.mqtt.controlpacket/ControlPacket.remainingLength|remainingLength(){}[0]
+    open fun serialize(com.ditchoom.buffer/BufferFactory = ...): com.ditchoom.buffer/ReadBuffer // com.ditchoom.mqtt.controlpacket/ControlPacket.serialize|serialize(com.ditchoom.buffer.BufferFactory){}[0]
+    open fun serialize(com.ditchoom.buffer/WriteBuffer) // com.ditchoom.mqtt.controlpacket/ControlPacket.serialize|serialize(com.ditchoom.buffer.WriteBuffer){}[0]
+    open fun validate(): kotlin/Exception? // com.ditchoom.mqtt.controlpacket/ControlPacket.validate|validate(){}[0]
+    open fun validateOrNull(): com.ditchoom.mqtt.controlpacket/ControlPacket? // com.ditchoom.mqtt.controlpacket/ControlPacket.validateOrNull|validateOrNull(){}[0]
+    open fun validateOrThrow(): com.ditchoom.mqtt.controlpacket/ControlPacket // com.ditchoom.mqtt.controlpacket/ControlPacket.validateOrThrow|validateOrThrow(){}[0]
+    open fun variableHeader(com.ditchoom.buffer/WriteBuffer) // com.ditchoom.mqtt.controlpacket/ControlPacket.variableHeader|variableHeader(com.ditchoom.buffer.WriteBuffer){}[0]
+
+    final object Companion { // com.ditchoom.mqtt.controlpacket/ControlPacket.Companion|null[0]
+        final const val MAX_FIXED_HEADER_SIZE // com.ditchoom.mqtt.controlpacket/ControlPacket.Companion.MAX_FIXED_HEADER_SIZE|{}MAX_FIXED_HEADER_SIZE[0]
+            final fun <get-MAX_FIXED_HEADER_SIZE>(): kotlin/Int // com.ditchoom.mqtt.controlpacket/ControlPacket.Companion.MAX_FIXED_HEADER_SIZE.<get-MAX_FIXED_HEADER_SIZE>|<get-MAX_FIXED_HEADER_SIZE>(){}[0]
+
+        final fun (com.ditchoom.buffer/ReadBuffer).readMqttUtf8StringNotValidatedSized(): kotlin/Pair<kotlin/Int, kotlin/String> // com.ditchoom.mqtt.controlpacket/ControlPacket.Companion.readMqttUtf8StringNotValidatedSized|readMqttUtf8StringNotValidatedSized@com.ditchoom.buffer.ReadBuffer(){}[0]
+        final fun (com.ditchoom.buffer/ReadBuffer).readVariableByteInteger(): kotlin/Int // com.ditchoom.mqtt.controlpacket/ControlPacket.Companion.readVariableByteInteger|readVariableByteInteger@com.ditchoom.buffer.ReadBuffer(){}[0]
+        final fun (com.ditchoom.buffer/WriteBuffer).writeMqttUtf8String(kotlin/String): com.ditchoom.buffer/WriteBuffer // com.ditchoom.mqtt.controlpacket/ControlPacket.Companion.writeMqttUtf8String|writeMqttUtf8String@com.ditchoom.buffer.WriteBuffer(kotlin.String){}[0]
+        final fun (com.ditchoom.buffer/WriteBuffer).writeVariableByteInteger(kotlin/Int): com.ditchoom.buffer/WriteBuffer // com.ditchoom.mqtt.controlpacket/ControlPacket.Companion.writeVariableByteInteger|writeVariableByteInteger@com.ditchoom.buffer.WriteBuffer(kotlin.Int){}[0]
+        final fun isValidFirstByte(kotlin/UByte): kotlin/Boolean // com.ditchoom.mqtt.controlpacket/ControlPacket.Companion.isValidFirstByte|isValidFirstByte(kotlin.UByte){}[0]
+        final fun variableByteSize(kotlin/Int): kotlin/Byte // com.ditchoom.mqtt.controlpacket/ControlPacket.Companion.variableByteSize|variableByteSize(kotlin.Int){}[0]
+    }
+}
+
+abstract interface com.ditchoom.mqtt.controlpacket/ControlPacketFactory { // com.ditchoom.mqtt.controlpacket/ControlPacketFactory|null[0]
+    abstract val protocolVersion // com.ditchoom.mqtt.controlpacket/ControlPacketFactory.protocolVersion|{}protocolVersion[0]
+        abstract fun <get-protocolVersion>(): kotlin/Int // com.ditchoom.mqtt.controlpacket/ControlPacketFactory.protocolVersion.<get-protocolVersion>|<get-protocolVersion>(){}[0]
+
+    abstract fun disconnect(com.ditchoom.mqtt.controlpacket.format/ReasonCode = ..., kotlin/ULong? = ..., kotlin/String? = ..., kotlin.collections/List<kotlin/Pair<kotlin/String, kotlin/String>> = ...): com.ditchoom.mqtt.controlpacket/IDisconnectNotification // com.ditchoom.mqtt.controlpacket/ControlPacketFactory.disconnect|disconnect(com.ditchoom.mqtt.controlpacket.format.ReasonCode;kotlin.ULong?;kotlin.String?;kotlin.collections.List<kotlin.Pair<kotlin.String,kotlin.String>>){}[0]
+    abstract fun pingRequest(): com.ditchoom.mqtt.controlpacket/IPingRequest // com.ditchoom.mqtt.controlpacket/ControlPacketFactory.pingRequest|pingRequest(){}[0]
+    abstract fun pingResponse(): com.ditchoom.mqtt.controlpacket/IPingResponse // com.ditchoom.mqtt.controlpacket/ControlPacketFactory.pingResponse|pingResponse(){}[0]
+    abstract fun subscribe(com.ditchoom.mqtt.controlpacket/TopicFilter, com.ditchoom.mqtt.controlpacket/QualityOfService = ..., kotlin/Boolean = ..., kotlin/Boolean = ..., com.ditchoom.mqtt.controlpacket/ISubscription.RetainHandling = ..., kotlin/String? = ..., kotlin.collections/List<kotlin/Pair<kotlin/String, kotlin/String>> = ...): com.ditchoom.mqtt.controlpacket/ISubscribeRequest // com.ditchoom.mqtt.controlpacket/ControlPacketFactory.subscribe|subscribe(com.ditchoom.mqtt.controlpacket.TopicFilter;com.ditchoom.mqtt.controlpacket.QualityOfService;kotlin.Boolean;kotlin.Boolean;com.ditchoom.mqtt.controlpacket.ISubscription.RetainHandling;kotlin.String?;kotlin.collections.List<kotlin.Pair<kotlin.String,kotlin.String>>){}[0]
+    abstract fun subscribe(kotlin.collections/Set<com.ditchoom.mqtt.controlpacket/ISubscription>, kotlin/String? = ..., kotlin.collections/List<kotlin/Pair<kotlin/String, kotlin/String>> = ...): com.ditchoom.mqtt.controlpacket/ISubscribeRequest // com.ditchoom.mqtt.controlpacket/ControlPacketFactory.subscribe|subscribe(kotlin.collections.Set<com.ditchoom.mqtt.controlpacket.ISubscription>;kotlin.String?;kotlin.collections.List<kotlin.Pair<kotlin.String,kotlin.String>>){}[0]
+    abstract fun unsubscribe(kotlin.collections/Set<com.ditchoom.mqtt.controlpacket/TopicFilter>, kotlin.collections/List<kotlin/Pair<kotlin/String, kotlin/String>> = ...): com.ditchoom.mqtt.controlpacket/IUnsubscribeRequest // com.ditchoom.mqtt.controlpacket/ControlPacketFactory.unsubscribe|unsubscribe(kotlin.collections.Set<com.ditchoom.mqtt.controlpacket.TopicFilter>;kotlin.collections.List<kotlin.Pair<kotlin.String,kotlin.String>>){}[0]
+    abstract suspend fun defaultPersistence(kotlin/Any? = ..., kotlin/String = ..., kotlin/Boolean = ...): com.ditchoom.mqtt/Persistence // com.ditchoom.mqtt.controlpacket/ControlPacketFactory.defaultPersistence|defaultPersistence(kotlin.Any?;kotlin.String;kotlin.Boolean){}[0]
+    open fun unsubscribe(com.ditchoom.mqtt.controlpacket/TopicFilter, kotlin.collections/List<kotlin/Pair<kotlin/String, kotlin/String>> = ...): com.ditchoom.mqtt.controlpacket/IUnsubscribeRequest // com.ditchoom.mqtt.controlpacket/ControlPacketFactory.unsubscribe|unsubscribe(com.ditchoom.mqtt.controlpacket.TopicFilter;kotlin.collections.List<kotlin.Pair<kotlin.String,kotlin.String>>){}[0]
+}
+
+abstract interface com.ditchoom.mqtt.controlpacket/IConnectionAcknowledgment : com.ditchoom.mqtt.controlpacket/ControlPacket { // com.ditchoom.mqtt.controlpacket/IConnectionAcknowledgment|null[0]
+    abstract val connectionReason // com.ditchoom.mqtt.controlpacket/IConnectionAcknowledgment.connectionReason|{}connectionReason[0]
+        abstract fun <get-connectionReason>(): kotlin/String // com.ditchoom.mqtt.controlpacket/IConnectionAcknowledgment.connectionReason.<get-connectionReason>|<get-connectionReason>(){}[0]
+    abstract val isSuccessful // com.ditchoom.mqtt.controlpacket/IConnectionAcknowledgment.isSuccessful|{}isSuccessful[0]
+        abstract fun <get-isSuccessful>(): kotlin/Boolean // com.ditchoom.mqtt.controlpacket/IConnectionAcknowledgment.isSuccessful.<get-isSuccessful>|<get-isSuccessful>(){}[0]
+    abstract val sessionPresent // com.ditchoom.mqtt.controlpacket/IConnectionAcknowledgment.sessionPresent|{}sessionPresent[0]
+        abstract fun <get-sessionPresent>(): kotlin/Boolean // com.ditchoom.mqtt.controlpacket/IConnectionAcknowledgment.sessionPresent.<get-sessionPresent>|<get-sessionPresent>(){}[0]
+    open val assignedClientIdentifier // com.ditchoom.mqtt.controlpacket/IConnectionAcknowledgment.assignedClientIdentifier|{}assignedClientIdentifier[0]
+        open fun <get-assignedClientIdentifier>(): kotlin/String? // com.ditchoom.mqtt.controlpacket/IConnectionAcknowledgment.assignedClientIdentifier.<get-assignedClientIdentifier>|<get-assignedClientIdentifier>(){}[0]
+    open val maxPacketSize // com.ditchoom.mqtt.controlpacket/IConnectionAcknowledgment.maxPacketSize|{}maxPacketSize[0]
+        open fun <get-maxPacketSize>(): kotlin/ULong // com.ditchoom.mqtt.controlpacket/IConnectionAcknowledgment.maxPacketSize.<get-maxPacketSize>|<get-maxPacketSize>(){}[0]
+    open val maximumQos // com.ditchoom.mqtt.controlpacket/IConnectionAcknowledgment.maximumQos|{}maximumQos[0]
+        open fun <get-maximumQos>(): com.ditchoom.mqtt.controlpacket/QualityOfService // com.ditchoom.mqtt.controlpacket/IConnectionAcknowledgment.maximumQos.<get-maximumQos>|<get-maximumQos>(){}[0]
+    open val receiveMaximum // com.ditchoom.mqtt.controlpacket/IConnectionAcknowledgment.receiveMaximum|{}receiveMaximum[0]
+        open fun <get-receiveMaximum>(): kotlin/Int // com.ditchoom.mqtt.controlpacket/IConnectionAcknowledgment.receiveMaximum.<get-receiveMaximum>|<get-receiveMaximum>(){}[0]
+    open val serverKeepAlive // com.ditchoom.mqtt.controlpacket/IConnectionAcknowledgment.serverKeepAlive|{}serverKeepAlive[0]
+        open fun <get-serverKeepAlive>(): kotlin/Int // com.ditchoom.mqtt.controlpacket/IConnectionAcknowledgment.serverKeepAlive.<get-serverKeepAlive>|<get-serverKeepAlive>(){}[0]
+    open val sessionExpiryInterval // com.ditchoom.mqtt.controlpacket/IConnectionAcknowledgment.sessionExpiryInterval|{}sessionExpiryInterval[0]
+        open fun <get-sessionExpiryInterval>(): kotlin/ULong // com.ditchoom.mqtt.controlpacket/IConnectionAcknowledgment.sessionExpiryInterval.<get-sessionExpiryInterval>|<get-sessionExpiryInterval>(){}[0]
+}
+
+abstract interface com.ditchoom.mqtt.controlpacket/IConnectionRequest : com.ditchoom.mqtt.controlpacket/ControlPacket { // com.ditchoom.mqtt.controlpacket/IConnectionRequest|null[0]
+    abstract val cleanStart // com.ditchoom.mqtt.controlpacket/IConnectionRequest.cleanStart|{}cleanStart[0]
+        abstract fun <get-cleanStart>(): kotlin/Boolean // com.ditchoom.mqtt.controlpacket/IConnectionRequest.cleanStart.<get-cleanStart>|<get-cleanStart>(){}[0]
+    abstract val clientIdentifier // com.ditchoom.mqtt.controlpacket/IConnectionRequest.clientIdentifier|{}clientIdentifier[0]
+        abstract fun <get-clientIdentifier>(): kotlin/String // com.ditchoom.mqtt.controlpacket/IConnectionRequest.clientIdentifier.<get-clientIdentifier>|<get-clientIdentifier>(){}[0]
+    abstract val hasPassword // com.ditchoom.mqtt.controlpacket/IConnectionRequest.hasPassword|{}hasPassword[0]
+        abstract fun <get-hasPassword>(): kotlin/Boolean // com.ditchoom.mqtt.controlpacket/IConnectionRequest.hasPassword.<get-hasPassword>|<get-hasPassword>(){}[0]
+    abstract val hasUserName // com.ditchoom.mqtt.controlpacket/IConnectionRequest.hasUserName|{}hasUserName[0]
+        abstract fun <get-hasUserName>(): kotlin/Boolean // com.ditchoom.mqtt.controlpacket/IConnectionRequest.hasUserName.<get-hasUserName>|<get-hasUserName>(){}[0]
+    abstract val keepAliveTimeoutSeconds // com.ditchoom.mqtt.controlpacket/IConnectionRequest.keepAliveTimeoutSeconds|{}keepAliveTimeoutSeconds[0]
+        abstract fun <get-keepAliveTimeoutSeconds>(): kotlin/UShort // com.ditchoom.mqtt.controlpacket/IConnectionRequest.keepAliveTimeoutSeconds.<get-keepAliveTimeoutSeconds>|<get-keepAliveTimeoutSeconds>(){}[0]
+    abstract val password // com.ditchoom.mqtt.controlpacket/IConnectionRequest.password|{}password[0]
+        abstract fun <get-password>(): kotlin/String? // com.ditchoom.mqtt.controlpacket/IConnectionRequest.password.<get-password>|<get-password>(){}[0]
+    abstract val protocolName // com.ditchoom.mqtt.controlpacket/IConnectionRequest.protocolName|{}protocolName[0]
+        abstract fun <get-protocolName>(): kotlin/String // com.ditchoom.mqtt.controlpacket/IConnectionRequest.protocolName.<get-protocolName>|<get-protocolName>(){}[0]
+    abstract val protocolVersion // com.ditchoom.mqtt.controlpacket/IConnectionRequest.protocolVersion|{}protocolVersion[0]
+        abstract fun <get-protocolVersion>(): kotlin/Int // com.ditchoom.mqtt.controlpacket/IConnectionRequest.protocolVersion.<get-protocolVersion>|<get-protocolVersion>(){}[0]
+    abstract val userName // com.ditchoom.mqtt.controlpacket/IConnectionRequest.userName|{}userName[0]
+        abstract fun <get-userName>(): kotlin/String? // com.ditchoom.mqtt.controlpacket/IConnectionRequest.userName.<get-userName>|<get-userName>(){}[0]
+    abstract val will // com.ditchoom.mqtt.controlpacket/IConnectionRequest.will|{}will[0]
+        abstract fun <get-will>(): com.ditchoom.mqtt.controlpacket/WillConfig // com.ditchoom.mqtt.controlpacket/IConnectionRequest.will.<get-will>|<get-will>(){}[0]
+    open val contentType // com.ditchoom.mqtt.controlpacket/IConnectionRequest.contentType|{}contentType[0]
+        open fun <get-contentType>(): kotlin/String? // com.ditchoom.mqtt.controlpacket/IConnectionRequest.contentType.<get-contentType>|<get-contentType>(){}[0]
+    open val correlationData // com.ditchoom.mqtt.controlpacket/IConnectionRequest.correlationData|{}correlationData[0]
+        open fun <get-correlationData>(): com.ditchoom.buffer/ReadBuffer? // com.ditchoom.mqtt.controlpacket/IConnectionRequest.correlationData.<get-correlationData>|<get-correlationData>(){}[0]
+    open val maxPacketSize // com.ditchoom.mqtt.controlpacket/IConnectionRequest.maxPacketSize|{}maxPacketSize[0]
+        open fun <get-maxPacketSize>(): kotlin/ULong // com.ditchoom.mqtt.controlpacket/IConnectionRequest.maxPacketSize.<get-maxPacketSize>|<get-maxPacketSize>(){}[0]
+    open val messageExpiryIntervalSeconds // com.ditchoom.mqtt.controlpacket/IConnectionRequest.messageExpiryIntervalSeconds|{}messageExpiryIntervalSeconds[0]
+        open fun <get-messageExpiryIntervalSeconds>(): kotlin/Long? // com.ditchoom.mqtt.controlpacket/IConnectionRequest.messageExpiryIntervalSeconds.<get-messageExpiryIntervalSeconds>|<get-messageExpiryIntervalSeconds>(){}[0]
+    open val payloadFormatIndicator // com.ditchoom.mqtt.controlpacket/IConnectionRequest.payloadFormatIndicator|{}payloadFormatIndicator[0]
+        open fun <get-payloadFormatIndicator>(): kotlin/Boolean // com.ditchoom.mqtt.controlpacket/IConnectionRequest.payloadFormatIndicator.<get-payloadFormatIndicator>|<get-payloadFormatIndicator>(){}[0]
+    open val receiveMaximum // com.ditchoom.mqtt.controlpacket/IConnectionRequest.receiveMaximum|{}receiveMaximum[0]
+        open fun <get-receiveMaximum>(): kotlin/UShort // com.ditchoom.mqtt.controlpacket/IConnectionRequest.receiveMaximum.<get-receiveMaximum>|<get-receiveMaximum>(){}[0]
+    open val responseTopic // com.ditchoom.mqtt.controlpacket/IConnectionRequest.responseTopic|{}responseTopic[0]
+        open fun <get-responseTopic>(): com.ditchoom.mqtt.controlpacket/TopicName? // com.ditchoom.mqtt.controlpacket/IConnectionRequest.responseTopic.<get-responseTopic>|<get-responseTopic>(){}[0]
+    open val sessionExpiryIntervalSeconds // com.ditchoom.mqtt.controlpacket/IConnectionRequest.sessionExpiryIntervalSeconds|{}sessionExpiryIntervalSeconds[0]
+        open fun <get-sessionExpiryIntervalSeconds>(): kotlin/ULong? // com.ditchoom.mqtt.controlpacket/IConnectionRequest.sessionExpiryIntervalSeconds.<get-sessionExpiryIntervalSeconds>|<get-sessionExpiryIntervalSeconds>(){}[0]
+    open val topicAliasMax // com.ditchoom.mqtt.controlpacket/IConnectionRequest.topicAliasMax|{}topicAliasMax[0]
+        open fun <get-topicAliasMax>(): kotlin/UShort? // com.ditchoom.mqtt.controlpacket/IConnectionRequest.topicAliasMax.<get-topicAliasMax>|<get-topicAliasMax>(){}[0]
+    open val userProperty // com.ditchoom.mqtt.controlpacket/IConnectionRequest.userProperty|{}userProperty[0]
+        open fun <get-userProperty>(): kotlin.collections/List<kotlin/Pair<kotlin/String, kotlin/String>> // com.ditchoom.mqtt.controlpacket/IConnectionRequest.userProperty.<get-userProperty>|<get-userProperty>(){}[0]
+    open val willDelayIntervalSeconds // com.ditchoom.mqtt.controlpacket/IConnectionRequest.willDelayIntervalSeconds|{}willDelayIntervalSeconds[0]
+        open fun <get-willDelayIntervalSeconds>(): kotlin/Long // com.ditchoom.mqtt.controlpacket/IConnectionRequest.willDelayIntervalSeconds.<get-willDelayIntervalSeconds>|<get-willDelayIntervalSeconds>(){}[0]
+    open val willFlag // com.ditchoom.mqtt.controlpacket/IConnectionRequest.willFlag|{}willFlag[0]
+        open fun <get-willFlag>(): kotlin/Boolean // com.ditchoom.mqtt.controlpacket/IConnectionRequest.willFlag.<get-willFlag>|<get-willFlag>(){}[0]
+    open val willPayload // com.ditchoom.mqtt.controlpacket/IConnectionRequest.willPayload|{}willPayload[0]
+        open fun <get-willPayload>(): com.ditchoom.buffer/ReadBuffer? // com.ditchoom.mqtt.controlpacket/IConnectionRequest.willPayload.<get-willPayload>|<get-willPayload>(){}[0]
+    open val willQos // com.ditchoom.mqtt.controlpacket/IConnectionRequest.willQos|{}willQos[0]
+        open fun <get-willQos>(): com.ditchoom.mqtt.controlpacket/QualityOfService // com.ditchoom.mqtt.controlpacket/IConnectionRequest.willQos.<get-willQos>|<get-willQos>(){}[0]
+    open val willRetain // com.ditchoom.mqtt.controlpacket/IConnectionRequest.willRetain|{}willRetain[0]
+        open fun <get-willRetain>(): kotlin/Boolean // com.ditchoom.mqtt.controlpacket/IConnectionRequest.willRetain.<get-willRetain>|<get-willRetain>(){}[0]
+    open val willTopic // com.ditchoom.mqtt.controlpacket/IConnectionRequest.willTopic|{}willTopic[0]
+        open fun <get-willTopic>(): com.ditchoom.mqtt.controlpacket/TopicName? // com.ditchoom.mqtt.controlpacket/IConnectionRequest.willTopic.<get-willTopic>|<get-willTopic>(){}[0]
+}
+
+abstract interface com.ditchoom.mqtt.controlpacket/IDisconnectNotification : com.ditchoom.mqtt.controlpacket/ControlPacket // com.ditchoom.mqtt.controlpacket/IDisconnectNotification|null[0]
+
+abstract interface com.ditchoom.mqtt.controlpacket/IPingRequest : com.ditchoom.mqtt.controlpacket/ControlPacket // com.ditchoom.mqtt.controlpacket/IPingRequest|null[0]
+
+abstract interface com.ditchoom.mqtt.controlpacket/IPingResponse : com.ditchoom.mqtt.controlpacket/ControlPacket // com.ditchoom.mqtt.controlpacket/IPingResponse|null[0]
+
+abstract interface com.ditchoom.mqtt.controlpacket/IPublishAcknowledgment : com.ditchoom.mqtt.controlpacket/ControlPacket { // com.ditchoom.mqtt.controlpacket/IPublishAcknowledgment|null[0]
+    final object Companion { // com.ditchoom.mqtt.controlpacket/IPublishAcknowledgment.Companion|null[0]
+        final const val CONTROL_PACKET_VALUE // com.ditchoom.mqtt.controlpacket/IPublishAcknowledgment.Companion.CONTROL_PACKET_VALUE|{}CONTROL_PACKET_VALUE[0]
+            final fun <get-CONTROL_PACKET_VALUE>(): kotlin/Byte // com.ditchoom.mqtt.controlpacket/IPublishAcknowledgment.Companion.CONTROL_PACKET_VALUE.<get-CONTROL_PACKET_VALUE>|<get-CONTROL_PACKET_VALUE>(){}[0]
+    }
+}
+
+abstract interface com.ditchoom.mqtt.controlpacket/IPublishComplete : com.ditchoom.mqtt.controlpacket/ControlPacket { // com.ditchoom.mqtt.controlpacket/IPublishComplete|null[0]
+    final object Companion { // com.ditchoom.mqtt.controlpacket/IPublishComplete.Companion|null[0]
+        final const val CONTROL_PACKET_VALUE // com.ditchoom.mqtt.controlpacket/IPublishComplete.Companion.CONTROL_PACKET_VALUE|{}CONTROL_PACKET_VALUE[0]
+            final fun <get-CONTROL_PACKET_VALUE>(): kotlin/Byte // com.ditchoom.mqtt.controlpacket/IPublishComplete.Companion.CONTROL_PACKET_VALUE.<get-CONTROL_PACKET_VALUE>|<get-CONTROL_PACKET_VALUE>(){}[0]
+    }
+}
+
+abstract interface com.ditchoom.mqtt.controlpacket/IPublishReceived : com.ditchoom.mqtt.controlpacket/ControlPacket { // com.ditchoom.mqtt.controlpacket/IPublishReceived|null[0]
+    abstract fun expectedResponse(com.ditchoom.mqtt.controlpacket.format/ReasonCode = ..., kotlin/String? = ..., kotlin.collections/List<kotlin/Pair<kotlin/String, kotlin/String>> = ...): com.ditchoom.mqtt.controlpacket/IPublishRelease // com.ditchoom.mqtt.controlpacket/IPublishReceived.expectedResponse|expectedResponse(com.ditchoom.mqtt.controlpacket.format.ReasonCode;kotlin.String?;kotlin.collections.List<kotlin.Pair<kotlin.String,kotlin.String>>){}[0]
+
+    final object Companion { // com.ditchoom.mqtt.controlpacket/IPublishReceived.Companion|null[0]
+        final const val CONTROL_PACKET_VALUE // com.ditchoom.mqtt.controlpacket/IPublishReceived.Companion.CONTROL_PACKET_VALUE|{}CONTROL_PACKET_VALUE[0]
+            final fun <get-CONTROL_PACKET_VALUE>(): kotlin/Byte // com.ditchoom.mqtt.controlpacket/IPublishReceived.Companion.CONTROL_PACKET_VALUE.<get-CONTROL_PACKET_VALUE>|<get-CONTROL_PACKET_VALUE>(){}[0]
+    }
+}
+
+abstract interface com.ditchoom.mqtt.controlpacket/IPublishRelease : com.ditchoom.mqtt.controlpacket/ControlPacket { // com.ditchoom.mqtt.controlpacket/IPublishRelease|null[0]
+    abstract fun expectedResponse(com.ditchoom.mqtt.controlpacket.format/ReasonCode = ..., kotlin/String? = ..., kotlin.collections/List<kotlin/Pair<kotlin/String, kotlin/String>> = ...): com.ditchoom.mqtt.controlpacket/IPublishComplete // com.ditchoom.mqtt.controlpacket/IPublishRelease.expectedResponse|expectedResponse(com.ditchoom.mqtt.controlpacket.format.ReasonCode;kotlin.String?;kotlin.collections.List<kotlin.Pair<kotlin.String,kotlin.String>>){}[0]
+
+    final object Companion { // com.ditchoom.mqtt.controlpacket/IPublishRelease.Companion|null[0]
+        final const val CONTROL_PACKET_VALUE // com.ditchoom.mqtt.controlpacket/IPublishRelease.Companion.CONTROL_PACKET_VALUE|{}CONTROL_PACKET_VALUE[0]
+            final fun <get-CONTROL_PACKET_VALUE>(): kotlin/Byte // com.ditchoom.mqtt.controlpacket/IPublishRelease.Companion.CONTROL_PACKET_VALUE.<get-CONTROL_PACKET_VALUE>|<get-CONTROL_PACKET_VALUE>(){}[0]
+    }
+}
+
+abstract interface com.ditchoom.mqtt.controlpacket/ISubscribeAcknowledgement : com.ditchoom.mqtt.controlpacket/ControlPacket { // com.ditchoom.mqtt.controlpacket/ISubscribeAcknowledgement|null[0]
+    final object Companion { // com.ditchoom.mqtt.controlpacket/ISubscribeAcknowledgement.Companion|null[0]
+        final const val CONTROL_PACKET_VALUE // com.ditchoom.mqtt.controlpacket/ISubscribeAcknowledgement.Companion.CONTROL_PACKET_VALUE|{}CONTROL_PACKET_VALUE[0]
+            final fun <get-CONTROL_PACKET_VALUE>(): kotlin/Byte // com.ditchoom.mqtt.controlpacket/ISubscribeAcknowledgement.Companion.CONTROL_PACKET_VALUE.<get-CONTROL_PACKET_VALUE>|<get-CONTROL_PACKET_VALUE>(){}[0]
+    }
+}
+
+abstract interface com.ditchoom.mqtt.controlpacket/ISubscribeRequest : com.ditchoom.mqtt.controlpacket/ControlPacket { // com.ditchoom.mqtt.controlpacket/ISubscribeRequest|null[0]
+    abstract val subscriptions // com.ditchoom.mqtt.controlpacket/ISubscribeRequest.subscriptions|{}subscriptions[0]
+        abstract fun <get-subscriptions>(): kotlin.collections/Set<com.ditchoom.mqtt.controlpacket/ISubscription> // com.ditchoom.mqtt.controlpacket/ISubscribeRequest.subscriptions.<get-subscriptions>|<get-subscriptions>(){}[0]
+
+    abstract fun copyWithNewPacketIdentifier(kotlin/Int): com.ditchoom.mqtt.controlpacket/ISubscribeRequest // com.ditchoom.mqtt.controlpacket/ISubscribeRequest.copyWithNewPacketIdentifier|copyWithNewPacketIdentifier(kotlin.Int){}[0]
+    abstract fun expectedResponse(): com.ditchoom.mqtt.controlpacket/ISubscribeAcknowledgement // com.ditchoom.mqtt.controlpacket/ISubscribeRequest.expectedResponse|expectedResponse(){}[0]
+
+    final object Companion { // com.ditchoom.mqtt.controlpacket/ISubscribeRequest.Companion|null[0]
+        final const val CONTROL_PACKET_VALUE // com.ditchoom.mqtt.controlpacket/ISubscribeRequest.Companion.CONTROL_PACKET_VALUE|{}CONTROL_PACKET_VALUE[0]
+            final fun <get-CONTROL_PACKET_VALUE>(): kotlin/Byte // com.ditchoom.mqtt.controlpacket/ISubscribeRequest.Companion.CONTROL_PACKET_VALUE.<get-CONTROL_PACKET_VALUE>|<get-CONTROL_PACKET_VALUE>(){}[0]
+    }
+}
+
+abstract interface com.ditchoom.mqtt.controlpacket/ISubscription { // com.ditchoom.mqtt.controlpacket/ISubscription|null[0]
+    abstract val maximumQos // com.ditchoom.mqtt.controlpacket/ISubscription.maximumQos|{}maximumQos[0]
+        abstract fun <get-maximumQos>(): com.ditchoom.mqtt.controlpacket/QualityOfService // com.ditchoom.mqtt.controlpacket/ISubscription.maximumQos.<get-maximumQos>|<get-maximumQos>(){}[0]
+    abstract val topicFilter // com.ditchoom.mqtt.controlpacket/ISubscription.topicFilter|{}topicFilter[0]
+        abstract fun <get-topicFilter>(): com.ditchoom.mqtt.controlpacket/TopicFilter // com.ditchoom.mqtt.controlpacket/ISubscription.topicFilter.<get-topicFilter>|<get-topicFilter>(){}[0]
+    open val noLocal // com.ditchoom.mqtt.controlpacket/ISubscription.noLocal|{}noLocal[0]
+        open fun <get-noLocal>(): kotlin/Boolean // com.ditchoom.mqtt.controlpacket/ISubscription.noLocal.<get-noLocal>|<get-noLocal>(){}[0]
+    open val retainAsPublished // com.ditchoom.mqtt.controlpacket/ISubscription.retainAsPublished|{}retainAsPublished[0]
+        open fun <get-retainAsPublished>(): kotlin/Boolean // com.ditchoom.mqtt.controlpacket/ISubscription.retainAsPublished.<get-retainAsPublished>|<get-retainAsPublished>(){}[0]
+    open val retainHandling // com.ditchoom.mqtt.controlpacket/ISubscription.retainHandling|{}retainHandling[0]
+        open fun <get-retainHandling>(): com.ditchoom.mqtt.controlpacket/ISubscription.RetainHandling // com.ditchoom.mqtt.controlpacket/ISubscription.retainHandling.<get-retainHandling>|<get-retainHandling>(){}[0]
+
+    final enum class RetainHandling : kotlin/Enum<com.ditchoom.mqtt.controlpacket/ISubscription.RetainHandling> { // com.ditchoom.mqtt.controlpacket/ISubscription.RetainHandling|null[0]
+        enum entry DO_NOT_SEND_RETAINED_MESSAGES // com.ditchoom.mqtt.controlpacket/ISubscription.RetainHandling.DO_NOT_SEND_RETAINED_MESSAGES|null[0]
+        enum entry SEND_RETAINED_MESSAGES_AT_SUBSCRIBE_ONLY_IF_SUBSCRIBE_DOESNT_EXISTS // com.ditchoom.mqtt.controlpacket/ISubscription.RetainHandling.SEND_RETAINED_MESSAGES_AT_SUBSCRIBE_ONLY_IF_SUBSCRIBE_DOESNT_EXISTS|null[0]
+        enum entry SEND_RETAINED_MESSAGES_AT_TIME_OF_SUBSCRIBE // com.ditchoom.mqtt.controlpacket/ISubscription.RetainHandling.SEND_RETAINED_MESSAGES_AT_TIME_OF_SUBSCRIBE|null[0]
+
+        final val entries // com.ditchoom.mqtt.controlpacket/ISubscription.RetainHandling.entries|#static{}entries[0]
+            final fun <get-entries>(): kotlin.enums/EnumEntries<com.ditchoom.mqtt.controlpacket/ISubscription.RetainHandling> // com.ditchoom.mqtt.controlpacket/ISubscription.RetainHandling.entries.<get-entries>|<get-entries>#static(){}[0]
+        final val value // com.ditchoom.mqtt.controlpacket/ISubscription.RetainHandling.value|{}value[0]
+            final fun <get-value>(): kotlin/UByte // com.ditchoom.mqtt.controlpacket/ISubscription.RetainHandling.value.<get-value>|<get-value>(){}[0]
+
+        final fun valueOf(kotlin/String): com.ditchoom.mqtt.controlpacket/ISubscription.RetainHandling // com.ditchoom.mqtt.controlpacket/ISubscription.RetainHandling.valueOf|valueOf#static(kotlin.String){}[0]
+        final fun values(): kotlin/Array<com.ditchoom.mqtt.controlpacket/ISubscription.RetainHandling> // com.ditchoom.mqtt.controlpacket/ISubscription.RetainHandling.values|values#static(){}[0]
+    }
+}
+
+abstract interface com.ditchoom.mqtt.controlpacket/IUnsubscribeAcknowledgment : com.ditchoom.mqtt.controlpacket/ControlPacket { // com.ditchoom.mqtt.controlpacket/IUnsubscribeAcknowledgment|null[0]
+    final object Companion { // com.ditchoom.mqtt.controlpacket/IUnsubscribeAcknowledgment.Companion|null[0]
+        final const val CONTROL_PACKET_VALUE // com.ditchoom.mqtt.controlpacket/IUnsubscribeAcknowledgment.Companion.CONTROL_PACKET_VALUE|{}CONTROL_PACKET_VALUE[0]
+            final fun <get-CONTROL_PACKET_VALUE>(): kotlin/Byte // com.ditchoom.mqtt.controlpacket/IUnsubscribeAcknowledgment.Companion.CONTROL_PACKET_VALUE.<get-CONTROL_PACKET_VALUE>|<get-CONTROL_PACKET_VALUE>(){}[0]
+    }
+}
+
+abstract interface com.ditchoom.mqtt.controlpacket/IUnsubscribeRequest : com.ditchoom.mqtt.controlpacket/ControlPacket { // com.ditchoom.mqtt.controlpacket/IUnsubscribeRequest|null[0]
+    abstract val topics // com.ditchoom.mqtt.controlpacket/IUnsubscribeRequest.topics|{}topics[0]
+        abstract fun <get-topics>(): kotlin.collections/Set<com.ditchoom.mqtt.controlpacket/TopicFilter> // com.ditchoom.mqtt.controlpacket/IUnsubscribeRequest.topics.<get-topics>|<get-topics>(){}[0]
+
+    abstract fun copyWithNewPacketIdentifier(kotlin/Int): com.ditchoom.mqtt.controlpacket/IUnsubscribeRequest // com.ditchoom.mqtt.controlpacket/IUnsubscribeRequest.copyWithNewPacketIdentifier|copyWithNewPacketIdentifier(kotlin.Int){}[0]
+
+    final object Companion { // com.ditchoom.mqtt.controlpacket/IUnsubscribeRequest.Companion|null[0]
+        final val controlPacketValue // com.ditchoom.mqtt.controlpacket/IUnsubscribeRequest.Companion.controlPacketValue|{}controlPacketValue[0]
+            final fun <get-controlPacketValue>(): kotlin/Byte // com.ditchoom.mqtt.controlpacket/IUnsubscribeRequest.Companion.controlPacketValue.<get-controlPacketValue>|<get-controlPacketValue>(){}[0]
+    }
+}
+
+abstract interface com.ditchoom.mqtt.controlpacket/PublishMessage : com.ditchoom.mqtt.controlpacket/ControlPacket { // com.ditchoom.mqtt.controlpacket/PublishMessage|null[0]
+    abstract val dup // com.ditchoom.mqtt.controlpacket/PublishMessage.dup|{}dup[0]
+        abstract fun <get-dup>(): kotlin/Boolean // com.ditchoom.mqtt.controlpacket/PublishMessage.dup.<get-dup>|<get-dup>(){}[0]
+    abstract val qualityOfService // com.ditchoom.mqtt.controlpacket/PublishMessage.qualityOfService|{}qualityOfService[0]
+        abstract fun <get-qualityOfService>(): com.ditchoom.mqtt.controlpacket/QualityOfService // com.ditchoom.mqtt.controlpacket/PublishMessage.qualityOfService.<get-qualityOfService>|<get-qualityOfService>(){}[0]
+    abstract val retain // com.ditchoom.mqtt.controlpacket/PublishMessage.retain|{}retain[0]
+        abstract fun <get-retain>(): kotlin/Boolean // com.ditchoom.mqtt.controlpacket/PublishMessage.retain.<get-retain>|<get-retain>(){}[0]
+    abstract val topic // com.ditchoom.mqtt.controlpacket/PublishMessage.topic|{}topic[0]
+        abstract fun <get-topic>(): com.ditchoom.mqtt.controlpacket/TopicName // com.ditchoom.mqtt.controlpacket/PublishMessage.topic.<get-topic>|<get-topic>(){}[0]
+    open val direction // com.ditchoom.mqtt.controlpacket/PublishMessage.direction|{}direction[0]
+        open fun <get-direction>(): com.ditchoom.mqtt.controlpacket.format.fixed/DirectionOfFlow // com.ditchoom.mqtt.controlpacket/PublishMessage.direction.<get-direction>|<get-direction>(){}[0]
+
+    abstract fun expectedResponse(com.ditchoom.mqtt.controlpacket.format/ReasonCode = ..., kotlin/String? = ..., kotlin.collections/List<kotlin/Pair<kotlin/String, kotlin/String>> = ...): com.ditchoom.mqtt.controlpacket/ControlPacket? // com.ditchoom.mqtt.controlpacket/PublishMessage.expectedResponse|expectedResponse(com.ditchoom.mqtt.controlpacket.format.ReasonCode;kotlin.String?;kotlin.collections.List<kotlin.Pair<kotlin.String,kotlin.String>>){}[0]
+    abstract fun maybeCopyWithNewPacketIdentifier(kotlin/Int): com.ditchoom.mqtt.controlpacket/PublishMessage // com.ditchoom.mqtt.controlpacket/PublishMessage.maybeCopyWithNewPacketIdentifier|maybeCopyWithNewPacketIdentifier(kotlin.Int){}[0]
+    abstract fun setDupFlagNewPubMessage(): com.ditchoom.mqtt.controlpacket/PublishMessage // com.ditchoom.mqtt.controlpacket/PublishMessage.setDupFlagNewPubMessage|setDupFlagNewPubMessage(){}[0]
+
+    final object Companion { // com.ditchoom.mqtt.controlpacket/PublishMessage.Companion|null[0]
+        final const val CONTROL_PACKET_VALUE // com.ditchoom.mqtt.controlpacket/PublishMessage.Companion.CONTROL_PACKET_VALUE|{}CONTROL_PACKET_VALUE[0]
+            final fun <get-CONTROL_PACKET_VALUE>(): kotlin/Byte // com.ditchoom.mqtt.controlpacket/PublishMessage.Companion.CONTROL_PACKET_VALUE.<get-CONTROL_PACKET_VALUE>|<get-CONTROL_PACKET_VALUE>(){}[0]
+    }
+}
+
+abstract interface com.ditchoom.mqtt/Persistence { // com.ditchoom.mqtt/Persistence|null[0]
+    abstract suspend fun ackPub(com.ditchoom.mqtt.connection/MqttBroker, com.ditchoom.mqtt.controlpacket/IPublishAcknowledgment) // com.ditchoom.mqtt/Persistence.ackPub|ackPub(com.ditchoom.mqtt.connection.MqttBroker;com.ditchoom.mqtt.controlpacket.IPublishAcknowledgment){}[0]
+    abstract suspend fun ackPubComplete(com.ditchoom.mqtt.connection/MqttBroker, com.ditchoom.mqtt.controlpacket/IPublishComplete) // com.ditchoom.mqtt/Persistence.ackPubComplete|ackPubComplete(com.ditchoom.mqtt.connection.MqttBroker;com.ditchoom.mqtt.controlpacket.IPublishComplete){}[0]
+    abstract suspend fun ackPubReceivedQueuePubRelease(com.ditchoom.mqtt.connection/MqttBroker, com.ditchoom.mqtt.controlpacket/IPublishReceived, com.ditchoom.mqtt.controlpacket/IPublishRelease) // com.ditchoom.mqtt/Persistence.ackPubReceivedQueuePubRelease|ackPubReceivedQueuePubRelease(com.ditchoom.mqtt.connection.MqttBroker;com.ditchoom.mqtt.controlpacket.IPublishReceived;com.ditchoom.mqtt.controlpacket.IPublishRelease){}[0]
+    abstract suspend fun ackPubRelease(com.ditchoom.mqtt.connection/MqttBroker, com.ditchoom.mqtt.controlpacket/IPublishRelease, com.ditchoom.mqtt.controlpacket/IPublishComplete) // com.ditchoom.mqtt/Persistence.ackPubRelease|ackPubRelease(com.ditchoom.mqtt.connection.MqttBroker;com.ditchoom.mqtt.controlpacket.IPublishRelease;com.ditchoom.mqtt.controlpacket.IPublishComplete){}[0]
+    abstract suspend fun ackSub(com.ditchoom.mqtt.connection/MqttBroker, com.ditchoom.mqtt.controlpacket/ISubscribeAcknowledgement) // com.ditchoom.mqtt/Persistence.ackSub|ackSub(com.ditchoom.mqtt.connection.MqttBroker;com.ditchoom.mqtt.controlpacket.ISubscribeAcknowledgement){}[0]
+    abstract suspend fun ackUnsub(com.ditchoom.mqtt.connection/MqttBroker, com.ditchoom.mqtt.controlpacket/IUnsubscribeAcknowledgment) // com.ditchoom.mqtt/Persistence.ackUnsub|ackUnsub(com.ditchoom.mqtt.connection.MqttBroker;com.ditchoom.mqtt.controlpacket.IUnsubscribeAcknowledgment){}[0]
+    abstract suspend fun activeSubscriptions(com.ditchoom.mqtt.connection/MqttBroker, kotlin/Boolean = ...): kotlin.collections/Map<com.ditchoom.mqtt.controlpacket/TopicFilter, com.ditchoom.mqtt.controlpacket/ISubscription> // com.ditchoom.mqtt/Persistence.activeSubscriptions|activeSubscriptions(com.ditchoom.mqtt.connection.MqttBroker;kotlin.Boolean){}[0]
+    abstract suspend fun addBroker(com.ditchoom.mqtt.controlpacket/IConnectionRequest): com.ditchoom.mqtt.connection/MqttBroker // com.ditchoom.mqtt/Persistence.addBroker|addBroker(com.ditchoom.mqtt.controlpacket.IConnectionRequest){}[0]
+    abstract suspend fun allBrokers(): kotlin.collections/Collection<com.ditchoom.mqtt.connection/MqttBroker> // com.ditchoom.mqtt/Persistence.allBrokers|allBrokers(){}[0]
+    abstract suspend fun brokerWithId(kotlin/Int): com.ditchoom.mqtt.connection/MqttBroker? // com.ditchoom.mqtt/Persistence.brokerWithId|brokerWithId(kotlin.Int){}[0]
+    abstract suspend fun clearMessages(com.ditchoom.mqtt.connection/MqttBroker) // com.ditchoom.mqtt/Persistence.clearMessages|clearMessages(com.ditchoom.mqtt.connection.MqttBroker){}[0]
+    abstract suspend fun getPubWithPacketId(com.ditchoom.mqtt.connection/MqttBroker, kotlin/Int): com.ditchoom.mqtt.controlpacket/PublishMessage? // com.ditchoom.mqtt/Persistence.getPubWithPacketId|getPubWithPacketId(com.ditchoom.mqtt.connection.MqttBroker;kotlin.Int){}[0]
+    abstract suspend fun getSubWithPacketId(com.ditchoom.mqtt.connection/MqttBroker, kotlin/Int): com.ditchoom.mqtt.controlpacket/ISubscribeRequest? // com.ditchoom.mqtt/Persistence.getSubWithPacketId|getSubWithPacketId(com.ditchoom.mqtt.connection.MqttBroker;kotlin.Int){}[0]
+    abstract suspend fun getUnsubWithPacketId(com.ditchoom.mqtt.connection/MqttBroker, kotlin/Int): com.ditchoom.mqtt.controlpacket/IUnsubscribeRequest? // com.ditchoom.mqtt/Persistence.getUnsubWithPacketId|getUnsubWithPacketId(com.ditchoom.mqtt.connection.MqttBroker;kotlin.Int){}[0]
+    abstract suspend fun incomingHandlerComplete(com.ditchoom.mqtt.connection/MqttBroker, kotlin/Int) // com.ditchoom.mqtt/Persistence.incomingHandlerComplete|incomingHandlerComplete(com.ditchoom.mqtt.connection.MqttBroker;kotlin.Int){}[0]
+    abstract suspend fun incomingMessagesToRedispatch(com.ditchoom.mqtt.connection/MqttBroker): kotlin.collections/Collection<com.ditchoom.mqtt/IncomingPublishRecord> // com.ditchoom.mqtt/Persistence.incomingMessagesToRedispatch|incomingMessagesToRedispatch(com.ditchoom.mqtt.connection.MqttBroker){}[0]
+    abstract suspend fun isQueueClear(com.ditchoom.mqtt.connection/MqttBroker, kotlin/Boolean = ...): kotlin/Boolean // com.ditchoom.mqtt/Persistence.isQueueClear|isQueueClear(com.ditchoom.mqtt.connection.MqttBroker;kotlin.Boolean){}[0]
+    abstract suspend fun messagesToSendOnReconnect(com.ditchoom.mqtt.connection/MqttBroker): kotlin.collections/Collection<com.ditchoom.mqtt.controlpacket/ControlPacket> // com.ditchoom.mqtt/Persistence.messagesToSendOnReconnect|messagesToSendOnReconnect(com.ditchoom.mqtt.connection.MqttBroker){}[0]
+    abstract suspend fun onPubCompWritten(com.ditchoom.mqtt.connection/MqttBroker, com.ditchoom.mqtt.controlpacket/IPublishComplete) // com.ditchoom.mqtt/Persistence.onPubCompWritten|onPubCompWritten(com.ditchoom.mqtt.connection.MqttBroker;com.ditchoom.mqtt.controlpacket.IPublishComplete){}[0]
+    abstract suspend fun persistIncomingPublish(com.ditchoom.mqtt.connection/MqttBroker, com.ditchoom.mqtt.controlpacket/PublishMessage) // com.ditchoom.mqtt/Persistence.persistIncomingPublish|persistIncomingPublish(com.ditchoom.mqtt.connection.MqttBroker;com.ditchoom.mqtt.controlpacket.PublishMessage){}[0]
+    abstract suspend fun removeBroker(kotlin/Int) // com.ditchoom.mqtt/Persistence.removeBroker|removeBroker(kotlin.Int){}[0]
+    abstract suspend fun updatePublishState(com.ditchoom.mqtt.connection/MqttBroker, kotlin/Int, kotlin/Int) // com.ditchoom.mqtt/Persistence.updatePublishState|updatePublishState(com.ditchoom.mqtt.connection.MqttBroker;kotlin.Int;kotlin.Int){}[0]
+    abstract suspend fun writePubGetPacketId(com.ditchoom.mqtt.connection/MqttBroker, com.ditchoom.mqtt.controlpacket/PublishMessage): kotlin/Int // com.ditchoom.mqtt/Persistence.writePubGetPacketId|writePubGetPacketId(com.ditchoom.mqtt.connection.MqttBroker;com.ditchoom.mqtt.controlpacket.PublishMessage){}[0]
+    abstract suspend fun writeSubUpdatePacketIdAndSimplifySubscriptions(com.ditchoom.mqtt.connection/MqttBroker, com.ditchoom.mqtt.controlpacket/ISubscribeRequest): com.ditchoom.mqtt.controlpacket/ISubscribeRequest // com.ditchoom.mqtt/Persistence.writeSubUpdatePacketIdAndSimplifySubscriptions|writeSubUpdatePacketIdAndSimplifySubscriptions(com.ditchoom.mqtt.connection.MqttBroker;com.ditchoom.mqtt.controlpacket.ISubscribeRequest){}[0]
+    abstract suspend fun writeUnsubGetPacketId(com.ditchoom.mqtt.connection/MqttBroker, com.ditchoom.mqtt.controlpacket/IUnsubscribeRequest): kotlin/Int // com.ditchoom.mqtt/Persistence.writeUnsubGetPacketId|writeUnsubGetPacketId(com.ditchoom.mqtt.connection.MqttBroker;com.ditchoom.mqtt.controlpacket.IUnsubscribeRequest){}[0]
+
+    final object Companion { // com.ditchoom.mqtt/Persistence.Companion|null[0]
+        final const val INCOMING_STATE_QOS2_HANDLER_COMPLETE_PUBREC_SENT // com.ditchoom.mqtt/Persistence.Companion.INCOMING_STATE_QOS2_HANDLER_COMPLETE_PUBREC_SENT|{}INCOMING_STATE_QOS2_HANDLER_COMPLETE_PUBREC_SENT[0]
+            final fun <get-INCOMING_STATE_QOS2_HANDLER_COMPLETE_PUBREC_SENT>(): kotlin/Int // com.ditchoom.mqtt/Persistence.Companion.INCOMING_STATE_QOS2_HANDLER_COMPLETE_PUBREC_SENT.<get-INCOMING_STATE_QOS2_HANDLER_COMPLETE_PUBREC_SENT>|<get-INCOMING_STATE_QOS2_HANDLER_COMPLETE_PUBREC_SENT>(){}[0]
+        final const val INCOMING_STATE_RECEIVED_PENDING_HANDLER // com.ditchoom.mqtt/Persistence.Companion.INCOMING_STATE_RECEIVED_PENDING_HANDLER|{}INCOMING_STATE_RECEIVED_PENDING_HANDLER[0]
+            final fun <get-INCOMING_STATE_RECEIVED_PENDING_HANDLER>(): kotlin/Int // com.ditchoom.mqtt/Persistence.Companion.INCOMING_STATE_RECEIVED_PENDING_HANDLER.<get-INCOMING_STATE_RECEIVED_PENDING_HANDLER>|<get-INCOMING_STATE_RECEIVED_PENDING_HANDLER>(){}[0]
+        final const val STATE_PUBREC_RECEIVED // com.ditchoom.mqtt/Persistence.Companion.STATE_PUBREC_RECEIVED|{}STATE_PUBREC_RECEIVED[0]
+            final fun <get-STATE_PUBREC_RECEIVED>(): kotlin/Int // com.ditchoom.mqtt/Persistence.Companion.STATE_PUBREC_RECEIVED.<get-STATE_PUBREC_RECEIVED>|<get-STATE_PUBREC_RECEIVED>(){}[0]
+        final const val STATE_PUBREL_SENT // com.ditchoom.mqtt/Persistence.Companion.STATE_PUBREL_SENT|{}STATE_PUBREL_SENT[0]
+            final fun <get-STATE_PUBREL_SENT>(): kotlin/Int // com.ditchoom.mqtt/Persistence.Companion.STATE_PUBREL_SENT.<get-STATE_PUBREL_SENT>|<get-STATE_PUBREL_SENT>(){}[0]
+        final const val STATE_QUEUED // com.ditchoom.mqtt/Persistence.Companion.STATE_QUEUED|{}STATE_QUEUED[0]
+            final fun <get-STATE_QUEUED>(): kotlin/Int // com.ditchoom.mqtt/Persistence.Companion.STATE_QUEUED.<get-STATE_QUEUED>|<get-STATE_QUEUED>(){}[0]
+        final const val STATE_SENT // com.ditchoom.mqtt/Persistence.Companion.STATE_SENT|{}STATE_SENT[0]
+            final fun <get-STATE_SENT>(): kotlin/Int // com.ditchoom.mqtt/Persistence.Companion.STATE_SENT.<get-STATE_SENT>|<get-STATE_SENT>(){}[0]
+    }
+}
+
+sealed interface com.ditchoom.mqtt.controlpacket/PacketIdAllocation { // com.ditchoom.mqtt.controlpacket/PacketIdAllocation|null[0]
+    final class Allocated : com.ditchoom.mqtt.controlpacket/PacketIdAllocation { // com.ditchoom.mqtt.controlpacket/PacketIdAllocation.Allocated|null[0]
+        constructor <init>(com.ditchoom.mqtt.controlpacket/PacketId) // com.ditchoom.mqtt.controlpacket/PacketIdAllocation.Allocated.<init>|<init>(com.ditchoom.mqtt.controlpacket.PacketId){}[0]
+
+        final val id // com.ditchoom.mqtt.controlpacket/PacketIdAllocation.Allocated.id|{}id[0]
+            final fun <get-id>(): com.ditchoom.mqtt.controlpacket/PacketId // com.ditchoom.mqtt.controlpacket/PacketIdAllocation.Allocated.id.<get-id>|<get-id>(){}[0]
+
+        final fun component1(): com.ditchoom.mqtt.controlpacket/PacketId // com.ditchoom.mqtt.controlpacket/PacketIdAllocation.Allocated.component1|component1(){}[0]
+        final fun copy(com.ditchoom.mqtt.controlpacket/PacketId = ...): com.ditchoom.mqtt.controlpacket/PacketIdAllocation.Allocated // com.ditchoom.mqtt.controlpacket/PacketIdAllocation.Allocated.copy|copy(com.ditchoom.mqtt.controlpacket.PacketId){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // com.ditchoom.mqtt.controlpacket/PacketIdAllocation.Allocated.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // com.ditchoom.mqtt.controlpacket/PacketIdAllocation.Allocated.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // com.ditchoom.mqtt.controlpacket/PacketIdAllocation.Allocated.toString|toString(){}[0]
+    }
+
+    final object Exhausted : com.ditchoom.mqtt.controlpacket/PacketIdAllocation { // com.ditchoom.mqtt.controlpacket/PacketIdAllocation.Exhausted|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // com.ditchoom.mqtt.controlpacket/PacketIdAllocation.Exhausted.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // com.ditchoom.mqtt.controlpacket/PacketIdAllocation.Exhausted.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // com.ditchoom.mqtt.controlpacket/PacketIdAllocation.Exhausted.toString|toString(){}[0]
+    }
+}
+
+sealed interface com.ditchoom.mqtt.controlpacket/PacketIdParse { // com.ditchoom.mqtt.controlpacket/PacketIdParse|null[0]
+    final class OutOfRange : com.ditchoom.mqtt.controlpacket/PacketIdParse { // com.ditchoom.mqtt.controlpacket/PacketIdParse.OutOfRange|null[0]
+        constructor <init>(kotlin/Int) // com.ditchoom.mqtt.controlpacket/PacketIdParse.OutOfRange.<init>|<init>(kotlin.Int){}[0]
+
+        final val value // com.ditchoom.mqtt.controlpacket/PacketIdParse.OutOfRange.value|{}value[0]
+            final fun <get-value>(): kotlin/Int // com.ditchoom.mqtt.controlpacket/PacketIdParse.OutOfRange.value.<get-value>|<get-value>(){}[0]
+
+        final fun component1(): kotlin/Int // com.ditchoom.mqtt.controlpacket/PacketIdParse.OutOfRange.component1|component1(){}[0]
+        final fun copy(kotlin/Int = ...): com.ditchoom.mqtt.controlpacket/PacketIdParse.OutOfRange // com.ditchoom.mqtt.controlpacket/PacketIdParse.OutOfRange.copy|copy(kotlin.Int){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // com.ditchoom.mqtt.controlpacket/PacketIdParse.OutOfRange.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // com.ditchoom.mqtt.controlpacket/PacketIdParse.OutOfRange.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // com.ditchoom.mqtt.controlpacket/PacketIdParse.OutOfRange.toString|toString(){}[0]
+    }
+
+    final class Valid : com.ditchoom.mqtt.controlpacket/PacketIdParse { // com.ditchoom.mqtt.controlpacket/PacketIdParse.Valid|null[0]
+        constructor <init>(com.ditchoom.mqtt.controlpacket/PacketId) // com.ditchoom.mqtt.controlpacket/PacketIdParse.Valid.<init>|<init>(com.ditchoom.mqtt.controlpacket.PacketId){}[0]
+
+        final val id // com.ditchoom.mqtt.controlpacket/PacketIdParse.Valid.id|{}id[0]
+            final fun <get-id>(): com.ditchoom.mqtt.controlpacket/PacketId // com.ditchoom.mqtt.controlpacket/PacketIdParse.Valid.id.<get-id>|<get-id>(){}[0]
+
+        final fun component1(): com.ditchoom.mqtt.controlpacket/PacketId // com.ditchoom.mqtt.controlpacket/PacketIdParse.Valid.component1|component1(){}[0]
+        final fun copy(com.ditchoom.mqtt.controlpacket/PacketId = ...): com.ditchoom.mqtt.controlpacket/PacketIdParse.Valid // com.ditchoom.mqtt.controlpacket/PacketIdParse.Valid.copy|copy(com.ditchoom.mqtt.controlpacket.PacketId){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // com.ditchoom.mqtt.controlpacket/PacketIdParse.Valid.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // com.ditchoom.mqtt.controlpacket/PacketIdParse.Valid.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // com.ditchoom.mqtt.controlpacket/PacketIdParse.Valid.toString|toString(){}[0]
+    }
+}
+
+sealed interface com.ditchoom.mqtt.controlpacket/Topic { // com.ditchoom.mqtt.controlpacket/Topic|null[0]
+    abstract val root // com.ditchoom.mqtt.controlpacket/Topic.root|{}root[0]
+        abstract fun <get-root>(): com.ditchoom.mqtt.controlpacket/Level // com.ditchoom.mqtt.controlpacket/Topic.root.<get-root>|<get-root>(){}[0]
+
+    abstract fun toString(): kotlin/String // com.ditchoom.mqtt.controlpacket/Topic.toString|toString(){}[0]
+    open fun matches(com.ditchoom.mqtt.controlpacket/Topic): kotlin/Boolean // com.ditchoom.mqtt.controlpacket/Topic.matches|matches(com.ditchoom.mqtt.controlpacket.Topic){}[0]
+
+    final enum class Type : kotlin/Enum<com.ditchoom.mqtt.controlpacket/Topic.Type> { // com.ditchoom.mqtt.controlpacket/Topic.Type|null[0]
+        enum entry Filter // com.ditchoom.mqtt.controlpacket/Topic.Type.Filter|null[0]
+        enum entry Name // com.ditchoom.mqtt.controlpacket/Topic.Type.Name|null[0]
+
+        final val entries // com.ditchoom.mqtt.controlpacket/Topic.Type.entries|#static{}entries[0]
+            final fun <get-entries>(): kotlin.enums/EnumEntries<com.ditchoom.mqtt.controlpacket/Topic.Type> // com.ditchoom.mqtt.controlpacket/Topic.Type.entries.<get-entries>|<get-entries>#static(){}[0]
+
+        final fun valueOf(kotlin/String): com.ditchoom.mqtt.controlpacket/Topic.Type // com.ditchoom.mqtt.controlpacket/Topic.Type.valueOf|valueOf#static(kotlin.String){}[0]
+        final fun values(): kotlin/Array<com.ditchoom.mqtt.controlpacket/Topic.Type> // com.ditchoom.mqtt.controlpacket/Topic.Type.values|values#static(){}[0]
+    }
+
+    final object Companion { // com.ditchoom.mqtt.controlpacket/Topic.Companion|null[0]
+        final fun fromOrNull(kotlin/String, com.ditchoom.mqtt.controlpacket/Topic.Type): com.ditchoom.mqtt.controlpacket/Topic? // com.ditchoom.mqtt.controlpacket/Topic.Companion.fromOrNull|fromOrNull(kotlin.String;com.ditchoom.mqtt.controlpacket.Topic.Type){}[0]
+        final fun fromOrThrow(kotlin/String, com.ditchoom.mqtt.controlpacket/Topic.Type): com.ditchoom.mqtt.controlpacket/Topic // com.ditchoom.mqtt.controlpacket/Topic.Companion.fromOrThrow|fromOrThrow(kotlin.String;com.ditchoom.mqtt.controlpacket.Topic.Type){}[0]
+    }
+}
+
+sealed interface com.ditchoom.mqtt.controlpacket/WillConfig { // com.ditchoom.mqtt.controlpacket/WillConfig|null[0]
+    final class Enabled : com.ditchoom.mqtt.controlpacket/WillConfig { // com.ditchoom.mqtt.controlpacket/WillConfig.Enabled|null[0]
+        constructor <init>(com.ditchoom.mqtt.controlpacket/TopicName, com.ditchoom.buffer/ReadBuffer, com.ditchoom.mqtt.controlpacket/QualityOfService = ..., kotlin/Boolean = ...) // com.ditchoom.mqtt.controlpacket/WillConfig.Enabled.<init>|<init>(com.ditchoom.mqtt.controlpacket.TopicName;com.ditchoom.buffer.ReadBuffer;com.ditchoom.mqtt.controlpacket.QualityOfService;kotlin.Boolean){}[0]
+
+        final val payload // com.ditchoom.mqtt.controlpacket/WillConfig.Enabled.payload|{}payload[0]
+            final fun <get-payload>(): com.ditchoom.buffer/ReadBuffer // com.ditchoom.mqtt.controlpacket/WillConfig.Enabled.payload.<get-payload>|<get-payload>(){}[0]
+        final val qos // com.ditchoom.mqtt.controlpacket/WillConfig.Enabled.qos|{}qos[0]
+            final fun <get-qos>(): com.ditchoom.mqtt.controlpacket/QualityOfService // com.ditchoom.mqtt.controlpacket/WillConfig.Enabled.qos.<get-qos>|<get-qos>(){}[0]
+        final val retain // com.ditchoom.mqtt.controlpacket/WillConfig.Enabled.retain|{}retain[0]
+            final fun <get-retain>(): kotlin/Boolean // com.ditchoom.mqtt.controlpacket/WillConfig.Enabled.retain.<get-retain>|<get-retain>(){}[0]
+        final val topic // com.ditchoom.mqtt.controlpacket/WillConfig.Enabled.topic|{}topic[0]
+            final fun <get-topic>(): com.ditchoom.mqtt.controlpacket/TopicName // com.ditchoom.mqtt.controlpacket/WillConfig.Enabled.topic.<get-topic>|<get-topic>(){}[0]
+
+        final fun component1(): com.ditchoom.mqtt.controlpacket/TopicName // com.ditchoom.mqtt.controlpacket/WillConfig.Enabled.component1|component1(){}[0]
+        final fun component2(): com.ditchoom.buffer/ReadBuffer // com.ditchoom.mqtt.controlpacket/WillConfig.Enabled.component2|component2(){}[0]
+        final fun component3(): com.ditchoom.mqtt.controlpacket/QualityOfService // com.ditchoom.mqtt.controlpacket/WillConfig.Enabled.component3|component3(){}[0]
+        final fun component4(): kotlin/Boolean // com.ditchoom.mqtt.controlpacket/WillConfig.Enabled.component4|component4(){}[0]
+        final fun copy(com.ditchoom.mqtt.controlpacket/TopicName = ..., com.ditchoom.buffer/ReadBuffer = ..., com.ditchoom.mqtt.controlpacket/QualityOfService = ..., kotlin/Boolean = ...): com.ditchoom.mqtt.controlpacket/WillConfig.Enabled // com.ditchoom.mqtt.controlpacket/WillConfig.Enabled.copy|copy(com.ditchoom.mqtt.controlpacket.TopicName;com.ditchoom.buffer.ReadBuffer;com.ditchoom.mqtt.controlpacket.QualityOfService;kotlin.Boolean){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // com.ditchoom.mqtt.controlpacket/WillConfig.Enabled.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // com.ditchoom.mqtt.controlpacket/WillConfig.Enabled.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // com.ditchoom.mqtt.controlpacket/WillConfig.Enabled.toString|toString(){}[0]
+    }
+
+    final object Disabled : com.ditchoom.mqtt.controlpacket/WillConfig { // com.ditchoom.mqtt.controlpacket/WillConfig.Disabled|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // com.ditchoom.mqtt.controlpacket/WillConfig.Disabled.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // com.ditchoom.mqtt.controlpacket/WillConfig.Disabled.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // com.ditchoom.mqtt.controlpacket/WillConfig.Disabled.toString|toString(){}[0]
+    }
+}
+
+final class com.ditchoom.mqtt.connection/MqttBroker { // com.ditchoom.mqtt.connection/MqttBroker|null[0]
+    constructor <init>(kotlin/Int, com.ditchoom.mqtt.controlpacket/IConnectionRequest) // com.ditchoom.mqtt.connection/MqttBroker.<init>|<init>(kotlin.Int;com.ditchoom.mqtt.controlpacket.IConnectionRequest){}[0]
+
+    final val brokerId // com.ditchoom.mqtt.connection/MqttBroker.brokerId|{}brokerId[0]
+        final fun <get-brokerId>(): kotlin/Int // com.ditchoom.mqtt.connection/MqttBroker.brokerId.<get-brokerId>|<get-brokerId>(){}[0]
+    final val connectionRequest // com.ditchoom.mqtt.connection/MqttBroker.connectionRequest|{}connectionRequest[0]
+        final fun <get-connectionRequest>(): com.ditchoom.mqtt.controlpacket/IConnectionRequest // com.ditchoom.mqtt.connection/MqttBroker.connectionRequest.<get-connectionRequest>|<get-connectionRequest>(){}[0]
+    final val identifier // com.ditchoom.mqtt.connection/MqttBroker.identifier|{}identifier[0]
+        final fun <get-identifier>(): kotlin/Int // com.ditchoom.mqtt.connection/MqttBroker.identifier.<get-identifier>|<get-identifier>(){}[0]
+    final val protocolVersion // com.ditchoom.mqtt.connection/MqttBroker.protocolVersion|{}protocolVersion[0]
+        final fun <get-protocolVersion>(): kotlin/Byte // com.ditchoom.mqtt.connection/MqttBroker.protocolVersion.<get-protocolVersion>|<get-protocolVersion>(){}[0]
+
+    final fun component1(): kotlin/Int // com.ditchoom.mqtt.connection/MqttBroker.component1|component1(){}[0]
+    final fun component2(): com.ditchoom.mqtt.controlpacket/IConnectionRequest // com.ditchoom.mqtt.connection/MqttBroker.component2|component2(){}[0]
+    final fun copy(kotlin/Int = ..., com.ditchoom.mqtt.controlpacket/IConnectionRequest = ...): com.ditchoom.mqtt.connection/MqttBroker // com.ditchoom.mqtt.connection/MqttBroker.copy|copy(kotlin.Int;com.ditchoom.mqtt.controlpacket.IConnectionRequest){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // com.ditchoom.mqtt.connection/MqttBroker.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // com.ditchoom.mqtt.connection/MqttBroker.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // com.ditchoom.mqtt.connection/MqttBroker.toString|toString(){}[0]
+}
+
+final class com.ditchoom.mqtt.controlpacket/InvalidMqttUtf8StringMalformedPacketException : com.ditchoom.mqtt/MalformedPacketException { // com.ditchoom.mqtt.controlpacket/InvalidMqttUtf8StringMalformedPacketException|null[0]
+    constructor <init>(kotlin/String, kotlin/Int, kotlin/String) // com.ditchoom.mqtt.controlpacket/InvalidMqttUtf8StringMalformedPacketException.<init>|<init>(kotlin.String;kotlin.Int;kotlin.String){}[0]
+}
+
+final class com.ditchoom.mqtt.controlpacket/OpaquePublishPayload : com.ditchoom.buffer.codec/Payload { // com.ditchoom.mqtt.controlpacket/OpaquePublishPayload|null[0]
+    constructor <init>(com.ditchoom.buffer.codec/OwnedBytesHandle) // com.ditchoom.mqtt.controlpacket/OpaquePublishPayload.<init>|<init>(com.ditchoom.buffer.codec.OwnedBytesHandle){}[0]
+
+    final val handle // com.ditchoom.mqtt.controlpacket/OpaquePublishPayload.handle|{}handle[0]
+        final fun <get-handle>(): com.ditchoom.buffer.codec/OwnedBytesHandle // com.ditchoom.mqtt.controlpacket/OpaquePublishPayload.handle.<get-handle>|<get-handle>(){}[0]
+
+    final fun byteSize(): kotlin/Int // com.ditchoom.mqtt.controlpacket/OpaquePublishPayload.byteSize|byteSize(){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // com.ditchoom.mqtt.controlpacket/OpaquePublishPayload.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // com.ditchoom.mqtt.controlpacket/OpaquePublishPayload.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // com.ditchoom.mqtt.controlpacket/OpaquePublishPayload.toString|toString(){}[0]
+}
+
+final class com.ditchoom.mqtt.controlpacket/PacketIdsExhaustedException : kotlin/IllegalStateException { // com.ditchoom.mqtt.controlpacket/PacketIdsExhaustedException|null[0]
+    constructor <init>() // com.ditchoom.mqtt.controlpacket/PacketIdsExhaustedException.<init>|<init>(){}[0]
+}
+
+final class com.ditchoom.mqtt.controlpacket/TopicFilter : com.ditchoom.mqtt.controlpacket/Topic { // com.ditchoom.mqtt.controlpacket/TopicFilter|null[0]
+    final val root // com.ditchoom.mqtt.controlpacket/TopicFilter.root|{}root[0]
+        final fun <get-root>(): com.ditchoom.mqtt.controlpacket/Level // com.ditchoom.mqtt.controlpacket/TopicFilter.root.<get-root>|<get-root>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // com.ditchoom.mqtt.controlpacket/TopicFilter.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // com.ditchoom.mqtt.controlpacket/TopicFilter.hashCode|hashCode(){}[0]
+    final fun matches(com.ditchoom.mqtt.controlpacket/TopicName): kotlin/Boolean // com.ditchoom.mqtt.controlpacket/TopicFilter.matches|matches(com.ditchoom.mqtt.controlpacket.TopicName){}[0]
+    final fun toString(): kotlin/String // com.ditchoom.mqtt.controlpacket/TopicFilter.toString|toString(){}[0]
+
+    final object Companion { // com.ditchoom.mqtt.controlpacket/TopicFilter.Companion|null[0]
+        final fun fromOrNull(kotlin/String): com.ditchoom.mqtt.controlpacket/TopicFilter? // com.ditchoom.mqtt.controlpacket/TopicFilter.Companion.fromOrNull|fromOrNull(kotlin.String){}[0]
+        final fun fromOrThrow(kotlin/String): com.ditchoom.mqtt.controlpacket/TopicFilter // com.ditchoom.mqtt.controlpacket/TopicFilter.Companion.fromOrThrow|fromOrThrow(kotlin.String){}[0]
+    }
+}
+
+final class com.ditchoom.mqtt.controlpacket/TopicName : com.ditchoom.mqtt.controlpacket/Topic { // com.ditchoom.mqtt.controlpacket/TopicName|null[0]
+    final val root // com.ditchoom.mqtt.controlpacket/TopicName.root|{}root[0]
+        final fun <get-root>(): com.ditchoom.mqtt.controlpacket/Level // com.ditchoom.mqtt.controlpacket/TopicName.root.<get-root>|<get-root>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // com.ditchoom.mqtt.controlpacket/TopicName.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // com.ditchoom.mqtt.controlpacket/TopicName.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // com.ditchoom.mqtt.controlpacket/TopicName.toString|toString(){}[0]
+
+    final object Companion { // com.ditchoom.mqtt.controlpacket/TopicName.Companion|null[0]
+        final fun fromOrNull(kotlin/String): com.ditchoom.mqtt.controlpacket/TopicName? // com.ditchoom.mqtt.controlpacket/TopicName.Companion.fromOrNull|fromOrNull(kotlin.String){}[0]
+        final fun fromOrThrow(kotlin/String): com.ditchoom.mqtt.controlpacket/TopicName // com.ditchoom.mqtt.controlpacket/TopicName.Companion.fromOrThrow|fromOrThrow(kotlin.String){}[0]
+    }
+}
+
+final class com.ditchoom.mqtt/InMemoryPersistence : com.ditchoom.mqtt/Persistence { // com.ditchoom.mqtt/InMemoryPersistence|null[0]
+    constructor <init>() // com.ditchoom.mqtt/InMemoryPersistence.<init>|<init>(){}[0]
+
+    final suspend fun ackPub(com.ditchoom.mqtt.connection/MqttBroker, com.ditchoom.mqtt.controlpacket/IPublishAcknowledgment) // com.ditchoom.mqtt/InMemoryPersistence.ackPub|ackPub(com.ditchoom.mqtt.connection.MqttBroker;com.ditchoom.mqtt.controlpacket.IPublishAcknowledgment){}[0]
+    final suspend fun ackPubComplete(com.ditchoom.mqtt.connection/MqttBroker, com.ditchoom.mqtt.controlpacket/IPublishComplete) // com.ditchoom.mqtt/InMemoryPersistence.ackPubComplete|ackPubComplete(com.ditchoom.mqtt.connection.MqttBroker;com.ditchoom.mqtt.controlpacket.IPublishComplete){}[0]
+    final suspend fun ackPubReceivedQueuePubRelease(com.ditchoom.mqtt.connection/MqttBroker, com.ditchoom.mqtt.controlpacket/IPublishReceived, com.ditchoom.mqtt.controlpacket/IPublishRelease) // com.ditchoom.mqtt/InMemoryPersistence.ackPubReceivedQueuePubRelease|ackPubReceivedQueuePubRelease(com.ditchoom.mqtt.connection.MqttBroker;com.ditchoom.mqtt.controlpacket.IPublishReceived;com.ditchoom.mqtt.controlpacket.IPublishRelease){}[0]
+    final suspend fun ackPubRelease(com.ditchoom.mqtt.connection/MqttBroker, com.ditchoom.mqtt.controlpacket/IPublishRelease, com.ditchoom.mqtt.controlpacket/IPublishComplete) // com.ditchoom.mqtt/InMemoryPersistence.ackPubRelease|ackPubRelease(com.ditchoom.mqtt.connection.MqttBroker;com.ditchoom.mqtt.controlpacket.IPublishRelease;com.ditchoom.mqtt.controlpacket.IPublishComplete){}[0]
+    final suspend fun ackSub(com.ditchoom.mqtt.connection/MqttBroker, com.ditchoom.mqtt.controlpacket/ISubscribeAcknowledgement) // com.ditchoom.mqtt/InMemoryPersistence.ackSub|ackSub(com.ditchoom.mqtt.connection.MqttBroker;com.ditchoom.mqtt.controlpacket.ISubscribeAcknowledgement){}[0]
+    final suspend fun ackUnsub(com.ditchoom.mqtt.connection/MqttBroker, com.ditchoom.mqtt.controlpacket/IUnsubscribeAcknowledgment) // com.ditchoom.mqtt/InMemoryPersistence.ackUnsub|ackUnsub(com.ditchoom.mqtt.connection.MqttBroker;com.ditchoom.mqtt.controlpacket.IUnsubscribeAcknowledgment){}[0]
+    final suspend fun activeSubscriptions(com.ditchoom.mqtt.connection/MqttBroker, kotlin/Boolean): kotlin.collections/Map<com.ditchoom.mqtt.controlpacket/TopicFilter, com.ditchoom.mqtt.controlpacket/ISubscription> // com.ditchoom.mqtt/InMemoryPersistence.activeSubscriptions|activeSubscriptions(com.ditchoom.mqtt.connection.MqttBroker;kotlin.Boolean){}[0]
+    final suspend fun addBroker(com.ditchoom.mqtt.controlpacket/IConnectionRequest): com.ditchoom.mqtt.connection/MqttBroker // com.ditchoom.mqtt/InMemoryPersistence.addBroker|addBroker(com.ditchoom.mqtt.controlpacket.IConnectionRequest){}[0]
+    final suspend fun allBrokers(): kotlin.collections/Collection<com.ditchoom.mqtt.connection/MqttBroker> // com.ditchoom.mqtt/InMemoryPersistence.allBrokers|allBrokers(){}[0]
+    final suspend fun brokerWithId(kotlin/Int): com.ditchoom.mqtt.connection/MqttBroker? // com.ditchoom.mqtt/InMemoryPersistence.brokerWithId|brokerWithId(kotlin.Int){}[0]
+    final suspend fun clearMessages(com.ditchoom.mqtt.connection/MqttBroker) // com.ditchoom.mqtt/InMemoryPersistence.clearMessages|clearMessages(com.ditchoom.mqtt.connection.MqttBroker){}[0]
+    final suspend fun getPubWithPacketId(com.ditchoom.mqtt.connection/MqttBroker, kotlin/Int): com.ditchoom.mqtt.controlpacket/PublishMessage? // com.ditchoom.mqtt/InMemoryPersistence.getPubWithPacketId|getPubWithPacketId(com.ditchoom.mqtt.connection.MqttBroker;kotlin.Int){}[0]
+    final suspend fun getSubWithPacketId(com.ditchoom.mqtt.connection/MqttBroker, kotlin/Int): com.ditchoom.mqtt.controlpacket/ISubscribeRequest? // com.ditchoom.mqtt/InMemoryPersistence.getSubWithPacketId|getSubWithPacketId(com.ditchoom.mqtt.connection.MqttBroker;kotlin.Int){}[0]
+    final suspend fun getUnsubWithPacketId(com.ditchoom.mqtt.connection/MqttBroker, kotlin/Int): com.ditchoom.mqtt.controlpacket/IUnsubscribeRequest? // com.ditchoom.mqtt/InMemoryPersistence.getUnsubWithPacketId|getUnsubWithPacketId(com.ditchoom.mqtt.connection.MqttBroker;kotlin.Int){}[0]
+    final suspend fun incomingHandlerComplete(com.ditchoom.mqtt.connection/MqttBroker, kotlin/Int) // com.ditchoom.mqtt/InMemoryPersistence.incomingHandlerComplete|incomingHandlerComplete(com.ditchoom.mqtt.connection.MqttBroker;kotlin.Int){}[0]
+    final suspend fun incomingMessagesToRedispatch(com.ditchoom.mqtt.connection/MqttBroker): kotlin.collections/Collection<com.ditchoom.mqtt/IncomingPublishRecord> // com.ditchoom.mqtt/InMemoryPersistence.incomingMessagesToRedispatch|incomingMessagesToRedispatch(com.ditchoom.mqtt.connection.MqttBroker){}[0]
+    final suspend fun isQueueClear(com.ditchoom.mqtt.connection/MqttBroker, kotlin/Boolean): kotlin/Boolean // com.ditchoom.mqtt/InMemoryPersistence.isQueueClear|isQueueClear(com.ditchoom.mqtt.connection.MqttBroker;kotlin.Boolean){}[0]
+    final suspend fun messagesToSendOnReconnect(com.ditchoom.mqtt.connection/MqttBroker): kotlin.collections/Collection<com.ditchoom.mqtt.controlpacket/ControlPacket> // com.ditchoom.mqtt/InMemoryPersistence.messagesToSendOnReconnect|messagesToSendOnReconnect(com.ditchoom.mqtt.connection.MqttBroker){}[0]
+    final suspend fun onPubCompWritten(com.ditchoom.mqtt.connection/MqttBroker, com.ditchoom.mqtt.controlpacket/IPublishComplete) // com.ditchoom.mqtt/InMemoryPersistence.onPubCompWritten|onPubCompWritten(com.ditchoom.mqtt.connection.MqttBroker;com.ditchoom.mqtt.controlpacket.IPublishComplete){}[0]
+    final suspend fun persistIncomingPublish(com.ditchoom.mqtt.connection/MqttBroker, com.ditchoom.mqtt.controlpacket/PublishMessage) // com.ditchoom.mqtt/InMemoryPersistence.persistIncomingPublish|persistIncomingPublish(com.ditchoom.mqtt.connection.MqttBroker;com.ditchoom.mqtt.controlpacket.PublishMessage){}[0]
+    final suspend fun removeBroker(kotlin/Int) // com.ditchoom.mqtt/InMemoryPersistence.removeBroker|removeBroker(kotlin.Int){}[0]
+    final suspend fun updatePublishState(com.ditchoom.mqtt.connection/MqttBroker, kotlin/Int, kotlin/Int) // com.ditchoom.mqtt/InMemoryPersistence.updatePublishState|updatePublishState(com.ditchoom.mqtt.connection.MqttBroker;kotlin.Int;kotlin.Int){}[0]
+    final suspend fun writePubGetPacketId(com.ditchoom.mqtt.connection/MqttBroker, com.ditchoom.mqtt.controlpacket/PublishMessage): kotlin/Int // com.ditchoom.mqtt/InMemoryPersistence.writePubGetPacketId|writePubGetPacketId(com.ditchoom.mqtt.connection.MqttBroker;com.ditchoom.mqtt.controlpacket.PublishMessage){}[0]
+    final suspend fun writeSubUpdatePacketIdAndSimplifySubscriptions(com.ditchoom.mqtt.connection/MqttBroker, com.ditchoom.mqtt.controlpacket/ISubscribeRequest): com.ditchoom.mqtt.controlpacket/ISubscribeRequest // com.ditchoom.mqtt/InMemoryPersistence.writeSubUpdatePacketIdAndSimplifySubscriptions|writeSubUpdatePacketIdAndSimplifySubscriptions(com.ditchoom.mqtt.connection.MqttBroker;com.ditchoom.mqtt.controlpacket.ISubscribeRequest){}[0]
+    final suspend fun writeUnsubGetPacketId(com.ditchoom.mqtt.connection/MqttBroker, com.ditchoom.mqtt.controlpacket/IUnsubscribeRequest): kotlin/Int // com.ditchoom.mqtt/InMemoryPersistence.writeUnsubGetPacketId|writeUnsubGetPacketId(com.ditchoom.mqtt.connection.MqttBroker;com.ditchoom.mqtt.controlpacket.IUnsubscribeRequest){}[0]
+}
+
+final class com.ditchoom.mqtt/IncomingPublishRecord { // com.ditchoom.mqtt/IncomingPublishRecord|null[0]
+    constructor <init>(com.ditchoom.mqtt.controlpacket/PublishMessage, kotlin/Int) // com.ditchoom.mqtt/IncomingPublishRecord.<init>|<init>(com.ditchoom.mqtt.controlpacket.PublishMessage;kotlin.Int){}[0]
+
+    final val packet // com.ditchoom.mqtt/IncomingPublishRecord.packet|{}packet[0]
+        final fun <get-packet>(): com.ditchoom.mqtt.controlpacket/PublishMessage // com.ditchoom.mqtt/IncomingPublishRecord.packet.<get-packet>|<get-packet>(){}[0]
+    final val state // com.ditchoom.mqtt/IncomingPublishRecord.state|{}state[0]
+        final fun <get-state>(): kotlin/Int // com.ditchoom.mqtt/IncomingPublishRecord.state.<get-state>|<get-state>(){}[0]
+
+    final fun component1(): com.ditchoom.mqtt.controlpacket/PublishMessage // com.ditchoom.mqtt/IncomingPublishRecord.component1|component1(){}[0]
+    final fun component2(): kotlin/Int // com.ditchoom.mqtt/IncomingPublishRecord.component2|component2(){}[0]
+    final fun copy(com.ditchoom.mqtt.controlpacket/PublishMessage = ..., kotlin/Int = ...): com.ditchoom.mqtt/IncomingPublishRecord // com.ditchoom.mqtt/IncomingPublishRecord.copy|copy(com.ditchoom.mqtt.controlpacket.PublishMessage;kotlin.Int){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // com.ditchoom.mqtt/IncomingPublishRecord.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // com.ditchoom.mqtt/IncomingPublishRecord.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // com.ditchoom.mqtt/IncomingPublishRecord.toString|toString(){}[0]
+}
+
+final class com.ditchoom.mqtt/MalformedInvalidVariableByteInteger : com.ditchoom.mqtt/MqttException { // com.ditchoom.mqtt/MalformedInvalidVariableByteInteger|null[0]
+    constructor <init>(kotlin/Int) // com.ditchoom.mqtt/MalformedInvalidVariableByteInteger.<init>|<init>(kotlin.Int){}[0]
+}
+
+final class com.ditchoom.mqtt/MissingCodecException : com.ditchoom.mqtt/MqttException { // com.ditchoom.mqtt/MissingCodecException|null[0]
+    constructor <init>(kotlin/String) // com.ditchoom.mqtt/MissingCodecException.<init>|<init>(kotlin.String){}[0]
+
+    final val topicName // com.ditchoom.mqtt/MissingCodecException.topicName|{}topicName[0]
+        final fun <get-topicName>(): kotlin/String // com.ditchoom.mqtt/MissingCodecException.topicName.<get-topicName>|<get-topicName>(){}[0]
+}
+
+final value class com.ditchoom.mqtt.controlpacket/MqttFixedHeader { // com.ditchoom.mqtt.controlpacket/MqttFixedHeader|null[0]
+    constructor <init>(kotlin/UByte) // com.ditchoom.mqtt.controlpacket/MqttFixedHeader.<init>|<init>(kotlin.UByte){}[0]
+
+    final val flags // com.ditchoom.mqtt.controlpacket/MqttFixedHeader.flags|{}flags[0]
+        final fun <get-flags>(): kotlin/Int // com.ditchoom.mqtt.controlpacket/MqttFixedHeader.flags.<get-flags>|<get-flags>(){}[0]
+    final val packetType // com.ditchoom.mqtt.controlpacket/MqttFixedHeader.packetType|{}packetType[0]
+        final fun <get-packetType>(): kotlin/Int // com.ditchoom.mqtt.controlpacket/MqttFixedHeader.packetType.<get-packetType>|<get-packetType>(){}[0]
+    final val publishDup // com.ditchoom.mqtt.controlpacket/MqttFixedHeader.publishDup|{}publishDup[0]
+        final fun <get-publishDup>(): kotlin/Boolean // com.ditchoom.mqtt.controlpacket/MqttFixedHeader.publishDup.<get-publishDup>|<get-publishDup>(){}[0]
+    final val publishHasPacketIdentifier // com.ditchoom.mqtt.controlpacket/MqttFixedHeader.publishHasPacketIdentifier|{}publishHasPacketIdentifier[0]
+        final fun <get-publishHasPacketIdentifier>(): kotlin/Boolean // com.ditchoom.mqtt.controlpacket/MqttFixedHeader.publishHasPacketIdentifier.<get-publishHasPacketIdentifier>|<get-publishHasPacketIdentifier>(){}[0]
+    final val publishQos // com.ditchoom.mqtt.controlpacket/MqttFixedHeader.publishQos|{}publishQos[0]
+        final fun <get-publishQos>(): kotlin/Int // com.ditchoom.mqtt.controlpacket/MqttFixedHeader.publishQos.<get-publishQos>|<get-publishQos>(){}[0]
+    final val publishRetain // com.ditchoom.mqtt.controlpacket/MqttFixedHeader.publishRetain|{}publishRetain[0]
+        final fun <get-publishRetain>(): kotlin/Boolean // com.ditchoom.mqtt.controlpacket/MqttFixedHeader.publishRetain.<get-publishRetain>|<get-publishRetain>(){}[0]
+    final val raw // com.ditchoom.mqtt.controlpacket/MqttFixedHeader.raw|{}raw[0]
+        final fun <get-raw>(): kotlin/UByte // com.ditchoom.mqtt.controlpacket/MqttFixedHeader.raw.<get-raw>|<get-raw>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // com.ditchoom.mqtt.controlpacket/MqttFixedHeader.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // com.ditchoom.mqtt.controlpacket/MqttFixedHeader.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // com.ditchoom.mqtt.controlpacket/MqttFixedHeader.toString|toString(){}[0]
+}
+
+final value class com.ditchoom.mqtt.controlpacket/PacketId { // com.ditchoom.mqtt.controlpacket/PacketId|null[0]
+    constructor <init>(kotlin/Int) // com.ditchoom.mqtt.controlpacket/PacketId.<init>|<init>(kotlin.Int){}[0]
+
+    final val value // com.ditchoom.mqtt.controlpacket/PacketId.value|{}value[0]
+        final fun <get-value>(): kotlin/Int // com.ditchoom.mqtt.controlpacket/PacketId.value.<get-value>|<get-value>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // com.ditchoom.mqtt.controlpacket/PacketId.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // com.ditchoom.mqtt.controlpacket/PacketId.hashCode|hashCode(){}[0]
+    final fun next(): com.ditchoom.mqtt.controlpacket/PacketId // com.ditchoom.mqtt.controlpacket/PacketId.next|next(){}[0]
+    final fun toString(): kotlin/String // com.ditchoom.mqtt.controlpacket/PacketId.toString|toString(){}[0]
+    final inline fun nextFree(kotlin/Function1<com.ditchoom.mqtt.controlpacket/PacketId, kotlin/Boolean>): com.ditchoom.mqtt.controlpacket/PacketIdAllocation // com.ditchoom.mqtt.controlpacket/PacketId.nextFree|nextFree(kotlin.Function1<com.ditchoom.mqtt.controlpacket.PacketId,kotlin.Boolean>){}[0]
+
+    final object Companion { // com.ditchoom.mqtt.controlpacket/PacketId.Companion|null[0]
+        final const val MAX // com.ditchoom.mqtt.controlpacket/PacketId.Companion.MAX|{}MAX[0]
+            final fun <get-MAX>(): kotlin/Int // com.ditchoom.mqtt.controlpacket/PacketId.Companion.MAX.<get-MAX>|<get-MAX>(){}[0]
+        final const val MIN // com.ditchoom.mqtt.controlpacket/PacketId.Companion.MIN|{}MIN[0]
+            final fun <get-MIN>(): kotlin/Int // com.ditchoom.mqtt.controlpacket/PacketId.Companion.MIN.<get-MIN>|<get-MIN>(){}[0]
+
+        final fun parse(kotlin/Int): com.ditchoom.mqtt.controlpacket/PacketIdParse // com.ditchoom.mqtt.controlpacket/PacketId.Companion.parse|parse(kotlin.Int){}[0]
+    }
+}
+
+open class com.ditchoom.mqtt/MalformedPacketException : com.ditchoom.mqtt/MqttException { // com.ditchoom.mqtt/MalformedPacketException|null[0]
+    constructor <init>(kotlin/String) // com.ditchoom.mqtt/MalformedPacketException.<init>|<init>(kotlin.String){}[0]
+}
+
+open class com.ditchoom.mqtt/MqttException : kotlin/Exception { // com.ditchoom.mqtt/MqttException|null[0]
+    constructor <init>(kotlin/String, kotlin/UByte) // com.ditchoom.mqtt/MqttException.<init>|<init>(kotlin.String;kotlin.UByte){}[0]
+
+    final val reasonCode // com.ditchoom.mqtt/MqttException.reasonCode|{}reasonCode[0]
+        final fun <get-reasonCode>(): kotlin/UByte // com.ditchoom.mqtt/MqttException.reasonCode.<get-reasonCode>|<get-reasonCode>(){}[0]
+}
+
+open class com.ditchoom.mqtt/MqttWarning : kotlin/Exception { // com.ditchoom.mqtt/MqttWarning|null[0]
+    constructor <init>(kotlin/String, kotlin/String) // com.ditchoom.mqtt/MqttWarning.<init>|<init>(kotlin.String;kotlin.String){}[0]
+}
+
+open class com.ditchoom.mqtt/ProtocolError : com.ditchoom.mqtt/MqttException { // com.ditchoom.mqtt/ProtocolError|null[0]
+    constructor <init>(kotlin/String) // com.ditchoom.mqtt/ProtocolError.<init>|<init>(kotlin.String){}[0]
+}
+
+sealed class com.ditchoom.mqtt.controlpacket/Level { // com.ditchoom.mqtt.controlpacket/Level|null[0]
+    abstract val value // com.ditchoom.mqtt.controlpacket/Level.value|{}value[0]
+        abstract fun <get-value>(): kotlin/String // com.ditchoom.mqtt.controlpacket/Level.value.<get-value>|<get-value>(){}[0]
+    open val nextLevel // com.ditchoom.mqtt.controlpacket/Level.nextLevel|{}nextLevel[0]
+        open fun <get-nextLevel>(): com.ditchoom.mqtt.controlpacket/Level? // com.ditchoom.mqtt.controlpacket/Level.nextLevel.<get-nextLevel>|<get-nextLevel>(){}[0]
+
+    final var isPostfixedWithSlash // com.ditchoom.mqtt.controlpacket/Level.isPostfixedWithSlash|{}isPostfixedWithSlash[0]
+        final fun <get-isPostfixedWithSlash>(): kotlin/Boolean // com.ditchoom.mqtt.controlpacket/Level.isPostfixedWithSlash.<get-isPostfixedWithSlash>|<get-isPostfixedWithSlash>(){}[0]
+        final fun <set-isPostfixedWithSlash>(kotlin/Boolean) // com.ditchoom.mqtt.controlpacket/Level.isPostfixedWithSlash.<set-isPostfixedWithSlash>|<set-isPostfixedWithSlash>(kotlin.Boolean){}[0]
+    final var isPrefixedWithSlash // com.ditchoom.mqtt.controlpacket/Level.isPrefixedWithSlash|{}isPrefixedWithSlash[0]
+        final fun <get-isPrefixedWithSlash>(): kotlin/Boolean // com.ditchoom.mqtt.controlpacket/Level.isPrefixedWithSlash.<get-isPrefixedWithSlash>|<get-isPrefixedWithSlash>(){}[0]
+        final fun <set-isPrefixedWithSlash>(kotlin/Boolean) // com.ditchoom.mqtt.controlpacket/Level.isPrefixedWithSlash.<set-isPrefixedWithSlash>|<set-isPrefixedWithSlash>(kotlin.Boolean){}[0]
+
+    abstract fun matches(com.ditchoom.mqtt.controlpacket/Level): kotlin/Boolean // com.ditchoom.mqtt.controlpacket/Level.matches|matches(com.ditchoom.mqtt.controlpacket.Level){}[0]
+    final fun stringValue(): kotlin/String // com.ditchoom.mqtt.controlpacket/Level.stringValue|stringValue(){}[0]
+
+    final class SingleLevelWildcard : com.ditchoom.mqtt.controlpacket/Level { // com.ditchoom.mqtt.controlpacket/Level.SingleLevelWildcard|null[0]
+        constructor <init>(com.ditchoom.mqtt.controlpacket/Level? = ...) // com.ditchoom.mqtt.controlpacket/Level.SingleLevelWildcard.<init>|<init>(com.ditchoom.mqtt.controlpacket.Level?){}[0]
+
+        final val nextLevel // com.ditchoom.mqtt.controlpacket/Level.SingleLevelWildcard.nextLevel|{}nextLevel[0]
+            final fun <get-nextLevel>(): com.ditchoom.mqtt.controlpacket/Level? // com.ditchoom.mqtt.controlpacket/Level.SingleLevelWildcard.nextLevel.<get-nextLevel>|<get-nextLevel>(){}[0]
+        final val value // com.ditchoom.mqtt.controlpacket/Level.SingleLevelWildcard.value|{}value[0]
+            final fun <get-value>(): kotlin/String // com.ditchoom.mqtt.controlpacket/Level.SingleLevelWildcard.value.<get-value>|<get-value>(){}[0]
+
+        final fun component1(): com.ditchoom.mqtt.controlpacket/Level? // com.ditchoom.mqtt.controlpacket/Level.SingleLevelWildcard.component1|component1(){}[0]
+        final fun copy(com.ditchoom.mqtt.controlpacket/Level? = ...): com.ditchoom.mqtt.controlpacket/Level.SingleLevelWildcard // com.ditchoom.mqtt.controlpacket/Level.SingleLevelWildcard.copy|copy(com.ditchoom.mqtt.controlpacket.Level?){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // com.ditchoom.mqtt.controlpacket/Level.SingleLevelWildcard.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // com.ditchoom.mqtt.controlpacket/Level.SingleLevelWildcard.hashCode|hashCode(){}[0]
+        final fun matches(com.ditchoom.mqtt.controlpacket/Level): kotlin/Boolean // com.ditchoom.mqtt.controlpacket/Level.SingleLevelWildcard.matches|matches(com.ditchoom.mqtt.controlpacket.Level){}[0]
+        final fun toString(): kotlin/String // com.ditchoom.mqtt.controlpacket/Level.SingleLevelWildcard.toString|toString(){}[0]
+    }
+
+    final class StringLevel : com.ditchoom.mqtt.controlpacket/Level { // com.ditchoom.mqtt.controlpacket/Level.StringLevel|null[0]
+        constructor <init>(kotlin/String, com.ditchoom.mqtt.controlpacket/Level?) // com.ditchoom.mqtt.controlpacket/Level.StringLevel.<init>|<init>(kotlin.String;com.ditchoom.mqtt.controlpacket.Level?){}[0]
+
+        final val nextLevel // com.ditchoom.mqtt.controlpacket/Level.StringLevel.nextLevel|{}nextLevel[0]
+            final fun <get-nextLevel>(): com.ditchoom.mqtt.controlpacket/Level? // com.ditchoom.mqtt.controlpacket/Level.StringLevel.nextLevel.<get-nextLevel>|<get-nextLevel>(){}[0]
+        final val value // com.ditchoom.mqtt.controlpacket/Level.StringLevel.value|{}value[0]
+            final fun <get-value>(): kotlin/String // com.ditchoom.mqtt.controlpacket/Level.StringLevel.value.<get-value>|<get-value>(){}[0]
+
+        final fun component1(): kotlin/String // com.ditchoom.mqtt.controlpacket/Level.StringLevel.component1|component1(){}[0]
+        final fun component2(): com.ditchoom.mqtt.controlpacket/Level? // com.ditchoom.mqtt.controlpacket/Level.StringLevel.component2|component2(){}[0]
+        final fun copy(kotlin/String = ..., com.ditchoom.mqtt.controlpacket/Level? = ...): com.ditchoom.mqtt.controlpacket/Level.StringLevel // com.ditchoom.mqtt.controlpacket/Level.StringLevel.copy|copy(kotlin.String;com.ditchoom.mqtt.controlpacket.Level?){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // com.ditchoom.mqtt.controlpacket/Level.StringLevel.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // com.ditchoom.mqtt.controlpacket/Level.StringLevel.hashCode|hashCode(){}[0]
+        final fun matches(com.ditchoom.mqtt.controlpacket/Level): kotlin/Boolean // com.ditchoom.mqtt.controlpacket/Level.StringLevel.matches|matches(com.ditchoom.mqtt.controlpacket.Level){}[0]
+        final fun toString(): kotlin/String // com.ditchoom.mqtt.controlpacket/Level.StringLevel.toString|toString(){}[0]
+    }
+
+    final object MultiLevelWildcard : com.ditchoom.mqtt.controlpacket/Level { // com.ditchoom.mqtt.controlpacket/Level.MultiLevelWildcard|null[0]
+        final val value // com.ditchoom.mqtt.controlpacket/Level.MultiLevelWildcard.value|{}value[0]
+            final fun <get-value>(): kotlin/String // com.ditchoom.mqtt.controlpacket/Level.MultiLevelWildcard.value.<get-value>|<get-value>(){}[0]
+
+        final fun matches(com.ditchoom.mqtt.controlpacket/Level): kotlin/Boolean // com.ditchoom.mqtt.controlpacket/Level.MultiLevelWildcard.matches|matches(com.ditchoom.mqtt.controlpacket.Level){}[0]
+        final fun toString(): kotlin/String // com.ditchoom.mqtt.controlpacket/Level.MultiLevelWildcard.toString|toString(){}[0]
+    }
+}
+
+final object com.ditchoom.mqtt.controlpacket/MqttFixedHeaderCodec : com.ditchoom.buffer.codec/Codec<com.ditchoom.mqtt.controlpacket/MqttFixedHeader> { // com.ditchoom.mqtt.controlpacket/MqttFixedHeaderCodec|null[0]
+    final fun decode(com.ditchoom.buffer/ReadBuffer, com.ditchoom.buffer.codec/DecodeContext): com.ditchoom.mqtt.controlpacket/MqttFixedHeader // com.ditchoom.mqtt.controlpacket/MqttFixedHeaderCodec.decode|decode(com.ditchoom.buffer.ReadBuffer;com.ditchoom.buffer.codec.DecodeContext){}[0]
+    final fun encode(com.ditchoom.buffer/WriteBuffer, com.ditchoom.mqtt.controlpacket/MqttFixedHeader, com.ditchoom.buffer.codec/EncodeContext) // com.ditchoom.mqtt.controlpacket/MqttFixedHeaderCodec.encode|encode(com.ditchoom.buffer.WriteBuffer;com.ditchoom.mqtt.controlpacket.MqttFixedHeader;com.ditchoom.buffer.codec.EncodeContext){}[0]
+    final fun peekFrameSize(com.ditchoom.buffer.stream/StreamProcessor, kotlin/Int): com.ditchoom.buffer.codec/PeekResult // com.ditchoom.mqtt.controlpacket/MqttFixedHeaderCodec.peekFrameSize|peekFrameSize(com.ditchoom.buffer.stream.StreamProcessor;kotlin.Int){}[0]
+    final fun sizeHint(com.ditchoom.mqtt.controlpacket/MqttFixedHeader, com.ditchoom.buffer.codec/EncodeContext): kotlin/Int // com.ditchoom.mqtt.controlpacket/MqttFixedHeaderCodec.sizeHint|sizeHint(com.ditchoom.mqtt.controlpacket.MqttFixedHeader;com.ditchoom.buffer.codec.EncodeContext){}[0]
+    final fun wireSize(com.ditchoom.mqtt.controlpacket/MqttFixedHeader, com.ditchoom.buffer.codec/EncodeContext): com.ditchoom.buffer.codec/WireSize // com.ditchoom.mqtt.controlpacket/MqttFixedHeaderCodec.wireSize|wireSize(com.ditchoom.mqtt.controlpacket.MqttFixedHeader;com.ditchoom.buffer.codec.EncodeContext){}[0]
+}
+
+final object com.ditchoom.mqtt.controlpacket/MqttRemainingLengthCodec : com.ditchoom.buffer.codec/BoundingLengthCodec<kotlin/UInt> { // com.ditchoom.mqtt.controlpacket/MqttRemainingLengthCodec|null[0]
+    final val maxWireSize // com.ditchoom.mqtt.controlpacket/MqttRemainingLengthCodec.maxWireSize|{}maxWireSize[0]
+        final fun <get-maxWireSize>(): kotlin/Int // com.ditchoom.mqtt.controlpacket/MqttRemainingLengthCodec.maxWireSize.<get-maxWireSize>|<get-maxWireSize>(){}[0]
+
+    final fun applyBound(com.ditchoom.buffer/ReadBuffer, kotlin/UInt) // com.ditchoom.mqtt.controlpacket/MqttRemainingLengthCodec.applyBound|applyBound(com.ditchoom.buffer.ReadBuffer;kotlin.UInt){}[0]
+    final fun decode(com.ditchoom.buffer/ReadBuffer, com.ditchoom.buffer.codec/DecodeContext): kotlin/UInt // com.ditchoom.mqtt.controlpacket/MqttRemainingLengthCodec.decode|decode(com.ditchoom.buffer.ReadBuffer;com.ditchoom.buffer.codec.DecodeContext){}[0]
+    final fun encode(com.ditchoom.buffer/WriteBuffer, kotlin/UInt, com.ditchoom.buffer.codec/EncodeContext) // com.ditchoom.mqtt.controlpacket/MqttRemainingLengthCodec.encode|encode(com.ditchoom.buffer.WriteBuffer;kotlin.UInt;com.ditchoom.buffer.codec.EncodeContext){}[0]
+    final fun wireSize(kotlin/UInt, com.ditchoom.buffer.codec/EncodeContext): com.ditchoom.buffer.codec/WireSize // com.ditchoom.mqtt.controlpacket/MqttRemainingLengthCodec.wireSize|wireSize(kotlin.UInt;com.ditchoom.buffer.codec.EncodeContext){}[0]
+}
+
+final object com.ditchoom.mqtt.controlpacket/OpaquePublishPayloadCodec : com.ditchoom.buffer.codec/Codec<com.ditchoom.mqtt.controlpacket/OpaquePublishPayload> { // com.ditchoom.mqtt.controlpacket/OpaquePublishPayloadCodec|null[0]
+    final fun decode(com.ditchoom.buffer/ReadBuffer, com.ditchoom.buffer.codec/DecodeContext): com.ditchoom.mqtt.controlpacket/OpaquePublishPayload // com.ditchoom.mqtt.controlpacket/OpaquePublishPayloadCodec.decode|decode(com.ditchoom.buffer.ReadBuffer;com.ditchoom.buffer.codec.DecodeContext){}[0]
+    final fun encode(com.ditchoom.buffer/WriteBuffer, com.ditchoom.mqtt.controlpacket/OpaquePublishPayload, com.ditchoom.buffer.codec/EncodeContext) // com.ditchoom.mqtt.controlpacket/OpaquePublishPayloadCodec.encode|encode(com.ditchoom.buffer.WriteBuffer;com.ditchoom.mqtt.controlpacket.OpaquePublishPayload;com.ditchoom.buffer.codec.EncodeContext){}[0]
+    final fun peekFrameSize(com.ditchoom.buffer.stream/StreamProcessor, kotlin/Int): com.ditchoom.buffer.codec/PeekResult // com.ditchoom.mqtt.controlpacket/OpaquePublishPayloadCodec.peekFrameSize|peekFrameSize(com.ditchoom.buffer.stream.StreamProcessor;kotlin.Int){}[0]
+    final fun wireSize(com.ditchoom.mqtt.controlpacket/OpaquePublishPayload, com.ditchoom.buffer.codec/EncodeContext): com.ditchoom.buffer.codec/WireSize // com.ditchoom.mqtt.controlpacket/OpaquePublishPayloadCodec.wireSize|wireSize(com.ditchoom.mqtt.controlpacket.OpaquePublishPayload;com.ditchoom.buffer.codec.EncodeContext){}[0]
+}
+
+final object com.ditchoom.mqtt.controlpacket/VariableByteIntegerCodec : com.ditchoom.buffer.codec/Codec<kotlin/UInt> { // com.ditchoom.mqtt.controlpacket/VariableByteIntegerCodec|null[0]
+    final fun decode(com.ditchoom.buffer/ReadBuffer, com.ditchoom.buffer.codec/DecodeContext): kotlin/UInt // com.ditchoom.mqtt.controlpacket/VariableByteIntegerCodec.decode|decode(com.ditchoom.buffer.ReadBuffer;com.ditchoom.buffer.codec.DecodeContext){}[0]
+    final fun encode(com.ditchoom.buffer/WriteBuffer, kotlin/UInt, com.ditchoom.buffer.codec/EncodeContext) // com.ditchoom.mqtt.controlpacket/VariableByteIntegerCodec.encode|encode(com.ditchoom.buffer.WriteBuffer;kotlin.UInt;com.ditchoom.buffer.codec.EncodeContext){}[0]
+    final fun wireSize(kotlin/UInt, com.ditchoom.buffer.codec/EncodeContext): com.ditchoom.buffer.codec/WireSize // com.ditchoom.mqtt.controlpacket/VariableByteIntegerCodec.wireSize|wireSize(kotlin.UInt;com.ditchoom.buffer.codec.EncodeContext){}[0]
+}
+
+final const val com.ditchoom.mqtt.controlpacket.encoding/VARIABLE_BYTE_INT_MAX // com.ditchoom.mqtt.controlpacket.encoding/VARIABLE_BYTE_INT_MAX|{}VARIABLE_BYTE_INT_MAX[0]
+    final fun <get-VARIABLE_BYTE_INT_MAX>(): kotlin/Int // com.ditchoom.mqtt.controlpacket.encoding/VARIABLE_BYTE_INT_MAX.<get-VARIABLE_BYTE_INT_MAX>|<get-VARIABLE_BYTE_INT_MAX>(){}[0]
+final const val com.ditchoom.mqtt.controlpacket/NO_PACKET_ID // com.ditchoom.mqtt.controlpacket/NO_PACKET_ID|{}NO_PACKET_ID[0]
+    final fun <get-NO_PACKET_ID>(): kotlin/Int // com.ditchoom.mqtt.controlpacket/NO_PACKET_ID.<get-NO_PACKET_ID>|<get-NO_PACKET_ID>(){}[0]
+
+final val com.ditchoom.mqtt.controlpacket/validControlPacketIdentifierRange // com.ditchoom.mqtt.controlpacket/validControlPacketIdentifierRange|{}validControlPacketIdentifierRange[0]
+    final fun <get-validControlPacketIdentifierRange>(): kotlin.ranges/IntRange // com.ditchoom.mqtt.controlpacket/validControlPacketIdentifierRange.<get-validControlPacketIdentifierRange>|<get-validControlPacketIdentifierRange>(){}[0]
+
+final fun (com.ditchoom.buffer/ReadBuffer).com.ditchoom.mqtt.controlpacket.encoding/readLengthPrefixedUtf8String(): kotlin/Pair<kotlin/Int, kotlin/String> // com.ditchoom.mqtt.controlpacket.encoding/readLengthPrefixedUtf8String|readLengthPrefixedUtf8String@com.ditchoom.buffer.ReadBuffer(){}[0]
+final fun (com.ditchoom.buffer/ReadBuffer).com.ditchoom.mqtt.controlpacket.encoding/readVariableByteInteger(): kotlin/Int // com.ditchoom.mqtt.controlpacket.encoding/readVariableByteInteger|readVariableByteInteger@com.ditchoom.buffer.ReadBuffer(){}[0]
+final fun (com.ditchoom.buffer/WriteBuffer).com.ditchoom.mqtt.controlpacket.encoding/writeLengthPrefixedUtf8String(kotlin/String): com.ditchoom.buffer/WriteBuffer // com.ditchoom.mqtt.controlpacket.encoding/writeLengthPrefixedUtf8String|writeLengthPrefixedUtf8String@com.ditchoom.buffer.WriteBuffer(kotlin.String){}[0]
+final fun (com.ditchoom.buffer/WriteBuffer).com.ditchoom.mqtt.controlpacket.encoding/writeVariableByteInteger(kotlin/Int): com.ditchoom.buffer/WriteBuffer // com.ditchoom.mqtt.controlpacket.encoding/writeVariableByteInteger|writeVariableByteInteger@com.ditchoom.buffer.WriteBuffer(kotlin.Int){}[0]
+final fun (kotlin/String).com.ditchoom.mqtt.controlpacket/validateMqttString(kotlin/Boolean): com.ditchoom.mqtt.controlpacket/InvalidMqttUtf8StringMalformedPacketException? // com.ditchoom.mqtt.controlpacket/validateMqttString|validateMqttString@kotlin.String(kotlin.Boolean){}[0]
+final fun (kotlin/String).com.ditchoom.mqtt.controlpacket/validateMqttUTF8String(): kotlin/Boolean // com.ditchoom.mqtt.controlpacket/validateMqttUTF8String|validateMqttUTF8String@kotlin.String(){}[0]
+final fun (kotlin/String).com.ditchoom.mqtt.controlpacket/validateMqttUTF8StringOrNull(): kotlin/String? // com.ditchoom.mqtt.controlpacket/validateMqttUTF8StringOrNull|validateMqttUTF8StringOrNull@kotlin.String(){}[0]
+final fun (kotlin/String).com.ditchoom.mqtt.controlpacket/validateMqttUTF8StringOrThrow(): kotlin/String // com.ditchoom.mqtt.controlpacket/validateMqttUTF8StringOrThrow|validateMqttUTF8StringOrThrow@kotlin.String(){}[0]
+final fun (kotlin/UByte).com.ditchoom.mqtt.controlpacket.format.fixed/get(kotlin/Int): kotlin/Boolean // com.ditchoom.mqtt.controlpacket.format.fixed/get|get@kotlin.UByte(kotlin.Int){}[0]
+final fun com.ditchoom.mqtt.controlpacket.encoding/variableByteSize(kotlin/Int): kotlin/Byte // com.ditchoom.mqtt.controlpacket.encoding/variableByteSize|variableByteSize(kotlin.Int){}[0]
+final fun com.ditchoom.mqtt.controlpacket/validateMqttUTF8StringOrThrowWith(kotlin/String): kotlin/String // com.ditchoom.mqtt.controlpacket/validateMqttUTF8StringOrThrowWith|validateMqttUTF8StringOrThrowWith(kotlin.String){}[0]
+final fun com.ditchoom.mqtt/isMalformedWireException(kotlin/Throwable): kotlin/Boolean // com.ditchoom.mqtt/isMalformedWireException|isMalformedWireException(kotlin.Throwable){}[0]
+final inline fun <#A: kotlin/Any?> com.ditchoom.mqtt/mappingMalformedWire(kotlin/Function0<#A>): #A // com.ditchoom.mqtt/mappingMalformedWire|mappingMalformedWire(kotlin.Function0<0:0>){0§<kotlin.Any?>}[0]

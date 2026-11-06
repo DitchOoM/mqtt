@@ -1,0 +1,320 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, iosX64, js, macosArm64, macosX64, tvosArm64, tvosSimulatorArm64, tvosX64, watchosArm64, watchosSimulatorArm64, watchosX64]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <com.ditchoom:mqtt-client>
+sealed interface com.ditchoom.mqtt.client/ConnectionState { // com.ditchoom.mqtt.client/ConnectionState|null[0]
+    final class Connected : com.ditchoom.mqtt.client/ConnectionState { // com.ditchoom.mqtt.client/ConnectionState.Connected|null[0]
+        constructor <init>(com.ditchoom.mqtt.controlpacket/IConnectionAcknowledgment) // com.ditchoom.mqtt.client/ConnectionState.Connected.<init>|<init>(com.ditchoom.mqtt.controlpacket.IConnectionAcknowledgment){}[0]
+
+        final val connack // com.ditchoom.mqtt.client/ConnectionState.Connected.connack|{}connack[0]
+            final fun <get-connack>(): com.ditchoom.mqtt.controlpacket/IConnectionAcknowledgment // com.ditchoom.mqtt.client/ConnectionState.Connected.connack.<get-connack>|<get-connack>(){}[0]
+
+        final fun component1(): com.ditchoom.mqtt.controlpacket/IConnectionAcknowledgment // com.ditchoom.mqtt.client/ConnectionState.Connected.component1|component1(){}[0]
+        final fun copy(com.ditchoom.mqtt.controlpacket/IConnectionAcknowledgment = ...): com.ditchoom.mqtt.client/ConnectionState.Connected // com.ditchoom.mqtt.client/ConnectionState.Connected.copy|copy(com.ditchoom.mqtt.controlpacket.IConnectionAcknowledgment){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // com.ditchoom.mqtt.client/ConnectionState.Connected.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // com.ditchoom.mqtt.client/ConnectionState.Connected.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // com.ditchoom.mqtt.client/ConnectionState.Connected.toString|toString(){}[0]
+    }
+
+    final object Disconnected : com.ditchoom.mqtt.client/ConnectionState { // com.ditchoom.mqtt.client/ConnectionState.Disconnected|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // com.ditchoom.mqtt.client/ConnectionState.Disconnected.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // com.ditchoom.mqtt.client/ConnectionState.Disconnected.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // com.ditchoom.mqtt.client/ConnectionState.Disconnected.toString|toString(){}[0]
+    }
+
+    final object Handshaking : com.ditchoom.mqtt.client/ConnectionState { // com.ditchoom.mqtt.client/ConnectionState.Handshaking|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // com.ditchoom.mqtt.client/ConnectionState.Handshaking.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // com.ditchoom.mqtt.client/ConnectionState.Handshaking.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // com.ditchoom.mqtt.client/ConnectionState.Handshaking.toString|toString(){}[0]
+    }
+}
+
+sealed interface com.ditchoom.mqtt.client/PublishResult { // com.ditchoom.mqtt.client/PublishResult|null[0]
+    final class QoS1 : com.ditchoom.mqtt.client/PublishResult { // com.ditchoom.mqtt.client/PublishResult.QoS1|null[0]
+        constructor <init>(com.ditchoom.mqtt.controlpacket/PacketId, kotlinx.coroutines.flow/StateFlow<com.ditchoom.mqtt.client/QoS1State>) // com.ditchoom.mqtt.client/PublishResult.QoS1.<init>|<init>(com.ditchoom.mqtt.controlpacket.PacketId;kotlinx.coroutines.flow.StateFlow<com.ditchoom.mqtt.client.QoS1State>){}[0]
+
+        final val packetId // com.ditchoom.mqtt.client/PublishResult.QoS1.packetId|{}packetId[0]
+            final fun <get-packetId>(): com.ditchoom.mqtt.controlpacket/PacketId // com.ditchoom.mqtt.client/PublishResult.QoS1.packetId.<get-packetId>|<get-packetId>(){}[0]
+        final val state // com.ditchoom.mqtt.client/PublishResult.QoS1.state|{}state[0]
+            final fun <get-state>(): kotlinx.coroutines.flow/StateFlow<com.ditchoom.mqtt.client/QoS1State> // com.ditchoom.mqtt.client/PublishResult.QoS1.state.<get-state>|<get-state>(){}[0]
+
+        final fun component1(): com.ditchoom.mqtt.controlpacket/PacketId // com.ditchoom.mqtt.client/PublishResult.QoS1.component1|component1(){}[0]
+        final fun component2(): kotlinx.coroutines.flow/StateFlow<com.ditchoom.mqtt.client/QoS1State> // com.ditchoom.mqtt.client/PublishResult.QoS1.component2|component2(){}[0]
+        final fun copy(com.ditchoom.mqtt.controlpacket/PacketId = ..., kotlinx.coroutines.flow/StateFlow<com.ditchoom.mqtt.client/QoS1State> = ...): com.ditchoom.mqtt.client/PublishResult.QoS1 // com.ditchoom.mqtt.client/PublishResult.QoS1.copy|copy(com.ditchoom.mqtt.controlpacket.PacketId;kotlinx.coroutines.flow.StateFlow<com.ditchoom.mqtt.client.QoS1State>){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // com.ditchoom.mqtt.client/PublishResult.QoS1.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // com.ditchoom.mqtt.client/PublishResult.QoS1.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // com.ditchoom.mqtt.client/PublishResult.QoS1.toString|toString(){}[0]
+    }
+
+    final class QoS2 : com.ditchoom.mqtt.client/PublishResult { // com.ditchoom.mqtt.client/PublishResult.QoS2|null[0]
+        constructor <init>(com.ditchoom.mqtt.controlpacket/PacketId, kotlinx.coroutines.flow/StateFlow<com.ditchoom.mqtt.client/QoS2State>) // com.ditchoom.mqtt.client/PublishResult.QoS2.<init>|<init>(com.ditchoom.mqtt.controlpacket.PacketId;kotlinx.coroutines.flow.StateFlow<com.ditchoom.mqtt.client.QoS2State>){}[0]
+
+        final val packetId // com.ditchoom.mqtt.client/PublishResult.QoS2.packetId|{}packetId[0]
+            final fun <get-packetId>(): com.ditchoom.mqtt.controlpacket/PacketId // com.ditchoom.mqtt.client/PublishResult.QoS2.packetId.<get-packetId>|<get-packetId>(){}[0]
+        final val state // com.ditchoom.mqtt.client/PublishResult.QoS2.state|{}state[0]
+            final fun <get-state>(): kotlinx.coroutines.flow/StateFlow<com.ditchoom.mqtt.client/QoS2State> // com.ditchoom.mqtt.client/PublishResult.QoS2.state.<get-state>|<get-state>(){}[0]
+
+        final fun component1(): com.ditchoom.mqtt.controlpacket/PacketId // com.ditchoom.mqtt.client/PublishResult.QoS2.component1|component1(){}[0]
+        final fun component2(): kotlinx.coroutines.flow/StateFlow<com.ditchoom.mqtt.client/QoS2State> // com.ditchoom.mqtt.client/PublishResult.QoS2.component2|component2(){}[0]
+        final fun copy(com.ditchoom.mqtt.controlpacket/PacketId = ..., kotlinx.coroutines.flow/StateFlow<com.ditchoom.mqtt.client/QoS2State> = ...): com.ditchoom.mqtt.client/PublishResult.QoS2 // com.ditchoom.mqtt.client/PublishResult.QoS2.copy|copy(com.ditchoom.mqtt.controlpacket.PacketId;kotlinx.coroutines.flow.StateFlow<com.ditchoom.mqtt.client.QoS2State>){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // com.ditchoom.mqtt.client/PublishResult.QoS2.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // com.ditchoom.mqtt.client/PublishResult.QoS2.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // com.ditchoom.mqtt.client/PublishResult.QoS2.toString|toString(){}[0]
+    }
+
+    final object QoS0Sent : com.ditchoom.mqtt.client/PublishResult { // com.ditchoom.mqtt.client/PublishResult.QoS0Sent|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // com.ditchoom.mqtt.client/PublishResult.QoS0Sent.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // com.ditchoom.mqtt.client/PublishResult.QoS0Sent.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // com.ditchoom.mqtt.client/PublishResult.QoS0Sent.toString|toString(){}[0]
+    }
+}
+
+sealed interface com.ditchoom.mqtt.client/QoS1State { // com.ditchoom.mqtt.client/QoS1State|null[0]
+    final class Acknowledged : com.ditchoom.mqtt.client/QoS1State { // com.ditchoom.mqtt.client/QoS1State.Acknowledged|null[0]
+        constructor <init>(com.ditchoom.mqtt.controlpacket/IPublishAcknowledgment) // com.ditchoom.mqtt.client/QoS1State.Acknowledged.<init>|<init>(com.ditchoom.mqtt.controlpacket.IPublishAcknowledgment){}[0]
+
+        final val ack // com.ditchoom.mqtt.client/QoS1State.Acknowledged.ack|{}ack[0]
+            final fun <get-ack>(): com.ditchoom.mqtt.controlpacket/IPublishAcknowledgment // com.ditchoom.mqtt.client/QoS1State.Acknowledged.ack.<get-ack>|<get-ack>(){}[0]
+
+        final fun component1(): com.ditchoom.mqtt.controlpacket/IPublishAcknowledgment // com.ditchoom.mqtt.client/QoS1State.Acknowledged.component1|component1(){}[0]
+        final fun copy(com.ditchoom.mqtt.controlpacket/IPublishAcknowledgment = ...): com.ditchoom.mqtt.client/QoS1State.Acknowledged // com.ditchoom.mqtt.client/QoS1State.Acknowledged.copy|copy(com.ditchoom.mqtt.controlpacket.IPublishAcknowledgment){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // com.ditchoom.mqtt.client/QoS1State.Acknowledged.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // com.ditchoom.mqtt.client/QoS1State.Acknowledged.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // com.ditchoom.mqtt.client/QoS1State.Acknowledged.toString|toString(){}[0]
+    }
+
+    final object Queued : com.ditchoom.mqtt.client/QoS1State { // com.ditchoom.mqtt.client/QoS1State.Queued|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // com.ditchoom.mqtt.client/QoS1State.Queued.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // com.ditchoom.mqtt.client/QoS1State.Queued.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // com.ditchoom.mqtt.client/QoS1State.Queued.toString|toString(){}[0]
+    }
+
+    final object Sent : com.ditchoom.mqtt.client/QoS1State { // com.ditchoom.mqtt.client/QoS1State.Sent|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // com.ditchoom.mqtt.client/QoS1State.Sent.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // com.ditchoom.mqtt.client/QoS1State.Sent.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // com.ditchoom.mqtt.client/QoS1State.Sent.toString|toString(){}[0]
+    }
+
+    final object SessionDiscarded : com.ditchoom.mqtt.client/QoS1State { // com.ditchoom.mqtt.client/QoS1State.SessionDiscarded|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // com.ditchoom.mqtt.client/QoS1State.SessionDiscarded.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // com.ditchoom.mqtt.client/QoS1State.SessionDiscarded.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // com.ditchoom.mqtt.client/QoS1State.SessionDiscarded.toString|toString(){}[0]
+    }
+}
+
+sealed interface com.ditchoom.mqtt.client/QoS2State { // com.ditchoom.mqtt.client/QoS2State|null[0]
+    final class Complete : com.ditchoom.mqtt.client/QoS2State { // com.ditchoom.mqtt.client/QoS2State.Complete|null[0]
+        constructor <init>(com.ditchoom.mqtt.controlpacket/IPublishComplete) // com.ditchoom.mqtt.client/QoS2State.Complete.<init>|<init>(com.ditchoom.mqtt.controlpacket.IPublishComplete){}[0]
+
+        final val comp // com.ditchoom.mqtt.client/QoS2State.Complete.comp|{}comp[0]
+            final fun <get-comp>(): com.ditchoom.mqtt.controlpacket/IPublishComplete // com.ditchoom.mqtt.client/QoS2State.Complete.comp.<get-comp>|<get-comp>(){}[0]
+
+        final fun component1(): com.ditchoom.mqtt.controlpacket/IPublishComplete // com.ditchoom.mqtt.client/QoS2State.Complete.component1|component1(){}[0]
+        final fun copy(com.ditchoom.mqtt.controlpacket/IPublishComplete = ...): com.ditchoom.mqtt.client/QoS2State.Complete // com.ditchoom.mqtt.client/QoS2State.Complete.copy|copy(com.ditchoom.mqtt.controlpacket.IPublishComplete){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // com.ditchoom.mqtt.client/QoS2State.Complete.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // com.ditchoom.mqtt.client/QoS2State.Complete.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // com.ditchoom.mqtt.client/QoS2State.Complete.toString|toString(){}[0]
+    }
+
+    final object Queued : com.ditchoom.mqtt.client/QoS2State { // com.ditchoom.mqtt.client/QoS2State.Queued|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // com.ditchoom.mqtt.client/QoS2State.Queued.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // com.ditchoom.mqtt.client/QoS2State.Queued.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // com.ditchoom.mqtt.client/QoS2State.Queued.toString|toString(){}[0]
+    }
+
+    final object Received : com.ditchoom.mqtt.client/QoS2State { // com.ditchoom.mqtt.client/QoS2State.Received|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // com.ditchoom.mqtt.client/QoS2State.Received.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // com.ditchoom.mqtt.client/QoS2State.Received.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // com.ditchoom.mqtt.client/QoS2State.Received.toString|toString(){}[0]
+    }
+
+    final object Released : com.ditchoom.mqtt.client/QoS2State { // com.ditchoom.mqtt.client/QoS2State.Released|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // com.ditchoom.mqtt.client/QoS2State.Released.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // com.ditchoom.mqtt.client/QoS2State.Released.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // com.ditchoom.mqtt.client/QoS2State.Released.toString|toString(){}[0]
+    }
+
+    final object Sent : com.ditchoom.mqtt.client/QoS2State { // com.ditchoom.mqtt.client/QoS2State.Sent|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // com.ditchoom.mqtt.client/QoS2State.Sent.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // com.ditchoom.mqtt.client/QoS2State.Sent.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // com.ditchoom.mqtt.client/QoS2State.Sent.toString|toString(){}[0]
+    }
+
+    final object SessionDiscarded : com.ditchoom.mqtt.client/QoS2State { // com.ditchoom.mqtt.client/QoS2State.SessionDiscarded|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // com.ditchoom.mqtt.client/QoS2State.SessionDiscarded.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // com.ditchoom.mqtt.client/QoS2State.SessionDiscarded.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // com.ditchoom.mqtt.client/QoS2State.SessionDiscarded.toString|toString(){}[0]
+    }
+}
+
+final class <#A: kotlin/Any?> com.ditchoom.mqtt.client/SubscribeOperation : kotlinx.coroutines.flow/Flow<kotlin/Pair<com.ditchoom.mqtt.controlpacket/PublishMessage, #A>> { // com.ditchoom.mqtt.client/SubscribeOperation|null[0]
+    constructor <init>(kotlin/Int, kotlin.collections/Map<com.ditchoom.mqtt.controlpacket/ISubscription, kotlinx.coroutines.flow/Flow<kotlin/Pair<com.ditchoom.mqtt.controlpacket/PublishMessage, #A>>>, kotlinx.coroutines/Deferred<com.ditchoom.mqtt.controlpacket/ISubscribeAcknowledgement>) // com.ditchoom.mqtt.client/SubscribeOperation.<init>|<init>(kotlin.Int;kotlin.collections.Map<com.ditchoom.mqtt.controlpacket.ISubscription,kotlinx.coroutines.flow.Flow<kotlin.Pair<com.ditchoom.mqtt.controlpacket.PublishMessage,1:0>>>;kotlinx.coroutines.Deferred<com.ditchoom.mqtt.controlpacket.ISubscribeAcknowledgement>){}[0]
+
+    final val packetId // com.ditchoom.mqtt.client/SubscribeOperation.packetId|{}packetId[0]
+        final fun <get-packetId>(): kotlin/Int // com.ditchoom.mqtt.client/SubscribeOperation.packetId.<get-packetId>|<get-packetId>(){}[0]
+    final val subAck // com.ditchoom.mqtt.client/SubscribeOperation.subAck|{}subAck[0]
+        final fun <get-subAck>(): kotlinx.coroutines/Deferred<com.ditchoom.mqtt.controlpacket/ISubscribeAcknowledgement> // com.ditchoom.mqtt.client/SubscribeOperation.subAck.<get-subAck>|<get-subAck>(){}[0]
+    final val subscriptions // com.ditchoom.mqtt.client/SubscribeOperation.subscriptions|{}subscriptions[0]
+        final fun <get-subscriptions>(): kotlin.collections/Map<com.ditchoom.mqtt.controlpacket/ISubscription, kotlinx.coroutines.flow/Flow<kotlin/Pair<com.ditchoom.mqtt.controlpacket/PublishMessage, #A>>> // com.ditchoom.mqtt.client/SubscribeOperation.subscriptions.<get-subscriptions>|<get-subscriptions>(){}[0]
+
+    final fun component1(): kotlin/Int // com.ditchoom.mqtt.client/SubscribeOperation.component1|component1(){}[0]
+    final fun component2(): kotlin.collections/Map<com.ditchoom.mqtt.controlpacket/ISubscription, kotlinx.coroutines.flow/Flow<kotlin/Pair<com.ditchoom.mqtt.controlpacket/PublishMessage, #A>>> // com.ditchoom.mqtt.client/SubscribeOperation.component2|component2(){}[0]
+    final fun component3(): kotlinx.coroutines/Deferred<com.ditchoom.mqtt.controlpacket/ISubscribeAcknowledgement> // com.ditchoom.mqtt.client/SubscribeOperation.component3|component3(){}[0]
+    final fun copy(kotlin/Int = ..., kotlin.collections/Map<com.ditchoom.mqtt.controlpacket/ISubscription, kotlinx.coroutines.flow/Flow<kotlin/Pair<com.ditchoom.mqtt.controlpacket/PublishMessage, #A>>> = ..., kotlinx.coroutines/Deferred<com.ditchoom.mqtt.controlpacket/ISubscribeAcknowledgement> = ...): com.ditchoom.mqtt.client/SubscribeOperation<#A> // com.ditchoom.mqtt.client/SubscribeOperation.copy|copy(kotlin.Int;kotlin.collections.Map<com.ditchoom.mqtt.controlpacket.ISubscription,kotlinx.coroutines.flow.Flow<kotlin.Pair<com.ditchoom.mqtt.controlpacket.PublishMessage,1:0>>>;kotlinx.coroutines.Deferred<com.ditchoom.mqtt.controlpacket.ISubscribeAcknowledgement>){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // com.ditchoom.mqtt.client/SubscribeOperation.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // com.ditchoom.mqtt.client/SubscribeOperation.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // com.ditchoom.mqtt.client/SubscribeOperation.toString|toString(){}[0]
+    final suspend fun collect(kotlinx.coroutines.flow/FlowCollector<kotlin/Pair<com.ditchoom.mqtt.controlpacket/PublishMessage, #A>>) // com.ditchoom.mqtt.client/SubscribeOperation.collect|collect(kotlinx.coroutines.flow.FlowCollector<kotlin.Pair<com.ditchoom.mqtt.controlpacket.PublishMessage,1:0>>){}[0]
+}
+
+final class com.ditchoom.mqtt.client/ConnectivityManager { // com.ditchoom.mqtt.client/ConnectivityManager|null[0]
+    final val connectionBroadcastChannel // com.ditchoom.mqtt.client/ConnectivityManager.connectionBroadcastChannel|{}connectionBroadcastChannel[0]
+        final fun <get-connectionBroadcastChannel>(): kotlinx.coroutines.flow/SharedFlow<com.ditchoom.mqtt.controlpacket/IConnectionAcknowledgment> // com.ditchoom.mqtt.client/ConnectivityManager.connectionBroadcastChannel.<get-connectionBroadcastChannel>|<get-connectionBroadcastChannel>(){}[0]
+    final val connectionState // com.ditchoom.mqtt.client/ConnectivityManager.connectionState|{}connectionState[0]
+        final fun <get-connectionState>(): kotlinx.coroutines.flow/StateFlow<com.ditchoom.mqtt.client/ConnectionState> // com.ditchoom.mqtt.client/ConnectivityManager.connectionState.<get-connectionState>|<get-connectionState>(){}[0]
+    final val processor // com.ditchoom.mqtt.client/ConnectivityManager.processor|{}processor[0]
+        final fun <get-processor>(): com.ditchoom.mqtt.client/ControlPacketProcessor // com.ditchoom.mqtt.client/ConnectivityManager.processor.<get-processor>|<get-processor>(){}[0]
+
+    final var connectionAttempts // com.ditchoom.mqtt.client/ConnectivityManager.connectionAttempts|{}connectionAttempts[0]
+        final fun <get-connectionAttempts>(): kotlin/Long // com.ditchoom.mqtt.client/ConnectivityManager.connectionAttempts.<get-connectionAttempts>|<get-connectionAttempts>(){}[0]
+    final var connectionCount // com.ditchoom.mqtt.client/ConnectivityManager.connectionCount|{}connectionCount[0]
+        final fun <get-connectionCount>(): kotlin/Long // com.ditchoom.mqtt.client/ConnectivityManager.connectionCount.<get-connectionCount>|<get-connectionCount>(){}[0]
+
+    final fun currentConnack(): com.ditchoom.mqtt.controlpacket/IConnectionAcknowledgment? // com.ditchoom.mqtt.client/ConnectivityManager.currentConnack|currentConnack(){}[0]
+    final suspend fun run() // com.ditchoom.mqtt.client/ConnectivityManager.run|run(){}[0]
+    final suspend fun sendDisconnect() // com.ditchoom.mqtt.client/ConnectivityManager.sendDisconnect|sendDisconnect(){}[0]
+    final suspend fun shutdown(kotlin/Boolean = ..., kotlin/Boolean = ...) // com.ditchoom.mqtt.client/ConnectivityManager.shutdown|shutdown(kotlin.Boolean;kotlin.Boolean){}[0]
+}
+
+final class com.ditchoom.mqtt.client/ControlPacketProcessor { // com.ditchoom.mqtt.client/ControlPacketProcessor|null[0]
+    final var pingCount // com.ditchoom.mqtt.client/ControlPacketProcessor.pingCount|{}pingCount[0]
+        final fun <get-pingCount>(): kotlin/Long // com.ditchoom.mqtt.client/ControlPacketProcessor.pingCount.<get-pingCount>|<get-pingCount>(){}[0]
+    final var pingResponseCount // com.ditchoom.mqtt.client/ControlPacketProcessor.pingResponseCount|{}pingResponseCount[0]
+        final fun <get-pingResponseCount>(): kotlin/Long // com.ditchoom.mqtt.client/ControlPacketProcessor.pingResponseCount.<get-pingResponseCount>|<get-pingResponseCount>(){}[0]
+
+    final fun noteActivity() // com.ditchoom.mqtt.client/ControlPacketProcessor.noteActivity|noteActivity(){}[0]
+    final suspend fun processIncomingMessages() // com.ditchoom.mqtt.client/ControlPacketProcessor.processIncomingMessages|processIncomingMessages(){}[0]
+    final suspend fun queueMessagesOnReconnect(): kotlin.collections/List<com.ditchoom.mqtt.controlpacket/ControlPacket> // com.ditchoom.mqtt.client/ControlPacketProcessor.queueMessagesOnReconnect|queueMessagesOnReconnect(){}[0]
+    final suspend fun replayIncomingMessagesOnReconnect() // com.ditchoom.mqtt.client/ControlPacketProcessor.replayIncomingMessagesOnReconnect|replayIncomingMessagesOnReconnect(){}[0]
+    final suspend fun runPingTimer() // com.ditchoom.mqtt.client/ControlPacketProcessor.runPingTimer|runPingTimer(){}[0]
+    final suspend fun subscribe(com.ditchoom.mqtt.controlpacket/ISubscribeRequest, kotlin/Boolean = ...): com.ditchoom.mqtt.controlpacket/ISubscribeRequest // com.ditchoom.mqtt.client/ControlPacketProcessor.subscribe|subscribe(com.ditchoom.mqtt.controlpacket.ISubscribeRequest;kotlin.Boolean){}[0]
+    final suspend fun unsubscribe(com.ditchoom.mqtt.controlpacket/IUnsubscribeRequest, kotlin/Boolean = ...): com.ditchoom.mqtt.controlpacket/IUnsubscribeRequest // com.ditchoom.mqtt.client/ControlPacketProcessor.unsubscribe|unsubscribe(com.ditchoom.mqtt.controlpacket.IUnsubscribeRequest;kotlin.Boolean){}[0]
+}
+
+final class com.ditchoom.mqtt.client/MqttClient { // com.ditchoom.mqtt.client/MqttClient|null[0]
+    final val broker // com.ditchoom.mqtt.client/MqttClient.broker|{}broker[0]
+        final fun <get-broker>(): com.ditchoom.mqtt.connection/MqttBroker // com.ditchoom.mqtt.client/MqttClient.broker.<get-broker>|<get-broker>(){}[0]
+    final val connectionState // com.ditchoom.mqtt.client/MqttClient.connectionState|{}connectionState[0]
+        final fun <get-connectionState>(): kotlinx.coroutines.flow/StateFlow<com.ditchoom.mqtt.client/ConnectionState> // com.ditchoom.mqtt.client/MqttClient.connectionState.<get-connectionState>|<get-connectionState>(){}[0]
+    final val packetFactory // com.ditchoom.mqtt.client/MqttClient.packetFactory|{}packetFactory[0]
+        final fun <get-packetFactory>(): com.ditchoom.mqtt.controlpacket/ControlPacketFactory // com.ditchoom.mqtt.client/MqttClient.packetFactory.<get-packetFactory>|<get-packetFactory>(){}[0]
+
+    final fun <#A1: com.ditchoom.buffer.codec/Payload> observe(com.ditchoom.mqtt.controlpacket/TopicFilter, com.ditchoom.buffer.codec/Codec<#A1>): kotlinx.coroutines.flow/Flow<kotlin/Pair<com.ditchoom.mqtt.controlpacket/PublishMessage, #A1>> // com.ditchoom.mqtt.client/MqttClient.observe|observe(com.ditchoom.mqtt.controlpacket.TopicFilter;com.ditchoom.buffer.codec.Codec<0:0>){0§<com.ditchoom.buffer.codec.Payload>}[0]
+    final suspend fun <#A1: com.ditchoom.buffer.codec/Payload> subscribe(com.ditchoom.mqtt.controlpacket/ISubscribeRequest, com.ditchoom.buffer.codec/Codec<#A1>): com.ditchoom.mqtt.client/SubscribeOperation<#A1> // com.ditchoom.mqtt.client/MqttClient.subscribe|subscribe(com.ditchoom.mqtt.controlpacket.ISubscribeRequest;com.ditchoom.buffer.codec.Codec<0:0>){0§<com.ditchoom.buffer.codec.Payload>}[0]
+    final suspend fun <#A1: com.ditchoom.buffer.codec/Payload> subscribe(kotlin.collections/Set<com.ditchoom.mqtt.controlpacket/ISubscription>, com.ditchoom.buffer.codec/Codec<#A1>): com.ditchoom.mqtt.client/SubscribeOperation<#A1> // com.ditchoom.mqtt.client/MqttClient.subscribe|subscribe(kotlin.collections.Set<com.ditchoom.mqtt.controlpacket.ISubscription>;com.ditchoom.buffer.codec.Codec<0:0>){0§<com.ditchoom.buffer.codec.Payload>}[0]
+    final suspend fun <#A1: com.ditchoom.buffer.codec/Payload> subscribe(kotlin/String, com.ditchoom.buffer.codec/Codec<#A1>, com.ditchoom.mqtt.controlpacket/QualityOfService = ...): com.ditchoom.mqtt.client/SubscribeOperation<#A1> // com.ditchoom.mqtt.client/MqttClient.subscribe|subscribe(kotlin.String;com.ditchoom.buffer.codec.Codec<0:0>;com.ditchoom.mqtt.controlpacket.QualityOfService){0§<com.ditchoom.buffer.codec.Payload>}[0]
+    final suspend fun <#A1: com.ditchoom.buffer.codec/Payload> subscribe(kotlin/String, com.ditchoom.buffer.codec/Codec<#A1>, com.ditchoom.mqtt.controlpacket/QualityOfService = ..., kotlin.coroutines/SuspendFunction2<com.ditchoom.mqtt.controlpacket/PublishMessage, #A1, kotlin/Unit>): com.ditchoom.mqtt.client/SubscribeOperation<#A1> // com.ditchoom.mqtt.client/MqttClient.subscribe|subscribe(kotlin.String;com.ditchoom.buffer.codec.Codec<0:0>;com.ditchoom.mqtt.controlpacket.QualityOfService;kotlin.coroutines.SuspendFunction2<com.ditchoom.mqtt.controlpacket.PublishMessage,0:0,kotlin.Unit>){0§<com.ditchoom.buffer.codec.Payload>}[0]
+    final suspend fun <#A1: kotlin/Any?> publish(kotlin/String, #A1, com.ditchoom.buffer.codec/Codec<#A1>, com.ditchoom.mqtt.controlpacket/QualityOfService = ..., kotlin/Boolean = ..., com.ditchoom.buffer/BufferFactory = ...): com.ditchoom.mqtt.client/PublishResult // com.ditchoom.mqtt.client/MqttClient.publish|publish(kotlin.String;0:0;com.ditchoom.buffer.codec.Codec<0:0>;com.ditchoom.mqtt.controlpacket.QualityOfService;kotlin.Boolean;com.ditchoom.buffer.BufferFactory){0§<kotlin.Any?>}[0]
+    final suspend fun awaitConnectivity(): com.ditchoom.mqtt.controlpacket/IConnectionAcknowledgment // com.ditchoom.mqtt.client/MqttClient.awaitConnectivity|awaitConnectivity(){}[0]
+    final suspend fun connectionAttempts(): kotlin/Long // com.ditchoom.mqtt.client/MqttClient.connectionAttempts|connectionAttempts(){}[0]
+    final suspend fun connectionCount(): kotlin/Long // com.ditchoom.mqtt.client/MqttClient.connectionCount|connectionCount(){}[0]
+    final suspend fun currentConnectionAcknowledgment(): com.ditchoom.mqtt.controlpacket/IConnectionAcknowledgment? // com.ditchoom.mqtt.client/MqttClient.currentConnectionAcknowledgment|currentConnectionAcknowledgment(){}[0]
+    final suspend fun pendingPublishes(): kotlin.collections/List<com.ditchoom.mqtt.client/PublishResult> // com.ditchoom.mqtt.client/MqttClient.pendingPublishes|pendingPublishes(){}[0]
+    final suspend fun pingCount(): kotlin/Long // com.ditchoom.mqtt.client/MqttClient.pingCount|pingCount(){}[0]
+    final suspend fun pingResponseCount(): kotlin/Long // com.ditchoom.mqtt.client/MqttClient.pingResponseCount|pingResponseCount(){}[0]
+    final suspend fun publish(com.ditchoom.mqtt.controlpacket/PublishMessage): com.ditchoom.mqtt.client/PublishResult // com.ditchoom.mqtt.client/MqttClient.publish|publish(com.ditchoom.mqtt.controlpacket.PublishMessage){}[0]
+    final suspend fun publish(kotlin/String, com.ditchoom.mqtt.controlpacket/QualityOfService = ..., com.ditchoom.buffer/ReadBuffer? = ..., kotlin/Boolean = ..., com.ditchoom.buffer/BufferFactory = ...): com.ditchoom.mqtt.client/PublishResult // com.ditchoom.mqtt.client/MqttClient.publish|publish(kotlin.String;com.ditchoom.mqtt.controlpacket.QualityOfService;com.ditchoom.buffer.ReadBuffer?;kotlin.Boolean;com.ditchoom.buffer.BufferFactory){}[0]
+    final suspend fun sendDisconnect() // com.ditchoom.mqtt.client/MqttClient.sendDisconnect|sendDisconnect(){}[0]
+    final suspend fun sendQueuedPublishMessage(kotlin/Int, com.ditchoom.mqtt.controlpacket/PublishMessage?) // com.ditchoom.mqtt.client/MqttClient.sendQueuedPublishMessage|sendQueuedPublishMessage(kotlin.Int;com.ditchoom.mqtt.controlpacket.PublishMessage?){}[0]
+    final suspend fun sendQueuedSubscribeMessage(kotlin/Int) // com.ditchoom.mqtt.client/MqttClient.sendQueuedSubscribeMessage|sendQueuedSubscribeMessage(kotlin.Int){}[0]
+    final suspend fun sendQueuedUnsubscribeMessage(kotlin/Int) // com.ditchoom.mqtt.client/MqttClient.sendQueuedUnsubscribeMessage|sendQueuedUnsubscribeMessage(kotlin.Int){}[0]
+    final suspend fun shutdown(kotlin/Boolean = ..., kotlin/Boolean = ...) // com.ditchoom.mqtt.client/MqttClient.shutdown|shutdown(kotlin.Boolean;kotlin.Boolean){}[0]
+    final suspend fun unsubscribe(com.ditchoom.mqtt.controlpacket/IUnsubscribeRequest): com.ditchoom.mqtt.client/UnsubscribeOperation // com.ditchoom.mqtt.client/MqttClient.unsubscribe|unsubscribe(com.ditchoom.mqtt.controlpacket.IUnsubscribeRequest){}[0]
+    final suspend fun unsubscribe(kotlin.collections/Set<com.ditchoom.mqtt.controlpacket/TopicFilter>): com.ditchoom.mqtt.client/UnsubscribeOperation // com.ditchoom.mqtt.client/MqttClient.unsubscribe|unsubscribe(kotlin.collections.Set<com.ditchoom.mqtt.controlpacket.TopicFilter>){}[0]
+    final suspend fun unsubscribe(kotlin/String): com.ditchoom.mqtt.client/UnsubscribeOperation // com.ditchoom.mqtt.client/MqttClient.unsubscribe|unsubscribe(kotlin.String){}[0]
+
+    final object Companion { // com.ditchoom.mqtt.client/MqttClient.Companion|null[0]
+        final suspend fun start(kotlinx.coroutines/CoroutineScope = ..., com.ditchoom.mqtt.connection/MqttBroker, com.ditchoom.mqtt/Persistence, com.ditchoom.mqtt.client/MqttEndpoint, kotlin.collections/List<com.ditchoom.mqtt.client/MqttEndpoint> = ..., com.ditchoom.buffer/BufferFactory = ..., com.ditchoom.mqtt.client/InFlightLimit = ..., kotlin.time/TimeSource = ...): com.ditchoom.mqtt.client/MqttClient // com.ditchoom.mqtt.client/MqttClient.Companion.start|start(kotlinx.coroutines.CoroutineScope;com.ditchoom.mqtt.connection.MqttBroker;com.ditchoom.mqtt.Persistence;com.ditchoom.mqtt.client.MqttEndpoint;kotlin.collections.List<com.ditchoom.mqtt.client.MqttEndpoint>;com.ditchoom.buffer.BufferFactory;com.ditchoom.mqtt.client.InFlightLimit;kotlin.time.TimeSource){}[0]
+    }
+}
+
+final class com.ditchoom.mqtt.client/MqttEndpoint { // com.ditchoom.mqtt.client/MqttEndpoint|null[0]
+    constructor <init>(kotlin/String, kotlin/Int, com.ditchoom.socket.transport/Transport = ..., com.ditchoom.socket/TransportConfig = ..., kotlin.time/Duration = ...) // com.ditchoom.mqtt.client/MqttEndpoint.<init>|<init>(kotlin.String;kotlin.Int;com.ditchoom.socket.transport.Transport;com.ditchoom.socket.TransportConfig;kotlin.time.Duration){}[0]
+
+    final val config // com.ditchoom.mqtt.client/MqttEndpoint.config|{}config[0]
+        final fun <get-config>(): com.ditchoom.socket/TransportConfig // com.ditchoom.mqtt.client/MqttEndpoint.config.<get-config>|<get-config>(){}[0]
+    final val connackTimeout // com.ditchoom.mqtt.client/MqttEndpoint.connackTimeout|{}connackTimeout[0]
+        final fun <get-connackTimeout>(): kotlin.time/Duration // com.ditchoom.mqtt.client/MqttEndpoint.connackTimeout.<get-connackTimeout>|<get-connackTimeout>(){}[0]
+    final val host // com.ditchoom.mqtt.client/MqttEndpoint.host|{}host[0]
+        final fun <get-host>(): kotlin/String // com.ditchoom.mqtt.client/MqttEndpoint.host.<get-host>|<get-host>(){}[0]
+    final val port // com.ditchoom.mqtt.client/MqttEndpoint.port|{}port[0]
+        final fun <get-port>(): kotlin/Int // com.ditchoom.mqtt.client/MqttEndpoint.port.<get-port>|<get-port>(){}[0]
+    final val transport // com.ditchoom.mqtt.client/MqttEndpoint.transport|{}transport[0]
+        final fun <get-transport>(): com.ditchoom.socket.transport/Transport // com.ditchoom.mqtt.client/MqttEndpoint.transport.<get-transport>|<get-transport>(){}[0]
+
+    final fun component1(): kotlin/String // com.ditchoom.mqtt.client/MqttEndpoint.component1|component1(){}[0]
+    final fun component2(): kotlin/Int // com.ditchoom.mqtt.client/MqttEndpoint.component2|component2(){}[0]
+    final fun component3(): com.ditchoom.socket.transport/Transport // com.ditchoom.mqtt.client/MqttEndpoint.component3|component3(){}[0]
+    final fun component4(): com.ditchoom.socket/TransportConfig // com.ditchoom.mqtt.client/MqttEndpoint.component4|component4(){}[0]
+    final fun component5(): kotlin.time/Duration // com.ditchoom.mqtt.client/MqttEndpoint.component5|component5(){}[0]
+    final fun copy(kotlin/String = ..., kotlin/Int = ..., com.ditchoom.socket.transport/Transport = ..., com.ditchoom.socket/TransportConfig = ..., kotlin.time/Duration = ...): com.ditchoom.mqtt.client/MqttEndpoint // com.ditchoom.mqtt.client/MqttEndpoint.copy|copy(kotlin.String;kotlin.Int;com.ditchoom.socket.transport.Transport;com.ditchoom.socket.TransportConfig;kotlin.time.Duration){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // com.ditchoom.mqtt.client/MqttEndpoint.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // com.ditchoom.mqtt.client/MqttEndpoint.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // com.ditchoom.mqtt.client/MqttEndpoint.toString|toString(){}[0]
+}
+
+final class com.ditchoom.mqtt.client/UnsubscribeOperation { // com.ditchoom.mqtt.client/UnsubscribeOperation|null[0]
+    constructor <init>(kotlin/Int, kotlinx.coroutines/Deferred<com.ditchoom.mqtt.controlpacket/IUnsubscribeAcknowledgment>) // com.ditchoom.mqtt.client/UnsubscribeOperation.<init>|<init>(kotlin.Int;kotlinx.coroutines.Deferred<com.ditchoom.mqtt.controlpacket.IUnsubscribeAcknowledgment>){}[0]
+
+    final val packetId // com.ditchoom.mqtt.client/UnsubscribeOperation.packetId|{}packetId[0]
+        final fun <get-packetId>(): kotlin/Int // com.ditchoom.mqtt.client/UnsubscribeOperation.packetId.<get-packetId>|<get-packetId>(){}[0]
+    final val unsubAck // com.ditchoom.mqtt.client/UnsubscribeOperation.unsubAck|{}unsubAck[0]
+        final fun <get-unsubAck>(): kotlinx.coroutines/Deferred<com.ditchoom.mqtt.controlpacket/IUnsubscribeAcknowledgment> // com.ditchoom.mqtt.client/UnsubscribeOperation.unsubAck.<get-unsubAck>|<get-unsubAck>(){}[0]
+
+    final fun component1(): kotlin/Int // com.ditchoom.mqtt.client/UnsubscribeOperation.component1|component1(){}[0]
+    final fun component2(): kotlinx.coroutines/Deferred<com.ditchoom.mqtt.controlpacket/IUnsubscribeAcknowledgment> // com.ditchoom.mqtt.client/UnsubscribeOperation.component2|component2(){}[0]
+    final fun copy(kotlin/Int = ..., kotlinx.coroutines/Deferred<com.ditchoom.mqtt.controlpacket/IUnsubscribeAcknowledgment> = ...): com.ditchoom.mqtt.client/UnsubscribeOperation // com.ditchoom.mqtt.client/UnsubscribeOperation.copy|copy(kotlin.Int;kotlinx.coroutines.Deferred<com.ditchoom.mqtt.controlpacket.IUnsubscribeAcknowledgment>){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // com.ditchoom.mqtt.client/UnsubscribeOperation.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // com.ditchoom.mqtt.client/UnsubscribeOperation.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // com.ditchoom.mqtt.client/UnsubscribeOperation.toString|toString(){}[0]
+}
+
+final value class com.ditchoom.mqtt.client/InFlightLimit { // com.ditchoom.mqtt.client/InFlightLimit|null[0]
+    constructor <init>(kotlin/Int) // com.ditchoom.mqtt.client/InFlightLimit.<init>|<init>(kotlin.Int){}[0]
+
+    final val value // com.ditchoom.mqtt.client/InFlightLimit.value|{}value[0]
+        final fun <get-value>(): kotlin/Int // com.ditchoom.mqtt.client/InFlightLimit.value.<get-value>|<get-value>(){}[0]
+
+    final fun constrainedBy(kotlin/Int): com.ditchoom.mqtt.client/InFlightLimit // com.ditchoom.mqtt.client/InFlightLimit.constrainedBy|constrainedBy(kotlin.Int){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // com.ditchoom.mqtt.client/InFlightLimit.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // com.ditchoom.mqtt.client/InFlightLimit.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // com.ditchoom.mqtt.client/InFlightLimit.toString|toString(){}[0]
+
+    final object Companion { // com.ditchoom.mqtt.client/InFlightLimit.Companion|null[0]
+        final const val MAX // com.ditchoom.mqtt.client/InFlightLimit.Companion.MAX|{}MAX[0]
+            final fun <get-MAX>(): kotlin/Int // com.ditchoom.mqtt.client/InFlightLimit.Companion.MAX.<get-MAX>|<get-MAX>(){}[0]
+
+        final val ProtocolMaximum // com.ditchoom.mqtt.client/InFlightLimit.Companion.ProtocolMaximum|{}ProtocolMaximum[0]
+            final fun <get-ProtocolMaximum>(): com.ditchoom.mqtt.client/InFlightLimit // com.ditchoom.mqtt.client/InFlightLimit.Companion.ProtocolMaximum.<get-ProtocolMaximum>|<get-ProtocolMaximum>(){}[0]
+    }
+}
+
+sealed class com.ditchoom.mqtt.client/MqttConnectionException : kotlin/Exception { // com.ditchoom.mqtt.client/MqttConnectionException|null[0]
+    final class ConnackRejected : com.ditchoom.mqtt.client/MqttConnectionException { // com.ditchoom.mqtt.client/MqttConnectionException.ConnackRejected|null[0]
+        constructor <init>(kotlin/String, kotlin/UByte, kotlin/Throwable? = ...) // com.ditchoom.mqtt.client/MqttConnectionException.ConnackRejected.<init>|<init>(kotlin.String;kotlin.UByte;kotlin.Throwable?){}[0]
+
+        final val reasonCode // com.ditchoom.mqtt.client/MqttConnectionException.ConnackRejected.reasonCode|{}reasonCode[0]
+            final fun <get-reasonCode>(): kotlin/UByte // com.ditchoom.mqtt.client/MqttConnectionException.ConnackRejected.reasonCode.<get-reasonCode>|<get-reasonCode>(){}[0]
+    }
+
+    final class ProtocolError : com.ditchoom.mqtt.client/MqttConnectionException { // com.ditchoom.mqtt.client/MqttConnectionException.ProtocolError|null[0]
+        constructor <init>(kotlin/String, kotlin/Throwable? = ...) // com.ditchoom.mqtt.client/MqttConnectionException.ProtocolError.<init>|<init>(kotlin.String;kotlin.Throwable?){}[0]
+    }
+}
+
+final fun (com.ditchoom.mqtt.controlpacket/ControlPacket).com.ditchoom.mqtt.client/toBuffer(com.ditchoom.buffer/BufferFactory = ...): com.ditchoom.buffer/ReadBuffer // com.ditchoom.mqtt.client/toBuffer|toBuffer@com.ditchoom.mqtt.controlpacket.ControlPacket(com.ditchoom.buffer.BufferFactory){}[0]
+final fun (kotlin.collections/Collection<com.ditchoom.mqtt.controlpacket/ControlPacket>).com.ditchoom.mqtt.client/toBuffer(com.ditchoom.buffer/BufferFactory = ...): com.ditchoom.buffer/ReadBuffer // com.ditchoom.mqtt.client/toBuffer|toBuffer@kotlin.collections.Collection<com.ditchoom.mqtt.controlpacket.ControlPacket>(com.ditchoom.buffer.BufferFactory){}[0]

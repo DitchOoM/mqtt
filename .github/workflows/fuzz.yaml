@@ -11,11 +11,12 @@ on:
       - '*.md'
     types: [synchronize, opened]
   workflow_dispatch:
+  workflow_call:
   schedule:
     - cron: '17 3 * * 0' # weekly, Sunday 03:17 UTC
 
 concurrency:
-  group: fuzz-${{ github.ref }}
+  group: fuzz-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:

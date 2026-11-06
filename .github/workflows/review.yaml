@@ -23,8 +23,32 @@ jobs:
   build-apple:
     uses: ./.github/workflows/build-apple.yaml
 
+  api-check:
+    uses: ./.github/workflows/api-check.yaml
+
+  platforms:
+    uses: ./.github/workflows/platforms.yaml
+
   validate:
     needs: [build-linux, build-apple]
     uses: ./.github/workflows/validate-artifacts.yaml
     with:
       version: ${{ needs.build-linux.outputs.version }}
+
+  summary:
+    name: "Summary"
+    if: always()
+    needs: [build-linux, build-apple, api-check, platforms, validate]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Gate table
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          {
+            echo "## PR gate"
+            echo "| job | result |"
+            echo "|---|---|"
+            echo "$RESULTS" | jq -r 'to_entries[] | "| \(.key) | \(.value.result) |"'
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "$RESULTS" | jq -e 'all(.[]; .result == "success")' > /dev/null

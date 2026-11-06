@@ -1,0 +1,88 @@
+name: "Downstream canary"
+
+# Builds the current main of buffer, socket and websocket into mavenLocal as snapshots, in that
+# order, then builds and tests mqtt against all three. An upstream change that breaks mqtt shows
+# up here before it is released. Each sibling builds against its own catalog, and mqtt is pointed
+# at the snapshots through the ditchoom*Version overrides in settings.gradle.kts.
+
+on:
+  schedule:
+    - cron: '23 5 * * *' # daily, 05:23 UTC
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/canary.yaml'
+      - 'settings.gradle.kts'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: canary-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  canary:
+    name: "mqtt vs buffer/socket/websocket main"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'zulu'
+          java-version: '21'
+          cache: gradle
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Cache Konan
+        uses: actions/cache@v5
+        with:
+          path: ~/.konan
+          key: konan-linux-canary-${{ hashFiles('gradle/libs.versions.toml') }}
+          restore-keys: konan-linux-
+
+      # buffer and socket publish as 999.0.0-SNAPSHOT so that Gradle's conflict resolution picks
+      # them over the releases websocket (and socket) were compiled against; websocket has no
+      # downstream inside this build, so it keeps the snapshot version it computes itself.
+      - name: Build sibling snapshots
+        env:
+          LOCAL_SINGLE_HOST_PUBLISH: "true"
+          CANARY_VERSION: 999.0.0-SNAPSHOT
+        run: |
+          set -euo pipefail
+          summary="| sibling | main commit | snapshot |\n|---|---|---|\n"
+          for repo in buffer socket websocket; do
+            git clone --depth 1 "https://github.com/DitchOoM/$repo.git" "$RUNNER_TEMP/$repo"
+            sha=$(git -C "$RUNNER_TEMP/$repo" rev-parse --short HEAD)
+            cd "$RUNNER_TEMP/$repo"
+            case "$repo" in
+              buffer) GITHUB_REPOSITORY=local/local ./gradlew publishToMavenLocal -x test -Pversion="$CANARY_VERSION" --no-configuration-cache ;;
+              socket) ./gradlew publishToMavenLocal -x test -Pversion="$CANARY_VERSION" --no-configuration-cache ;;
+              websocket) env -u GITHUB_REPOSITORY ./gradlew publishToMavenLocal -x test --no-configuration-cache ;;
+            esac
+            cd "$GITHUB_WORKSPACE"
+            version=$(ls ~/.m2/repository/com/ditchoom/$repo | grep -- '-SNAPSHOT$' | sort -V | tail -1)
+            test -n "$version" || { echo "::error::$repo published no snapshot"; exit 1; }
+            name="ditchoom$(tr '[:lower:]' '[:upper:]' <<< "${repo:0:1}")${repo:1}Version"
+            echo "ORG_GRADLE_PROJECT_$name=$version" >> "$GITHUB_ENV"
+            summary+="| $repo | \`$sha\` | \`$version\` |\n"
+          done
+          printf "## Downstream canary\n%b" "$summary" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Build and test mqtt against the snapshots
+        run: >-
+          ./gradlew ktlintCheck jvmTest jsNodeTest testDebugUnitTest linuxX64Test
+          --no-configuration-cache
+
+      - name: Upload reports
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: canary-reports
+          path: "*/build/reports/tests"
+          retention-days: 7

@@ -24,6 +24,13 @@ interface Persistence {
 
     suspend fun clearMessages(broker: MqttBroker)
 
+    /**
+     * Records [pub] under a fresh packet identifier and returns it. The identifier MUST NOT be
+     * held by any client packet for [broker] that is still unacknowledged (PUBLISH, PUBREL,
+     * SUBSCRIBE, UNSUBSCRIBE), and allocation MUST be atomic with recording the packet.
+     * The same contract applies to [writeUnsubGetPacketId] and
+     * [writeSubUpdatePacketIdAndSimplifySubscriptions].
+     */
     suspend fun writePubGetPacketId(
         broker: MqttBroker,
         pub: PublishMessage,

@@ -30,7 +30,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterIsInstance
@@ -39,6 +38,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlin.time.TimeSource
 
 /**
  * In-process MQTT 3.1.1 (v4) / 5.0 client for a single [broker].
@@ -111,7 +111,7 @@ class MqttClient internal constructor(
                     packetId,
                 )
             } ?: return
-        processor.publish(pub, false)
+        processor.sendPacket(pub)
     }
 
     /**
@@ -141,40 +141,20 @@ class MqttClient internal constructor(
         return publish(pub)
     }
 
-    suspend fun publish(pub: PublishMessage): PublishResult {
-        // [MQTT-3.3.4-8]: don't exceed the broker's Receive Maximum. Acquire a slot before
-        // allocating a packet id so nothing enters the persistence/in-flight set until the
-        // broker can accept it. The permit is released when the ack arrives (see
-        // ControlPacketProcessor). QoS 0 carries no ack, so it isn't quota-limited.
-        if (pub.qualityOfService.isGreaterThan(QualityOfService.AT_MOST_ONCE)) {
-            processor.acquireSendQuota()
-        }
-        val prepared = processor.preparePublish(pub)
-        val result = observePub(prepared)
-        processor.sendPacket(prepared)
-        return result
-    }
-
-    private suspend fun observePub(publishMessage: PublishMessage): PublishResult {
-        val packetId = publishMessage.packetIdentifier
-        return when (publishMessage.qualityOfService) {
-            QualityOfService.AT_MOST_ONCE -> PublishResult.QoS0Sent
-
-            QualityOfService.AT_LEAST_ONCE -> {
-                check(packetId != NO_PACKET_ID) { "PacketId must be set by the persistence" }
-                val stateFlow = MutableStateFlow<QoS1State>(QoS1State.Queued)
-                processor.registerQos1State(packetId, stateFlow)
-                PublishResult.QoS1(packetId, stateFlow)
+    /**
+     * QoS 0 is written immediately. QoS 1/2 suspends until the session's send quota
+     * ([InFlightLimit], bounded by the broker's Receive Maximum) has room and a session is
+     * established; the publish is then persisted under a fresh packet identifier and queued.
+     */
+    suspend fun publish(pub: PublishMessage): PublishResult =
+        when (pub.qualityOfService) {
+            QualityOfService.AT_MOST_ONCE -> {
+                processor.sendPacket(pub)
+                PublishResult.QoS0Sent
             }
-
-            QualityOfService.EXACTLY_ONCE -> {
-                check(packetId != NO_PACKET_ID) { "PacketId must be set by the persistence" }
-                val stateFlow = MutableStateFlow<QoS2State>(QoS2State.Queued)
-                processor.registerQos2State(packetId, stateFlow)
-                PublishResult.QoS2(packetId, stateFlow)
-            }
+            QualityOfService.AT_LEAST_ONCE -> processor.window.publish(pub, Tracking.AtLeastOnce())
+            QualityOfService.EXACTLY_ONCE -> processor.window.publish(pub, Tracking.ExactlyOnce())
         }
-    }
 
     /**
      * Extract the typed `payload` field from the concrete v4 / v5 PUBLISH variant. Mirrors
@@ -519,21 +499,11 @@ class MqttClient internal constructor(
     }
 
     /**
-     * Returns in-flight publish operations that survived a process restart.
-     * Each has a [PublishResult] with a [StateFlow] reconstructed from the persisted state.
-     * Useful for recovering UI state or tracking delivery after restart.
+     * Returns the unacknowledged QoS 1/2 publishes. After a process restart, publishes restored
+     * from persistence appear once the broker resumes the session, with a [StateFlow]
+     * reconstructed from the persisted state.
      */
-    suspend fun pendingPublishes(): List<PublishResult> {
-        val (qos1, qos2) = processor.qosStateSnapshots()
-        val results = mutableListOf<PublishResult>()
-        for ((packetId, stateFlow) in qos1) {
-            results += PublishResult.QoS1(packetId, stateFlow)
-        }
-        for ((packetId, stateFlow) in qos2) {
-            results += PublishResult.QoS2(packetId, stateFlow)
-        }
-        return results
-    }
+    suspend fun pendingPublishes(): List<PublishResult> = processor.window.snapshot()
 
     internal fun isStopped() = connectionJob?.isActive != true
 
@@ -563,6 +533,8 @@ class MqttClient internal constructor(
             broker: MqttBroker,
             persistence: Persistence,
             bufferFactory: BufferFactory = BufferFactory.Default,
+            inFlightLimit: InFlightLimit = InFlightLimit.ProtocolMaximum,
+            timeSource: TimeSource = TimeSource.Monotonic,
             connectSingle: (
                 suspend (
                     MqttConnectionOptions,
@@ -577,10 +549,11 @@ class MqttClient internal constructor(
             val publishCodecForTopic: (String) -> Codec<out Payload>? = { topic ->
                 registry.codecForTopicName(TopicName.fromOrThrow(topic))
             }
-            val cm = ConnectivityManager(persistence, broker, publishCodecForTopic, effectiveConnect)
+            val cm = ConnectivityManager(persistence, broker, publishCodecForTopic, effectiveConnect, inFlightLimit, timeSource)
             val client = MqttClient(cm, scope, registry, bufferFactory)
             client.connectionJob =
                 scope.launch {
+                    launch { cm.processor.window.run() }
                     while (kotlinx.coroutines.currentCoroutineContext().isActive) {
                         try {
                             cm.run()

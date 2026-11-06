@@ -205,9 +205,8 @@ class PahoConformanceV5Test {
      * [MQTT-3.3.4-8] / [MQTT-3.3.4-9] send-quota flow control. The paho broker advertises
      * `Receive Maximum: 2` in its CONNACK, so a client that fires more than two concurrent
      * QoS 1 publishes MUST hold the surplus back rather than putting >2 on the wire — the
-     * broker disconnects a client that exceeds its Receive Maximum. Before the client-side
-     * semaphore this burst of six killed the connection; now all six complete over a single
-     * connection as slots free up on each PUBACK.
+     * broker disconnects a client that exceeds its Receive Maximum. All six must complete over
+     * a single connection as slots free up on each PUBACK.
      */
     @Test
     fun receiveMaximumThrottlesConcurrentPublishes() =

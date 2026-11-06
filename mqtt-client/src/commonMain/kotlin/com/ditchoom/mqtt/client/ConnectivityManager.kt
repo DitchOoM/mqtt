@@ -12,6 +12,7 @@ import com.ditchoom.mqtt.controlpacket.IDisconnectNotification
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
@@ -22,11 +23,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.TimeSource
 
 /**
  * Owns a single MQTT broker connection: iterates [MqttBroker.connectionOps] for failover,
@@ -42,11 +45,13 @@ import kotlin.time.Duration.Companion.seconds
  * PUBLISH, so threading it through the call (rather than capturing at construction) means
  * a caller-supplied [connectSingle] cannot bypass the per-client [TopicCodecRegistry].
  */
-class ConnectivityManager(
+class ConnectivityManager internal constructor(
     internal val persistence: Persistence,
     internal val broker: MqttBroker,
     private val publishCodecForTopic: (topicName: String) -> Codec<out Payload>?,
     private val connectSingle: suspend (MqttConnectionOptions, (topicName: String) -> Codec<out Payload>?) -> Connection<ControlPacket>,
+    inFlightLimit: InFlightLimit,
+    timeSource: TimeSource,
 ) {
     var connectionCount = 0L
         private set
@@ -70,7 +75,14 @@ class ConnectivityManager(
     internal val firstAttemptComplete = CompletableDeferred<Unit>()
 
     val processor: ControlPacketProcessor =
-        ControlPacketProcessor(broker, readChannel, writeChannel, persistence)
+        ControlPacketProcessor(
+            broker,
+            readChannel,
+            writeChannel,
+            persistence,
+            OutboundWindow(broker, persistence, inFlightLimit),
+            timeSource,
+        )
 
     private var currentConnack: IConnectionAcknowledgment? = null
 
@@ -110,6 +122,7 @@ class ConnectivityManager(
             }
         } finally {
             withContext(NonCancellable) {
+                processor.window.sessionEnded()
                 _connectionState.value = ConnectionState.Disconnected
                 // Clear the cached CONNACK so awaitConnectivity() waits for the next one on
                 // reconnect rather than returning a stale ack from the session we just left.
@@ -186,30 +199,37 @@ class ConnectivityManager(
         throw lastException ?: IllegalStateException("No connection options configured for broker ${broker.brokerId}")
     }
 
+    /** The only caller of [Connection.send] once the session is up, so frames never interleave. */
     private suspend fun writeLoop(conn: Connection<ControlPacket>) {
+        val window = processor.window
         while (currentCoroutineContext().isActive) {
-            val packets =
+            val step =
                 try {
-                    writeChannel.receive()
-                } catch (_: Exception) {
-                    break
+                    select {
+                        window.outbound.onReceive { packet ->
+                            conn.send(packet)
+                            window.written(packet)
+                            WriterStep.Continue
+                        }
+                        writeChannel.onReceive { packets ->
+                            packets.forEach { conn.send(it) }
+                            if (packets.any { it is IDisconnectNotification }) WriterStep.Stop else WriterStep.Continue
+                        }
+                    }
+                } catch (_: ClosedReceiveChannelException) {
+                    WriterStep.Stop
                 }
-            for (packet in packets) {
-                conn.send(packet)
-                processor.onPacketSent(packet)
-            }
             processor.noteActivity()
-            if (packets.any { it is IDisconnectNotification }) {
-                break
+            when (step) {
+                WriterStep.Continue -> Unit
+                WriterStep.Stop -> return
             }
         }
     }
 
+    private enum class WriterStep { Continue, Stop }
+
     private suspend fun prepareSession(connack: IConnectionAcknowledgment) {
-        // Size the client-side send quota from the broker's advertised Receive Maximum
-        // ([MQTT-3.3.4-8]). Created once (see ControlPacketProcessor.configureSendQuota),
-        // so a reconnect that resumes in-flight publishes keeps the quota balanced.
-        processor.configureSendQuota(connack.receiveMaximum)
         val sessionPresent = connack.sessionPresent
         if (broker.connectionRequest.cleanStart && sessionPresent) {
             throw MqttConnectionException.ProtocolError(
@@ -218,13 +238,11 @@ class ConnectivityManager(
         }
         if (sessionPresent) {
             emptyWriteChannel()
-            val messages = processor.queueMessagesOnReconnect()
-            for (packet in messages) {
-                writeChannel.send(listOf(packet))
-            }
+            processor.window.sessionStarted(connack.receiveMaximum, Resumption.Resumed(processor.queueMessagesOnReconnect()))
             processor.replayIncomingMessagesOnReconnect()
         } else {
             persistence.clearMessages(broker)
+            processor.window.sessionStarted(connack.receiveMaximum, Resumption.Fresh)
         }
     }
 

@@ -94,10 +94,7 @@ class ControlPacketProcessor internal constructor(
                 }
             }.last()
 
-    suspend fun queueMessagesOnReconnect() =
-        persistence.messagesToSendOnReconnect(broker).map {
-            (it as? PublishMessage)?.setDupFlagNewPubMessage() ?: it
-        }
+    suspend fun queueMessagesOnReconnect() = persistence.messagesToSendOnReconnect(broker).map(ControlPacket::asResend)
 
     /**
      * Replays incoming QoS 1/2 publishes that were persisted but not yet fully acknowledged.

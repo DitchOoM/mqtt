@@ -33,7 +33,7 @@ runs:
     - name: Restore upstream builds
       id: cache
       if: steps.plan.outputs.build != ''
-      uses: actions/cache@v5
+      uses: actions/cache@v6
       with:
         path: ${{ steps.plan.outputs.paths }}
         key: ${{ steps.plan.outputs.key }}-${{ hashFiles('.github/scripts/upstream-from-source.sh', '.github/upstream-pin-version.init.gradle.kts') }}

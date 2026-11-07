@@ -43,10 +43,10 @@ jobs:
             runner: ubuntu-24.04
             tasks: wasmJsNodeTest wasmJsBrowserTest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
           distribution: 'zulu'
           java-version: '21'
@@ -62,7 +62,7 @@ jobs:
           websocket-ref: ${{ inputs.websocket-ref }}
 
       - name: Cache Konan
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/.konan
           key: konan-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('gradle/libs.versions.toml') }}

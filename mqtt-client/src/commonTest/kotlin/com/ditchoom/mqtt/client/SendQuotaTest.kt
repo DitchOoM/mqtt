@@ -1,31 +1,42 @@
 package com.ditchoom.mqtt.client
 
+import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Charset
+import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.flow.Connection
 import com.ditchoom.buffer.toReadBuffer
 import com.ditchoom.mqtt.InMemoryPersistence
+import com.ditchoom.mqtt.Persistence
 import com.ditchoom.mqtt.client.net.awaitPublishComplete
 import com.ditchoom.mqtt.client.net.opaquePayloadUtf8
 import com.ditchoom.mqtt.client.net.runTestNoTimeSkipping
+import com.ditchoom.mqtt.connection.MqttBroker
 import com.ditchoom.mqtt.controlpacket.ControlPacket
+import com.ditchoom.mqtt.controlpacket.PublishMessage
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt5.controlpacket.ConnAckProperties
 import com.ditchoom.mqtt5.controlpacket.ConnectionRequest
 import com.ditchoom.mqtt5.controlpacket.ControlPacketV5
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.onSuccess
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.onTimeout
 import kotlinx.coroutines.selects.select
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -136,8 +147,105 @@ class SendQuotaTest {
             assertEquals(1L, client.connectionCount())
         }
 
+    /**
+     * A publish the window admits while the old connection is dying (its event queued ahead of
+     * SessionEnded) is persisted after the reconnect has already begun. The resumed session must
+     * still resend it: the session snapshot has to be read in the window's own event order, not
+     * by the reconnecting caller. The interleaving is pinned with the test scheduler and a gate
+     * that holds the window inside that admission until the second CONNACK has been handled.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun publishAdmittedWhileTheOldSessionDiesIsResentOnResume() =
+        runTest {
+            val persistence = GatedPublishWrites(InMemoryPersistence())
+            val request = ConnectionRequest(clientId = "send-quota", keepAliveSeconds = 60, cleanStart = false)
+            val brokerRecord = persistence.addBroker(request)
+            val dying =
+                ManualConnection(ControlPacketV5.ConnAck(properties = ConnAckProperties(receiveMaximum = UShort.MAX_VALUE.toInt())))
+            val resumed =
+                ManualConnection(ControlPacketV5.ConnAck(sessionPresent = true, properties = ConnAckProperties(receiveMaximum = 2)))
+            val connections = ArrayDeque(listOf(dying, resumed))
+            val client =
+                MqttClient.start(
+                    backgroundScope,
+                    brokerRecord,
+                    persistence,
+                    listOf(MqttEndpoint("scripted", 1883)),
+                    BufferFactory.Default,
+                    InFlightLimit.ProtocolMaximum,
+                    testScheduler.timeSource,
+                ) { _, _, _, _ -> connections.removeFirst() }
+            client.publish(TOPIC, QualityOfService.AT_LEAST_ONCE, "first".toReadBuffer(Charset.UTF8))
+
+            val admissionHeld = persistence.holdNextPublishWrite()
+            val late =
+                async { client.publish(TOPIC, QualityOfService.AT_LEAST_ONCE, "late".toReadBuffer(Charset.UTF8)) }
+            runCurrent()
+            dying.brokerCloses()
+            runCurrent()
+            admissionHeld.complete(Unit)
+            runCurrent()
+
+            val lateResult = late.await() as PublishResult.QoS1
+            resumed.acknowledgeQos1Publishes()
+            runCurrent()
+            assertIs<QoS1State.Acknowledged>(lateResult.state.value, "late publish ended ${lateResult.state.value}")
+            client.shutdown(sendDisconnect = false)
+        }
+
     private companion object {
         const val TOPIC = "quota/test"
+    }
+}
+
+/** Suspends the next [writePubGetPacketId] until the returned gate completes. */
+private class GatedPublishWrites(
+    private val inner: Persistence,
+) : Persistence by inner {
+    private val gates = Channel<CompletableDeferred<Unit>>(Channel.UNLIMITED)
+
+    fun holdNextPublishWrite(): CompletableDeferred<Unit> = CompletableDeferred<Unit>().also { gates.trySend(it) }
+
+    override suspend fun writePubGetPacketId(
+        broker: MqttBroker,
+        pub: PublishMessage,
+    ): Int {
+        gates.tryReceive().onSuccess { it.await() }
+        return inner.writePubGetPacketId(broker, pub)
+    }
+}
+
+/** A connection the test drives by hand: [connack] is queued up front, everything sent is recorded. */
+private class ManualConnection(
+    connack: ControlPacket,
+) : Connection<ControlPacket> {
+    override val id: Long = 0L
+    private val sent = Channel<ControlPacket>(Channel.UNLIMITED)
+    private val inbound = Channel<ControlPacket>(Channel.UNLIMITED).also { it.trySend(connack) }
+
+    override suspend fun send(message: ControlPacket) {
+        sent.send(message)
+    }
+
+    override fun receive(): Flow<ControlPacket> =
+        flow {
+            for (packet in inbound) emit(packet)
+        }
+
+    override suspend fun close() {
+        inbound.close()
+    }
+
+    fun brokerCloses() {
+        inbound.close()
+    }
+
+    fun acknowledgeQos1Publishes() {
+        generateSequence { sent.tryReceive().getOrNull() }
+            .filterIsInstance<PublishMessage>()
+            .filter { it.qualityOfService == QualityOfService.AT_LEAST_ONCE }
+            .forEach { inbound.trySend(ControlPacketV5.PubAck(it.packetIdentifier)) }
     }
 }
 

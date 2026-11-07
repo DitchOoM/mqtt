@@ -10,11 +10,9 @@ kotlinWrappers = "2026.7.2"
 buffer = "6.30.9"
 ksp = "2.3.13"
 socket = "4.26.0"
-# PLACEHOLDER: websocket 2.1.0 is not on Maven Central yet (DitchOoM/websocket#24), so a plain
-# build cannot resolve it. Until it ships, CI builds that branch into mavenLocal as 2.1.0-SNAPSHOT
-# (.github/actions/websocket-preview), and a local build does the same with
-#   ./gradlew build -PditchoomWebsocketVersion=2.1.0-SNAPSHOT
-# Delete the action once 2.1.0 is released; this line then resolves as is.
+# While a pinned socket or websocket version is not on Maven Central yet, CI builds it from source
+# into mavenLocal at this exact version (.github/actions/upstream-from-source; the ref is in
+# .github/upstream-refs). A release resolves only from Central and fails if it cannot.
 websocket = "2.1.0"
 kotlinxBenchmark = "0.5.0"
 sqldelight = "2.4.1"

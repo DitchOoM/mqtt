@@ -14,8 +14,34 @@ on:
       - '*.md'
     types: [synchronize, opened]
   workflow_dispatch:
+    inputs:
+      socket-ref:
+        description: "DitchOoM/socket branch, tag or commit to build from source"
+        required: false
+        default: ""
+        type: string
+      websocket-ref:
+        description: "DitchOoM/websocket branch, tag or commit to build from source"
+        required: false
+        default: ""
+        type: string
   workflow_call:
     inputs:
+      upstream:
+        description: "auto, or central for a release (.github/actions/upstream-from-source)"
+        required: false
+        default: "auto"
+        type: string
+      socket-ref:
+        description: "DitchOoM/socket branch, tag or commit to build from source"
+        required: false
+        default: ""
+        type: string
+      websocket-ref:
+        description: "DitchOoM/websocket branch, tag or commit to build from source"
+        required: false
+        default: ""
+        type: string
       iterations:
         description: "How many times each cell repeats the stress test"
         type: number
@@ -50,9 +76,14 @@ jobs:
           java-version: '21'
           cache: gradle
 
-      # TEMPORARY: websocket 2.1.0 is not on Maven Central yet (see gradle/libs.versions.toml).
-      - name: Build websocket 2.1.0 preview
-        uses: ./.github/actions/websocket-preview
+      # socket and websocket from Maven Central, or built from source when a ref input is set or the
+      # catalog pins a version Central does not have yet (.github/actions/upstream-from-source).
+      - name: Upstream libraries
+        uses: ./.github/actions/upstream-from-source
+        with:
+          mode: ${{ inputs.upstream || 'auto' }}
+          socket-ref: ${{ inputs.socket-ref }}
+          websocket-ref: ${{ inputs.websocket-ref }}
 
       - name: Start ${{ matrix.broker }}
         run: .github/interop/start-broker.sh ${{ matrix.broker }} ${{ matrix.transport }} ${{ matrix.protocol }}

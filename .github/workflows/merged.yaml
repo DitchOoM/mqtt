@@ -113,6 +113,7 @@ jobs:
     uses: ./.github/workflows/build-linux.yaml
     with:
       gradle-args: ${{ needs.check-release.outputs.gradle-args }}
+      upstream: central
 
   build-apple:
     needs: check-release
@@ -120,6 +121,7 @@ jobs:
     uses: ./.github/workflows/build-apple.yaml
     with:
       gradle-args: ${{ needs.check-release.outputs.gradle-args }}
+      upstream: central
 
   validate:
     needs: [check-release, build-linux, build-apple]

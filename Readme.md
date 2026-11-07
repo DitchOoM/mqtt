@@ -129,7 +129,7 @@ Other runtime dependencies:
 > 🚀 = Ready &nbsp; 📝 = Planned &nbsp; ⛔ = Unavailable (platform API limits)
 
 The WebSocket transport (`websocket-tcp`) runs over a TCP socket, so it is not available in the
-browser and, on Linux, is published for `linuxX64` only. In the browser, use WebTransport or a custom
+browser. In the browser, use WebTransport or a custom
 `Transport`.
 
 ## Installation
@@ -146,7 +146,7 @@ dependencies {
     implementation("com.ditchoom:mqtt-5-models:3.0.0") // MQTT 5.0
 
     // Only for the transports you use:
-    implementation("com.ditchoom:websocket-tcp:2.1.0")         // WebSocket
+    implementation("com.ditchoom:websocket-tcp:2.1.1")         // WebSocket
     implementation("com.ditchoom:socket-quic-default:4.26.0")  // QUIC (experimental)
     implementation("com.ditchoom:socket-webtransport:4.26.0")  // WebTransport (experimental)
 }

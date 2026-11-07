@@ -52,7 +52,7 @@ A breaking release: lock-free QoS 1/2 send quota (#12), any socket `Transport` t
 ### Changed
 - Toolchain: Gradle **9.9.0**, AGP **9.5.1** (classic DSL through AGP 9's transitional flags), Kotlin
   **2.4.21**, KSP **2.3.13**.
-- Dependencies: socket **4.24.0**, buffer **6.30.9**, websocket **2.1.0**, sqldelight 2.4.1,
+- Dependencies: socket **4.26.0**, buffer **6.30.9**, websocket **2.1.1**, sqldelight 2.4.1,
   kotlinx-benchmark 0.5.0, maven-publish 0.37.0, dokka 2.3.0. Test dependencies: testcontainers
   2.0.5, JUnit 6.1.3, jazzer 0.30.0.
 - A connection always reads with `ReadPolicy.UntilClosed`, whatever `TransportConfig` it is given, so an

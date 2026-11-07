@@ -29,14 +29,14 @@ dependencies {
     implementation("com.ditchoom:mqtt-client:3.0.0")
     implementation("com.ditchoom:mqtt-5-models:3.0.0")
 
-    implementation("com.ditchoom:websocket-tcp:2.1.0")           // WebSocket
-    implementation("com.ditchoom:socket-quic-default:4.24.0")    // QUIC
-    implementation("com.ditchoom:socket-webtransport:4.24.0")    // WebTransport
+    implementation("com.ditchoom:websocket-tcp:2.1.1")           // WebSocket
+    implementation("com.ditchoom:socket-quic-default:4.26.0")    // QUIC
+    implementation("com.ditchoom:socket-webtransport:4.26.0")    // WebTransport
 }
 ```
 
 Keep the socket transport artifacts on the same version as the `socket` that `mqtt-client` brings
-(4.24.0 for mqtt 3.0.0).
+(4.26.0 for mqtt 3.0.0).
 
 ## TCP and TLS
 

@@ -133,7 +133,7 @@ connection.
 
 ### WebSocket
 
-Add `com.ditchoom:websocket-tcp:2.1.0`. `mqtt-client` no longer brings it.
+Add `com.ditchoom:websocket-tcp:2.1.1`. `mqtt-client` no longer brings it.
 
 Before:
 
@@ -310,7 +310,7 @@ To route the same endpoint over several transports (for example QUIC, then WebSo
 ```kotlin
 dependencies {
     implementation("com.ditchoom:mqtt-client:3.0.0")
-    implementation("com.ditchoom:websocket-tcp:2.1.0")
+    implementation("com.ditchoom:websocket-tcp:2.1.1")
     implementation("com.ditchoom:socket-quic-default:4.26.0")
     implementation("com.ditchoom:socket-webtransport:4.26.0")
 }

@@ -112,7 +112,7 @@ src/
 
 - **buffer** (`com.ditchoom:buffer` **6.30.9**, + `buffer-codec` / `buffer-flow`) - Native byte buffer management. `buffer-flow` provides the `ByteSource`/`ByteSink`/`ByteStream` types with `ReadPolicy`/`WritePolicy` and `ReadResult.End`/`Reset`.
 - **socket** (`com.ditchoom:socket` **4.26.0**) - **`api`** dependency of `mqtt-client`, so consumers see `Transport`, `TcpTransport`, `FallbackTransport`, `MemoryTransport`, `TransportConfig` and `TlsConfig`. One immutable `TransportConfig` per dial; a connection **is** a `ByteStream`.
-- **Transport artifacts (not dependencies of `mqtt-client`; consumers add the ones they use):** `com.ditchoom:websocket-tcp` **2.1.0** (`WebSocketTransport`; JVM, Android, Node, Apple, linuxX64 — no browser), `com.ditchoom:socket-quic-default` (`QuicTransport`; experimental, non-standard but EMQX implements it, native only — JS/wasm have no raw UDP, no tvOS/watchOS engine), `com.ditchoom:socket-webtransport` (`WebTransportTransport`; experimental, all targets incl. browser). `websocket-tcp` is a `commonTest` dependency only.
+- **Transport artifacts (not dependencies of `mqtt-client`; consumers add the ones they use):** `com.ditchoom:websocket-tcp` **2.1.1** (`WebSocketTransport`; JVM, Android, Node, Apple, linuxX64, linuxArm64 — no browser), `com.ditchoom:socket-quic-default` (`QuicTransport`; experimental, non-standard but EMQX implements it, native only — JS/wasm have no raw UDP, no tvOS/watchOS engine), `com.ditchoom:socket-webtransport` (`WebTransportTransport`; experimental, all targets incl. browser). `websocket-tcp` is a `commonTest` dependency only.
 - **kotlinx-coroutines** - Async/coroutines support
 - **sqldelight** - SQLite persistence for models-v4 and models-v5
 

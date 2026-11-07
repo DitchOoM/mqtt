@@ -56,8 +56,8 @@ This project simplifies managing an MQTT client across multiple platforms with a
 | **Protocol** | Pick a v3.1.1 *or* v5 library | Both MQTT 3.1.1 (v4) and 5.0 behind one client |
 | **Reliability** | Hand-roll reconnect + QoS state | Automatic reconnection, QoS 0/1/2 state machines, message persistence, offline buffering |
 | **Payloads** | `ByteArray` copies everywhere | Zero-copy `ReadBuffer` + typed `Codec<P>` payloads |
-| **Transport** | Rewrite for TCP vs WebSocket | Composable transport seam (TCP today; WebSocket, QUIC, WebTransport on the same seam) |
-| **High availability** | Manual failover | A broker can list multiple connection options and fail over between them |
+| **Transport** | Rewrite for TCP vs WebSocket | Inject any socket `Transport`: TCP, TLS, WebSocket, QUIC, WebTransport, a fallback chain, or your own |
+| **High availability** | Manual failover | Pass an ordered list of failover endpoints and the client works through them |
 
 ### Implementation notes
 
@@ -101,8 +101,8 @@ An in-memory `Persistence` is available on every platform.
 DitchOoM Kotlin Multiplatform runtime dependencies:
 
 * [Buffer](https://github.com/DitchOoM/buffer) — native buffer allocation/management, the `Codec` framework, and the `buffer-flow` byte layer.
-* [Socket](https://github.com/DitchOoM/socket) — TCP (and QUIC / WebTransport) transports for an MQTT broker.
-* [websocket](https://github.com/DitchOoM/websocket) — WebSocket transport (with TLS and permessage-deflate compression).
+* [Socket](https://github.com/DitchOoM/socket) — the `Transport` interface, TCP and TLS. Exposed as an `api` dependency of `mqtt-client`. QUIC (`socket-quic-default`) and WebTransport (`socket-webtransport`) are separate, optional artifacts.
+* [websocket](https://github.com/DitchOoM/websocket) — optional WebSocket transport (`websocket-tcp`, with TLS and permessage-deflate compression).
 
 Official Kotlin Multiplatform runtime dependencies:
 
@@ -117,7 +117,7 @@ Other runtime dependencies:
 | Platform  | MQTT 3.1.1 (v4) | MQTT 5.0 | LWT | SSL / TLS | Persistence | Auto Reconnect | Offline Buffering | TCP | WebSocket | Coroutines API | High Availability |
 |:---------:|:---------------:|:--------:|:---:|:---------:|:-----------:|:--------------:|:-----------------:|:---:|:---------:|:--------------:|:-----------------:|
 |   `JVM`   |       🚀        |    🚀    | 🚀  |    🚀     |     🚀      |       🚀       |        🚀         | 🚀  |    🚀     |       🚀       |        🚀         |
-| `Browser` |       🚀        |    🚀    | 🚀  |    🚀     |     🚀      |       🚀       |        🚀         | ⛔  |    🚀     |       🚀       |        🚀         |
+| `Browser` |       🚀        |    🚀    | 🚀  |    🚀     |     🚀      |       🚀       |        🚀         | ⛔  |    ⛔     |       🚀       |        🚀         |
 | `Node.JS` |       🚀        |    🚀    | 🚀  |    🚀     |     📝      |       🚀       |        🚀         | 🚀  |    🚀     |       🚀       |        🚀         |
 | `Android` |       🚀        |    🚀    | 🚀  |    🚀     |     🚀      |       🚀       |        🚀         | 🚀  |    🚀     |       🚀       |        🚀         |
 |   `iOS`   |       🚀        |    🚀    | 🚀  |    🚀     |     🚀      |       🚀       |        🚀         | 🚀  |    🚀     |       🚀       |        🚀         |
@@ -128,18 +128,27 @@ Other runtime dependencies:
 
 > 🚀 = Ready &nbsp; 📝 = Planned &nbsp; ⛔ = Unavailable (platform API limits)
 
+The WebSocket transport (`websocket-tcp`) runs over a TCP socket, so it is not available in the
+browser. In the browser, use WebTransport or a custom
+`Transport`.
+
 ## Installation
 
 Published to Maven Central under `com.ditchoom`.
 
 ```kotlin
 dependencies {
-    // The client (pulls in buffer + socket transitively).
-    implementation("com.ditchoom:mqtt-client:<version>")
+    // The client. Exposes com.ditchoom:socket (TCP + TLS) as an api dependency.
+    implementation("com.ditchoom:mqtt-client:3.0.0")
 
-    // Add the protocol version(s) you need — or both:
-    implementation("com.ditchoom:mqtt-4-models:<version>") // MQTT 3.1.1 (v4)
-    implementation("com.ditchoom:mqtt-5-models:<version>") // MQTT 5.0
+    // The protocol version(s) you need, or both:
+    implementation("com.ditchoom:mqtt-4-models:3.0.0") // MQTT 3.1.1 (v4)
+    implementation("com.ditchoom:mqtt-5-models:3.0.0") // MQTT 5.0
+
+    // Only for the transports you use:
+    implementation("com.ditchoom:websocket-tcp:2.1.1")         // WebSocket
+    implementation("com.ditchoom:socket-quic-default:4.26.0")  // QUIC (experimental)
+    implementation("com.ditchoom:socket-webtransport:4.26.0")  // WebTransport (experimental)
 }
 ```
 
@@ -147,18 +156,20 @@ Find the latest version on [Maven Central](https://search.maven.org/artifact/com
 
 ## Usage
 
-The client is **in-process**: you create a `Persistence`, register a broker, and start an `MqttClient`.
-It connects, keeps itself connected (automatic reconnection + failover across the broker's connection
-options), and persists in-flight QoS 1/2 messages.
+The client is **in-process**: you create a `Persistence`, register a broker, and start an `MqttClient`
+with an `MqttEndpoint` that says how to reach the broker. It connects, keeps itself connected
+(automatic reconnection, plus failover across any extra endpoints), and persists in-flight QoS 1/2
+messages.
 
 ```kotlin
 import com.ditchoom.mqtt.client.MqttClient
-import com.ditchoom.mqtt.connection.MqttConnectionOptions
+import com.ditchoom.mqtt.client.MqttEndpoint
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicFilter
 import com.ditchoom.mqtt.controlpacket.OpaquePublishPayloadCodec
 import com.ditchoom.mqtt3.controlpacket.ConnectionRequest // v4; use com.ditchoom.mqtt5.* for v5
 import com.ditchoom.buffer.Charset
+import com.ditchoom.buffer.codec.asReadBuffer
 import com.ditchoom.buffer.toReadBuffer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -167,16 +178,16 @@ import kotlinx.coroutines.flow.take
 
 val scope = CoroutineScope(Dispatchers.Default)
 
-// 1. Describe how/where to connect. A broker may list several options for high-availability failover.
-val connection = MqttConnectionOptions.SocketConnection(host = "test.mosquitto.org", port = 1883)
+// 1. The session (CONNECT) and how to reach the broker (endpoint).
 val connectionRequest = ConnectionRequest(clientId = "my-client", keepAliveSeconds = 60, cleanSession = true)
+val endpoint = MqttEndpoint(host = "test.mosquitto.org", port = 1883)
 
 // 2. Choose persistence (in-memory here) and register the broker.
 val persistence = connectionRequest.controlPacketFactory.defaultPersistence(inMemory = true)
-val broker = persistence.addBroker(connection, connectionRequest)
+val broker = persistence.addBroker(connectionRequest)
 
 // 3. Start the client (stays connected until you shut it down).
-val client = MqttClient.start(scope = scope, broker = broker, persistence = persistence)
+val client = MqttClient.start(scope = scope, broker = broker, persistence = persistence, endpoint = endpoint)
 client.awaitConnectivity()
 
 // 4. Observe messages on a topic filter. A Codec<P> decodes the payload; OpaquePublishPayloadCodec
@@ -220,16 +231,38 @@ client.observe(TopicFilter.fromOrThrow("t"), MyCodec).collect { (publish, value)
 
 ## Transports
 
-All transports produce the same `Connection<ControlPacket>` and are selected behind a composable
-`MqttTransport` seam, so the rest of the client is transport-agnostic. Pick a transport by the
-`MqttConnectionOptions` subtype (or plug in your own via a custom resolver / `connectSingle`):
+An `MqttEndpoint` carries any socket `Transport`. The client frames MQTT on whatever byte stream the
+transport returns, so TCP, TLS, WebSocket, QUIC, WebTransport, a `FallbackTransport` chain and your own
+`Transport` implementations all work the same way. TLS is set on the endpoint's `TransportConfig`.
 
-| Option | Transport | Status |
-|--------|-----------|--------|
-| `SocketConnection` | TCP (+ TLS) | ✅ Ready |
-| `WebSocketConnectionOptions` | WebSocket (+ TLS, permessage-deflate) | ✅ Ready |
-| `QuicConnectionOptions` | QUIC (native) | 🧪 Experimental — implemented (single stream), not broker-tested. Non-standard (EMQX-style); native only. |
-| `WebTransportConnectionOptions` | WebTransport (incl. browser) | 🧪 Experimental — implemented, not broker-tested. The web substitute for QUIC where UDP is unavailable. |
+```kotlin
+import com.ditchoom.mqtt.client.MqttEndpoint
+import com.ditchoom.socket.TransportConfig
+import com.ditchoom.websocket.tcp.WebSocketTransport
+
+val tcp = MqttEndpoint("broker.example.com", 1883)
+val tls = MqttEndpoint("broker.example.com", 8883, config = TransportConfig.tlsDefault())
+val wss =
+    MqttEndpoint(
+        host = "broker.example.com",
+        port = 443,
+        transport = WebSocketTransport(websocketEndpoint = "/mqtt", protocols = listOf("mqtt")),
+        config = TransportConfig.tlsDefault(),
+    )
+
+val client =
+    MqttClient.start(scope = scope, broker = broker, persistence = persistence, endpoint = tls, failover = listOf(wss))
+```
+
+| Transport | Class | Artifact | Status |
+|-----------|-------|----------|--------|
+| TCP, TLS | `TcpTransport` (default) | `socket` (included) | Supported |
+| WebSocket (`ws` / `wss`) | `com.ditchoom.websocket.tcp.WebSocketTransport` | `websocket-tcp` | Supported |
+| QUIC | `com.ditchoom.socket.quic.QuicTransport` | `socket-quic-default` | Experimental. MQTT over QUIC is non-standard but implemented by EMQX. Not available on JS. |
+| WebTransport | `com.ditchoom.socket.webtransport.WebTransportTransport` | `socket-webtransport` | Experimental. Works in the browser. |
+| Fallback chain | `FallbackTransport` | `socket` (included) | Supported |
+
+See the [transports guide][docs] for QUIC, WebTransport, fallback chains and custom transports.
 
 ## Building Locally
 
@@ -255,6 +288,10 @@ All transports produce the same `Connection<ControlPacket>` and are selected beh
 ./gradlew ktlintCheck             # Check code style
 ./gradlew ktlintFormat            # Auto-format code
 
+# Public ABI gate (run updateKotlinAbi on macOS after an intentional API change)
+./gradlew checkKotlinAbi
+./gradlew updateKotlinAbi
+
 # Wire-format snapshot gate (fails on breaking MQTT wire-format drift)
 ./gradlew checkCodecSchema        # Verify against committed baseline
 ./gradlew updateCodecSchema       # Accept an intentional wire change
@@ -269,7 +306,7 @@ All transports produce the same `Connection<ControlPacket>` and are selected beh
 ## Roadmap
 
 See the [open issues](https://github.com/DitchOoM/mqtt/issues) for proposed features and known issues,
-and `TODO.md` for tracked follow-ups (QUIC/WebTransport implementation).
+and `TODO.md` for tracked follow-ups.
 
 ## Contributing
 

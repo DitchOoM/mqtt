@@ -16,7 +16,9 @@ import kotlin.time.Duration.Companion.seconds
  * - WebSocket: `com.ditchoom.websocket.tcp.WebSocketTransport(websocketEndpoint = "/mqtt",
  *   protocols = listOf("mqtt"))` from `com.ditchoom:websocket-tcp`. TLS gives `wss`.
  * - QUIC: `com.ditchoom.socket.quic.QuicTransport` from `com.ditchoom:socket-quic-default`, with
- *   ALPN `"mqtt"`. MQTT over QUIC is non-standard, but EMQX implements it.
+ *   ALPN `"mqtt"` and `persistentStreams = true`. MQTT over QUIC is non-standard, but EMQX implements
+ *   it. A QUIC stream takes its read deadline from `QuicOptions`, not from [config], so without
+ *   `persistentStreams` an idle session is cut off; keep the keep-alive below `QuicOptions.idleTimeout`.
  * - Anything else that is a [Transport]: `FallbackTransport` chains, `MemoryTransport` in tests,
  *   or your own.
  *

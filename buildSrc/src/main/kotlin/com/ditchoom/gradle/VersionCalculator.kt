@@ -9,7 +9,7 @@ data class Version(
     val minor: UInt,
     val patch: UInt,
     val snapshot: Boolean,
-) {
+) : Comparable<Version> {
     constructor(string: String, snapshot: Boolean) :
         this(
             string.split('.')[0].toUInt(),
@@ -27,6 +27,9 @@ data class Version(
     fun snapshot() = Version(major, minor, patch, true)
 
     fun isVersionZero() = major == 0u && minor == 0u && patch == 0u
+
+    /** Release order only; the snapshot flag does not take part. */
+    override fun compareTo(other: Version): Int = compareValuesBy(this, other, Version::major, Version::minor, Version::patch)
 
     override fun toString(): String =
         if (snapshot) {
@@ -51,20 +54,26 @@ object VersionCalculator {
         return result
     }
 
+    /**
+     * The release after the latest one on Maven Central, bumped as the PR's label asks, and never
+     * below [floor]: a planned release line (gradle.properties `releaseVersionFloor`) is published
+     * at that version whatever label its merge carries. Once a release at or above [floor] exists,
+     * the floor has no effect.
+     */
     fun getNextVersion(
         artifact: String,
         snapshot: Boolean,
         incrementMajor: Boolean,
         incrementMinor: Boolean,
+        floor: Version,
     ): Version {
-        var v = getLatestVersion(artifact)
-        if (snapshot) {
-            v = v.snapshot()
-        }
-        return when {
-            incrementMajor -> v.incrementMajor()
-            incrementMinor -> v.incrementMinor()
-            else -> v.incrementPatch()
-        }
+        val latest = getLatestVersion(artifact)
+        val bumped =
+            when {
+                incrementMajor -> latest.incrementMajor()
+                incrementMinor -> latest.incrementMinor()
+                else -> latest.incrementPatch()
+            }
+        return maxOf(bumped, floor).copy(snapshot = snapshot)
     }
 }

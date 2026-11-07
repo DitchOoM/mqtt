@@ -2,13 +2,11 @@ package com.ditchoom.mqtt.client
 
 import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Default
-import com.ditchoom.buffer.codec.Codec
 import com.ditchoom.buffer.codec.Payload
 import com.ditchoom.buffer.codec.ownedBytesFrom
 import com.ditchoom.buffer.flow.Connection
 import com.ditchoom.mqtt.InMemoryPersistence
 import com.ditchoom.mqtt.client.net.runTestNoTimeSkipping
-import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.ISubscribeRequest
 import com.ditchoom.mqtt.controlpacket.MqttFixedHeader
@@ -30,56 +28,41 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.withTimeout
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertSame
 import kotlin.time.Duration.Companion.seconds
 
 /**
- * Regression coverage for the `MqttClient.start` ↔ `MqttCodec` wiring on incoming PUBLISH.
+ * Pins the wiring between the client's `TopicCodecRegistry` and `MqttCodec` on incoming PUBLISH.
  *
- * Pre-fix behaviour: `MqttClient.start` threaded the per-client `TopicCodecRegistry` into
- * `defaultSingleConnection` only when the caller supplied no `connectSingle`. A
- * caller-supplied `connectSingle` (e.g. every `createConnectFactory(...)` test path)
- * silently used `publishCodecForTopic = { null }`, so `MqttCodec.decode` threw
- * `MissingCodecException` for every incoming PUBLISH — broker connection died, SUBACK
- * still arrived on the reconnect, but no PUBLISH ever made it to the dispatcher and the
- * handler-based `subscribe<P>(filter, codec, qos, handler)` never fired.
- *
- * Post-fix: `connectSingle`'s signature carries the per-topic codec lookup as a parameter;
- * `ConnectivityManager` invokes `connectSingle(op, publishCodecForTopic)` so the registry
- * cannot be bypassed. These tests pin the structural contract — they fail at compile-time
- * if the signature regresses, and at run-time if the lookup ever returns null for a topic
- * the client just subscribed to.
+ * The connector receives the per-topic codec lookup on every connect, and `ConnectivityManager`
+ * always passes the client's registry, so no connection can decode PUBLISH payloads with anything
+ * else. These tests fail to compile if that signature regresses, and fail at run time if the lookup
+ * does not route a topic the client just subscribed to, or if a handler-based subscription never
+ * sees its PUBLISH.
  */
 class MqttClientCodecRoutingRegressionTest {
     @Test
     fun connectSingleReceivesLookupThatResolvesSubscribedCodec() =
         runTestNoTimeSkipping {
-            val capturedLookup = CompletableDeferred<(String) -> Codec<out Payload>?>()
+            val capturedLookup = CompletableDeferred<(String) -> TopicCodec>()
             val fakeConn = FakeConnection()
             val persistence = InMemoryPersistence()
             val broker =
-                persistence.addBroker(
-                    listOf(MqttConnectionOptions.SocketConnection("test", 1883)),
-                    sampleConnectionRequest(),
-                )
+                persistence.addBroker(sampleConnectionRequest())
             // Seed CONNACK so MqttClient.start can complete the handshake.
             fakeConn.inbound.send(ConnectionAcknowledgment())
 
             val scope = CoroutineScope(coroutineContext + Dispatchers.Default)
             val client =
-                MqttClient.start(
-                    scope = scope,
-                    broker = broker,
-                    persistence = persistence,
-                    connectSingle = { _, lookup ->
-                        capturedLookup.complete(lookup)
-                        fakeConn
-                    },
-                )
+                startScriptedClient(scope, broker, persistence) { _, _, _, lookup ->
+                    capturedLookup.complete(lookup)
+                    fakeConn
+                }
             try {
                 val lookup = withTimeout(5.seconds) { capturedLookup.await() }
-                assertEquals(
-                    null,
+                assertEquals<TopicCodec>(
+                    TopicCodec.Unrouted,
                     lookup("regression/topic"),
                     "before subscribe, lookup should not resolve a codec",
                 )
@@ -104,7 +87,7 @@ class MqttClientCodecRoutingRegressionTest {
 
                 assertSame(
                     OpaquePublishPayloadCodec,
-                    lookup("regression/topic"),
+                    assertIs<TopicCodec.Routed>(lookup("regression/topic")).codec,
                     "post-subscribe, lookup must resolve to the registered codec",
                 )
             } finally {
@@ -118,20 +101,12 @@ class MqttClientCodecRoutingRegressionTest {
             val fakeConn = FakeConnection()
             val persistence = InMemoryPersistence()
             val broker =
-                persistence.addBroker(
-                    listOf(MqttConnectionOptions.SocketConnection("test", 1883)),
-                    sampleConnectionRequest(),
-                )
+                persistence.addBroker(sampleConnectionRequest())
             fakeConn.inbound.send(ConnectionAcknowledgment())
 
             val scope = CoroutineScope(coroutineContext + Dispatchers.Default)
             val client =
-                MqttClient.start(
-                    scope = scope,
-                    broker = broker,
-                    persistence = persistence,
-                    connectSingle = { _, _ -> fakeConn },
-                )
+                startScriptedClient(scope, broker, persistence) { _, _, _, _ -> fakeConn }
             try {
                 val received = CompletableDeferred<Pair<String, OpaquePublishPayload>>()
 

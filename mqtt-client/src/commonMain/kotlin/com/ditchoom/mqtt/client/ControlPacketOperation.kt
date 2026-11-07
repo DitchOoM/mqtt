@@ -5,6 +5,7 @@ import com.ditchoom.mqtt.controlpacket.IPublishComplete
 import com.ditchoom.mqtt.controlpacket.ISubscribeAcknowledgement
 import com.ditchoom.mqtt.controlpacket.ISubscription
 import com.ditchoom.mqtt.controlpacket.IUnsubscribeAcknowledgment
+import com.ditchoom.mqtt.controlpacket.PacketId
 import com.ditchoom.mqtt.controlpacket.PublishMessage
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.flow.Flow
@@ -13,7 +14,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 
 /**
- * QoS 1 publish state machine: Queued → Sent → Acknowledged.
+ * QoS 1 publish state machine: Queued → Sent → Acknowledged, or → SessionDiscarded.
  */
 sealed interface QoS1State {
     /** Message persisted locally, waiting to be written to wire. */
@@ -26,10 +27,13 @@ sealed interface QoS1State {
     data class Acknowledged(
         val ack: IPublishAcknowledgment,
     ) : QoS1State
+
+    /** The broker started a fresh session before acknowledging; the message will not be resent. */
+    data object SessionDiscarded : QoS1State
 }
 
 /**
- * QoS 2 publish state machine: Queued → Sent → Received → Released → Complete.
+ * QoS 2 publish state machine: Queued → Sent → Received → Released → Complete, or → SessionDiscarded.
  */
 sealed interface QoS2State {
     /** Message persisted locally, waiting to be written to wire. */
@@ -48,6 +52,9 @@ sealed interface QoS2State {
     data class Complete(
         val comp: IPublishComplete,
     ) : QoS2State
+
+    /** The broker started a fresh session before PUBCOMP; the message will not be resent. */
+    data object SessionDiscarded : QoS2State
 }
 
 /**
@@ -60,13 +67,13 @@ sealed interface PublishResult {
 
     /** QoS 1: observe [state] for Queued → Sent → Acknowledged progression. */
     data class QoS1(
-        val packetId: Int,
+        val packetId: PacketId,
         val state: StateFlow<QoS1State>,
     ) : PublishResult
 
     /** QoS 2: observe [state] for Queued → Sent → Received → Released → Complete progression. */
     data class QoS2(
-        val packetId: Int,
+        val packetId: PacketId,
         val state: StateFlow<QoS2State>,
     ) : PublishResult
 }

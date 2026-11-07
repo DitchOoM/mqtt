@@ -58,13 +58,24 @@ internal class TopicCodecRegistry {
      * type. Today consumers are responsible for not registering
      * overlapping filters with different codec result types.
      */
-    fun codecForTopicName(topic: TopicName): Codec<out Payload>? {
+    fun codecForTopicName(topic: TopicName): TopicCodec {
         val snapshot = entries.load()
         for ((filter, codec) in snapshot) {
-            if (filter.matches(topic)) return codec
+            if (filter.matches(topic)) return TopicCodec.Routed(codec)
         }
-        return null
+        return TopicCodec.Unrouted
     }
+}
+
+/** What the client decodes an incoming PUBLISH's payload with, resolved from its topic name. */
+internal sealed interface TopicCodec {
+    /** A subscription or observer registered [codec] for a filter that matches the topic. */
+    class Routed(
+        val codec: Codec<out Payload>,
+    ) : TopicCodec
+
+    /** No registered filter matches the topic, so the client never asked for this message. */
+    data object Unrouted : TopicCodec
 }
 
 @OptIn(ExperimentalAtomicApi::class)

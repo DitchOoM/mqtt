@@ -18,7 +18,7 @@ codecSchema {
     failOnBreaking.set(true)
 }
 
-val hostOs = org.jetbrains.kotlin.konan.target.HostManager.host
+val nativeHost = com.ditchoom.gradle.NativeHost.current
 
 kotlin {
     jvmToolchain(21)
@@ -56,7 +56,7 @@ kotlin {
         }
     }
 
-    if (hostOs.family.isAppleFamily) {
+    if (nativeHost == com.ditchoom.gradle.NativeHost.Apple) {
         macosX64()
         macosArm64()
         iosArm64()
@@ -70,7 +70,7 @@ kotlin {
         watchosX64()
     }
 
-    if (hostOs == org.jetbrains.kotlin.konan.target.KonanTarget.LINUX_X64) {
+    if (nativeHost == com.ditchoom.gradle.NativeHost.LinuxX64) {
         linuxX64()
         linuxArm64()
     }
@@ -120,10 +120,10 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask<*>>().con
 }
 
 android {
-    compileSdk = 36
+    compileSdk = 37
     sourceSets["main"].manifest.srcFile("src/androidMain/AndroidManifest.xml")
     defaultConfig {
-        minSdk = 21
+        minSdk = 23
     }
     namespace = "com.ditchoom.mqtt3"
     publishing {
@@ -164,12 +164,13 @@ tasks.withType<org.jetbrains.kotlin.gradle.targets.js.testing.KotlinJsTest>().co
     }
 }
 
-// Gradle 8.14 strict-mode: sourcesJar / ktlint / dokka tasks consume KSP-generated sources; declare the dep explicitly.
+// Gradle strict-mode: sourcesJar / ktlint / dokka / per-target KSP tasks consume KSP-generated sources; declare the dep explicitly.
 tasks
     .matching {
         it.name.endsWith("SourcesJar") ||
             it.name == "sourcesJar" ||
             it.name == "runKtlintCheckOverCommonMainSourceSet" ||
             it.name == "runKtlintFormatOverCommonMainSourceSet" ||
-            it.name.startsWith("dokkaGenerate")
+            it.name.startsWith("dokkaGenerate") ||
+            (it.name.startsWith("ksp") && it.name != "kspCommonMainKotlinMetadata")
     }.configureEach { dependsOn("kspCommonMainKotlinMetadata") }

@@ -1,0 +1,1966 @@
+public final class com/ditchoom/mqtt5/controlpacket/ConnAckProperties {
+	public static final field Companion Lcom/ditchoom/mqtt5/controlpacket/ConnAckProperties$Companion;
+	public fun <init> ()V
+	public synthetic fun <init> (Lkotlin/ULong;ILcom/ditchoom/mqtt/controlpacket/QualityOfService;ZLkotlin/ULong;Ljava/lang/String;ILjava/lang/String;Ljava/util/List;ZZZLjava/lang/Integer;Ljava/lang/String;Ljava/lang/String;Lcom/ditchoom/mqtt5/controlpacket/properties/Authentication;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Lkotlin/ULong;ILcom/ditchoom/mqtt/controlpacket/QualityOfService;ZLkotlin/ULong;Ljava/lang/String;ILjava/lang/String;Ljava/util/List;ZZZLjava/lang/Integer;Ljava/lang/String;Ljava/lang/String;Lcom/ditchoom/mqtt5/controlpacket/properties/Authentication;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-6VbMDqA ()Lkotlin/ULong;
+	public final fun component10 ()Z
+	public final fun component11 ()Z
+	public final fun component12 ()Z
+	public final fun component13 ()Ljava/lang/Integer;
+	public final fun component14 ()Ljava/lang/String;
+	public final fun component15 ()Ljava/lang/String;
+	public final fun component16 ()Lcom/ditchoom/mqtt5/controlpacket/properties/Authentication;
+	public final fun component2 ()I
+	public final fun component3 ()Lcom/ditchoom/mqtt/controlpacket/QualityOfService;
+	public final fun component4 ()Z
+	public final fun component5-6VbMDqA ()Lkotlin/ULong;
+	public final fun component6 ()Ljava/lang/String;
+	public final fun component7 ()I
+	public final fun component8 ()Ljava/lang/String;
+	public final fun component9 ()Ljava/util/List;
+	public final fun copy--5WxPs4 (Lkotlin/ULong;ILcom/ditchoom/mqtt/controlpacket/QualityOfService;ZLkotlin/ULong;Ljava/lang/String;ILjava/lang/String;Ljava/util/List;ZZZLjava/lang/Integer;Ljava/lang/String;Ljava/lang/String;Lcom/ditchoom/mqtt5/controlpacket/properties/Authentication;)Lcom/ditchoom/mqtt5/controlpacket/ConnAckProperties;
+	public static synthetic fun copy--5WxPs4$default (Lcom/ditchoom/mqtt5/controlpacket/ConnAckProperties;Lkotlin/ULong;ILcom/ditchoom/mqtt/controlpacket/QualityOfService;ZLkotlin/ULong;Ljava/lang/String;ILjava/lang/String;Ljava/util/List;ZZZLjava/lang/Integer;Ljava/lang/String;Ljava/lang/String;Lcom/ditchoom/mqtt5/controlpacket/properties/Authentication;ILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/ConnAckProperties;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAssignedClientIdentifier ()Ljava/lang/String;
+	public final fun getAuthentication ()Lcom/ditchoom/mqtt5/controlpacket/properties/Authentication;
+	public final fun getMaximumPacketSize-6VbMDqA ()Lkotlin/ULong;
+	public final fun getMaximumQos ()Lcom/ditchoom/mqtt/controlpacket/QualityOfService;
+	public final fun getProps ()Ljava/util/List;
+	public final fun getReasonString ()Ljava/lang/String;
+	public final fun getReceiveMaximum ()I
+	public final fun getResponseInformation ()Ljava/lang/String;
+	public final fun getRetainAvailable ()Z
+	public final fun getServerKeepAlive ()Ljava/lang/Integer;
+	public final fun getServerReference ()Ljava/lang/String;
+	public final fun getSessionExpiryIntervalSeconds-6VbMDqA ()Lkotlin/ULong;
+	public final fun getSharedSubscriptionAvailable ()Z
+	public final fun getSubscriptionIdentifiersAvailable ()Z
+	public final fun getSupportsWildcardSubscriptions ()Z
+	public final fun getTopicAliasMaximum ()I
+	public final fun getUserProperty ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/ConnAckProperties$Companion {
+	public final fun from (Ljava/util/Collection;)Lcom/ditchoom/mqtt5/controlpacket/ConnAckProperties;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/ConnAckPropertiesKt {
+	public static final fun getConnackConnectReason ()Ljava/util/Map;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/ConnectFlagsV5 {
+	public static final field Companion Lcom/ditchoom/mqtt5/controlpacket/ConnectFlagsV5$Companion;
+	public static final synthetic fun box-impl (B)Lcom/ditchoom/mqtt5/controlpacket/ConnectFlagsV5;
+	public static fun constructor-impl (B)B
+	public fun equals (Ljava/lang/Object;)Z
+	public static fun equals-impl (BLjava/lang/Object;)Z
+	public static final fun equals-impl0 (BB)Z
+	public static final fun getCleanStart-impl (B)Z
+	public static final fun getPasswordFlag-impl (B)Z
+	public final fun getRaw-w2LRezQ ()B
+	public static final fun getReserved-impl (B)Z
+	public static final fun getUsernameFlag-impl (B)Z
+	public static final fun getWillFlag-impl (B)Z
+	public static final fun getWillQos-impl (B)I
+	public static final fun getWillQosBit1-impl (B)Z
+	public static final fun getWillQosBit2-impl (B)Z
+	public static final fun getWillRetain-impl (B)Z
+	public fun hashCode ()I
+	public static fun hashCode-impl (B)I
+	public fun toString ()Ljava/lang/String;
+	public static fun toString-impl (B)Ljava/lang/String;
+	public final synthetic fun unbox-impl ()B
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/ConnectFlagsV5$Companion {
+	public final fun from-2jbrskk (ZZLcom/ditchoom/mqtt/controlpacket/QualityOfService;ZZZ)B
+	public static synthetic fun from-2jbrskk$default (Lcom/ditchoom/mqtt5/controlpacket/ConnectFlagsV5$Companion;ZZLcom/ditchoom/mqtt/controlpacket/QualityOfService;ZZZILjava/lang/Object;)B
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/ConnectProperties {
+	public static final field Companion Lcom/ditchoom/mqtt5/controlpacket/ConnectProperties$Companion;
+	public fun <init> ()V
+	public synthetic fun <init> (Lkotlin/ULong;Ljava/lang/Integer;Lkotlin/ULong;Ljava/lang/Integer;Ljava/lang/Boolean;Ljava/lang/Boolean;Ljava/util/List;Lcom/ditchoom/mqtt5/controlpacket/properties/Authentication;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Lkotlin/ULong;Ljava/lang/Integer;Lkotlin/ULong;Ljava/lang/Integer;Ljava/lang/Boolean;Ljava/lang/Boolean;Ljava/util/List;Lcom/ditchoom/mqtt5/controlpacket/properties/Authentication;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-6VbMDqA ()Lkotlin/ULong;
+	public final fun component2 ()Ljava/lang/Integer;
+	public final fun component3-6VbMDqA ()Lkotlin/ULong;
+	public final fun component4 ()Ljava/lang/Integer;
+	public final fun component5 ()Ljava/lang/Boolean;
+	public final fun component6 ()Ljava/lang/Boolean;
+	public final fun component7 ()Ljava/util/List;
+	public final fun component8 ()Lcom/ditchoom/mqtt5/controlpacket/properties/Authentication;
+	public final fun copy-IETL5SY (Lkotlin/ULong;Ljava/lang/Integer;Lkotlin/ULong;Ljava/lang/Integer;Ljava/lang/Boolean;Ljava/lang/Boolean;Ljava/util/List;Lcom/ditchoom/mqtt5/controlpacket/properties/Authentication;)Lcom/ditchoom/mqtt5/controlpacket/ConnectProperties;
+	public static synthetic fun copy-IETL5SY$default (Lcom/ditchoom/mqtt5/controlpacket/ConnectProperties;Lkotlin/ULong;Ljava/lang/Integer;Lkotlin/ULong;Ljava/lang/Integer;Ljava/lang/Boolean;Ljava/lang/Boolean;Ljava/util/List;Lcom/ditchoom/mqtt5/controlpacket/properties/Authentication;ILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/ConnectProperties;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAuthentication ()Lcom/ditchoom/mqtt5/controlpacket/properties/Authentication;
+	public final fun getMaximumPacketSize-6VbMDqA ()Lkotlin/ULong;
+	public final fun getProps ()Ljava/util/List;
+	public final fun getReceiveMaximum ()Ljava/lang/Integer;
+	public final fun getRequestProblemInformation ()Ljava/lang/Boolean;
+	public final fun getRequestResponseInformation ()Ljava/lang/Boolean;
+	public final fun getSessionExpiryIntervalSeconds-6VbMDqA ()Lkotlin/ULong;
+	public final fun getTopicAliasMaximum ()Ljava/lang/Integer;
+	public final fun getUserProperty ()Ljava/util/List;
+	public fun hashCode ()I
+	public final fun size ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/ConnectProperties$Companion {
+	public final fun from (Ljava/util/Collection;)Lcom/ditchoom/mqtt5/controlpacket/ConnectProperties;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/ConnectWillProperties {
+	public static final field Companion Lcom/ditchoom/mqtt5/controlpacket/ConnectWillProperties$Companion;
+	public fun <init> ()V
+	public fun <init> (JZLjava/lang/Long;Ljava/lang/String;Lcom/ditchoom/mqtt/controlpacket/TopicName;Lcom/ditchoom/buffer/ReadBuffer;Ljava/util/List;)V
+	public synthetic fun <init> (JZLjava/lang/Long;Ljava/lang/String;Lcom/ditchoom/mqtt/controlpacket/TopicName;Lcom/ditchoom/buffer/ReadBuffer;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()J
+	public final fun component2 ()Z
+	public final fun component3 ()Ljava/lang/Long;
+	public final fun component4 ()Ljava/lang/String;
+	public final fun component5 ()Lcom/ditchoom/mqtt/controlpacket/TopicName;
+	public final fun component6 ()Lcom/ditchoom/buffer/ReadBuffer;
+	public final fun component7 ()Ljava/util/List;
+	public final fun copy (JZLjava/lang/Long;Ljava/lang/String;Lcom/ditchoom/mqtt/controlpacket/TopicName;Lcom/ditchoom/buffer/ReadBuffer;Ljava/util/List;)Lcom/ditchoom/mqtt5/controlpacket/ConnectWillProperties;
+	public static synthetic fun copy$default (Lcom/ditchoom/mqtt5/controlpacket/ConnectWillProperties;JZLjava/lang/Long;Ljava/lang/String;Lcom/ditchoom/mqtt/controlpacket/TopicName;Lcom/ditchoom/buffer/ReadBuffer;Ljava/util/List;ILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/ConnectWillProperties;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getContentType ()Ljava/lang/String;
+	public final fun getCorrelationData ()Lcom/ditchoom/buffer/ReadBuffer;
+	public final fun getMessageExpiryIntervalSeconds ()Ljava/lang/Long;
+	public final fun getPayloadFormatIndicator ()Z
+	public final fun getProps ()Ljava/util/List;
+	public final fun getResponseTopic ()Lcom/ditchoom/mqtt/controlpacket/TopicName;
+	public final fun getUserProperty ()Ljava/util/List;
+	public final fun getWillDelayIntervalSeconds ()J
+	public fun hashCode ()I
+	public final fun size ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/ConnectWillProperties$Companion {
+	public final fun from (Ljava/util/Collection;)Lcom/ditchoom/mqtt5/controlpacket/ConnectWillProperties;
+}
+
+public abstract interface class com/ditchoom/mqtt5/controlpacket/ControlPacketV5 : com/ditchoom/mqtt/controlpacket/ControlPacket {
+	public fun getControlPacketFactory ()Lcom/ditchoom/mqtt/controlpacket/ControlPacketFactory;
+	public fun getMqttVersion ()B
+	public fun packetSize ()I
+	public fun serialize (Lcom/ditchoom/buffer/BufferFactory;)Lcom/ditchoom/buffer/ReadBuffer;
+	public fun serialize (Lcom/ditchoom/buffer/WriteBuffer;)V
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/ControlPacketV5$Auth : com/ditchoom/mqtt5/controlpacket/ControlPacketV5 {
+	public fun <init> ()V
+	public synthetic fun <init> (BLkotlin/UByte;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (BLkotlin/UByte;Ljava/util/List;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Lcom/ditchoom/mqtt/controlpacket/format/ReasonCode;Ljava/lang/String;Ljava/util/List;)V
+	public synthetic fun <init> (Lcom/ditchoom/mqtt/controlpacket/format/ReasonCode;Ljava/lang/String;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-b78-hV8 ()B
+	public final fun component2-7PGSa80 ()Lkotlin/UByte;
+	public final fun component3 ()Ljava/util/List;
+	public final fun copy-2-E6pFQ (BLkotlin/UByte;Ljava/util/List;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$Auth;
+	public static synthetic fun copy-2-E6pFQ$default (Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$Auth;BLkotlin/UByte;Ljava/util/List;ILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$Auth;
+	public fun encodeBody (Lcom/ditchoom/buffer/WriteBuffer;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getByte1-w2LRezQ ()B
+	public fun getControlPacketFactory ()Lcom/ditchoom/mqtt/controlpacket/ControlPacketFactory;
+	public fun getControlPacketValue ()B
+	public fun getDirection ()Lcom/ditchoom/mqtt/controlpacket/format/fixed/DirectionOfFlow;
+	public fun getFlags ()B
+	public final fun getHeader-b78-hV8 ()B
+	public fun getMqttVersion ()B
+	public fun getPacketIdentifier ()I
+	public final fun getProperties ()Ljava/util/List;
+	public final fun getReasonCode-7PGSa80 ()Lkotlin/UByte;
+	public fun hashCode ()I
+	public fun packetSize ()I
+	public fun payload (Lcom/ditchoom/buffer/WriteBuffer;)V
+	public fun remainingLength ()I
+	public fun serialize (Lcom/ditchoom/buffer/BufferFactory;)Lcom/ditchoom/buffer/ReadBuffer;
+	public fun serialize (Lcom/ditchoom/buffer/WriteBuffer;)V
+	public fun toString ()Ljava/lang/String;
+	public fun validate ()Ljava/lang/Exception;
+	public fun validateOrNull ()Lcom/ditchoom/mqtt/controlpacket/ControlPacket;
+	public fun validateOrThrow ()Lcom/ditchoom/mqtt/controlpacket/ControlPacket;
+	public fun variableHeader (Lcom/ditchoom/buffer/WriteBuffer;)V
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/ControlPacketV5$ConnAck : com/ditchoom/mqtt/controlpacket/IConnectionAcknowledgment, com/ditchoom/mqtt5/controlpacket/ControlPacketV5 {
+	public synthetic fun <init> (BBBLjava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (BBBLjava/util/List;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (ZLcom/ditchoom/mqtt/controlpacket/format/ReasonCode;Lcom/ditchoom/mqtt5/controlpacket/ConnAckProperties;)V
+	public synthetic fun <init> (ZLcom/ditchoom/mqtt/controlpacket/format/ReasonCode;Lcom/ditchoom/mqtt5/controlpacket/ConnAckProperties;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-b78-hV8 ()B
+	public final fun component2-w2LRezQ ()B
+	public final fun component3-w2LRezQ ()B
+	public final fun component4 ()Ljava/util/List;
+	public final fun copy-oJTrWfw (BBBLjava/util/List;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$ConnAck;
+	public static synthetic fun copy-oJTrWfw$default (Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$ConnAck;BBBLjava/util/List;ILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$ConnAck;
+	public fun encodeBody (Lcom/ditchoom/buffer/WriteBuffer;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAcknowledgeFlags-w2LRezQ ()B
+	public fun getAssignedClientIdentifier ()Ljava/lang/String;
+	public fun getByte1-w2LRezQ ()B
+	public final fun getConnectReason ()Lcom/ditchoom/mqtt/controlpacket/format/ReasonCode;
+	public final fun getConnectReasonCode-w2LRezQ ()B
+	public fun getConnectionReason ()Ljava/lang/String;
+	public fun getControlPacketFactory ()Lcom/ditchoom/mqtt/controlpacket/ControlPacketFactory;
+	public fun getControlPacketValue ()B
+	public fun getDirection ()Lcom/ditchoom/mqtt/controlpacket/format/fixed/DirectionOfFlow;
+	public fun getFlags ()B
+	public final fun getHeader-b78-hV8 ()B
+	public fun getMaxPacketSize-s-VKNKU ()J
+	public fun getMaximumQos ()Lcom/ditchoom/mqtt/controlpacket/QualityOfService;
+	public fun getMqttVersion ()B
+	public fun getPacketIdentifier ()I
+	public final fun getProperties ()Ljava/util/List;
+	public fun getReceiveMaximum ()I
+	public fun getServerKeepAlive ()I
+	public fun getSessionExpiryInterval-s-VKNKU ()J
+	public fun getSessionPresent ()Z
+	public final fun getTypedProperties ()Lcom/ditchoom/mqtt5/controlpacket/ConnAckProperties;
+	public fun hashCode ()I
+	public fun isSuccessful ()Z
+	public fun packetSize ()I
+	public fun payload (Lcom/ditchoom/buffer/WriteBuffer;)V
+	public fun remainingLength ()I
+	public fun serialize (Lcom/ditchoom/buffer/BufferFactory;)Lcom/ditchoom/buffer/ReadBuffer;
+	public fun serialize (Lcom/ditchoom/buffer/WriteBuffer;)V
+	public fun toString ()Ljava/lang/String;
+	public fun validate ()Ljava/lang/Exception;
+	public fun validateOrNull ()Lcom/ditchoom/mqtt/controlpacket/ControlPacket;
+	public fun validateOrThrow ()Lcom/ditchoom/mqtt/controlpacket/ControlPacket;
+	public fun variableHeader (Lcom/ditchoom/buffer/WriteBuffer;)V
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/ControlPacketV5$Connect : com/ditchoom/mqtt/controlpacket/IConnectionRequest, com/ditchoom/mqtt5/controlpacket/ControlPacketV5 {
+	public static final field Companion Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$Connect$Companion;
+	public synthetic fun <init> (BLjava/lang/String;BBSLjava/util/List;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Lcom/ditchoom/mqtt/controlpacket/OpaquePublishPayload;Ljava/lang/String;Lcom/ditchoom/buffer/codec/OwnedBytesHandle;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (BLjava/lang/String;BBSLjava/util/List;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Lcom/ditchoom/mqtt/controlpacket/OpaquePublishPayload;Ljava/lang/String;Lcom/ditchoom/buffer/codec/OwnedBytesHandle;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-b78-hV8 ()B
+	public final fun component10 ()Lcom/ditchoom/mqtt/controlpacket/OpaquePublishPayload;
+	public final fun component11 ()Ljava/lang/String;
+	public final fun component12 ()Lcom/ditchoom/buffer/codec/OwnedBytesHandle;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3-w2LRezQ ()B
+	public final fun component4-8Z_j4wg ()B
+	public final fun component5-Mh2AYeg ()S
+	public final fun component6 ()Ljava/util/List;
+	public final fun component7 ()Ljava/lang/String;
+	public final fun component8 ()Ljava/util/List;
+	public final fun component9 ()Ljava/lang/String;
+	public final fun copy-h1-gaVg (BLjava/lang/String;BBSLjava/util/List;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Lcom/ditchoom/mqtt/controlpacket/OpaquePublishPayload;Ljava/lang/String;Lcom/ditchoom/buffer/codec/OwnedBytesHandle;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$Connect;
+	public static synthetic fun copy-h1-gaVg$default (Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$Connect;BLjava/lang/String;BBSLjava/util/List;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Lcom/ditchoom/mqtt/controlpacket/OpaquePublishPayload;Ljava/lang/String;Lcom/ditchoom/buffer/codec/OwnedBytesHandle;ILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$Connect;
+	public fun encodeBody (Lcom/ditchoom/buffer/WriteBuffer;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getByte1-w2LRezQ ()B
+	public fun getCleanStart ()Z
+	public final fun getClientId ()Ljava/lang/String;
+	public fun getClientIdentifier ()Ljava/lang/String;
+	public final fun getConnectFlags-8Z_j4wg ()B
+	public fun getContentType ()Ljava/lang/String;
+	public fun getControlPacketFactory ()Lcom/ditchoom/mqtt/controlpacket/ControlPacketFactory;
+	public fun getControlPacketValue ()B
+	public fun getCorrelationData ()Lcom/ditchoom/buffer/ReadBuffer;
+	public fun getDirection ()Lcom/ditchoom/mqtt/controlpacket/format/fixed/DirectionOfFlow;
+	public fun getFlags ()B
+	public fun getHasPassword ()Z
+	public fun getHasUserName ()Z
+	public final fun getHeader-b78-hV8 ()B
+	public final fun getKeepAlive-Mh2AYeg ()S
+	public fun getKeepAliveTimeoutSeconds-Mh2AYeg ()S
+	public fun getMaxPacketSize-s-VKNKU ()J
+	public fun getMessageExpiryIntervalSeconds ()Ljava/lang/Long;
+	public fun getMqttVersion ()B
+	public fun getPacketIdentifier ()I
+	public fun getPassword ()Ljava/lang/String;
+	public final fun getPasswordValue ()Lcom/ditchoom/buffer/codec/OwnedBytesHandle;
+	public fun getPayloadFormatIndicator ()Z
+	public final fun getProperties ()Ljava/util/List;
+	public final fun getProtocolLevel-w2LRezQ ()B
+	public fun getProtocolName ()Ljava/lang/String;
+	public fun getProtocolVersion ()I
+	public fun getReceiveMaximum-Mh2AYeg ()S
+	public fun getResponseTopic ()Lcom/ditchoom/mqtt/controlpacket/TopicName;
+	public fun getSessionExpiryIntervalSeconds-6VbMDqA ()Lkotlin/ULong;
+	public fun getTopicAliasMax-XRpZGF0 ()Lkotlin/UShort;
+	public final fun getTypedProperties ()Lcom/ditchoom/mqtt5/controlpacket/ConnectProperties;
+	public final fun getTypedWillProperties ()Lcom/ditchoom/mqtt5/controlpacket/ConnectWillProperties;
+	public fun getUserName ()Ljava/lang/String;
+	public fun getUserProperty ()Ljava/util/List;
+	public final fun getUsername ()Ljava/lang/String;
+	public fun getWill ()Lcom/ditchoom/mqtt/controlpacket/WillConfig;
+	public fun getWillDelayIntervalSeconds ()J
+	public fun getWillFlag ()Z
+	public fun getWillPayload ()Lcom/ditchoom/buffer/ReadBuffer;
+	public final fun getWillPayloadValue ()Lcom/ditchoom/mqtt/controlpacket/OpaquePublishPayload;
+	public final fun getWillProperties ()Ljava/util/List;
+	public fun getWillQos ()Lcom/ditchoom/mqtt/controlpacket/QualityOfService;
+	public fun getWillRetain ()Z
+	public fun getWillTopic ()Lcom/ditchoom/mqtt/controlpacket/TopicName;
+	public final fun getWillTopicString ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun packetSize ()I
+	public fun payload (Lcom/ditchoom/buffer/WriteBuffer;)V
+	public fun remainingLength ()I
+	public fun serialize (Lcom/ditchoom/buffer/BufferFactory;)Lcom/ditchoom/buffer/ReadBuffer;
+	public fun serialize (Lcom/ditchoom/buffer/WriteBuffer;)V
+	public fun toString ()Ljava/lang/String;
+	public fun validate ()Lcom/ditchoom/mqtt/MqttWarning;
+	public synthetic fun validate ()Ljava/lang/Exception;
+	public fun validateOrNull ()Lcom/ditchoom/mqtt/controlpacket/ControlPacket;
+	public fun validateOrThrow ()Lcom/ditchoom/mqtt/controlpacket/ControlPacket;
+	public fun variableHeader (Lcom/ditchoom/buffer/WriteBuffer;)V
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/ControlPacketV5$Connect$Companion {
+	public final fun create-XYBYqek (Ljava/lang/String;IZLjava/lang/String;Ljava/lang/String;Lcom/ditchoom/mqtt/controlpacket/WillConfig;Ljava/lang/String;BLcom/ditchoom/mqtt5/controlpacket/ConnectProperties;Lcom/ditchoom/mqtt5/controlpacket/ConnectWillProperties;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$Connect;
+	public static synthetic fun create-XYBYqek$default (Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$Connect$Companion;Ljava/lang/String;IZLjava/lang/String;Ljava/lang/String;Lcom/ditchoom/mqtt/controlpacket/WillConfig;Ljava/lang/String;BLcom/ditchoom/mqtt5/controlpacket/ConnectProperties;Lcom/ditchoom/mqtt5/controlpacket/ConnectWillProperties;ILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$Connect;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/ControlPacketV5$DefaultImpls {
+	public static fun encodeBody (Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5;Lcom/ditchoom/buffer/WriteBuffer;)V
+	public static fun getByte1-w2LRezQ (Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5;)B
+	public static fun getControlPacketFactory (Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5;)Lcom/ditchoom/mqtt/controlpacket/ControlPacketFactory;
+	public static fun getFlags (Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5;)B
+	public static fun getMqttVersion (Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5;)B
+	public static fun getPacketIdentifier (Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5;)I
+	public static fun packetSize (Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5;)I
+	public static fun payload (Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5;Lcom/ditchoom/buffer/WriteBuffer;)V
+	public static fun remainingLength (Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5;)I
+	public static fun serialize (Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5;Lcom/ditchoom/buffer/BufferFactory;)Lcom/ditchoom/buffer/ReadBuffer;
+	public static fun serialize (Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5;Lcom/ditchoom/buffer/WriteBuffer;)V
+	public static fun validate (Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5;)Ljava/lang/Exception;
+	public static fun validateOrNull (Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5;)Lcom/ditchoom/mqtt/controlpacket/ControlPacket;
+	public static fun validateOrThrow (Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5;)Lcom/ditchoom/mqtt/controlpacket/ControlPacket;
+	public static fun variableHeader (Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5;Lcom/ditchoom/buffer/WriteBuffer;)V
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/ControlPacketV5$Disconnect : com/ditchoom/mqtt/controlpacket/IDisconnectNotification, com/ditchoom/mqtt5/controlpacket/ControlPacketV5 {
+	public fun <init> ()V
+	public synthetic fun <init> (BLkotlin/UByte;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (BLkotlin/UByte;Ljava/util/List;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Lcom/ditchoom/mqtt/controlpacket/format/ReasonCode;Lkotlin/ULong;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Lcom/ditchoom/mqtt/controlpacket/format/ReasonCode;Lkotlin/ULong;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-b78-hV8 ()B
+	public final fun component2-7PGSa80 ()Lkotlin/UByte;
+	public final fun component3 ()Ljava/util/List;
+	public final fun copy-2-E6pFQ (BLkotlin/UByte;Ljava/util/List;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$Disconnect;
+	public static synthetic fun copy-2-E6pFQ$default (Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$Disconnect;BLkotlin/UByte;Ljava/util/List;ILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$Disconnect;
+	public fun encodeBody (Lcom/ditchoom/buffer/WriteBuffer;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getByte1-w2LRezQ ()B
+	public fun getControlPacketFactory ()Lcom/ditchoom/mqtt/controlpacket/ControlPacketFactory;
+	public fun getControlPacketValue ()B
+	public fun getDirection ()Lcom/ditchoom/mqtt/controlpacket/format/fixed/DirectionOfFlow;
+	public fun getFlags ()B
+	public final fun getHeader-b78-hV8 ()B
+	public fun getMqttVersion ()B
+	public fun getPacketIdentifier ()I
+	public final fun getProperties ()Ljava/util/List;
+	public final fun getReasonCode-7PGSa80 ()Lkotlin/UByte;
+	public fun hashCode ()I
+	public fun packetSize ()I
+	public fun payload (Lcom/ditchoom/buffer/WriteBuffer;)V
+	public fun remainingLength ()I
+	public fun serialize (Lcom/ditchoom/buffer/BufferFactory;)Lcom/ditchoom/buffer/ReadBuffer;
+	public fun serialize (Lcom/ditchoom/buffer/WriteBuffer;)V
+	public fun toString ()Ljava/lang/String;
+	public fun validate ()Ljava/lang/Exception;
+	public fun validateOrNull ()Lcom/ditchoom/mqtt/controlpacket/ControlPacket;
+	public fun validateOrThrow ()Lcom/ditchoom/mqtt/controlpacket/ControlPacket;
+	public fun variableHeader (Lcom/ditchoom/buffer/WriteBuffer;)V
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/ControlPacketV5$PingReq : com/ditchoom/mqtt/controlpacket/IPingRequest, com/ditchoom/mqtt5/controlpacket/ControlPacketV5 {
+	public fun <init> ()V
+	public synthetic fun <init> (BILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (BLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-b78-hV8 ()B
+	public final fun copy-szSKjTQ (B)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$PingReq;
+	public static synthetic fun copy-szSKjTQ$default (Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$PingReq;BILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$PingReq;
+	public fun encodeBody (Lcom/ditchoom/buffer/WriteBuffer;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getByte1-w2LRezQ ()B
+	public fun getControlPacketFactory ()Lcom/ditchoom/mqtt/controlpacket/ControlPacketFactory;
+	public fun getControlPacketValue ()B
+	public fun getDirection ()Lcom/ditchoom/mqtt/controlpacket/format/fixed/DirectionOfFlow;
+	public fun getFlags ()B
+	public final fun getHeader-b78-hV8 ()B
+	public fun getMqttVersion ()B
+	public fun getPacketIdentifier ()I
+	public fun hashCode ()I
+	public fun packetSize ()I
+	public fun payload (Lcom/ditchoom/buffer/WriteBuffer;)V
+	public fun remainingLength ()I
+	public fun serialize (Lcom/ditchoom/buffer/BufferFactory;)Lcom/ditchoom/buffer/ReadBuffer;
+	public fun serialize (Lcom/ditchoom/buffer/WriteBuffer;)V
+	public fun toString ()Ljava/lang/String;
+	public fun validate ()Ljava/lang/Exception;
+	public fun validateOrNull ()Lcom/ditchoom/mqtt/controlpacket/ControlPacket;
+	public fun validateOrThrow ()Lcom/ditchoom/mqtt/controlpacket/ControlPacket;
+	public fun variableHeader (Lcom/ditchoom/buffer/WriteBuffer;)V
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/ControlPacketV5$PingResp : com/ditchoom/mqtt/controlpacket/IPingResponse, com/ditchoom/mqtt5/controlpacket/ControlPacketV5 {
+	public fun <init> ()V
+	public synthetic fun <init> (BILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (BLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-b78-hV8 ()B
+	public final fun copy-szSKjTQ (B)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$PingResp;
+	public static synthetic fun copy-szSKjTQ$default (Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$PingResp;BILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$PingResp;
+	public fun encodeBody (Lcom/ditchoom/buffer/WriteBuffer;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getByte1-w2LRezQ ()B
+	public fun getControlPacketFactory ()Lcom/ditchoom/mqtt/controlpacket/ControlPacketFactory;
+	public fun getControlPacketValue ()B
+	public fun getDirection ()Lcom/ditchoom/mqtt/controlpacket/format/fixed/DirectionOfFlow;
+	public fun getFlags ()B
+	public final fun getHeader-b78-hV8 ()B
+	public fun getMqttVersion ()B
+	public fun getPacketIdentifier ()I
+	public fun hashCode ()I
+	public fun packetSize ()I
+	public fun payload (Lcom/ditchoom/buffer/WriteBuffer;)V
+	public fun remainingLength ()I
+	public fun serialize (Lcom/ditchoom/buffer/BufferFactory;)Lcom/ditchoom/buffer/ReadBuffer;
+	public fun serialize (Lcom/ditchoom/buffer/WriteBuffer;)V
+	public fun toString ()Ljava/lang/String;
+	public fun validate ()Ljava/lang/Exception;
+	public fun validateOrNull ()Lcom/ditchoom/mqtt/controlpacket/ControlPacket;
+	public fun validateOrThrow ()Lcom/ditchoom/mqtt/controlpacket/ControlPacket;
+	public fun variableHeader (Lcom/ditchoom/buffer/WriteBuffer;)V
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/ControlPacketV5$PubAck : com/ditchoom/mqtt/controlpacket/IPublishAcknowledgment, com/ditchoom/mqtt5/controlpacket/ControlPacketV5 {
+	public synthetic fun <init> (BSLkotlin/UByte;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (BSLkotlin/UByte;Ljava/util/List;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (ILcom/ditchoom/mqtt/controlpacket/format/ReasonCode;Ljava/lang/String;Ljava/util/List;)V
+	public synthetic fun <init> (ILcom/ditchoom/mqtt/controlpacket/format/ReasonCode;Ljava/lang/String;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-b78-hV8 ()B
+	public final fun component2-Mh2AYeg ()S
+	public final fun component3-7PGSa80 ()Lkotlin/UByte;
+	public final fun component4 ()Ljava/util/List;
+	public final fun copy-lyyXM60 (BSLkotlin/UByte;Ljava/util/List;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$PubAck;
+	public static synthetic fun copy-lyyXM60$default (Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$PubAck;BSLkotlin/UByte;Ljava/util/List;ILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$PubAck;
+	public fun encodeBody (Lcom/ditchoom/buffer/WriteBuffer;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getByte1-w2LRezQ ()B
+	public fun getControlPacketFactory ()Lcom/ditchoom/mqtt/controlpacket/ControlPacketFactory;
+	public fun getControlPacketValue ()B
+	public fun getDirection ()Lcom/ditchoom/mqtt/controlpacket/format/fixed/DirectionOfFlow;
+	public fun getFlags ()B
+	public final fun getHeader-b78-hV8 ()B
+	public fun getMqttVersion ()B
+	public final fun getPacketId-Mh2AYeg ()S
+	public fun getPacketIdentifier ()I
+	public final fun getProperties ()Ljava/util/List;
+	public final fun getReasonCode-7PGSa80 ()Lkotlin/UByte;
+	public fun hashCode ()I
+	public fun packetSize ()I
+	public fun payload (Lcom/ditchoom/buffer/WriteBuffer;)V
+	public fun remainingLength ()I
+	public fun serialize (Lcom/ditchoom/buffer/BufferFactory;)Lcom/ditchoom/buffer/ReadBuffer;
+	public fun serialize (Lcom/ditchoom/buffer/WriteBuffer;)V
+	public fun toString ()Ljava/lang/String;
+	public fun validate ()Ljava/lang/Exception;
+	public fun validateOrNull ()Lcom/ditchoom/mqtt/controlpacket/ControlPacket;
+	public fun validateOrThrow ()Lcom/ditchoom/mqtt/controlpacket/ControlPacket;
+	public fun variableHeader (Lcom/ditchoom/buffer/WriteBuffer;)V
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/ControlPacketV5$PubComp : com/ditchoom/mqtt/controlpacket/IPublishComplete, com/ditchoom/mqtt5/controlpacket/ControlPacketV5 {
+	public synthetic fun <init> (BSLkotlin/UByte;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (BSLkotlin/UByte;Ljava/util/List;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (ILcom/ditchoom/mqtt/controlpacket/format/ReasonCode;Ljava/lang/String;Ljava/util/List;)V
+	public synthetic fun <init> (ILcom/ditchoom/mqtt/controlpacket/format/ReasonCode;Ljava/lang/String;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (SLcom/ditchoom/mqtt/controlpacket/format/ReasonCode;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (SLcom/ditchoom/mqtt/controlpacket/format/ReasonCode;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-b78-hV8 ()B
+	public final fun component2-Mh2AYeg ()S
+	public final fun component3-7PGSa80 ()Lkotlin/UByte;
+	public final fun component4 ()Ljava/util/List;
+	public final fun copy-lyyXM60 (BSLkotlin/UByte;Ljava/util/List;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$PubComp;
+	public static synthetic fun copy-lyyXM60$default (Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$PubComp;BSLkotlin/UByte;Ljava/util/List;ILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$PubComp;
+	public fun encodeBody (Lcom/ditchoom/buffer/WriteBuffer;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getByte1-w2LRezQ ()B
+	public fun getControlPacketFactory ()Lcom/ditchoom/mqtt/controlpacket/ControlPacketFactory;
+	public fun getControlPacketValue ()B
+	public fun getDirection ()Lcom/ditchoom/mqtt/controlpacket/format/fixed/DirectionOfFlow;
+	public fun getFlags ()B
+	public final fun getHeader-b78-hV8 ()B
+	public fun getMqttVersion ()B
+	public final fun getPacketId-Mh2AYeg ()S
+	public fun getPacketIdentifier ()I
+	public final fun getProperties ()Ljava/util/List;
+	public final fun getReasonCode-7PGSa80 ()Lkotlin/UByte;
+	public fun hashCode ()I
+	public fun packetSize ()I
+	public fun payload (Lcom/ditchoom/buffer/WriteBuffer;)V
+	public fun remainingLength ()I
+	public fun serialize (Lcom/ditchoom/buffer/BufferFactory;)Lcom/ditchoom/buffer/ReadBuffer;
+	public fun serialize (Lcom/ditchoom/buffer/WriteBuffer;)V
+	public fun toString ()Ljava/lang/String;
+	public fun validate ()Ljava/lang/Exception;
+	public fun validateOrNull ()Lcom/ditchoom/mqtt/controlpacket/ControlPacket;
+	public fun validateOrThrow ()Lcom/ditchoom/mqtt/controlpacket/ControlPacket;
+	public fun variableHeader (Lcom/ditchoom/buffer/WriteBuffer;)V
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/ControlPacketV5$PubRec : com/ditchoom/mqtt/controlpacket/IPublishReceived, com/ditchoom/mqtt5/controlpacket/ControlPacketV5 {
+	public synthetic fun <init> (BSLkotlin/UByte;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (BSLkotlin/UByte;Ljava/util/List;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (ILcom/ditchoom/mqtt/controlpacket/format/ReasonCode;Ljava/lang/String;Ljava/util/List;)V
+	public synthetic fun <init> (ILcom/ditchoom/mqtt/controlpacket/format/ReasonCode;Ljava/lang/String;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-b78-hV8 ()B
+	public final fun component2-Mh2AYeg ()S
+	public final fun component3-7PGSa80 ()Lkotlin/UByte;
+	public final fun component4 ()Ljava/util/List;
+	public final fun copy-lyyXM60 (BSLkotlin/UByte;Ljava/util/List;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$PubRec;
+	public static synthetic fun copy-lyyXM60$default (Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$PubRec;BSLkotlin/UByte;Ljava/util/List;ILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$PubRec;
+	public fun encodeBody (Lcom/ditchoom/buffer/WriteBuffer;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public fun expectedResponse (Lcom/ditchoom/mqtt/controlpacket/format/ReasonCode;Ljava/lang/String;Ljava/util/List;)Lcom/ditchoom/mqtt/controlpacket/IPublishRelease;
+	public fun getByte1-w2LRezQ ()B
+	public fun getControlPacketFactory ()Lcom/ditchoom/mqtt/controlpacket/ControlPacketFactory;
+	public fun getControlPacketValue ()B
+	public fun getDirection ()Lcom/ditchoom/mqtt/controlpacket/format/fixed/DirectionOfFlow;
+	public fun getFlags ()B
+	public final fun getHeader-b78-hV8 ()B
+	public fun getMqttVersion ()B
+	public final fun getPacketId-Mh2AYeg ()S
+	public fun getPacketIdentifier ()I
+	public final fun getProperties ()Ljava/util/List;
+	public final fun getReasonCode-7PGSa80 ()Lkotlin/UByte;
+	public fun hashCode ()I
+	public fun packetSize ()I
+	public fun payload (Lcom/ditchoom/buffer/WriteBuffer;)V
+	public fun remainingLength ()I
+	public fun serialize (Lcom/ditchoom/buffer/BufferFactory;)Lcom/ditchoom/buffer/ReadBuffer;
+	public fun serialize (Lcom/ditchoom/buffer/WriteBuffer;)V
+	public fun toString ()Ljava/lang/String;
+	public fun validate ()Ljava/lang/Exception;
+	public fun validateOrNull ()Lcom/ditchoom/mqtt/controlpacket/ControlPacket;
+	public fun validateOrThrow ()Lcom/ditchoom/mqtt/controlpacket/ControlPacket;
+	public fun variableHeader (Lcom/ditchoom/buffer/WriteBuffer;)V
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/ControlPacketV5$PubRel : com/ditchoom/mqtt/controlpacket/IPublishRelease, com/ditchoom/mqtt5/controlpacket/ControlPacketV5 {
+	public synthetic fun <init> (BSLkotlin/UByte;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (BSLkotlin/UByte;Ljava/util/List;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (ILcom/ditchoom/mqtt/controlpacket/format/ReasonCode;Ljava/lang/String;Ljava/util/List;)V
+	public synthetic fun <init> (ILcom/ditchoom/mqtt/controlpacket/format/ReasonCode;Ljava/lang/String;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-b78-hV8 ()B
+	public final fun component2-Mh2AYeg ()S
+	public final fun component3-7PGSa80 ()Lkotlin/UByte;
+	public final fun component4 ()Ljava/util/List;
+	public final fun copy-lyyXM60 (BSLkotlin/UByte;Ljava/util/List;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$PubRel;
+	public static synthetic fun copy-lyyXM60$default (Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$PubRel;BSLkotlin/UByte;Ljava/util/List;ILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$PubRel;
+	public fun encodeBody (Lcom/ditchoom/buffer/WriteBuffer;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public fun expectedResponse (Lcom/ditchoom/mqtt/controlpacket/format/ReasonCode;Ljava/lang/String;Ljava/util/List;)Lcom/ditchoom/mqtt/controlpacket/IPublishComplete;
+	public fun getByte1-w2LRezQ ()B
+	public fun getControlPacketFactory ()Lcom/ditchoom/mqtt/controlpacket/ControlPacketFactory;
+	public fun getControlPacketValue ()B
+	public fun getDirection ()Lcom/ditchoom/mqtt/controlpacket/format/fixed/DirectionOfFlow;
+	public fun getFlags ()B
+	public final fun getHeader-b78-hV8 ()B
+	public fun getMqttVersion ()B
+	public final fun getPacketId-Mh2AYeg ()S
+	public fun getPacketIdentifier ()I
+	public final fun getProperties ()Ljava/util/List;
+	public final fun getReasonCode-7PGSa80 ()Lkotlin/UByte;
+	public fun hashCode ()I
+	public fun packetSize ()I
+	public fun payload (Lcom/ditchoom/buffer/WriteBuffer;)V
+	public fun remainingLength ()I
+	public fun serialize (Lcom/ditchoom/buffer/BufferFactory;)Lcom/ditchoom/buffer/ReadBuffer;
+	public fun serialize (Lcom/ditchoom/buffer/WriteBuffer;)V
+	public fun toString ()Ljava/lang/String;
+	public fun validate ()Ljava/lang/Exception;
+	public fun validateOrNull ()Lcom/ditchoom/mqtt/controlpacket/ControlPacket;
+	public fun validateOrThrow ()Lcom/ditchoom/mqtt/controlpacket/ControlPacket;
+	public fun variableHeader (Lcom/ditchoom/buffer/WriteBuffer;)V
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/ControlPacketV5$Publish : com/ditchoom/mqtt/controlpacket/PublishMessage, com/ditchoom/mqtt5/controlpacket/ControlPacketV5 {
+	public static final field Companion Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$Publish$Companion;
+	public synthetic fun <init> (BLjava/lang/String;Lkotlin/UShort;Ljava/util/List;Lcom/ditchoom/buffer/codec/Payload;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (BLjava/lang/String;Lkotlin/UShort;Ljava/util/List;Lcom/ditchoom/buffer/codec/Payload;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-b78-hV8 ()B
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3-XRpZGF0 ()Lkotlin/UShort;
+	public final fun component4 ()Ljava/util/List;
+	public final fun component5 ()Lcom/ditchoom/buffer/codec/Payload;
+	public final fun copy-JaTVDyM (BLjava/lang/String;Lkotlin/UShort;Ljava/util/List;Lcom/ditchoom/buffer/codec/Payload;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$Publish;
+	public static synthetic fun copy-JaTVDyM$default (Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$Publish;BLjava/lang/String;Lkotlin/UShort;Ljava/util/List;Lcom/ditchoom/buffer/codec/Payload;ILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$Publish;
+	public fun encodeBody (Lcom/ditchoom/buffer/WriteBuffer;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public fun expectedResponse (Lcom/ditchoom/mqtt/controlpacket/format/ReasonCode;Ljava/lang/String;Ljava/util/List;)Lcom/ditchoom/mqtt/controlpacket/ControlPacket;
+	public fun getByte1-w2LRezQ ()B
+	public fun getControlPacketFactory ()Lcom/ditchoom/mqtt/controlpacket/ControlPacketFactory;
+	public fun getControlPacketValue ()B
+	public fun getDirection ()Lcom/ditchoom/mqtt/controlpacket/format/fixed/DirectionOfFlow;
+	public fun getDup ()Z
+	public fun getFlags ()B
+	public final fun getHeader-b78-hV8 ()B
+	public fun getMqttVersion ()B
+	public final fun getPacketId-XRpZGF0 ()Lkotlin/UShort;
+	public fun getPacketIdentifier ()I
+	public final fun getPayload ()Lcom/ditchoom/buffer/codec/Payload;
+	public final fun getProperties ()Ljava/util/List;
+	public fun getQualityOfService ()Lcom/ditchoom/mqtt/controlpacket/QualityOfService;
+	public fun getRetain ()Z
+	public fun getTopic ()Lcom/ditchoom/mqtt/controlpacket/TopicName;
+	public final fun getTopicName ()Ljava/lang/String;
+	public final fun getTypedProperties ()Lcom/ditchoom/mqtt5/controlpacket/PublishProperties;
+	public fun hashCode ()I
+	public fun maybeCopyWithNewPacketIdentifier (I)Lcom/ditchoom/mqtt/controlpacket/PublishMessage;
+	public fun packetSize ()I
+	public fun payload (Lcom/ditchoom/buffer/WriteBuffer;)V
+	public fun remainingLength ()I
+	public fun serialize (Lcom/ditchoom/buffer/BufferFactory;)Lcom/ditchoom/buffer/ReadBuffer;
+	public fun serialize (Lcom/ditchoom/buffer/WriteBuffer;)V
+	public fun setDupFlagNewPubMessage ()Lcom/ditchoom/mqtt/controlpacket/PublishMessage;
+	public fun toString ()Ljava/lang/String;
+	public fun validate ()Lcom/ditchoom/mqtt/MalformedPacketException;
+	public synthetic fun validate ()Ljava/lang/Exception;
+	public fun validateOrNull ()Lcom/ditchoom/mqtt/controlpacket/ControlPacket;
+	public fun validateOrThrow ()Lcom/ditchoom/mqtt/controlpacket/ControlPacket;
+	public fun variableHeader (Lcom/ditchoom/buffer/WriteBuffer;)V
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/ControlPacketV5$Publish$Companion {
+	public final fun ofRaw (Lcom/ditchoom/mqtt/controlpacket/TopicName;Lcom/ditchoom/mqtt/controlpacket/QualityOfService;Lcom/ditchoom/buffer/ReadBuffer;ZZILcom/ditchoom/mqtt5/controlpacket/PublishProperties;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$Publish;
+	public static synthetic fun ofRaw$default (Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$Publish$Companion;Lcom/ditchoom/mqtt/controlpacket/TopicName;Lcom/ditchoom/mqtt/controlpacket/QualityOfService;Lcom/ditchoom/buffer/ReadBuffer;ZZILcom/ditchoom/mqtt5/controlpacket/PublishProperties;ILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$Publish;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/ControlPacketV5$SubAck : com/ditchoom/mqtt/controlpacket/ISubscribeAcknowledgement, com/ditchoom/mqtt5/controlpacket/ControlPacketV5 {
+	public synthetic fun <init> (BSLjava/util/List;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (BSLjava/util/List;Ljava/util/List;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (ILjava/lang/String;Ljava/util/List;Ljava/util/List;)V
+	public synthetic fun <init> (ILjava/lang/String;Ljava/util/List;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (SLcom/ditchoom/mqtt/controlpacket/format/ReasonCode;Ljava/lang/String;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (SLcom/ditchoom/mqtt/controlpacket/format/ReasonCode;Ljava/lang/String;Ljava/util/List;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (SLjava/util/List;Ljava/lang/String;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (SLjava/util/List;Ljava/lang/String;Ljava/util/List;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-b78-hV8 ()B
+	public final fun component2-Mh2AYeg ()S
+	public final fun component3 ()Ljava/util/List;
+	public final fun component4 ()Ljava/util/List;
+	public final fun copy-AiiRFOk (BSLjava/util/List;Ljava/util/List;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$SubAck;
+	public static synthetic fun copy-AiiRFOk$default (Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$SubAck;BSLjava/util/List;Ljava/util/List;ILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$SubAck;
+	public fun encodeBody (Lcom/ditchoom/buffer/WriteBuffer;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getByte1-w2LRezQ ()B
+	public fun getControlPacketFactory ()Lcom/ditchoom/mqtt/controlpacket/ControlPacketFactory;
+	public fun getControlPacketValue ()B
+	public fun getDirection ()Lcom/ditchoom/mqtt/controlpacket/format/fixed/DirectionOfFlow;
+	public fun getFlags ()B
+	public final fun getHeader-b78-hV8 ()B
+	public fun getMqttVersion ()B
+	public final fun getPacketId-Mh2AYeg ()S
+	public fun getPacketIdentifier ()I
+	public final fun getPayload ()Ljava/util/List;
+	public final fun getProperties ()Ljava/util/List;
+	public final fun getReasonCodeEntries ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun packetSize ()I
+	public fun payload (Lcom/ditchoom/buffer/WriteBuffer;)V
+	public fun remainingLength ()I
+	public fun serialize (Lcom/ditchoom/buffer/BufferFactory;)Lcom/ditchoom/buffer/ReadBuffer;
+	public fun serialize (Lcom/ditchoom/buffer/WriteBuffer;)V
+	public fun toString ()Ljava/lang/String;
+	public fun validate ()Ljava/lang/Exception;
+	public fun validateOrNull ()Lcom/ditchoom/mqtt/controlpacket/ControlPacket;
+	public fun validateOrThrow ()Lcom/ditchoom/mqtt/controlpacket/ControlPacket;
+	public fun variableHeader (Lcom/ditchoom/buffer/WriteBuffer;)V
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/ControlPacketV5$Subscribe : com/ditchoom/mqtt/controlpacket/ISubscribeRequest, com/ditchoom/mqtt5/controlpacket/ControlPacketV5 {
+	public synthetic fun <init> (BSLjava/util/List;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (BSLjava/util/List;Ljava/util/List;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (ILjava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/lang/String;Ljava/util/List;)V
+	public synthetic fun <init> (ILjava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/lang/String;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (SLjava/lang/String;Lcom/ditchoom/mqtt/controlpacket/QualityOfService;ZZLcom/ditchoom/mqtt/controlpacket/ISubscription$RetainHandling;Ljava/lang/String;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (SLjava/lang/String;Lcom/ditchoom/mqtt/controlpacket/QualityOfService;ZZLcom/ditchoom/mqtt/controlpacket/ISubscription$RetainHandling;Ljava/lang/String;Ljava/util/List;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (SLjava/util/Set;Ljava/lang/String;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (SLjava/util/Set;Ljava/lang/String;Ljava/util/List;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-b78-hV8 ()B
+	public final fun component2-Mh2AYeg ()S
+	public final fun component3 ()Ljava/util/List;
+	public final fun component4 ()Ljava/util/List;
+	public final fun copy-AiiRFOk (BSLjava/util/List;Ljava/util/List;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$Subscribe;
+	public static synthetic fun copy-AiiRFOk$default (Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$Subscribe;BSLjava/util/List;Ljava/util/List;ILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$Subscribe;
+	public fun copyWithNewPacketIdentifier (I)Lcom/ditchoom/mqtt/controlpacket/ISubscribeRequest;
+	public fun encodeBody (Lcom/ditchoom/buffer/WriteBuffer;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public fun expectedResponse ()Lcom/ditchoom/mqtt/controlpacket/ISubscribeAcknowledgement;
+	public fun getByte1-w2LRezQ ()B
+	public fun getControlPacketFactory ()Lcom/ditchoom/mqtt/controlpacket/ControlPacketFactory;
+	public fun getControlPacketValue ()B
+	public fun getDirection ()Lcom/ditchoom/mqtt/controlpacket/format/fixed/DirectionOfFlow;
+	public fun getFlags ()B
+	public final fun getHeader-b78-hV8 ()B
+	public fun getMqttVersion ()B
+	public final fun getPacketId-Mh2AYeg ()S
+	public fun getPacketIdentifier ()I
+	public final fun getProperties ()Ljava/util/List;
+	public final fun getSubscriptionEntries ()Ljava/util/List;
+	public fun getSubscriptions ()Ljava/util/Set;
+	public fun hashCode ()I
+	public fun packetSize ()I
+	public fun payload (Lcom/ditchoom/buffer/WriteBuffer;)V
+	public fun remainingLength ()I
+	public fun serialize (Lcom/ditchoom/buffer/BufferFactory;)Lcom/ditchoom/buffer/ReadBuffer;
+	public fun serialize (Lcom/ditchoom/buffer/WriteBuffer;)V
+	public fun toString ()Ljava/lang/String;
+	public fun validate ()Ljava/lang/Exception;
+	public fun validateOrNull ()Lcom/ditchoom/mqtt/controlpacket/ControlPacket;
+	public fun validateOrThrow ()Lcom/ditchoom/mqtt/controlpacket/ControlPacket;
+	public fun variableHeader (Lcom/ditchoom/buffer/WriteBuffer;)V
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/ControlPacketV5$UnsubAck : com/ditchoom/mqtt/controlpacket/IUnsubscribeAcknowledgment, com/ditchoom/mqtt5/controlpacket/ControlPacketV5 {
+	public synthetic fun <init> (BSLjava/util/List;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (BSLjava/util/List;Ljava/util/List;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (ILjava/lang/String;Ljava/util/List;Ljava/util/List;)V
+	public synthetic fun <init> (ILjava/lang/String;Ljava/util/List;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-b78-hV8 ()B
+	public final fun component2-Mh2AYeg ()S
+	public final fun component3 ()Ljava/util/List;
+	public final fun component4 ()Ljava/util/List;
+	public final fun copy-AiiRFOk (BSLjava/util/List;Ljava/util/List;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$UnsubAck;
+	public static synthetic fun copy-AiiRFOk$default (Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$UnsubAck;BSLjava/util/List;Ljava/util/List;ILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$UnsubAck;
+	public fun encodeBody (Lcom/ditchoom/buffer/WriteBuffer;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getByte1-w2LRezQ ()B
+	public fun getControlPacketFactory ()Lcom/ditchoom/mqtt/controlpacket/ControlPacketFactory;
+	public fun getControlPacketValue ()B
+	public fun getDirection ()Lcom/ditchoom/mqtt/controlpacket/format/fixed/DirectionOfFlow;
+	public fun getFlags ()B
+	public final fun getHeader-b78-hV8 ()B
+	public fun getMqttVersion ()B
+	public final fun getPacketId-Mh2AYeg ()S
+	public fun getPacketIdentifier ()I
+	public final fun getProperties ()Ljava/util/List;
+	public final fun getReasonCodeEntries ()Ljava/util/List;
+	public final fun getReasonCodes ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun packetSize ()I
+	public fun payload (Lcom/ditchoom/buffer/WriteBuffer;)V
+	public fun remainingLength ()I
+	public fun serialize (Lcom/ditchoom/buffer/BufferFactory;)Lcom/ditchoom/buffer/ReadBuffer;
+	public fun serialize (Lcom/ditchoom/buffer/WriteBuffer;)V
+	public fun toString ()Ljava/lang/String;
+	public fun validate ()Ljava/lang/Exception;
+	public fun validateOrNull ()Lcom/ditchoom/mqtt/controlpacket/ControlPacket;
+	public fun validateOrThrow ()Lcom/ditchoom/mqtt/controlpacket/ControlPacket;
+	public fun variableHeader (Lcom/ditchoom/buffer/WriteBuffer;)V
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/ControlPacketV5$Unsubscribe : com/ditchoom/mqtt/controlpacket/IUnsubscribeRequest, com/ditchoom/mqtt5/controlpacket/ControlPacketV5 {
+	public synthetic fun <init> (BSLjava/util/List;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (BSLjava/util/List;Ljava/util/List;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/lang/String;Ljava/util/List;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/util/Set;Ljava/util/List;)V
+	public synthetic fun <init> (Ljava/util/Set;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (SLjava/util/Set;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (SLjava/util/Set;Ljava/util/List;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-b78-hV8 ()B
+	public final fun component2-Mh2AYeg ()S
+	public final fun component3 ()Ljava/util/List;
+	public final fun component4 ()Ljava/util/List;
+	public final fun copy-AiiRFOk (BSLjava/util/List;Ljava/util/List;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$Unsubscribe;
+	public static synthetic fun copy-AiiRFOk$default (Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$Unsubscribe;BSLjava/util/List;Ljava/util/List;ILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$Unsubscribe;
+	public fun copyWithNewPacketIdentifier (I)Lcom/ditchoom/mqtt/controlpacket/IUnsubscribeRequest;
+	public fun encodeBody (Lcom/ditchoom/buffer/WriteBuffer;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getByte1-w2LRezQ ()B
+	public fun getControlPacketFactory ()Lcom/ditchoom/mqtt/controlpacket/ControlPacketFactory;
+	public fun getControlPacketValue ()B
+	public fun getDirection ()Lcom/ditchoom/mqtt/controlpacket/format/fixed/DirectionOfFlow;
+	public fun getFlags ()B
+	public final fun getHeader-b78-hV8 ()B
+	public fun getMqttVersion ()B
+	public final fun getPacketId-Mh2AYeg ()S
+	public fun getPacketIdentifier ()I
+	public final fun getProperties ()Ljava/util/List;
+	public final fun getTopicEntries ()Ljava/util/List;
+	public fun getTopics ()Ljava/util/Set;
+	public fun hashCode ()I
+	public fun packetSize ()I
+	public fun payload (Lcom/ditchoom/buffer/WriteBuffer;)V
+	public fun remainingLength ()I
+	public fun serialize (Lcom/ditchoom/buffer/BufferFactory;)Lcom/ditchoom/buffer/ReadBuffer;
+	public fun serialize (Lcom/ditchoom/buffer/WriteBuffer;)V
+	public fun toString ()Ljava/lang/String;
+	public fun validate ()Ljava/lang/Exception;
+	public fun validateOrNull ()Lcom/ditchoom/mqtt/controlpacket/ControlPacket;
+	public fun validateOrThrow ()Lcom/ditchoom/mqtt/controlpacket/ControlPacket;
+	public fun variableHeader (Lcom/ditchoom/buffer/WriteBuffer;)V
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/ControlPacketV5AuthCodec : com/ditchoom/buffer/codec/FrameDetector {
+	public static final field INSTANCE Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5AuthCodec;
+	public final fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$Auth;
+	public final fun encode (Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$Auth;Lcom/ditchoom/buffer/codec/EncodeContext;Lcom/ditchoom/buffer/BufferFactory;)Lcom/ditchoom/buffer/ReadBuffer;
+	public fun peekFrameSize (Lcom/ditchoom/buffer/stream/StreamProcessor;I)Lcom/ditchoom/buffer/codec/PeekResult;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/ControlPacketV5Codec : com/ditchoom/buffer/codec/FrameDetector {
+	public static final field Companion Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5Codec$Companion;
+	public fun <init> (Lcom/ditchoom/buffer/codec/Codec;)V
+	public final fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5;
+	public final fun encode (Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5;Lcom/ditchoom/buffer/codec/EncodeContext;Lcom/ditchoom/buffer/BufferFactory;)Lcom/ditchoom/buffer/ReadBuffer;
+	public fun peekFrameSize (Lcom/ditchoom/buffer/stream/StreamProcessor;I)Lcom/ditchoom/buffer/codec/PeekResult;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/ControlPacketV5Codec$Companion : com/ditchoom/buffer/codec/FrameDetector {
+	public final fun decodeAggregating (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;Lkotlin/jvm/functions/Function1;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5;
+	public static synthetic fun decodeAggregating$default (Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5Codec$Companion;Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5;
+	public fun peekFrameSize (Lcom/ditchoom/buffer/stream/StreamProcessor;I)Lcom/ditchoom/buffer/codec/PeekResult;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/ControlPacketV5ConnAckCodec : com/ditchoom/buffer/codec/FrameDetector {
+	public static final field INSTANCE Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5ConnAckCodec;
+	public final fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$ConnAck;
+	public final fun encode (Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$ConnAck;Lcom/ditchoom/buffer/codec/EncodeContext;Lcom/ditchoom/buffer/BufferFactory;)Lcom/ditchoom/buffer/ReadBuffer;
+	public fun peekFrameSize (Lcom/ditchoom/buffer/stream/StreamProcessor;I)Lcom/ditchoom/buffer/codec/PeekResult;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/ControlPacketV5ConnectCodec : com/ditchoom/buffer/codec/FrameDetector {
+	public static final field INSTANCE Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5ConnectCodec;
+	public final fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$Connect;
+	public final fun encode (Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$Connect;Lcom/ditchoom/buffer/codec/EncodeContext;Lcom/ditchoom/buffer/BufferFactory;)Lcom/ditchoom/buffer/ReadBuffer;
+	public fun peekFrameSize (Lcom/ditchoom/buffer/stream/StreamProcessor;I)Lcom/ditchoom/buffer/codec/PeekResult;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/ControlPacketV5DisconnectCodec : com/ditchoom/buffer/codec/FrameDetector {
+	public static final field INSTANCE Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5DisconnectCodec;
+	public final fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$Disconnect;
+	public final fun encode (Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$Disconnect;Lcom/ditchoom/buffer/codec/EncodeContext;Lcom/ditchoom/buffer/BufferFactory;)Lcom/ditchoom/buffer/ReadBuffer;
+	public fun peekFrameSize (Lcom/ditchoom/buffer/stream/StreamProcessor;I)Lcom/ditchoom/buffer/codec/PeekResult;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/ControlPacketV5Factory : com/ditchoom/mqtt/controlpacket/ControlPacketFactory {
+	public static final field INSTANCE Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5Factory;
+	public fun defaultPersistence (Ljava/lang/Object;Ljava/lang/String;ZLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun disconnect-bqFruO8 (Lcom/ditchoom/mqtt/controlpacket/format/ReasonCode;Lkotlin/ULong;Ljava/lang/String;Ljava/util/List;)Lcom/ditchoom/mqtt/controlpacket/IDisconnectNotification;
+	public fun getProtocolVersion ()I
+	public synthetic fun pingRequest ()Lcom/ditchoom/mqtt/controlpacket/IPingRequest;
+	public fun pingRequest ()Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$PingReq;
+	public synthetic fun pingResponse ()Lcom/ditchoom/mqtt/controlpacket/IPingResponse;
+	public fun pingResponse ()Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$PingResp;
+	public fun subscribe (Lcom/ditchoom/mqtt/controlpacket/TopicFilter;Lcom/ditchoom/mqtt/controlpacket/QualityOfService;ZZLcom/ditchoom/mqtt/controlpacket/ISubscription$RetainHandling;Ljava/lang/String;Ljava/util/List;)Lcom/ditchoom/mqtt/controlpacket/ISubscribeRequest;
+	public fun subscribe (Ljava/util/Set;Ljava/lang/String;Ljava/util/List;)Lcom/ditchoom/mqtt/controlpacket/ISubscribeRequest;
+	public fun unsubscribe (Lcom/ditchoom/mqtt/controlpacket/TopicFilter;Ljava/util/List;)Lcom/ditchoom/mqtt/controlpacket/IUnsubscribeRequest;
+	public synthetic fun unsubscribe (Ljava/util/Set;Ljava/util/List;)Lcom/ditchoom/mqtt/controlpacket/IUnsubscribeRequest;
+	public fun unsubscribe (Ljava/util/Set;Ljava/util/List;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$Unsubscribe;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/ControlPacketV5Kt {
+	public static final fun ConnectionRequest-XYBYqek (Ljava/lang/String;IZLjava/lang/String;Ljava/lang/String;Lcom/ditchoom/mqtt/controlpacket/WillConfig;Ljava/lang/String;BLcom/ditchoom/mqtt5/controlpacket/ConnectProperties;Lcom/ditchoom/mqtt5/controlpacket/ConnectWillProperties;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$Connect;
+	public static synthetic fun ConnectionRequest-XYBYqek$default (Ljava/lang/String;IZLjava/lang/String;Ljava/lang/String;Lcom/ditchoom/mqtt/controlpacket/WillConfig;Ljava/lang/String;BLcom/ditchoom/mqtt5/controlpacket/ConnectProperties;Lcom/ditchoom/mqtt5/controlpacket/ConnectWillProperties;ILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$Connect;
+	public static final fun reasonStringValue (Ljava/util/Collection;)Ljava/lang/String;
+	public static final fun userProperties (Ljava/util/Collection;)Ljava/util/List;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/ControlPacketV5PingReqCodec : com/ditchoom/buffer/codec/FrameDetector {
+	public static final field INSTANCE Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5PingReqCodec;
+	public final fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$PingReq;
+	public final fun encode (Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$PingReq;Lcom/ditchoom/buffer/codec/EncodeContext;Lcom/ditchoom/buffer/BufferFactory;)Lcom/ditchoom/buffer/ReadBuffer;
+	public fun peekFrameSize (Lcom/ditchoom/buffer/stream/StreamProcessor;I)Lcom/ditchoom/buffer/codec/PeekResult;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/ControlPacketV5PingRespCodec : com/ditchoom/buffer/codec/FrameDetector {
+	public static final field INSTANCE Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5PingRespCodec;
+	public final fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$PingResp;
+	public final fun encode (Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$PingResp;Lcom/ditchoom/buffer/codec/EncodeContext;Lcom/ditchoom/buffer/BufferFactory;)Lcom/ditchoom/buffer/ReadBuffer;
+	public fun peekFrameSize (Lcom/ditchoom/buffer/stream/StreamProcessor;I)Lcom/ditchoom/buffer/codec/PeekResult;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/ControlPacketV5PubAckCodec : com/ditchoom/buffer/codec/FrameDetector {
+	public static final field INSTANCE Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5PubAckCodec;
+	public final fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$PubAck;
+	public final fun encode (Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$PubAck;Lcom/ditchoom/buffer/codec/EncodeContext;Lcom/ditchoom/buffer/BufferFactory;)Lcom/ditchoom/buffer/ReadBuffer;
+	public fun peekFrameSize (Lcom/ditchoom/buffer/stream/StreamProcessor;I)Lcom/ditchoom/buffer/codec/PeekResult;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/ControlPacketV5PubCompCodec : com/ditchoom/buffer/codec/FrameDetector {
+	public static final field INSTANCE Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5PubCompCodec;
+	public final fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$PubComp;
+	public final fun encode (Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$PubComp;Lcom/ditchoom/buffer/codec/EncodeContext;Lcom/ditchoom/buffer/BufferFactory;)Lcom/ditchoom/buffer/ReadBuffer;
+	public fun peekFrameSize (Lcom/ditchoom/buffer/stream/StreamProcessor;I)Lcom/ditchoom/buffer/codec/PeekResult;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/ControlPacketV5PubRecCodec : com/ditchoom/buffer/codec/FrameDetector {
+	public static final field INSTANCE Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5PubRecCodec;
+	public final fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$PubRec;
+	public final fun encode (Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$PubRec;Lcom/ditchoom/buffer/codec/EncodeContext;Lcom/ditchoom/buffer/BufferFactory;)Lcom/ditchoom/buffer/ReadBuffer;
+	public fun peekFrameSize (Lcom/ditchoom/buffer/stream/StreamProcessor;I)Lcom/ditchoom/buffer/codec/PeekResult;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/ControlPacketV5PubRelCodec : com/ditchoom/buffer/codec/FrameDetector {
+	public static final field INSTANCE Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5PubRelCodec;
+	public final fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$PubRel;
+	public final fun encode (Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$PubRel;Lcom/ditchoom/buffer/codec/EncodeContext;Lcom/ditchoom/buffer/BufferFactory;)Lcom/ditchoom/buffer/ReadBuffer;
+	public fun peekFrameSize (Lcom/ditchoom/buffer/stream/StreamProcessor;I)Lcom/ditchoom/buffer/codec/PeekResult;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/ControlPacketV5PublishCodec : com/ditchoom/buffer/codec/FrameDetector {
+	public static final field Companion Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5PublishCodec$Companion;
+	public fun <init> (Lcom/ditchoom/buffer/codec/Codec;)V
+	public final fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$Publish;
+	public final fun encode (Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$Publish;Lcom/ditchoom/buffer/codec/EncodeContext;Lcom/ditchoom/buffer/BufferFactory;)Lcom/ditchoom/buffer/ReadBuffer;
+	public fun peekFrameSize (Lcom/ditchoom/buffer/stream/StreamProcessor;I)Lcom/ditchoom/buffer/codec/PeekResult;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/ControlPacketV5PublishCodec$Companion : com/ditchoom/buffer/codec/FrameDetector {
+	public final fun partial (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5PublishCodec$Partial;
+	public fun peekFrameSize (Lcom/ditchoom/buffer/stream/StreamProcessor;I)Lcom/ditchoom/buffer/codec/PeekResult;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/ControlPacketV5PublishCodec$Partial {
+	public final fun complete (Lcom/ditchoom/buffer/codec/Decoder;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$Publish;
+	public final fun getHeader-b78-hV8 ()B
+	public final fun getPacketId-XRpZGF0 ()Lkotlin/UShort;
+	public final fun getProperties ()Ljava/util/List;
+	public final fun getTopicName ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/ControlPacketV5SubAckCodec : com/ditchoom/buffer/codec/FrameDetector {
+	public static final field INSTANCE Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5SubAckCodec;
+	public final fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$SubAck;
+	public final fun encode (Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$SubAck;Lcom/ditchoom/buffer/codec/EncodeContext;Lcom/ditchoom/buffer/BufferFactory;)Lcom/ditchoom/buffer/ReadBuffer;
+	public fun peekFrameSize (Lcom/ditchoom/buffer/stream/StreamProcessor;I)Lcom/ditchoom/buffer/codec/PeekResult;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/ControlPacketV5SubscribeCodec : com/ditchoom/buffer/codec/FrameDetector {
+	public static final field INSTANCE Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5SubscribeCodec;
+	public final fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$Subscribe;
+	public final fun encode (Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$Subscribe;Lcom/ditchoom/buffer/codec/EncodeContext;Lcom/ditchoom/buffer/BufferFactory;)Lcom/ditchoom/buffer/ReadBuffer;
+	public fun peekFrameSize (Lcom/ditchoom/buffer/stream/StreamProcessor;I)Lcom/ditchoom/buffer/codec/PeekResult;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/ControlPacketV5UnsubAckCodec : com/ditchoom/buffer/codec/FrameDetector {
+	public static final field INSTANCE Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5UnsubAckCodec;
+	public final fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$UnsubAck;
+	public final fun encode (Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$UnsubAck;Lcom/ditchoom/buffer/codec/EncodeContext;Lcom/ditchoom/buffer/BufferFactory;)Lcom/ditchoom/buffer/ReadBuffer;
+	public fun peekFrameSize (Lcom/ditchoom/buffer/stream/StreamProcessor;I)Lcom/ditchoom/buffer/codec/PeekResult;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/ControlPacketV5UnsubscribeCodec : com/ditchoom/buffer/codec/FrameDetector {
+	public static final field INSTANCE Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5UnsubscribeCodec;
+	public final fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$Unsubscribe;
+	public final fun encode (Lcom/ditchoom/mqtt5/controlpacket/ControlPacketV5$Unsubscribe;Lcom/ditchoom/buffer/codec/EncodeContext;Lcom/ditchoom/buffer/BufferFactory;)Lcom/ditchoom/buffer/ReadBuffer;
+	public fun peekFrameSize (Lcom/ditchoom/buffer/stream/StreamProcessor;I)Lcom/ditchoom/buffer/codec/PeekResult;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/PublishProperties {
+	public static final field Companion Lcom/ditchoom/mqtt5/controlpacket/PublishProperties$Companion;
+	public fun <init> ()V
+	public fun <init> (ZLjava/lang/Long;Ljava/lang/Integer;Lcom/ditchoom/mqtt/controlpacket/TopicName;Lcom/ditchoom/buffer/ReadBuffer;Ljava/util/List;Ljava/util/Set;Ljava/lang/String;)V
+	public synthetic fun <init> (ZLjava/lang/Long;Ljava/lang/Integer;Lcom/ditchoom/mqtt/controlpacket/TopicName;Lcom/ditchoom/buffer/ReadBuffer;Ljava/util/List;Ljava/util/Set;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Z
+	public final fun component2 ()Ljava/lang/Long;
+	public final fun component3 ()Ljava/lang/Integer;
+	public final fun component4 ()Lcom/ditchoom/mqtt/controlpacket/TopicName;
+	public final fun component5 ()Lcom/ditchoom/buffer/ReadBuffer;
+	public final fun component6 ()Ljava/util/List;
+	public final fun component7 ()Ljava/util/Set;
+	public final fun component8 ()Ljava/lang/String;
+	public final fun copy (ZLjava/lang/Long;Ljava/lang/Integer;Lcom/ditchoom/mqtt/controlpacket/TopicName;Lcom/ditchoom/buffer/ReadBuffer;Ljava/util/List;Ljava/util/Set;Ljava/lang/String;)Lcom/ditchoom/mqtt5/controlpacket/PublishProperties;
+	public static synthetic fun copy$default (Lcom/ditchoom/mqtt5/controlpacket/PublishProperties;ZLjava/lang/Long;Ljava/lang/Integer;Lcom/ditchoom/mqtt/controlpacket/TopicName;Lcom/ditchoom/buffer/ReadBuffer;Ljava/util/List;Ljava/util/Set;Ljava/lang/String;ILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/PublishProperties;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getContentType ()Ljava/lang/String;
+	public final fun getCorrelationData ()Lcom/ditchoom/buffer/ReadBuffer;
+	public final fun getMessageExpiryInterval ()Ljava/lang/Long;
+	public final fun getPayloadFormatIndicator ()Z
+	public final fun getProps ()Ljava/util/List;
+	public final fun getResponseTopic ()Lcom/ditchoom/mqtt/controlpacket/TopicName;
+	public final fun getSubscriptionIdentifier ()Ljava/util/Set;
+	public final fun getTopicAlias ()Ljava/lang/Integer;
+	public final fun getUserProperty ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/PublishProperties$Companion {
+	public final fun from (Ljava/util/Collection;)Lcom/ditchoom/mqtt5/controlpacket/PublishProperties;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/SubAckReasonCodeV5 {
+	public synthetic fun <init> (BLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-w2LRezQ ()B
+	public final fun copy-7apg3OU (B)Lcom/ditchoom/mqtt5/controlpacket/SubAckReasonCodeV5;
+	public static synthetic fun copy-7apg3OU$default (Lcom/ditchoom/mqtt5/controlpacket/SubAckReasonCodeV5;BILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/SubAckReasonCodeV5;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getRaw-w2LRezQ ()B
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/SubAckReasonCodeV5Codec : com/ditchoom/buffer/codec/Codec {
+	public static final field INSTANCE Lcom/ditchoom/mqtt5/controlpacket/SubAckReasonCodeV5Codec;
+	public fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Lcom/ditchoom/mqtt5/controlpacket/SubAckReasonCodeV5;
+	public synthetic fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Ljava/lang/Object;
+	public fun encode (Lcom/ditchoom/buffer/WriteBuffer;Lcom/ditchoom/mqtt5/controlpacket/SubAckReasonCodeV5;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public synthetic fun encode (Lcom/ditchoom/buffer/WriteBuffer;Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public fun peekFrameSize (Lcom/ditchoom/buffer/stream/StreamProcessor;I)Lcom/ditchoom/buffer/codec/PeekResult;
+	public fun sizeHint (Lcom/ditchoom/mqtt5/controlpacket/SubAckReasonCodeV5;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public synthetic fun sizeHint (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public fun wireSize (Lcom/ditchoom/mqtt5/controlpacket/SubAckReasonCodeV5;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+	public synthetic fun wireSize (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/Subscription : com/ditchoom/mqtt/controlpacket/ISubscription {
+	public static final field Companion Lcom/ditchoom/mqtt5/controlpacket/Subscription$Companion;
+	public fun <init> (Lcom/ditchoom/mqtt/controlpacket/TopicFilter;Lcom/ditchoom/mqtt/controlpacket/QualityOfService;ZZLcom/ditchoom/mqtt/controlpacket/ISubscription$RetainHandling;)V
+	public synthetic fun <init> (Lcom/ditchoom/mqtt/controlpacket/TopicFilter;Lcom/ditchoom/mqtt/controlpacket/QualityOfService;ZZLcom/ditchoom/mqtt/controlpacket/ISubscription$RetainHandling;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Lcom/ditchoom/mqtt/controlpacket/TopicFilter;
+	public final fun component2 ()Lcom/ditchoom/mqtt/controlpacket/QualityOfService;
+	public final fun component3 ()Z
+	public final fun component4 ()Z
+	public final fun component5 ()Lcom/ditchoom/mqtt/controlpacket/ISubscription$RetainHandling;
+	public final fun copy (Lcom/ditchoom/mqtt/controlpacket/TopicFilter;Lcom/ditchoom/mqtt/controlpacket/QualityOfService;ZZLcom/ditchoom/mqtt/controlpacket/ISubscription$RetainHandling;)Lcom/ditchoom/mqtt5/controlpacket/Subscription;
+	public static synthetic fun copy$default (Lcom/ditchoom/mqtt5/controlpacket/Subscription;Lcom/ditchoom/mqtt/controlpacket/TopicFilter;Lcom/ditchoom/mqtt/controlpacket/QualityOfService;ZZLcom/ditchoom/mqtt/controlpacket/ISubscription$RetainHandling;ILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/Subscription;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getMaximumQos ()Lcom/ditchoom/mqtt/controlpacket/QualityOfService;
+	public fun getNoLocal ()Z
+	public fun getRetainAsPublished ()Z
+	public fun getRetainHandling ()Lcom/ditchoom/mqtt/controlpacket/ISubscription$RetainHandling;
+	public fun getTopicFilter ()Lcom/ditchoom/mqtt/controlpacket/TopicFilter;
+	public fun hashCode ()I
+	public final fun size ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/Subscription$Companion {
+	public final fun from (Ljava/lang/String;Lcom/ditchoom/mqtt/controlpacket/QualityOfService;ZZLcom/ditchoom/mqtt/controlpacket/ISubscription$RetainHandling;)Lcom/ditchoom/mqtt5/controlpacket/Subscription;
+	public final fun from (Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;)Ljava/util/Set;
+	public static synthetic fun from$default (Lcom/ditchoom/mqtt5/controlpacket/Subscription$Companion;Ljava/lang/String;Lcom/ditchoom/mqtt/controlpacket/QualityOfService;ZZLcom/ditchoom/mqtt/controlpacket/ISubscription$RetainHandling;ILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/Subscription;
+	public static synthetic fun from$default (Lcom/ditchoom/mqtt5/controlpacket/Subscription$Companion;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;ILjava/lang/Object;)Ljava/util/Set;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/SubscriptionKt {
+	public static final fun size (Ljava/util/Collection;)I
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/SubscriptionV5Entry {
+	public synthetic fun <init> (Ljava/lang/String;BLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2-w2LRezQ ()B
+	public final fun copy-EK-6454 (Ljava/lang/String;B)Lcom/ditchoom/mqtt5/controlpacket/SubscriptionV5Entry;
+	public static synthetic fun copy-EK-6454$default (Lcom/ditchoom/mqtt5/controlpacket/SubscriptionV5Entry;Ljava/lang/String;BILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/SubscriptionV5Entry;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getSubscriptionOptions-w2LRezQ ()B
+	public final fun getTopicFilter ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/SubscriptionV5EntryCodec : com/ditchoom/buffer/codec/Codec {
+	public static final field INSTANCE Lcom/ditchoom/mqtt5/controlpacket/SubscriptionV5EntryCodec;
+	public fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Lcom/ditchoom/mqtt5/controlpacket/SubscriptionV5Entry;
+	public synthetic fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Ljava/lang/Object;
+	public fun encode (Lcom/ditchoom/buffer/WriteBuffer;Lcom/ditchoom/mqtt5/controlpacket/SubscriptionV5Entry;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public synthetic fun encode (Lcom/ditchoom/buffer/WriteBuffer;Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public fun peekFrameSize (Lcom/ditchoom/buffer/stream/StreamProcessor;I)Lcom/ditchoom/buffer/codec/PeekResult;
+	public fun sizeHint (Lcom/ditchoom/mqtt5/controlpacket/SubscriptionV5Entry;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public synthetic fun sizeHint (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public fun wireSize (Lcom/ditchoom/mqtt5/controlpacket/SubscriptionV5Entry;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+	public synthetic fun wireSize (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/TopicFilterV5Entry {
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Lcom/ditchoom/mqtt5/controlpacket/TopicFilterV5Entry;
+	public static synthetic fun copy$default (Lcom/ditchoom/mqtt5/controlpacket/TopicFilterV5Entry;Ljava/lang/String;ILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/TopicFilterV5Entry;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getTopicFilter ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/TopicFilterV5EntryCodec : com/ditchoom/buffer/codec/Codec {
+	public static final field INSTANCE Lcom/ditchoom/mqtt5/controlpacket/TopicFilterV5EntryCodec;
+	public fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Lcom/ditchoom/mqtt5/controlpacket/TopicFilterV5Entry;
+	public synthetic fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Ljava/lang/Object;
+	public fun encode (Lcom/ditchoom/buffer/WriteBuffer;Lcom/ditchoom/mqtt5/controlpacket/TopicFilterV5Entry;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public synthetic fun encode (Lcom/ditchoom/buffer/WriteBuffer;Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public fun peekFrameSize (Lcom/ditchoom/buffer/stream/StreamProcessor;I)Lcom/ditchoom/buffer/codec/PeekResult;
+	public fun sizeHint (Lcom/ditchoom/mqtt5/controlpacket/TopicFilterV5Entry;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public synthetic fun sizeHint (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public fun wireSize (Lcom/ditchoom/mqtt5/controlpacket/TopicFilterV5Entry;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+	public synthetic fun wireSize (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/UnsubAckReasonCodeV5 {
+	public synthetic fun <init> (BLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-w2LRezQ ()B
+	public final fun copy-7apg3OU (B)Lcom/ditchoom/mqtt5/controlpacket/UnsubAckReasonCodeV5;
+	public static synthetic fun copy-7apg3OU$default (Lcom/ditchoom/mqtt5/controlpacket/UnsubAckReasonCodeV5;BILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/UnsubAckReasonCodeV5;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getRaw-w2LRezQ ()B
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/UnsubAckReasonCodeV5Codec : com/ditchoom/buffer/codec/Codec {
+	public static final field INSTANCE Lcom/ditchoom/mqtt5/controlpacket/UnsubAckReasonCodeV5Codec;
+	public fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Lcom/ditchoom/mqtt5/controlpacket/UnsubAckReasonCodeV5;
+	public synthetic fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Ljava/lang/Object;
+	public fun encode (Lcom/ditchoom/buffer/WriteBuffer;Lcom/ditchoom/mqtt5/controlpacket/UnsubAckReasonCodeV5;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public synthetic fun encode (Lcom/ditchoom/buffer/WriteBuffer;Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public fun peekFrameSize (Lcom/ditchoom/buffer/stream/StreamProcessor;I)Lcom/ditchoom/buffer/codec/PeekResult;
+	public fun sizeHint (Lcom/ditchoom/mqtt5/controlpacket/UnsubAckReasonCodeV5;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public synthetic fun sizeHint (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public fun wireSize (Lcom/ditchoom/mqtt5/controlpacket/UnsubAckReasonCodeV5;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+	public synthetic fun wireSize (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/AssignedClientIdentifier : com/ditchoom/mqtt5/controlpacket/properties/MqttProperty {
+	public synthetic fun <init> (BLjava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (BLjava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1-CwbrCDo ()B
+	public final fun component2 ()Ljava/lang/String;
+	public final fun copy-C8HR_v0 (BLjava/lang/String;)Lcom/ditchoom/mqtt5/controlpacket/properties/AssignedClientIdentifier;
+	public static synthetic fun copy-C8HR_v0$default (Lcom/ditchoom/mqtt5/controlpacket/properties/AssignedClientIdentifier;BLjava/lang/String;ILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/properties/AssignedClientIdentifier;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getId-CwbrCDo ()B
+	public final fun getValue ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/AssignedClientIdentifierCodec : com/ditchoom/buffer/codec/Codec {
+	public static final field INSTANCE Lcom/ditchoom/mqtt5/controlpacket/properties/AssignedClientIdentifierCodec;
+	public fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Lcom/ditchoom/mqtt5/controlpacket/properties/AssignedClientIdentifier;
+	public synthetic fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Ljava/lang/Object;
+	public fun encode (Lcom/ditchoom/buffer/WriteBuffer;Lcom/ditchoom/mqtt5/controlpacket/properties/AssignedClientIdentifier;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public synthetic fun encode (Lcom/ditchoom/buffer/WriteBuffer;Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public fun peekFrameSize (Lcom/ditchoom/buffer/stream/StreamProcessor;I)Lcom/ditchoom/buffer/codec/PeekResult;
+	public fun sizeHint (Lcom/ditchoom/mqtt5/controlpacket/properties/AssignedClientIdentifier;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public synthetic fun sizeHint (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public fun wireSize (Lcom/ditchoom/mqtt5/controlpacket/properties/AssignedClientIdentifier;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+	public synthetic fun wireSize (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/Authentication {
+	public fun <init> (Ljava/lang/String;Lcom/ditchoom/buffer/ReadBuffer;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Lcom/ditchoom/buffer/ReadBuffer;
+	public final fun copy (Ljava/lang/String;Lcom/ditchoom/buffer/ReadBuffer;)Lcom/ditchoom/mqtt5/controlpacket/properties/Authentication;
+	public static synthetic fun copy$default (Lcom/ditchoom/mqtt5/controlpacket/properties/Authentication;Ljava/lang/String;Lcom/ditchoom/buffer/ReadBuffer;ILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/properties/Authentication;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getData ()Lcom/ditchoom/buffer/ReadBuffer;
+	public final fun getMethod ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/AuthenticationData : com/ditchoom/mqtt5/controlpacket/properties/MqttProperty {
+	public synthetic fun <init> (BLcom/ditchoom/buffer/codec/OwnedBytesHandle;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (BLcom/ditchoom/buffer/codec/OwnedBytesHandle;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Lcom/ditchoom/buffer/codec/OwnedBytesHandle;)V
+	public final fun component1-CwbrCDo ()B
+	public final fun component2 ()Lcom/ditchoom/buffer/codec/OwnedBytesHandle;
+	public final fun copy-C8HR_v0 (BLcom/ditchoom/buffer/codec/OwnedBytesHandle;)Lcom/ditchoom/mqtt5/controlpacket/properties/AuthenticationData;
+	public static synthetic fun copy-C8HR_v0$default (Lcom/ditchoom/mqtt5/controlpacket/properties/AuthenticationData;BLcom/ditchoom/buffer/codec/OwnedBytesHandle;ILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/properties/AuthenticationData;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getId-CwbrCDo ()B
+	public final fun getValue ()Lcom/ditchoom/buffer/codec/OwnedBytesHandle;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/AuthenticationDataCodec : com/ditchoom/buffer/codec/Codec {
+	public static final field INSTANCE Lcom/ditchoom/mqtt5/controlpacket/properties/AuthenticationDataCodec;
+	public fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Lcom/ditchoom/mqtt5/controlpacket/properties/AuthenticationData;
+	public synthetic fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Ljava/lang/Object;
+	public fun encode (Lcom/ditchoom/buffer/WriteBuffer;Lcom/ditchoom/mqtt5/controlpacket/properties/AuthenticationData;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public synthetic fun encode (Lcom/ditchoom/buffer/WriteBuffer;Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public fun peekFrameSize (Lcom/ditchoom/buffer/stream/StreamProcessor;I)Lcom/ditchoom/buffer/codec/PeekResult;
+	public fun sizeHint (Lcom/ditchoom/mqtt5/controlpacket/properties/AuthenticationData;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public synthetic fun sizeHint (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public fun wireSize (Lcom/ditchoom/mqtt5/controlpacket/properties/AuthenticationData;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+	public synthetic fun wireSize (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/AuthenticationMethod : com/ditchoom/mqtt5/controlpacket/properties/MqttProperty {
+	public synthetic fun <init> (BLjava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (BLjava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1-CwbrCDo ()B
+	public final fun component2 ()Ljava/lang/String;
+	public final fun copy-C8HR_v0 (BLjava/lang/String;)Lcom/ditchoom/mqtt5/controlpacket/properties/AuthenticationMethod;
+	public static synthetic fun copy-C8HR_v0$default (Lcom/ditchoom/mqtt5/controlpacket/properties/AuthenticationMethod;BLjava/lang/String;ILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/properties/AuthenticationMethod;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getId-CwbrCDo ()B
+	public final fun getValue ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/AuthenticationMethodCodec : com/ditchoom/buffer/codec/Codec {
+	public static final field INSTANCE Lcom/ditchoom/mqtt5/controlpacket/properties/AuthenticationMethodCodec;
+	public fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Lcom/ditchoom/mqtt5/controlpacket/properties/AuthenticationMethod;
+	public synthetic fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Ljava/lang/Object;
+	public fun encode (Lcom/ditchoom/buffer/WriteBuffer;Lcom/ditchoom/mqtt5/controlpacket/properties/AuthenticationMethod;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public synthetic fun encode (Lcom/ditchoom/buffer/WriteBuffer;Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public fun peekFrameSize (Lcom/ditchoom/buffer/stream/StreamProcessor;I)Lcom/ditchoom/buffer/codec/PeekResult;
+	public fun sizeHint (Lcom/ditchoom/mqtt5/controlpacket/properties/AuthenticationMethod;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public synthetic fun sizeHint (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public fun wireSize (Lcom/ditchoom/mqtt5/controlpacket/properties/AuthenticationMethod;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+	public synthetic fun wireSize (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/ContentType : com/ditchoom/mqtt5/controlpacket/properties/MqttProperty {
+	public synthetic fun <init> (BLjava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (BLjava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1-CwbrCDo ()B
+	public final fun component2 ()Ljava/lang/String;
+	public final fun copy-C8HR_v0 (BLjava/lang/String;)Lcom/ditchoom/mqtt5/controlpacket/properties/ContentType;
+	public static synthetic fun copy-C8HR_v0$default (Lcom/ditchoom/mqtt5/controlpacket/properties/ContentType;BLjava/lang/String;ILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/properties/ContentType;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getId-CwbrCDo ()B
+	public final fun getValue ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/ContentTypeCodec : com/ditchoom/buffer/codec/Codec {
+	public static final field INSTANCE Lcom/ditchoom/mqtt5/controlpacket/properties/ContentTypeCodec;
+	public fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Lcom/ditchoom/mqtt5/controlpacket/properties/ContentType;
+	public synthetic fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Ljava/lang/Object;
+	public fun encode (Lcom/ditchoom/buffer/WriteBuffer;Lcom/ditchoom/mqtt5/controlpacket/properties/ContentType;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public synthetic fun encode (Lcom/ditchoom/buffer/WriteBuffer;Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public fun peekFrameSize (Lcom/ditchoom/buffer/stream/StreamProcessor;I)Lcom/ditchoom/buffer/codec/PeekResult;
+	public fun sizeHint (Lcom/ditchoom/mqtt5/controlpacket/properties/ContentType;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public synthetic fun sizeHint (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public fun wireSize (Lcom/ditchoom/mqtt5/controlpacket/properties/ContentType;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+	public synthetic fun wireSize (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/CorrelationData : com/ditchoom/mqtt5/controlpacket/properties/MqttProperty {
+	public synthetic fun <init> (BLcom/ditchoom/buffer/codec/OwnedBytesHandle;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (BLcom/ditchoom/buffer/codec/OwnedBytesHandle;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Lcom/ditchoom/buffer/codec/OwnedBytesHandle;)V
+	public final fun component1-CwbrCDo ()B
+	public final fun component2 ()Lcom/ditchoom/buffer/codec/OwnedBytesHandle;
+	public final fun copy-C8HR_v0 (BLcom/ditchoom/buffer/codec/OwnedBytesHandle;)Lcom/ditchoom/mqtt5/controlpacket/properties/CorrelationData;
+	public static synthetic fun copy-C8HR_v0$default (Lcom/ditchoom/mqtt5/controlpacket/properties/CorrelationData;BLcom/ditchoom/buffer/codec/OwnedBytesHandle;ILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/properties/CorrelationData;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getId-CwbrCDo ()B
+	public final fun getValue ()Lcom/ditchoom/buffer/codec/OwnedBytesHandle;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/CorrelationDataCodec : com/ditchoom/buffer/codec/Codec {
+	public static final field INSTANCE Lcom/ditchoom/mqtt5/controlpacket/properties/CorrelationDataCodec;
+	public fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Lcom/ditchoom/mqtt5/controlpacket/properties/CorrelationData;
+	public synthetic fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Ljava/lang/Object;
+	public fun encode (Lcom/ditchoom/buffer/WriteBuffer;Lcom/ditchoom/mqtt5/controlpacket/properties/CorrelationData;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public synthetic fun encode (Lcom/ditchoom/buffer/WriteBuffer;Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public fun peekFrameSize (Lcom/ditchoom/buffer/stream/StreamProcessor;I)Lcom/ditchoom/buffer/codec/PeekResult;
+	public fun sizeHint (Lcom/ditchoom/mqtt5/controlpacket/properties/CorrelationData;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public synthetic fun sizeHint (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public fun wireSize (Lcom/ditchoom/mqtt5/controlpacket/properties/CorrelationData;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+	public synthetic fun wireSize (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/MaximumPacketSize : com/ditchoom/mqtt5/controlpacket/properties/MqttProperty {
+	public synthetic fun <init> (BIILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (BILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-CwbrCDo ()B
+	public final fun component2-pVg5ArA ()I
+	public final fun copy-g-c98_Y (BI)Lcom/ditchoom/mqtt5/controlpacket/properties/MaximumPacketSize;
+	public static synthetic fun copy-g-c98_Y$default (Lcom/ditchoom/mqtt5/controlpacket/properties/MaximumPacketSize;BIILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/properties/MaximumPacketSize;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getBytes-pVg5ArA ()I
+	public final fun getId-CwbrCDo ()B
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/MaximumPacketSizeCodec : com/ditchoom/buffer/codec/Codec {
+	public static final field INSTANCE Lcom/ditchoom/mqtt5/controlpacket/properties/MaximumPacketSizeCodec;
+	public fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Lcom/ditchoom/mqtt5/controlpacket/properties/MaximumPacketSize;
+	public synthetic fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Ljava/lang/Object;
+	public fun encode (Lcom/ditchoom/buffer/WriteBuffer;Lcom/ditchoom/mqtt5/controlpacket/properties/MaximumPacketSize;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public synthetic fun encode (Lcom/ditchoom/buffer/WriteBuffer;Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public fun peekFrameSize (Lcom/ditchoom/buffer/stream/StreamProcessor;I)Lcom/ditchoom/buffer/codec/PeekResult;
+	public fun sizeHint (Lcom/ditchoom/mqtt5/controlpacket/properties/MaximumPacketSize;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public synthetic fun sizeHint (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public fun wireSize (Lcom/ditchoom/mqtt5/controlpacket/properties/MaximumPacketSize;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+	public synthetic fun wireSize (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/MaximumQos : com/ditchoom/mqtt5/controlpacket/properties/MqttProperty {
+	public synthetic fun <init> (BZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (BZLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Z)V
+	public final fun component1-CwbrCDo ()B
+	public final fun component2 ()Z
+	public final fun copy-C8HR_v0 (BZ)Lcom/ditchoom/mqtt5/controlpacket/properties/MaximumQos;
+	public static synthetic fun copy-C8HR_v0$default (Lcom/ditchoom/mqtt5/controlpacket/properties/MaximumQos;BZILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/properties/MaximumQos;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getId-CwbrCDo ()B
+	public final fun getQos1Allowed ()Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/MaximumQosCodec : com/ditchoom/buffer/codec/Codec {
+	public static final field INSTANCE Lcom/ditchoom/mqtt5/controlpacket/properties/MaximumQosCodec;
+	public fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Lcom/ditchoom/mqtt5/controlpacket/properties/MaximumQos;
+	public synthetic fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Ljava/lang/Object;
+	public fun encode (Lcom/ditchoom/buffer/WriteBuffer;Lcom/ditchoom/mqtt5/controlpacket/properties/MaximumQos;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public synthetic fun encode (Lcom/ditchoom/buffer/WriteBuffer;Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public fun peekFrameSize (Lcom/ditchoom/buffer/stream/StreamProcessor;I)Lcom/ditchoom/buffer/codec/PeekResult;
+	public fun sizeHint (Lcom/ditchoom/mqtt5/controlpacket/properties/MaximumQos;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public synthetic fun sizeHint (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public fun wireSize (Lcom/ditchoom/mqtt5/controlpacket/properties/MaximumQos;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+	public synthetic fun wireSize (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/MessageExpiryInterval : com/ditchoom/mqtt5/controlpacket/properties/MqttProperty {
+	public synthetic fun <init> (BIILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (BILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-CwbrCDo ()B
+	public final fun component2-pVg5ArA ()I
+	public final fun copy-g-c98_Y (BI)Lcom/ditchoom/mqtt5/controlpacket/properties/MessageExpiryInterval;
+	public static synthetic fun copy-g-c98_Y$default (Lcom/ditchoom/mqtt5/controlpacket/properties/MessageExpiryInterval;BIILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/properties/MessageExpiryInterval;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getId-CwbrCDo ()B
+	public final fun getSeconds-pVg5ArA ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/MessageExpiryIntervalCodec : com/ditchoom/buffer/codec/Codec {
+	public static final field INSTANCE Lcom/ditchoom/mqtt5/controlpacket/properties/MessageExpiryIntervalCodec;
+	public fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Lcom/ditchoom/mqtt5/controlpacket/properties/MessageExpiryInterval;
+	public synthetic fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Ljava/lang/Object;
+	public fun encode (Lcom/ditchoom/buffer/WriteBuffer;Lcom/ditchoom/mqtt5/controlpacket/properties/MessageExpiryInterval;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public synthetic fun encode (Lcom/ditchoom/buffer/WriteBuffer;Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public fun peekFrameSize (Lcom/ditchoom/buffer/stream/StreamProcessor;I)Lcom/ditchoom/buffer/codec/PeekResult;
+	public fun sizeHint (Lcom/ditchoom/mqtt5/controlpacket/properties/MessageExpiryInterval;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public synthetic fun sizeHint (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public fun wireSize (Lcom/ditchoom/mqtt5/controlpacket/properties/MessageExpiryInterval;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+	public synthetic fun wireSize (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+}
+
+public abstract interface class com/ditchoom/mqtt5/controlpacket/properties/MqttProperty {
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/MqttPropertyCodec : com/ditchoom/buffer/codec/Codec {
+	public static final field INSTANCE Lcom/ditchoom/mqtt5/controlpacket/properties/MqttPropertyCodec;
+	public fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Lcom/ditchoom/mqtt5/controlpacket/properties/MqttProperty;
+	public synthetic fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Ljava/lang/Object;
+	public fun encode (Lcom/ditchoom/buffer/WriteBuffer;Lcom/ditchoom/mqtt5/controlpacket/properties/MqttProperty;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public synthetic fun encode (Lcom/ditchoom/buffer/WriteBuffer;Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public fun peekFrameSize (Lcom/ditchoom/buffer/stream/StreamProcessor;I)Lcom/ditchoom/buffer/codec/PeekResult;
+	public fun sizeHint (Lcom/ditchoom/mqtt5/controlpacket/properties/MqttProperty;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public synthetic fun sizeHint (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public fun wireSize (Lcom/ditchoom/mqtt5/controlpacket/properties/MqttProperty;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+	public synthetic fun wireSize (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/MqttPropertyCodecExtKt {
+	public static final fun decodeMqttProperties (Lcom/ditchoom/buffer/ReadBuffer;)Ljava/util/List;
+	public static final fun encodeMqttProperties (Lcom/ditchoom/buffer/WriteBuffer;Ljava/util/List;)V
+	public static final fun mqttPropertiesSectionSize (Ljava/util/List;)I
+	public static final fun mqttPropertiesSize (Ljava/util/List;)I
+	public static final fun mqttPropertySize (Lcom/ditchoom/mqtt5/controlpacket/properties/MqttProperty;)I
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/PayloadFormatIndicator : com/ditchoom/mqtt5/controlpacket/properties/MqttProperty {
+	public synthetic fun <init> (BZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (BZLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Z)V
+	public final fun component1-CwbrCDo ()B
+	public final fun component2 ()Z
+	public final fun copy-C8HR_v0 (BZ)Lcom/ditchoom/mqtt5/controlpacket/properties/PayloadFormatIndicator;
+	public static synthetic fun copy-C8HR_v0$default (Lcom/ditchoom/mqtt5/controlpacket/properties/PayloadFormatIndicator;BZILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/properties/PayloadFormatIndicator;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getId-CwbrCDo ()B
+	public fun hashCode ()I
+	public final fun isUtf8 ()Z
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/PayloadFormatIndicatorCodec : com/ditchoom/buffer/codec/Codec {
+	public static final field INSTANCE Lcom/ditchoom/mqtt5/controlpacket/properties/PayloadFormatIndicatorCodec;
+	public fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Lcom/ditchoom/mqtt5/controlpacket/properties/PayloadFormatIndicator;
+	public synthetic fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Ljava/lang/Object;
+	public fun encode (Lcom/ditchoom/buffer/WriteBuffer;Lcom/ditchoom/mqtt5/controlpacket/properties/PayloadFormatIndicator;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public synthetic fun encode (Lcom/ditchoom/buffer/WriteBuffer;Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public fun peekFrameSize (Lcom/ditchoom/buffer/stream/StreamProcessor;I)Lcom/ditchoom/buffer/codec/PeekResult;
+	public fun sizeHint (Lcom/ditchoom/mqtt5/controlpacket/properties/PayloadFormatIndicator;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public synthetic fun sizeHint (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public fun wireSize (Lcom/ditchoom/mqtt5/controlpacket/properties/PayloadFormatIndicator;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+	public synthetic fun wireSize (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/PropertyExtractor {
+	public fun <init> (Ljava/util/Collection;Ljava/lang/String;)V
+	public final fun getByType ()Ljava/util/Map;
+	public final fun getConsumed ()Ljava/util/Set;
+	public final fun rejectUnknown ()V
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/PropertyId {
+	public static final synthetic fun box-impl (B)Lcom/ditchoom/mqtt5/controlpacket/properties/PropertyId;
+	public static fun constructor-impl (B)B
+	public fun equals (Ljava/lang/Object;)Z
+	public static fun equals-impl (BLjava/lang/Object;)Z
+	public static final fun equals-impl0 (BB)Z
+	public static final fun getId-impl (B)I
+	public final fun getRaw-w2LRezQ ()B
+	public fun hashCode ()I
+	public static fun hashCode-impl (B)I
+	public fun toString ()Ljava/lang/String;
+	public static fun toString-impl (B)Ljava/lang/String;
+	public final synthetic fun unbox-impl ()B
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/PropertyIdCodec : com/ditchoom/buffer/codec/Codec {
+	public static final field INSTANCE Lcom/ditchoom/mqtt5/controlpacket/properties/PropertyIdCodec;
+	public synthetic fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Ljava/lang/Object;
+	public fun decode-BgXNonI (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)B
+	public synthetic fun encode (Lcom/ditchoom/buffer/WriteBuffer;Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public fun encode-dBrZ9Yc (Lcom/ditchoom/buffer/WriteBuffer;BLcom/ditchoom/buffer/codec/EncodeContext;)V
+	public fun peekFrameSize (Lcom/ditchoom/buffer/stream/StreamProcessor;I)Lcom/ditchoom/buffer/codec/PeekResult;
+	public synthetic fun sizeHint (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public fun sizeHint-C8HR_v0 (BLcom/ditchoom/buffer/codec/EncodeContext;)I
+	public synthetic fun wireSize (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+	public fun wireSize-C8HR_v0 (BLcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/ReasonString : com/ditchoom/mqtt5/controlpacket/properties/MqttProperty {
+	public synthetic fun <init> (BLjava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (BLjava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1-CwbrCDo ()B
+	public final fun component2 ()Ljava/lang/String;
+	public final fun copy-C8HR_v0 (BLjava/lang/String;)Lcom/ditchoom/mqtt5/controlpacket/properties/ReasonString;
+	public static synthetic fun copy-C8HR_v0$default (Lcom/ditchoom/mqtt5/controlpacket/properties/ReasonString;BLjava/lang/String;ILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/properties/ReasonString;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getId-CwbrCDo ()B
+	public final fun getValue ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/ReasonStringCodec : com/ditchoom/buffer/codec/Codec {
+	public static final field INSTANCE Lcom/ditchoom/mqtt5/controlpacket/properties/ReasonStringCodec;
+	public fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Lcom/ditchoom/mqtt5/controlpacket/properties/ReasonString;
+	public synthetic fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Ljava/lang/Object;
+	public fun encode (Lcom/ditchoom/buffer/WriteBuffer;Lcom/ditchoom/mqtt5/controlpacket/properties/ReasonString;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public synthetic fun encode (Lcom/ditchoom/buffer/WriteBuffer;Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public fun peekFrameSize (Lcom/ditchoom/buffer/stream/StreamProcessor;I)Lcom/ditchoom/buffer/codec/PeekResult;
+	public fun sizeHint (Lcom/ditchoom/mqtt5/controlpacket/properties/ReasonString;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public synthetic fun sizeHint (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public fun wireSize (Lcom/ditchoom/mqtt5/controlpacket/properties/ReasonString;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+	public synthetic fun wireSize (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/ReceiveMaximum : com/ditchoom/mqtt5/controlpacket/properties/MqttProperty {
+	public synthetic fun <init> (BSILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (BSLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (SLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-CwbrCDo ()B
+	public final fun component2-Mh2AYeg ()S
+	public final fun copy-2ZgSHV0 (BS)Lcom/ditchoom/mqtt5/controlpacket/properties/ReceiveMaximum;
+	public static synthetic fun copy-2ZgSHV0$default (Lcom/ditchoom/mqtt5/controlpacket/properties/ReceiveMaximum;BSILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/properties/ReceiveMaximum;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getId-CwbrCDo ()B
+	public final fun getMax-Mh2AYeg ()S
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/ReceiveMaximumCodec : com/ditchoom/buffer/codec/Codec {
+	public static final field INSTANCE Lcom/ditchoom/mqtt5/controlpacket/properties/ReceiveMaximumCodec;
+	public fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Lcom/ditchoom/mqtt5/controlpacket/properties/ReceiveMaximum;
+	public synthetic fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Ljava/lang/Object;
+	public fun encode (Lcom/ditchoom/buffer/WriteBuffer;Lcom/ditchoom/mqtt5/controlpacket/properties/ReceiveMaximum;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public synthetic fun encode (Lcom/ditchoom/buffer/WriteBuffer;Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public fun peekFrameSize (Lcom/ditchoom/buffer/stream/StreamProcessor;I)Lcom/ditchoom/buffer/codec/PeekResult;
+	public fun sizeHint (Lcom/ditchoom/mqtt5/controlpacket/properties/ReceiveMaximum;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public synthetic fun sizeHint (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public fun wireSize (Lcom/ditchoom/mqtt5/controlpacket/properties/ReceiveMaximum;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+	public synthetic fun wireSize (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/RequestProblemInformation : com/ditchoom/mqtt5/controlpacket/properties/MqttProperty {
+	public synthetic fun <init> (BZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (BZLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Z)V
+	public final fun component1-CwbrCDo ()B
+	public final fun component2 ()Z
+	public final fun copy-C8HR_v0 (BZ)Lcom/ditchoom/mqtt5/controlpacket/properties/RequestProblemInformation;
+	public static synthetic fun copy-C8HR_v0$default (Lcom/ditchoom/mqtt5/controlpacket/properties/RequestProblemInformation;BZILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/properties/RequestProblemInformation;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getEnabled ()Z
+	public final fun getId-CwbrCDo ()B
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/RequestProblemInformationCodec : com/ditchoom/buffer/codec/Codec {
+	public static final field INSTANCE Lcom/ditchoom/mqtt5/controlpacket/properties/RequestProblemInformationCodec;
+	public fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Lcom/ditchoom/mqtt5/controlpacket/properties/RequestProblemInformation;
+	public synthetic fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Ljava/lang/Object;
+	public fun encode (Lcom/ditchoom/buffer/WriteBuffer;Lcom/ditchoom/mqtt5/controlpacket/properties/RequestProblemInformation;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public synthetic fun encode (Lcom/ditchoom/buffer/WriteBuffer;Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public fun peekFrameSize (Lcom/ditchoom/buffer/stream/StreamProcessor;I)Lcom/ditchoom/buffer/codec/PeekResult;
+	public fun sizeHint (Lcom/ditchoom/mqtt5/controlpacket/properties/RequestProblemInformation;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public synthetic fun sizeHint (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public fun wireSize (Lcom/ditchoom/mqtt5/controlpacket/properties/RequestProblemInformation;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+	public synthetic fun wireSize (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/RequestResponseInformation : com/ditchoom/mqtt5/controlpacket/properties/MqttProperty {
+	public synthetic fun <init> (BZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (BZLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Z)V
+	public final fun component1-CwbrCDo ()B
+	public final fun component2 ()Z
+	public final fun copy-C8HR_v0 (BZ)Lcom/ditchoom/mqtt5/controlpacket/properties/RequestResponseInformation;
+	public static synthetic fun copy-C8HR_v0$default (Lcom/ditchoom/mqtt5/controlpacket/properties/RequestResponseInformation;BZILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/properties/RequestResponseInformation;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getEnabled ()Z
+	public final fun getId-CwbrCDo ()B
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/RequestResponseInformationCodec : com/ditchoom/buffer/codec/Codec {
+	public static final field INSTANCE Lcom/ditchoom/mqtt5/controlpacket/properties/RequestResponseInformationCodec;
+	public fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Lcom/ditchoom/mqtt5/controlpacket/properties/RequestResponseInformation;
+	public synthetic fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Ljava/lang/Object;
+	public fun encode (Lcom/ditchoom/buffer/WriteBuffer;Lcom/ditchoom/mqtt5/controlpacket/properties/RequestResponseInformation;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public synthetic fun encode (Lcom/ditchoom/buffer/WriteBuffer;Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public fun peekFrameSize (Lcom/ditchoom/buffer/stream/StreamProcessor;I)Lcom/ditchoom/buffer/codec/PeekResult;
+	public fun sizeHint (Lcom/ditchoom/mqtt5/controlpacket/properties/RequestResponseInformation;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public synthetic fun sizeHint (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public fun wireSize (Lcom/ditchoom/mqtt5/controlpacket/properties/RequestResponseInformation;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+	public synthetic fun wireSize (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/ResponseInformation : com/ditchoom/mqtt5/controlpacket/properties/MqttProperty {
+	public synthetic fun <init> (BLjava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (BLjava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1-CwbrCDo ()B
+	public final fun component2 ()Ljava/lang/String;
+	public final fun copy-C8HR_v0 (BLjava/lang/String;)Lcom/ditchoom/mqtt5/controlpacket/properties/ResponseInformation;
+	public static synthetic fun copy-C8HR_v0$default (Lcom/ditchoom/mqtt5/controlpacket/properties/ResponseInformation;BLjava/lang/String;ILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/properties/ResponseInformation;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getId-CwbrCDo ()B
+	public final fun getValue ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/ResponseInformationCodec : com/ditchoom/buffer/codec/Codec {
+	public static final field INSTANCE Lcom/ditchoom/mqtt5/controlpacket/properties/ResponseInformationCodec;
+	public fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Lcom/ditchoom/mqtt5/controlpacket/properties/ResponseInformation;
+	public synthetic fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Ljava/lang/Object;
+	public fun encode (Lcom/ditchoom/buffer/WriteBuffer;Lcom/ditchoom/mqtt5/controlpacket/properties/ResponseInformation;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public synthetic fun encode (Lcom/ditchoom/buffer/WriteBuffer;Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public fun peekFrameSize (Lcom/ditchoom/buffer/stream/StreamProcessor;I)Lcom/ditchoom/buffer/codec/PeekResult;
+	public fun sizeHint (Lcom/ditchoom/mqtt5/controlpacket/properties/ResponseInformation;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public synthetic fun sizeHint (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public fun wireSize (Lcom/ditchoom/mqtt5/controlpacket/properties/ResponseInformation;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+	public synthetic fun wireSize (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/ResponseTopic : com/ditchoom/mqtt5/controlpacket/properties/MqttProperty {
+	public synthetic fun <init> (BLjava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (BLjava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1-CwbrCDo ()B
+	public final fun component2 ()Ljava/lang/String;
+	public final fun copy-C8HR_v0 (BLjava/lang/String;)Lcom/ditchoom/mqtt5/controlpacket/properties/ResponseTopic;
+	public static synthetic fun copy-C8HR_v0$default (Lcom/ditchoom/mqtt5/controlpacket/properties/ResponseTopic;BLjava/lang/String;ILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/properties/ResponseTopic;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getId-CwbrCDo ()B
+	public final fun getValue ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/ResponseTopicCodec : com/ditchoom/buffer/codec/Codec {
+	public static final field INSTANCE Lcom/ditchoom/mqtt5/controlpacket/properties/ResponseTopicCodec;
+	public fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Lcom/ditchoom/mqtt5/controlpacket/properties/ResponseTopic;
+	public synthetic fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Ljava/lang/Object;
+	public fun encode (Lcom/ditchoom/buffer/WriteBuffer;Lcom/ditchoom/mqtt5/controlpacket/properties/ResponseTopic;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public synthetic fun encode (Lcom/ditchoom/buffer/WriteBuffer;Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public fun peekFrameSize (Lcom/ditchoom/buffer/stream/StreamProcessor;I)Lcom/ditchoom/buffer/codec/PeekResult;
+	public fun sizeHint (Lcom/ditchoom/mqtt5/controlpacket/properties/ResponseTopic;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public synthetic fun sizeHint (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public fun wireSize (Lcom/ditchoom/mqtt5/controlpacket/properties/ResponseTopic;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+	public synthetic fun wireSize (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/RetainAvailable : com/ditchoom/mqtt5/controlpacket/properties/MqttProperty {
+	public synthetic fun <init> (BZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (BZLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Z)V
+	public final fun component1-CwbrCDo ()B
+	public final fun component2 ()Z
+	public final fun copy-C8HR_v0 (BZ)Lcom/ditchoom/mqtt5/controlpacket/properties/RetainAvailable;
+	public static synthetic fun copy-C8HR_v0$default (Lcom/ditchoom/mqtt5/controlpacket/properties/RetainAvailable;BZILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/properties/RetainAvailable;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getId-CwbrCDo ()B
+	public final fun getSupported ()Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/RetainAvailableCodec : com/ditchoom/buffer/codec/Codec {
+	public static final field INSTANCE Lcom/ditchoom/mqtt5/controlpacket/properties/RetainAvailableCodec;
+	public fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Lcom/ditchoom/mqtt5/controlpacket/properties/RetainAvailable;
+	public synthetic fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Ljava/lang/Object;
+	public fun encode (Lcom/ditchoom/buffer/WriteBuffer;Lcom/ditchoom/mqtt5/controlpacket/properties/RetainAvailable;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public synthetic fun encode (Lcom/ditchoom/buffer/WriteBuffer;Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public fun peekFrameSize (Lcom/ditchoom/buffer/stream/StreamProcessor;I)Lcom/ditchoom/buffer/codec/PeekResult;
+	public fun sizeHint (Lcom/ditchoom/mqtt5/controlpacket/properties/RetainAvailable;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public synthetic fun sizeHint (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public fun wireSize (Lcom/ditchoom/mqtt5/controlpacket/properties/RetainAvailable;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+	public synthetic fun wireSize (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/ServerKeepAlive : com/ditchoom/mqtt5/controlpacket/properties/MqttProperty {
+	public synthetic fun <init> (BSILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (BSLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (SLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-CwbrCDo ()B
+	public final fun component2-Mh2AYeg ()S
+	public final fun copy-2ZgSHV0 (BS)Lcom/ditchoom/mqtt5/controlpacket/properties/ServerKeepAlive;
+	public static synthetic fun copy-2ZgSHV0$default (Lcom/ditchoom/mqtt5/controlpacket/properties/ServerKeepAlive;BSILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/properties/ServerKeepAlive;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getId-CwbrCDo ()B
+	public final fun getSeconds-Mh2AYeg ()S
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/ServerKeepAliveCodec : com/ditchoom/buffer/codec/Codec {
+	public static final field INSTANCE Lcom/ditchoom/mqtt5/controlpacket/properties/ServerKeepAliveCodec;
+	public fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Lcom/ditchoom/mqtt5/controlpacket/properties/ServerKeepAlive;
+	public synthetic fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Ljava/lang/Object;
+	public fun encode (Lcom/ditchoom/buffer/WriteBuffer;Lcom/ditchoom/mqtt5/controlpacket/properties/ServerKeepAlive;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public synthetic fun encode (Lcom/ditchoom/buffer/WriteBuffer;Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public fun peekFrameSize (Lcom/ditchoom/buffer/stream/StreamProcessor;I)Lcom/ditchoom/buffer/codec/PeekResult;
+	public fun sizeHint (Lcom/ditchoom/mqtt5/controlpacket/properties/ServerKeepAlive;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public synthetic fun sizeHint (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public fun wireSize (Lcom/ditchoom/mqtt5/controlpacket/properties/ServerKeepAlive;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+	public synthetic fun wireSize (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/ServerReference : com/ditchoom/mqtt5/controlpacket/properties/MqttProperty {
+	public synthetic fun <init> (BLjava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (BLjava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1-CwbrCDo ()B
+	public final fun component2 ()Ljava/lang/String;
+	public final fun copy-C8HR_v0 (BLjava/lang/String;)Lcom/ditchoom/mqtt5/controlpacket/properties/ServerReference;
+	public static synthetic fun copy-C8HR_v0$default (Lcom/ditchoom/mqtt5/controlpacket/properties/ServerReference;BLjava/lang/String;ILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/properties/ServerReference;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getId-CwbrCDo ()B
+	public final fun getValue ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/ServerReferenceCodec : com/ditchoom/buffer/codec/Codec {
+	public static final field INSTANCE Lcom/ditchoom/mqtt5/controlpacket/properties/ServerReferenceCodec;
+	public fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Lcom/ditchoom/mqtt5/controlpacket/properties/ServerReference;
+	public synthetic fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Ljava/lang/Object;
+	public fun encode (Lcom/ditchoom/buffer/WriteBuffer;Lcom/ditchoom/mqtt5/controlpacket/properties/ServerReference;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public synthetic fun encode (Lcom/ditchoom/buffer/WriteBuffer;Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public fun peekFrameSize (Lcom/ditchoom/buffer/stream/StreamProcessor;I)Lcom/ditchoom/buffer/codec/PeekResult;
+	public fun sizeHint (Lcom/ditchoom/mqtt5/controlpacket/properties/ServerReference;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public synthetic fun sizeHint (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public fun wireSize (Lcom/ditchoom/mqtt5/controlpacket/properties/ServerReference;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+	public synthetic fun wireSize (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/SessionExpiryInterval : com/ditchoom/mqtt5/controlpacket/properties/MqttProperty {
+	public synthetic fun <init> (BIILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (BILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-CwbrCDo ()B
+	public final fun component2-pVg5ArA ()I
+	public final fun copy-g-c98_Y (BI)Lcom/ditchoom/mqtt5/controlpacket/properties/SessionExpiryInterval;
+	public static synthetic fun copy-g-c98_Y$default (Lcom/ditchoom/mqtt5/controlpacket/properties/SessionExpiryInterval;BIILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/properties/SessionExpiryInterval;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getId-CwbrCDo ()B
+	public final fun getSeconds-pVg5ArA ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/SessionExpiryIntervalCodec : com/ditchoom/buffer/codec/Codec {
+	public static final field INSTANCE Lcom/ditchoom/mqtt5/controlpacket/properties/SessionExpiryIntervalCodec;
+	public fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Lcom/ditchoom/mqtt5/controlpacket/properties/SessionExpiryInterval;
+	public synthetic fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Ljava/lang/Object;
+	public fun encode (Lcom/ditchoom/buffer/WriteBuffer;Lcom/ditchoom/mqtt5/controlpacket/properties/SessionExpiryInterval;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public synthetic fun encode (Lcom/ditchoom/buffer/WriteBuffer;Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public fun peekFrameSize (Lcom/ditchoom/buffer/stream/StreamProcessor;I)Lcom/ditchoom/buffer/codec/PeekResult;
+	public fun sizeHint (Lcom/ditchoom/mqtt5/controlpacket/properties/SessionExpiryInterval;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public synthetic fun sizeHint (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public fun wireSize (Lcom/ditchoom/mqtt5/controlpacket/properties/SessionExpiryInterval;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+	public synthetic fun wireSize (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/SharedSubscriptionAvailable : com/ditchoom/mqtt5/controlpacket/properties/MqttProperty {
+	public synthetic fun <init> (BZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (BZLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Z)V
+	public final fun component1-CwbrCDo ()B
+	public final fun component2 ()Z
+	public final fun copy-C8HR_v0 (BZ)Lcom/ditchoom/mqtt5/controlpacket/properties/SharedSubscriptionAvailable;
+	public static synthetic fun copy-C8HR_v0$default (Lcom/ditchoom/mqtt5/controlpacket/properties/SharedSubscriptionAvailable;BZILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/properties/SharedSubscriptionAvailable;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getId-CwbrCDo ()B
+	public final fun getSupported ()Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/SharedSubscriptionAvailableCodec : com/ditchoom/buffer/codec/Codec {
+	public static final field INSTANCE Lcom/ditchoom/mqtt5/controlpacket/properties/SharedSubscriptionAvailableCodec;
+	public fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Lcom/ditchoom/mqtt5/controlpacket/properties/SharedSubscriptionAvailable;
+	public synthetic fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Ljava/lang/Object;
+	public fun encode (Lcom/ditchoom/buffer/WriteBuffer;Lcom/ditchoom/mqtt5/controlpacket/properties/SharedSubscriptionAvailable;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public synthetic fun encode (Lcom/ditchoom/buffer/WriteBuffer;Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public fun peekFrameSize (Lcom/ditchoom/buffer/stream/StreamProcessor;I)Lcom/ditchoom/buffer/codec/PeekResult;
+	public fun sizeHint (Lcom/ditchoom/mqtt5/controlpacket/properties/SharedSubscriptionAvailable;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public synthetic fun sizeHint (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public fun wireSize (Lcom/ditchoom/mqtt5/controlpacket/properties/SharedSubscriptionAvailable;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+	public synthetic fun wireSize (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/SubscriptionIdentifier : com/ditchoom/mqtt5/controlpacket/properties/MqttProperty {
+	public synthetic fun <init> (BIILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (BILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (I)V
+	public final fun component1-CwbrCDo ()B
+	public final fun component2-pVg5ArA ()I
+	public final fun copy-g-c98_Y (BI)Lcom/ditchoom/mqtt5/controlpacket/properties/SubscriptionIdentifier;
+	public static synthetic fun copy-g-c98_Y$default (Lcom/ditchoom/mqtt5/controlpacket/properties/SubscriptionIdentifier;BIILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/properties/SubscriptionIdentifier;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getId-CwbrCDo ()B
+	public final fun getValue-pVg5ArA ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/SubscriptionIdentifierAvailable : com/ditchoom/mqtt5/controlpacket/properties/MqttProperty {
+	public synthetic fun <init> (BZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (BZLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Z)V
+	public final fun component1-CwbrCDo ()B
+	public final fun component2 ()Z
+	public final fun copy-C8HR_v0 (BZ)Lcom/ditchoom/mqtt5/controlpacket/properties/SubscriptionIdentifierAvailable;
+	public static synthetic fun copy-C8HR_v0$default (Lcom/ditchoom/mqtt5/controlpacket/properties/SubscriptionIdentifierAvailable;BZILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/properties/SubscriptionIdentifierAvailable;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getId-CwbrCDo ()B
+	public final fun getSupported ()Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/SubscriptionIdentifierAvailableCodec : com/ditchoom/buffer/codec/Codec {
+	public static final field INSTANCE Lcom/ditchoom/mqtt5/controlpacket/properties/SubscriptionIdentifierAvailableCodec;
+	public fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Lcom/ditchoom/mqtt5/controlpacket/properties/SubscriptionIdentifierAvailable;
+	public synthetic fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Ljava/lang/Object;
+	public fun encode (Lcom/ditchoom/buffer/WriteBuffer;Lcom/ditchoom/mqtt5/controlpacket/properties/SubscriptionIdentifierAvailable;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public synthetic fun encode (Lcom/ditchoom/buffer/WriteBuffer;Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public fun peekFrameSize (Lcom/ditchoom/buffer/stream/StreamProcessor;I)Lcom/ditchoom/buffer/codec/PeekResult;
+	public fun sizeHint (Lcom/ditchoom/mqtt5/controlpacket/properties/SubscriptionIdentifierAvailable;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public synthetic fun sizeHint (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public fun wireSize (Lcom/ditchoom/mqtt5/controlpacket/properties/SubscriptionIdentifierAvailable;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+	public synthetic fun wireSize (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/SubscriptionIdentifierCodec : com/ditchoom/buffer/codec/Codec {
+	public static final field INSTANCE Lcom/ditchoom/mqtt5/controlpacket/properties/SubscriptionIdentifierCodec;
+	public fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Lcom/ditchoom/mqtt5/controlpacket/properties/SubscriptionIdentifier;
+	public synthetic fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Ljava/lang/Object;
+	public fun encode (Lcom/ditchoom/buffer/WriteBuffer;Lcom/ditchoom/mqtt5/controlpacket/properties/SubscriptionIdentifier;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public synthetic fun encode (Lcom/ditchoom/buffer/WriteBuffer;Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public fun peekFrameSize (Lcom/ditchoom/buffer/stream/StreamProcessor;I)Lcom/ditchoom/buffer/codec/PeekResult;
+	public fun sizeHint (Lcom/ditchoom/mqtt5/controlpacket/properties/SubscriptionIdentifier;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public synthetic fun sizeHint (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public fun wireSize (Lcom/ditchoom/mqtt5/controlpacket/properties/SubscriptionIdentifier;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+	public synthetic fun wireSize (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/TopicAlias : com/ditchoom/mqtt5/controlpacket/properties/MqttProperty {
+	public synthetic fun <init> (BSILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (BSLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (SLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-CwbrCDo ()B
+	public final fun component2-Mh2AYeg ()S
+	public final fun copy-2ZgSHV0 (BS)Lcom/ditchoom/mqtt5/controlpacket/properties/TopicAlias;
+	public static synthetic fun copy-2ZgSHV0$default (Lcom/ditchoom/mqtt5/controlpacket/properties/TopicAlias;BSILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/properties/TopicAlias;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getId-CwbrCDo ()B
+	public final fun getValue-Mh2AYeg ()S
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/TopicAliasCodec : com/ditchoom/buffer/codec/Codec {
+	public static final field INSTANCE Lcom/ditchoom/mqtt5/controlpacket/properties/TopicAliasCodec;
+	public fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Lcom/ditchoom/mqtt5/controlpacket/properties/TopicAlias;
+	public synthetic fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Ljava/lang/Object;
+	public fun encode (Lcom/ditchoom/buffer/WriteBuffer;Lcom/ditchoom/mqtt5/controlpacket/properties/TopicAlias;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public synthetic fun encode (Lcom/ditchoom/buffer/WriteBuffer;Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public fun peekFrameSize (Lcom/ditchoom/buffer/stream/StreamProcessor;I)Lcom/ditchoom/buffer/codec/PeekResult;
+	public fun sizeHint (Lcom/ditchoom/mqtt5/controlpacket/properties/TopicAlias;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public synthetic fun sizeHint (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public fun wireSize (Lcom/ditchoom/mqtt5/controlpacket/properties/TopicAlias;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+	public synthetic fun wireSize (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/TopicAliasMaximum : com/ditchoom/mqtt5/controlpacket/properties/MqttProperty {
+	public synthetic fun <init> (BSILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (BSLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (SLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-CwbrCDo ()B
+	public final fun component2-Mh2AYeg ()S
+	public final fun copy-2ZgSHV0 (BS)Lcom/ditchoom/mqtt5/controlpacket/properties/TopicAliasMaximum;
+	public static synthetic fun copy-2ZgSHV0$default (Lcom/ditchoom/mqtt5/controlpacket/properties/TopicAliasMaximum;BSILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/properties/TopicAliasMaximum;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getId-CwbrCDo ()B
+	public final fun getMax-Mh2AYeg ()S
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/TopicAliasMaximumCodec : com/ditchoom/buffer/codec/Codec {
+	public static final field INSTANCE Lcom/ditchoom/mqtt5/controlpacket/properties/TopicAliasMaximumCodec;
+	public fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Lcom/ditchoom/mqtt5/controlpacket/properties/TopicAliasMaximum;
+	public synthetic fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Ljava/lang/Object;
+	public fun encode (Lcom/ditchoom/buffer/WriteBuffer;Lcom/ditchoom/mqtt5/controlpacket/properties/TopicAliasMaximum;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public synthetic fun encode (Lcom/ditchoom/buffer/WriteBuffer;Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public fun peekFrameSize (Lcom/ditchoom/buffer/stream/StreamProcessor;I)Lcom/ditchoom/buffer/codec/PeekResult;
+	public fun sizeHint (Lcom/ditchoom/mqtt5/controlpacket/properties/TopicAliasMaximum;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public synthetic fun sizeHint (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public fun wireSize (Lcom/ditchoom/mqtt5/controlpacket/properties/TopicAliasMaximum;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+	public synthetic fun wireSize (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/UserProperty : com/ditchoom/mqtt5/controlpacket/properties/MqttProperty {
+	public synthetic fun <init> (BLjava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (BLjava/lang/String;Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
+	public final fun component1-CwbrCDo ()B
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun copy-BLW4mT8 (BLjava/lang/String;Ljava/lang/String;)Lcom/ditchoom/mqtt5/controlpacket/properties/UserProperty;
+	public static synthetic fun copy-BLW4mT8$default (Lcom/ditchoom/mqtt5/controlpacket/properties/UserProperty;BLjava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/properties/UserProperty;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getId-CwbrCDo ()B
+	public final fun getKey ()Ljava/lang/String;
+	public final fun getValue ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/UserPropertyCodec : com/ditchoom/buffer/codec/Codec {
+	public static final field INSTANCE Lcom/ditchoom/mqtt5/controlpacket/properties/UserPropertyCodec;
+	public fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Lcom/ditchoom/mqtt5/controlpacket/properties/UserProperty;
+	public synthetic fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Ljava/lang/Object;
+	public fun encode (Lcom/ditchoom/buffer/WriteBuffer;Lcom/ditchoom/mqtt5/controlpacket/properties/UserProperty;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public synthetic fun encode (Lcom/ditchoom/buffer/WriteBuffer;Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public fun peekFrameSize (Lcom/ditchoom/buffer/stream/StreamProcessor;I)Lcom/ditchoom/buffer/codec/PeekResult;
+	public fun sizeHint (Lcom/ditchoom/mqtt5/controlpacket/properties/UserProperty;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public synthetic fun sizeHint (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public fun wireSize (Lcom/ditchoom/mqtt5/controlpacket/properties/UserProperty;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+	public synthetic fun wireSize (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/WildcardSubscriptionAvailable : com/ditchoom/mqtt5/controlpacket/properties/MqttProperty {
+	public synthetic fun <init> (BZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (BZLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Z)V
+	public final fun component1-CwbrCDo ()B
+	public final fun component2 ()Z
+	public final fun copy-C8HR_v0 (BZ)Lcom/ditchoom/mqtt5/controlpacket/properties/WildcardSubscriptionAvailable;
+	public static synthetic fun copy-C8HR_v0$default (Lcom/ditchoom/mqtt5/controlpacket/properties/WildcardSubscriptionAvailable;BZILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/properties/WildcardSubscriptionAvailable;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getId-CwbrCDo ()B
+	public final fun getSupported ()Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/WildcardSubscriptionAvailableCodec : com/ditchoom/buffer/codec/Codec {
+	public static final field INSTANCE Lcom/ditchoom/mqtt5/controlpacket/properties/WildcardSubscriptionAvailableCodec;
+	public fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Lcom/ditchoom/mqtt5/controlpacket/properties/WildcardSubscriptionAvailable;
+	public synthetic fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Ljava/lang/Object;
+	public fun encode (Lcom/ditchoom/buffer/WriteBuffer;Lcom/ditchoom/mqtt5/controlpacket/properties/WildcardSubscriptionAvailable;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public synthetic fun encode (Lcom/ditchoom/buffer/WriteBuffer;Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public fun peekFrameSize (Lcom/ditchoom/buffer/stream/StreamProcessor;I)Lcom/ditchoom/buffer/codec/PeekResult;
+	public fun sizeHint (Lcom/ditchoom/mqtt5/controlpacket/properties/WildcardSubscriptionAvailable;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public synthetic fun sizeHint (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public fun wireSize (Lcom/ditchoom/mqtt5/controlpacket/properties/WildcardSubscriptionAvailable;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+	public synthetic fun wireSize (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/WillDelayInterval : com/ditchoom/mqtt5/controlpacket/properties/MqttProperty {
+	public synthetic fun <init> (BIILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (BILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-CwbrCDo ()B
+	public final fun component2-pVg5ArA ()I
+	public final fun copy-g-c98_Y (BI)Lcom/ditchoom/mqtt5/controlpacket/properties/WillDelayInterval;
+	public static synthetic fun copy-g-c98_Y$default (Lcom/ditchoom/mqtt5/controlpacket/properties/WillDelayInterval;BIILjava/lang/Object;)Lcom/ditchoom/mqtt5/controlpacket/properties/WillDelayInterval;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getId-CwbrCDo ()B
+	public final fun getSeconds-pVg5ArA ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ditchoom/mqtt5/controlpacket/properties/WillDelayIntervalCodec : com/ditchoom/buffer/codec/Codec {
+	public static final field INSTANCE Lcom/ditchoom/mqtt5/controlpacket/properties/WillDelayIntervalCodec;
+	public fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Lcom/ditchoom/mqtt5/controlpacket/properties/WillDelayInterval;
+	public synthetic fun decode (Lcom/ditchoom/buffer/ReadBuffer;Lcom/ditchoom/buffer/codec/DecodeContext;)Ljava/lang/Object;
+	public fun encode (Lcom/ditchoom/buffer/WriteBuffer;Lcom/ditchoom/mqtt5/controlpacket/properties/WillDelayInterval;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public synthetic fun encode (Lcom/ditchoom/buffer/WriteBuffer;Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)V
+	public fun peekFrameSize (Lcom/ditchoom/buffer/stream/StreamProcessor;I)Lcom/ditchoom/buffer/codec/PeekResult;
+	public fun sizeHint (Lcom/ditchoom/mqtt5/controlpacket/properties/WillDelayInterval;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public synthetic fun sizeHint (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)I
+	public fun wireSize (Lcom/ditchoom/mqtt5/controlpacket/properties/WillDelayInterval;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+	public synthetic fun wireSize (Ljava/lang/Object;Lcom/ditchoom/buffer/codec/EncodeContext;)Lcom/ditchoom/buffer/codec/WireSize;
+}
+
+public final class com/ditchoom/mqtt5/persistence/DefaultPersistenceKt {
+	public static final fun defaultDispatcher (ILjava/lang/String;)Lkotlinx/coroutines/CoroutineDispatcher;
+	public static final fun newDefaultPersistence (Ljava/lang/Object;Ljava/lang/String;ZLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun newDefaultPersistence$default (Ljava/lang/Object;Ljava/lang/String;ZLkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+}
+

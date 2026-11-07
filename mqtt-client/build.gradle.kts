@@ -9,7 +9,7 @@ plugins {
     id("com.ditchoom.module")
 }
 
-val hostOs = org.jetbrains.kotlin.konan.target.HostManager.host
+val nativeHost = com.ditchoom.gradle.NativeHost.current
 
 kotlin {
     jvmToolchain(21)
@@ -34,7 +34,7 @@ kotlin {
         }
     }
 
-    if (hostOs.family.isAppleFamily) {
+    if (nativeHost == com.ditchoom.gradle.NativeHost.Apple) {
         macosX64()
         macosArm64()
         iosArm64()
@@ -48,7 +48,7 @@ kotlin {
         watchosX64()
     }
 
-    if (hostOs == org.jetbrains.kotlin.konan.target.KonanTarget.LINUX_X64) {
+    if (nativeHost == com.ditchoom.gradle.NativeHost.LinuxX64) {
         linuxX64()
         linuxArm64()
     }
@@ -67,14 +67,9 @@ kotlin {
             implementation(libs.buffer)
             implementation(libs.buffer.codec)
             implementation(libs.buffer.flow)
-            implementation(libs.socket)
-            implementation(libs.websocket)
-            // Experimental MQTT-over-QUIC / -WebTransport transports (single bidirectional stream).
-            // socket-quic-default pulls the per-platform QUIC engine transitively (quiche on JVM/native;
-            // an UnsupportedQuicEngine that throws on JS/wasmJs/tvOS/watchOS — no raw UDP there).
-            // socket-webtransport works on every target, including the browser.
-            implementation(libs.socket.quic.default)
-            implementation(libs.socket.webtransport)
+            // api: MqttEndpoint exposes socket's Transport and TransportConfig. Which transport
+            // modules ride along (websocket-tcp, socket-quic-default, ...) is the consumer's choice.
+            api(libs.socket)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
@@ -82,7 +77,7 @@ kotlin {
             implementation(project(":models-v4"))
             implementation(project(":models-v5"))
             implementation(libs.socket)
-            implementation(libs.websocket)
+            implementation(libs.websocket.tcp)
         }
 
         jsMain.dependencies {
@@ -133,6 +128,12 @@ val conformanceTestPatterns =
 
 val runConformanceTests = project.hasProperty("conformanceTests")
 
+// Real-broker interop needs a broker cell described by MQTT_INTEROP_* environment variables
+// (see BrokerInteropTest and .github/workflows/interop.yaml).
+// Run with: ./gradlew :mqtt-client:jvmTest -PinteropTests --tests '*BrokerInteropTest*'
+val interopTestPatterns = listOf("com.ditchoom.mqtt.client.net.BrokerInteropTest")
+val runInteropTests = project.hasProperty("interopTests")
+
 // Filter JVM tests
 tasks.withType<Test>().configureEach {
     testLogging {
@@ -147,6 +148,11 @@ tasks.withType<Test>().configureEach {
     if (!runConformanceTests) {
         filter {
             conformanceTestPatterns.forEach { excludeTestsMatching(it) }
+        }
+    }
+    if (!runInteropTests) {
+        filter {
+            interopTestPatterns.forEach { excludeTestsMatching(it) }
         }
     }
 }
@@ -175,14 +181,13 @@ tasks.withType<org.jetbrains.kotlin.gradle.targets.js.testing.KotlinJsTest>().co
 }
 
 android {
-    compileSdk = 36
+    compileSdk = 37
     sourceSets["main"].manifest.srcFile("src/androidMain/AndroidManifest.xml")
     buildFeatures {
         aidl = true
     }
     defaultConfig {
-        minSdk = 21
-        targetSdk = 36
+        minSdk = 23
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Mirror the JVM/Native/JS `runIntegrationTests` filter on Android instrumented tests.
         // Without this, connectedDebugAndroidTest runs the broker-dependent suite by default and
@@ -203,7 +208,11 @@ android {
             withJavadocJar()
         }
     }
+    testOptions {
+        targetSdk = 37
+    }
     lint {
+        targetSdk = 37
         disable += "EnsureInitializerMetadata"
     }
     namespace = "com.ditchoom.mqtt.client"

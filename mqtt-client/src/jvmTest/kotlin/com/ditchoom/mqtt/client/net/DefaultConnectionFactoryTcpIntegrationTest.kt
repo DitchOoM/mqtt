@@ -1,6 +1,5 @@
 package com.ditchoom.mqtt.client.net
 
-import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.IConnectionAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IPublishAcknowledgment
 import com.ditchoom.mqtt.controlpacket.QualityOfService
@@ -43,14 +42,9 @@ class DefaultConnectionFactoryTcpIntegrationTest {
     fun connectPublishDisconnect() =
         runTestNoTimeSkipping(timeout = 30.seconds) {
             val options =
-                MqttConnectionOptions.SocketConnection(
-                    host = TestMosquittoBroker.tcpHost(),
-                    port = TestMosquittoBroker.tcpPort(),
-                    tlsEnabled = false,
-                    connectionTimeout = 15.seconds,
-                )
+                tcpEndpoint(TestMosquittoBroker.tcpHost(), TestMosquittoBroker.tcpPort(), timeout = 15.seconds)
             val connectionRequest = ConnectionRequest(clientId = "ditchoom-tcp-${Random.nextInt()}")
-            val connection = defaultSingleConnection(options, connectionRequest.controlPacketFactory)
+            val connection = openRawConnection(options, connectionRequest.controlPacketFactory)
 
             connection.send(connectionRequest)
             val connack = connection.receive().first()

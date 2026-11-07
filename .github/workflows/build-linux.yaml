@@ -3,6 +3,21 @@ name: "Build & Test (Linux)"
 on:
   workflow_call:
     inputs:
+      upstream:
+        description: "auto, or central for a release (.github/actions/upstream-from-source)"
+        required: false
+        default: "auto"
+        type: string
+      socket-ref:
+        description: "DitchOoM/socket branch, tag or commit to build from source"
+        required: false
+        default: ""
+        type: string
+      websocket-ref:
+        description: "DitchOoM/websocket branch, tag or commit to build from source"
+        required: false
+        default: ""
+        type: string
       gradle-args:
         description: "Extra Gradle arguments (e.g., -PincrementMinor=true)"
         required: false
@@ -21,14 +36,23 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
           distribution: 'zulu'
           java-version: '21'
           cache: gradle
+
+      # socket and websocket from Maven Central, or built from source when a ref input is set or the
+      # catalog pins a version Central does not have yet (.github/actions/upstream-from-source).
+      - name: Upstream libraries
+        uses: ./.github/actions/upstream-from-source
+        with:
+          mode: ${{ inputs.upstream || 'auto' }}
+          socket-ref: ${{ inputs.socket-ref }}
+          websocket-ref: ${{ inputs.websocket-ref }}
 
       - name: Setup Chrome
         uses: browser-actions/setup-chrome@v2
@@ -37,7 +61,7 @@ jobs:
         uses: android-actions/setup-android@v4
 
       - name: Cache Konan
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/.konan
           # Keyed on the version catalog only — the konan toolchain tracks the
@@ -47,7 +71,7 @@ jobs:
           restore-keys: konan-linux-
 
       - name: Cache Gradle build outputs
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/.gradle/caches
           key: gradle-linux-${{ hashFiles('gradle/libs.versions.toml', '**/*.gradle.kts', 'gradle/wrapper/gradle-wrapper.properties') }}
@@ -57,14 +81,19 @@ jobs:
         id: version
         run: echo "version=$(./gradlew -q :mqtt-client:nextVersion ${{ inputs.gradle-args }})" >> $GITHUB_OUTPUT
 
-      # linuxX64Test added for native test-execution parity (JVM behaviour ≠ native memory/lifecycle).
+      # linuxX64Test for native test-execution parity (JVM behaviour differs from native memory/lifecycle).
       - name: Run JVM / JS / Android / Linux-native tests
         run: >-
           ./gradlew ktlintCheck
           jvmTest jsNodeTest jsBrowserTest
-          testDebugUnitTest testReleaseUnitTest
+          testDebugUnitTest
           linuxX64Test
           ${{ inputs.gradle-args }}
+
+      # A release resolves every dependency from Maven Central; this fails if one came from mavenLocal.
+      - name: Verify dependencies resolved from Maven Central only
+        if: inputs.upstream == 'central'
+        run: ./gradlew verifyCentralOnly ${{ inputs.gradle-args }}
 
       - name: Publish to Maven Local
         run: ./gradlew publishToMavenLocal --no-build-cache ${{ inputs.gradle-args }}

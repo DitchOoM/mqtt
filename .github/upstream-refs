@@ -1,0 +1,3 @@
+# Where CI builds an upstream library from when gradle/libs.versions.toml pins a version that is not
+# on Maven Central yet: "<library> <version> <ref>". A line applies only while the catalog pins
+# that exact version, so it goes stale harmlessly once the release ships; delete it then.

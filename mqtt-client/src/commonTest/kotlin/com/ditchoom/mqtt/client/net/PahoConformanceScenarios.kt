@@ -3,10 +3,10 @@ package com.ditchoom.mqtt.client.net
 import com.ditchoom.buffer.Charset
 import com.ditchoom.buffer.codec.asReadBuffer
 import com.ditchoom.mqtt.client.MqttClient
+import com.ditchoom.mqtt.client.MqttEndpoint
 import com.ditchoom.mqtt.client.PublishResult
 import com.ditchoom.mqtt.client.QoS1State
 import com.ditchoom.mqtt.client.QoS2State
-import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.IConnectionAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IConnectionRequest
 import com.ditchoom.mqtt.controlpacket.OpaquePublishPayload
@@ -37,13 +37,7 @@ import kotlin.time.Duration.Companion.seconds
 internal object PahoConformance {
     val host: String get() = if (getPlatform() == Platform.Android) "10.0.2.2" else "localhost"
 
-    fun tcpOptions(): MqttConnectionOptions =
-        MqttConnectionOptions.SocketConnection(
-            host,
-            1883,
-            tlsEnabled = false,
-            connectionTimeout = 10.seconds,
-        )
+    fun tcpOptions(): MqttEndpoint = tcpEndpoint(host, 1883, timeout = 10.seconds)
 
     fun clientId(prefix: String): String = "$prefix-${Random.nextUInt()}"
 
@@ -56,8 +50,8 @@ internal suspend fun startPahoClient(
     connectionRequest: IConnectionRequest,
 ): Pair<MqttClient, IConnectionAcknowledgment> {
     val persistence = connectionRequest.controlPacketFactory.defaultPersistence(true)
-    val broker = persistence.addBroker(PahoConformance.tcpOptions(), connectionRequest)
-    val client = MqttClient.start(scope, broker, persistence, connectSingle = createConnectFactory(broker))
+    val broker = persistence.addBroker(connectionRequest)
+    val client = startClient(scope, broker, persistence, PahoConformance.tcpOptions())
     return client to client.awaitConnectivity()
 }
 

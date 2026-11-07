@@ -1,0 +1,80 @@
+name: "Extra platforms"
+
+# Hosts and targets the main Linux and Apple builds do not cover: arm64 Linux (JVM and JS on an
+# arm64 JDK and Node; Kotlin/Native has no linux arm64 host), x86_64 macOS (the macosX64 native
+# target), and the wasmJs targets. There is no Windows leg because
+# mqtt declares no mingw target.
+
+on:
+  workflow_call:
+    inputs:
+      upstream:
+        description: "auto, or central for a release (.github/actions/upstream-from-source)"
+        required: false
+        default: "auto"
+        type: string
+      socket-ref:
+        description: "DitchOoM/socket branch, tag or commit to build from source"
+        required: false
+        default: ""
+        type: string
+      websocket-ref:
+        description: "DitchOoM/websocket branch, tag or commit to build from source"
+        required: false
+        default: ""
+        type: string
+
+jobs:
+  platform:
+    name: "${{ matrix.name }}"
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: "Linux arm64 / JVM / JS"
+            runner: ubuntu-24.04-arm
+            tasks: jvmTest jsNodeTest
+          - name: "macOS x86_64 / macosX64"
+            runner: macos-15-intel
+            tasks: macosX64Test
+          - name: "Linux / wasmJs (node + browser)"
+            runner: ubuntu-24.04
+            tasks: wasmJsNodeTest wasmJsBrowserTest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v6
+        with:
+          distribution: 'zulu'
+          java-version: '21'
+          cache: gradle
+
+      # socket and websocket from Maven Central, or built from source when a ref input is set or the
+      # catalog pins a version Central does not have yet (.github/actions/upstream-from-source).
+      - name: Upstream libraries
+        uses: ./.github/actions/upstream-from-source
+        with:
+          mode: ${{ inputs.upstream || 'auto' }}
+          socket-ref: ${{ inputs.socket-ref }}
+          websocket-ref: ${{ inputs.websocket-ref }}
+
+      - name: Cache Konan
+        uses: actions/cache@v6
+        with:
+          path: ~/.konan
+          key: konan-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('gradle/libs.versions.toml') }}
+          restore-keys: konan-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: Test
+        run: ./gradlew ${{ matrix.tasks }}
+
+      - name: Upload reports
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: platform-reports-${{ runner.os }}-${{ runner.arch }}
+          path: "*/build/reports/tests"
+          retention-days: 7

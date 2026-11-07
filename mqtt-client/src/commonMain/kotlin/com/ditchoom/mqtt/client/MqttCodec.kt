@@ -26,7 +26,7 @@ import com.ditchoom.mqtt5.controlpacket.ControlPacketV5Codec
  * while the wire frame is still alive — zero-copy when the codec is
  * Pattern #1 (typed value from native handle). The lambda inspects
  * `partial.topicName` (decoded before the payload bytes are read) and
- * resolves the codec via [publishCodecForTopic]. If no codec is registered for
+ * resolves the codec via [codecForTopic]. If no codec is registered for
  * the topic, [MissingCodecException] is thrown — this signals "broker sent
  * a PUBLISH on a topic we never subscribed to", which is a server or wiring
  * bug, not a normal-path consumer concern. Every [MqttClient.observe] /
@@ -42,11 +42,10 @@ import com.ditchoom.mqtt5.controlpacket.ControlPacketV5Codec
  * **peekFrameSize**: same `[byte1][VBI(remainingLength)][body]` walker as
  * before — wire framing is identical between v4 and v5.
  */
-class MqttCodec(
+internal class MqttCodec(
     private val factory: ControlPacketFactory,
-    private val publishCodecForTopic: (topicName: String) -> Codec<out Payload>? = { null },
+    private val codecForTopic: (topicName: String) -> TopicCodec,
 ) : Codec<ControlPacket> {
-    @Suppress("UNCHECKED_CAST")
     override fun decode(
         buffer: ReadBuffer,
         context: DecodeContext,
@@ -61,10 +60,7 @@ class MqttCodec(
                         buffer = buffer,
                         context = context,
                         onPublishMessageV4 = { partial ->
-                            val codec =
-                                publishCodecForTopic(partial.topicName)
-                                    ?: throw MissingCodecException(partial.topicName)
-                            partial.complete(codec as Codec<Payload>)
+                            partial.complete(routedCodec(partial.topicName))
                         },
                     )
                 5 ->
@@ -72,14 +68,18 @@ class MqttCodec(
                         buffer = buffer,
                         context = context,
                         onPublish = { partial ->
-                            val codec =
-                                publishCodecForTopic(partial.topicName)
-                                    ?: throw MissingCodecException(partial.topicName)
-                            partial.complete(codec as Codec<Payload>)
+                            partial.complete(routedCodec(partial.topicName))
                         },
                     )
                 else -> error("Unsupported MQTT protocol version: $version (expected 4 or 5)")
             }
+        }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun routedCodec(topicName: String): Codec<Payload> =
+        when (val resolved = codecForTopic(topicName)) {
+            is TopicCodec.Routed -> resolved.codec as Codec<Payload>
+            TopicCodec.Unrouted -> throw MissingCodecException(topicName)
         }
 
     override fun encode(

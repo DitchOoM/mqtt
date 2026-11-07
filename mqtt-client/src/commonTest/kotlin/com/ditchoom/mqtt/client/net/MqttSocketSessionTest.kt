@@ -1,13 +1,15 @@
 package com.ditchoom.mqtt.client.net
 
-import com.ditchoom.mqtt.connection.MqttConnectionOptions
+import com.ditchoom.mqtt.client.MqttEndpoint
 import com.ditchoom.mqtt.controlpacket.IConnectionAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IPublishAcknowledgment
 import com.ditchoom.mqtt.controlpacket.QualityOfService
 import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt3.controlpacket.ConnectionRequest
+import com.ditchoom.socket.TlsConfig
 import com.ditchoom.socket.TransportKind
 import com.ditchoom.socket.networkCapabilities
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.first
 import kotlin.random.Random
 import kotlin.test.Test
@@ -23,12 +25,7 @@ class MqttSocketSessionTest {
         runTestNoTimeSkipping {
             if (TransportKind.TCP !in networkCapabilities().transports) return@runTestNoTimeSkipping
             val connectionOptions =
-                MqttConnectionOptions.SocketConnection(
-                    "test.mosquitto.org",
-                    8886,
-                    tlsEnabled = true,
-                    connectionTimeout = 10.seconds,
-                )
+                tcpEndpoint("test.mosquitto.org", 8886, tls = TlsConfig.DEFAULT, timeout = 10.seconds)
             connectTest(connectionOptions)
         }
 
@@ -36,7 +33,7 @@ class MqttSocketSessionTest {
     fun connectLocalhostMqtt4() =
         runTestNoTimeSkipping {
             if (TransportKind.TCP !in networkCapabilities().transports) return@runTestNoTimeSkipping
-            val connectionOptions = MqttConnectionOptions.SocketConnection(host, 1883, tlsEnabled = false, connectionTimeout = 10.seconds)
+            val connectionOptions = tcpEndpoint(host, 1883, timeout = 10.seconds)
             connectTest(connectionOptions, 4)
         }
 
@@ -44,7 +41,7 @@ class MqttSocketSessionTest {
     fun connectLocalhostMqtt5() =
         runTestNoTimeSkipping {
             if (TransportKind.TCP !in networkCapabilities().transports) return@runTestNoTimeSkipping
-            val connectionOptions = MqttConnectionOptions.SocketConnection(host, 1883, tlsEnabled = false, connectionTimeout = 10.seconds)
+            val connectionOptions = tcpEndpoint(host, 1883, timeout = 10.seconds)
             connectTest(connectionOptions, 5)
         }
 
@@ -54,14 +51,7 @@ class MqttSocketSessionTest {
             // Mosquitto container (mqtt-client/build.gradle.kts) binds 8080 for plain WS; same
             // endpoint `stayConnectedEchoWebsockets*` uses.
             val connectionOptions =
-                MqttConnectionOptions.WebSocketConnectionOptions(
-                    host = host,
-                    port = 8080,
-                    websocketEndpoint = "/mqtt",
-                    tlsEnabled = false,
-                    protocols = listOf("mqttv3.1"),
-                    connectionTimeout = 10.seconds,
-                )
+                webSocketEndpoint(host, 8080, path = "/mqtt", protocols = listOf("mqttv3.1"), timeout = 10.seconds)
             connectTest(connectionOptions, version = 4)
         }
 
@@ -70,17 +60,12 @@ class MqttSocketSessionTest {
         runTestNoTimeSkipping {
             if (TransportKind.TCP !in networkCapabilities().transports) return@runTestNoTimeSkipping
             val connectionOptions =
-                MqttConnectionOptions.SocketConnection(
-                    "test.mosquitto.org",
-                    1883,
-                    tlsEnabled = false,
-                    connectionTimeout = 10.seconds,
-                )
+                tcpEndpoint("test.mosquitto.org", 1883, timeout = 10.seconds)
             connectTest(connectionOptions)
         }
 
-    private suspend fun connectTest(
-        connectionOptions: MqttConnectionOptions,
+    private suspend fun CoroutineScope.connectTest(
+        connectionOptions: MqttEndpoint,
         version: Int = 4,
     ) {
         var testCompleted = false
@@ -93,7 +78,7 @@ class MqttSocketSessionTest {
                         .ConnectionRequest(clientId = "taco123-" + Random.nextInt())
                 }
             val factory = connectionRequest.controlPacketFactory
-            val connection = defaultSingleConnection(connectionOptions, factory)
+            val connection = openRawConnection(connectionOptions, factory)
             // Send CONNECT and read CONNACK
             connection.send(connectionRequest)
             val connack = connection.receive().first()

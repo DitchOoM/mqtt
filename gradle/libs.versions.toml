@@ -1,26 +1,29 @@
 
 [versions]
-kotlin = "2.4.0"
-androidGradlePlugin = "8.13.2"
+kotlin = "2.4.21"
+androidGradlePlugin = "9.5.1"
 ktlint = "14.2.0"
-mavenPublish = "0.35.0"
-dokka = "2.2.0"
+mavenPublish = "0.37.0"
+dokka = "2.3.0"
 kotlinxCoroutines = "1.11.0"
 kotlinWrappers = "2026.7.2"
-buffer = "6.13.1"
-ksp = "2.3.9"
-socket = "3.11.0"
-websocket = "2.0.5"
-kotlinxBenchmark = "0.4.15"
-sqldelight = "2.3.2"
+buffer = "6.30.9"
+ksp = "2.3.13"
+socket = "4.26.0"
+# While a pinned socket or websocket version is not on Maven Central yet, CI builds it from source
+# into mavenLocal at this exact version (.github/actions/upstream-from-source; the ref is in
+# .github/upstream-refs). A release resolves only from Central and fails if it cannot.
+websocket = "2.1.1"
+kotlinxBenchmark = "0.5.0"
+sqldelight = "2.4.1"
 androidxStartup = "1.2.0"
 androidxTestRunner = "1.7.0"
 androidxTestRules = "1.7.0"
 androidxTestCore = "1.7.0"
-testcontainers = "1.20.4"
-jazzer = "0.24.0"
-junitJupiter = "5.12.2"
-junitPlatform = "1.12.2"
+testcontainers = "2.0.5"
+jazzer = "0.30.0"
+junitJupiter = "6.1.3"
+junitPlatform = "6.1.3"
 
 [libraries]
 buffer = { module = "com.ditchoom:buffer", version.ref = "buffer" }
@@ -28,13 +31,7 @@ buffer-codec = { module = "com.ditchoom:buffer-codec", version.ref = "buffer" }
 buffer-codec-processor = { module = "com.ditchoom:buffer-codec-processor", version.ref = "buffer" }
 buffer-flow = { module = "com.ditchoom:buffer-flow", version.ref = "buffer" }
 socket = { module = "com.ditchoom:socket", version.ref = "socket" }
-# QUIC / WebTransport transport modules (buffer-neutral byte layer, built on buffer 6).
-# Wired into the composable transport seam; QUIC/WebTransport impls are currently stubs.
-socket-quic-default = { module = "com.ditchoom:socket-quic-default", version.ref = "socket" }
-# Note: the quiche QUIC engine (socket-quic-quiche) is pulled transitively by socket-quic-default on
-# the platforms that support it; do not depend on it directly (it has no JS/wasmJs variants).
-socket-webtransport = { module = "com.ditchoom:socket-webtransport", version.ref = "socket" }
-websocket = { module = "com.ditchoom:websocket", version.ref = "websocket" }
+websocket-tcp = { module = "com.ditchoom:websocket-tcp", version.ref = "websocket" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinxCoroutines" }
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlinxCoroutines" }

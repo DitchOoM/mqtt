@@ -1,6 +1,5 @@
 package com.ditchoom.mqtt.client.net
 
-import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.IConnectionAcknowledgment
 import com.ditchoom.mqtt.controlpacket.IPublishAcknowledgment
 import com.ditchoom.mqtt.controlpacket.QualityOfService
@@ -16,7 +15,7 @@ import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.seconds
 
 /**
- * End-to-end coverage of the WebSocket branch of [defaultSingleConnection] against a
+ * End-to-end coverage of the WebSocket branch of [EndpointConnector] against a
  * hermetic Mosquitto broker started via Testcontainers. Requires Docker.
  */
 class DefaultConnectionFactoryWsIntegrationTest {
@@ -43,16 +42,15 @@ class DefaultConnectionFactoryWsIntegrationTest {
     fun connectPublishDisconnect() =
         runTestNoTimeSkipping(timeout = 30.seconds) {
             val options =
-                MqttConnectionOptions.WebSocketConnectionOptions(
-                    host = TestMosquittoBroker.wsHost(),
-                    port = TestMosquittoBroker.wsPort(),
-                    websocketEndpoint = "/",
-                    tlsEnabled = false,
+                webSocketEndpoint(
+                    TestMosquittoBroker.wsHost(),
+                    TestMosquittoBroker.wsPort(),
+                    path = "/",
                     protocols = listOf("mqtt"),
-                    connectionTimeout = 15.seconds,
+                    timeout = 15.seconds,
                 )
             val connectionRequest = ConnectionRequest(clientId = "ditchoom-ws-${Random.nextInt()}")
-            val connection = defaultSingleConnection(options, connectionRequest.controlPacketFactory)
+            val connection = openRawConnection(options, connectionRequest.controlPacketFactory)
 
             connection.send(connectionRequest)
             val connack = connection.receive().first()

@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<!-- Interop broker for .github/workflows/interop.yaml: TCP, TLS with the certificate CI generates,
+     WebSocket on /mqtt, and a Receive Maximum of 10 so the client's send quota is exercised. -->
+<hivemq>
+    <listeners>
+        <tcp-listener>
+            <port>1883</port>
+            <bind-address>0.0.0.0</bind-address>
+        </tcp-listener>
+        <tls-tcp-listener>
+            <port>8883</port>
+            <bind-address>0.0.0.0</bind-address>
+            <tls>
+                <keystore>
+                    <path>/certs/server.p12</path>
+                    <password>interop</password>
+                    <private-key-password>interop</private-key-password>
+                </keystore>
+            </tls>
+        </tls-tcp-listener>
+        <websocket-listener>
+            <port>8000</port>
+            <bind-address>0.0.0.0</bind-address>
+            <path>/mqtt</path>
+            <subprotocols>
+                <subprotocol>mqtt</subprotocol>
+            </subprotocols>
+            <allow-extensions>true</allow-extensions>
+        </websocket-listener>
+    </listeners>
+    <mqtt>
+        <receive-maximum>
+            <server-receive-maximum>10</server-receive-maximum>
+        </receive-maximum>
+    </mqtt>
+</hivemq>

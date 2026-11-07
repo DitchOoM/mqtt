@@ -7,11 +7,10 @@ import com.ditchoom.buffer.codec.Codec
 import com.ditchoom.buffer.codec.EncodeContext
 import com.ditchoom.buffer.codec.Payload
 import com.ditchoom.buffer.codec.WireSize
-import com.ditchoom.buffer.flow.Connection
 import com.ditchoom.mqtt.Persistence
+import com.ditchoom.mqtt.client.net.EndpointConnector
+import com.ditchoom.mqtt.client.net.MqttConnector
 import com.ditchoom.mqtt.connection.MqttBroker
-import com.ditchoom.mqtt.connection.MqttConnectionOptions
-import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.ControlPacketFactory
 import com.ditchoom.mqtt.controlpacket.IConnectionAcknowledgment
 import com.ditchoom.mqtt.controlpacket.ISubscribeAcknowledgement
@@ -30,7 +29,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterIsInstance
@@ -39,21 +37,22 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlin.time.TimeSource
 
 /**
  * In-process MQTT 3.1.1 (v4) / 5.0 client for a single [broker].
  *
  * Create one with [MqttClient.start], which connects and then *stays* connected: it automatically
- * reconnects, fails over across the broker's [MqttBroker.connectionOps], resumes the session, and
+ * reconnects, fails over across its [MqttEndpoint]s, resumes the session, and
  * resends unacknowledged QoS 1/2 messages. Delivery state and subscriptions are tracked through the
  * [com.ditchoom.mqtt.Persistence] passed to [start], so in-flight messages can survive a process
  * restart on platforms with durable persistence.
  *
  * The messaging surface is [publish], [subscribe], [observe] and [unsubscribe]. Payloads are handled
  * zero-copy: the typed overloads take a [Codec] `<P>` for a domain type, while the raw overloads work
- * with [com.ditchoom.buffer.ReadBuffer] (and `OpaquePublishPayloadCodec` for received bytes). Transport
- * selection (TCP / WebSocket / QUIC / WebTransport) is handled behind the client via the
- * [com.ditchoom.mqtt.client.net.MqttTransport] seam, so this API is transport-agnostic.
+ * with [com.ditchoom.buffer.ReadBuffer] (and `OpaquePublishPayloadCodec` for received bytes). The
+ * transport (TCP, TLS, WebSocket, QUIC, ...) is whatever socket `Transport` each [MqttEndpoint]
+ * carries, so this API is transport-agnostic.
  *
  * Instances are obtained from [start]; the constructor is internal.
  */
@@ -111,7 +110,7 @@ class MqttClient internal constructor(
                     packetId,
                 )
             } ?: return
-        processor.publish(pub, false)
+        processor.sendPacket(pub)
     }
 
     /**
@@ -141,40 +140,20 @@ class MqttClient internal constructor(
         return publish(pub)
     }
 
-    suspend fun publish(pub: PublishMessage): PublishResult {
-        // [MQTT-3.3.4-8]: don't exceed the broker's Receive Maximum. Acquire a slot before
-        // allocating a packet id so nothing enters the persistence/in-flight set until the
-        // broker can accept it. The permit is released when the ack arrives (see
-        // ControlPacketProcessor). QoS 0 carries no ack, so it isn't quota-limited.
-        if (pub.qualityOfService.isGreaterThan(QualityOfService.AT_MOST_ONCE)) {
-            processor.acquireSendQuota()
-        }
-        val prepared = processor.preparePublish(pub)
-        val result = observePub(prepared)
-        processor.sendPacket(prepared)
-        return result
-    }
-
-    private suspend fun observePub(publishMessage: PublishMessage): PublishResult {
-        val packetId = publishMessage.packetIdentifier
-        return when (publishMessage.qualityOfService) {
-            QualityOfService.AT_MOST_ONCE -> PublishResult.QoS0Sent
-
-            QualityOfService.AT_LEAST_ONCE -> {
-                check(packetId != NO_PACKET_ID) { "PacketId must be set by the persistence" }
-                val stateFlow = MutableStateFlow<QoS1State>(QoS1State.Queued)
-                processor.registerQos1State(packetId, stateFlow)
-                PublishResult.QoS1(packetId, stateFlow)
+    /**
+     * QoS 0 is written immediately. QoS 1/2 suspends until the session's send quota
+     * ([InFlightLimit], bounded by the broker's Receive Maximum) has room and a session is
+     * established; the publish is then persisted under a fresh packet identifier and queued.
+     */
+    suspend fun publish(pub: PublishMessage): PublishResult =
+        when (pub.qualityOfService) {
+            QualityOfService.AT_MOST_ONCE -> {
+                processor.sendPacket(pub)
+                PublishResult.QoS0Sent
             }
-
-            QualityOfService.EXACTLY_ONCE -> {
-                check(packetId != NO_PACKET_ID) { "PacketId must be set by the persistence" }
-                val stateFlow = MutableStateFlow<QoS2State>(QoS2State.Queued)
-                processor.registerQos2State(packetId, stateFlow)
-                PublishResult.QoS2(packetId, stateFlow)
-            }
+            QualityOfService.AT_LEAST_ONCE -> processor.window.publish(pub, Tracking.AtLeastOnce())
+            QualityOfService.EXACTLY_ONCE -> processor.window.publish(pub, Tracking.ExactlyOnce())
         }
-    }
 
     /**
      * Extract the typed `payload` field from the concrete v4 / v5 PUBLISH variant. Mirrors
@@ -519,21 +498,11 @@ class MqttClient internal constructor(
     }
 
     /**
-     * Returns in-flight publish operations that survived a process restart.
-     * Each has a [PublishResult] with a [StateFlow] reconstructed from the persisted state.
-     * Useful for recovering UI state or tracking delivery after restart.
+     * Returns the unacknowledged QoS 1/2 publishes. After a process restart, publishes restored
+     * from persistence appear once the broker resumes the session, with a [StateFlow]
+     * reconstructed from the persisted state.
      */
-    suspend fun pendingPublishes(): List<PublishResult> {
-        val (qos1, qos2) = processor.qosStateSnapshots()
-        val results = mutableListOf<PublishResult>()
-        for ((packetId, stateFlow) in qos1) {
-            results += PublishResult.QoS1(packetId, stateFlow)
-        }
-        for ((packetId, stateFlow) in qos2) {
-            results += PublishResult.QoS2(packetId, stateFlow)
-        }
-        return results
-    }
+    suspend fun pendingPublishes(): List<PublishResult> = processor.window.snapshot()
 
     internal fun isStopped() = connectionJob?.isActive != true
 
@@ -544,43 +513,48 @@ class MqttClient internal constructor(
     companion object {
         /**
          * Starts a client for [broker] and suspends until the first full handshake pass
-         * completes (CONNACK received OR all of [MqttBroker.connectionOps] exhausted).
+         * completes: a CONNACK is received, or [endpoint] and every [failover] endpoint have
+         * been tried.
          *
-         * After the first session ends — either because the peer closed the TCP socket or
-         * because the user called [sendDisconnect] — an outer loop here re-invokes
-         * [ConnectivityManager.run] so the session-resume / "stay connected" pattern works
-         * without the caller having to wrap [connectSingle] in socket's
-         * [com.ditchoom.socket.transport.ReconnectingConnection]. The loop exits only when
-         * the client's [CoroutineScope] is cancelled (e.g. via [shutdown]) or when the next
-         * handshake pass throws a non-retryable exception.
+         * Each pass dials [endpoint] first, then each [failover] endpoint in order. An endpoint
+         * carries any socket `Transport` (TCP, TLS, WebSocket, QUIC, a `FallbackTransport`
+         * chain, ...), so the transport is chosen here and nowhere else; see [MqttEndpoint].
          *
-         * [connectSingle] opens one transport for one [MqttConnectionOptions]; option
-         * iteration is [ConnectivityManager]'s job so each attempt is counted in
-         * [connectionAttempts].
+         * After a session ends — the peer closed the connection, or [sendDisconnect] was
+         * called — the client reconnects and resumes the session on its own. It stops only
+         * when [scope] is cancelled, e.g. by [shutdown].
          */
         suspend fun start(
             scope: CoroutineScope = CoroutineScope(Dispatchers.Default + CoroutineName("MQTT Client")),
             broker: MqttBroker,
             persistence: Persistence,
+            endpoint: MqttEndpoint,
+            failover: List<MqttEndpoint> = emptyList(),
             bufferFactory: BufferFactory = BufferFactory.Default,
-            connectSingle: (
-                suspend (
-                    MqttConnectionOptions,
-                    (topicName: String) -> Codec<out Payload>?,
-                ) -> Connection<ControlPacket>
-            )? = null,
+            inFlightLimit: InFlightLimit = InFlightLimit.ProtocolMaximum,
+            timeSource: TimeSource = TimeSource.Monotonic,
+        ): MqttClient =
+            start(scope, broker, persistence, listOf(endpoint) + failover, bufferFactory, inFlightLimit, timeSource, EndpointConnector)
+
+        internal suspend fun start(
+            scope: CoroutineScope,
+            broker: MqttBroker,
+            persistence: Persistence,
+            endpoints: List<MqttEndpoint>,
+            bufferFactory: BufferFactory,
+            inFlightLimit: InFlightLimit,
+            timeSource: TimeSource,
+            connector: MqttConnector,
         ): MqttClient {
             val registry = TopicCodecRegistry()
-            val effectiveConnect =
-                connectSingle ?: com.ditchoom.mqtt.client.net
-                    .defaultSingleConnection(broker)
-            val publishCodecForTopic: (String) -> Codec<out Payload>? = { topic ->
+            val codecForTopic: (String) -> TopicCodec = { topic ->
                 registry.codecForTopicName(TopicName.fromOrThrow(topic))
             }
-            val cm = ConnectivityManager(persistence, broker, publishCodecForTopic, effectiveConnect)
+            val cm = ConnectivityManager(persistence, broker, endpoints, codecForTopic, scope, connector, inFlightLimit, timeSource)
             val client = MqttClient(cm, scope, registry, bufferFactory)
             client.connectionJob =
                 scope.launch {
+                    launch { cm.processor.window.run() }
                     while (kotlinx.coroutines.currentCoroutineContext().isActive) {
                         try {
                             cm.run()
@@ -600,8 +574,8 @@ class MqttClient internal constructor(
         }
 
         /**
-         * Delay between reconnect attempts. Small, fixed — callers that want sophisticated
-         * backoff / network-aware retry can wrap [connectSingle] in their own factory.
+         * Delay between reconnect attempts. Small and fixed; network-aware retry belongs in the
+         * endpoint's `Transport`, e.g. a `FallbackTransport`.
          */
         private val reconnectBackoff = kotlin.time.Duration.parse("PT1S")
 

@@ -1,0 +1,59 @@
+name: "DitchOoM upstream libraries"
+description: >-
+  Puts socket and websocket where the mqtt build resolves them. Each comes from Maven Central unless
+  its ref input is set or the catalog pins a version Central does not have yet (then
+  .github/upstream-refs names the ref); those are built from source into mavenLocal at the
+  catalog's version. Central mode is the release: nothing is built, and the job fails unless
+  buffer, socket and websocket all resolve from Central.
+inputs:
+  mode:
+    description: "auto, or central for a release"
+    required: false
+    default: "auto"
+  socket-ref:
+    description: "DitchOoM/socket branch, tag or commit to build from source"
+    required: false
+    default: ""
+  websocket-ref:
+    description: "DitchOoM/websocket branch, tag or commit to build from source"
+    required: false
+    default: ""
+runs:
+  using: composite
+  steps:
+    - name: Plan upstream sources
+      id: plan
+      shell: bash
+      env:
+        MODE: ${{ inputs.mode }}
+        SOCKET_REF: ${{ inputs.socket-ref }}
+        WEBSOCKET_REF: ${{ inputs.websocket-ref }}
+      run: bash .github/scripts/upstream-from-source.sh plan
+
+    - name: Restore upstream builds
+      id: cache
+      if: steps.plan.outputs.build != ''
+      uses: actions/cache@v5
+      with:
+        path: ${{ steps.plan.outputs.paths }}
+        key: ${{ steps.plan.outputs.key }}-${{ hashFiles('.github/scripts/upstream-from-source.sh', '.github/upstream-pin-version.init.gradle.kts') }}
+
+    # websocket's Android target needs an SDK location to configure, and the arm64 Linux image has none.
+    - name: Set up the Android SDK (arm64 Linux)
+      if: steps.plan.outputs.build != '' && steps.cache.outputs.cache-hit != 'true' && runner.os == 'Linux' && runner.arch == 'ARM64'
+      uses: android-actions/setup-android@v4
+      with:
+        packages: platform-tools
+
+    - name: Build upstream from source
+      if: steps.plan.outputs.build != '' && steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        BUILD: ${{ steps.plan.outputs.build }}
+      run: bash .github/scripts/upstream-from-source.sh build
+
+    # The mqtt build searches mavenLocal only when this is set (DitchoomModulePlugin).
+    - name: Point the mqtt build at mavenLocal
+      if: steps.plan.outputs.build != ''
+      shell: bash
+      run: echo "DITCHOOM_UPSTREAM_FROM_SOURCE=true" >> "$GITHUB_ENV"

@@ -27,7 +27,8 @@ class DitchoomModulePlugin : Plugin<Project> {
 
         project.repositories.google()
         project.repositories.mavenCentral()
-        project.repositories.mavenLocal()
+        SiblingSource.of(project, isRunningOnGithub).addRepositories(project.repositories)
+        registerCentralOnlyGuard(project)
 
         project.tasks.register<Jar>("javadocJar") {
             archiveClassifier.set("javadoc")

@@ -244,10 +244,9 @@ class ConnectivityManager internal constructor(
         }
         if (sessionPresent) {
             emptyWriteChannel()
-            processor.window.sessionStarted(connack.receiveMaximum, Resumption.Resumed(processor.queueMessagesOnReconnect()))
+            processor.window.sessionStarted(connack.receiveMaximum, Resumption.Resumed)
             processor.replayIncomingMessagesOnReconnect()
         } else {
-            persistence.clearMessages(broker)
             processor.window.sessionStarted(connack.receiveMaximum, Resumption.Fresh)
         }
     }

@@ -171,7 +171,7 @@ class SendQuotaTest {
                     broker = brokerRecord,
                     persistence = persistence,
                     timeSource = testScheduler.timeSource,
-                    connectSingle = { _, _ -> connections.removeFirst() },
+                    connectSingle = { _, _, _ -> connections.removeFirst() },
                 )
             client.publish(TOPIC, QualityOfService.AT_LEAST_ONCE, "first".toReadBuffer(Charset.UTF8))
 
@@ -288,7 +288,7 @@ private class ScriptedBroker(
             scope = CoroutineScope(scope.coroutineContext + Dispatchers.Default),
             broker = brokerRecord,
             persistence = persistence,
-            connectSingle = { _, _ -> connect() },
+            connectSingle = { _, _, _ -> connect() },
         )
     }
 

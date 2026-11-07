@@ -8,7 +8,9 @@ import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.ControlPacketFactory
 import com.ditchoom.socket.transport.CodecConnection
+import com.ditchoom.socket.transport.OverflowPolicy
 import com.ditchoom.socket.webtransport.WebTransportTransport
+import kotlinx.coroutines.CoroutineScope
 
 /**
  * MQTT over WebTransport (**experimental**, no standard mapping exists). The MQTT byte stream is
@@ -25,6 +27,7 @@ import com.ditchoom.socket.webtransport.WebTransportTransport
  */
 object WebTransportMqttTransport : MqttTransport {
     override suspend fun connect(
+        scope: CoroutineScope,
         options: MqttConnectionOptions,
         factory: ControlPacketFactory,
         publishCodecForTopic: (topicName: String) -> Codec<out Payload>?,
@@ -34,6 +37,9 @@ object WebTransportMqttTransport : MqttTransport {
             op.host,
             op.port,
             MqttCodec(factory, publishCodecForTopic),
+            scope,
+            MQTT_OUTBOUND_QUEUE_CAPACITY,
+            OverflowPolicy.Suspend,
             WebTransportTransport(path = op.endpoint),
             buildTransportConfig(op),
         )

@@ -12,7 +12,9 @@ import com.ditchoom.mqtt.controlpacket.ControlPacketFactory
 import com.ditchoom.socket.TlsConfig
 import com.ditchoom.socket.TransportConfig
 import com.ditchoom.socket.transport.CodecConnection
+import com.ditchoom.socket.transport.OverflowPolicy
 import com.ditchoom.socket.transport.TcpTransport
+import kotlinx.coroutines.CoroutineScope
 
 /**
  * Plain TCP (optionally TLS) MQTT transport. `ClientSocket` is itself a buffer-flow `ByteStream`, so
@@ -20,6 +22,7 @@ import com.ditchoom.socket.transport.TcpTransport
  */
 object TcpMqttTransport : MqttTransport {
     override suspend fun connect(
+        scope: CoroutineScope,
         options: MqttConnectionOptions,
         factory: ControlPacketFactory,
         publishCodecForTopic: (topicName: String) -> Codec<out Payload>?,
@@ -28,10 +31,21 @@ object TcpMqttTransport : MqttTransport {
             options.host,
             options.port,
             MqttCodec(factory, publishCodecForTopic),
+            scope,
+            MQTT_OUTBOUND_QUEUE_CAPACITY,
+            OverflowPolicy.Suspend,
             TcpTransport(),
             buildTransportConfig(options),
         )
 }
+
+/**
+ * Depth of a connection's outbound hand-off queue, used with [OverflowPolicy.Suspend] so no control
+ * packet is ever dropped. The client's single writer already bounds what reaches it (QoS 1/2 by the
+ * send quota), so this only absorbs bursts of QoS 0 and acknowledgements; a full queue suspends the
+ * writer, which is the back-pressure an at-least-once protocol wants.
+ */
+internal const val MQTT_OUTBOUND_QUEUE_CAPACITY: Int = 64
 
 /**
  * Maps [MqttConnectionOptions] onto socket's single, immutable [TransportConfig] (which folds

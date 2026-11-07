@@ -175,14 +175,13 @@ tasks.withType<org.jetbrains.kotlin.gradle.targets.js.testing.KotlinJsTest>().co
 }
 
 android {
-    compileSdk = 36
+    compileSdk = 37
     sourceSets["main"].manifest.srcFile("src/androidMain/AndroidManifest.xml")
     buildFeatures {
         aidl = true
     }
     defaultConfig {
-        minSdk = 21
-        targetSdk = 36
+        minSdk = 23
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Mirror the JVM/Native/JS `runIntegrationTests` filter on Android instrumented tests.
         // Without this, connectedDebugAndroidTest runs the broker-dependent suite by default and
@@ -203,7 +202,11 @@ android {
             withJavadocJar()
         }
     }
+    testOptions {
+        targetSdk = 37
+    }
     lint {
+        targetSdk = 37
         disable += "EnsureInitializerMetadata"
     }
     namespace = "com.ditchoom.mqtt.client"

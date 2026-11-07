@@ -14,6 +14,7 @@ import com.ditchoom.mqtt.controlpacket.TopicName
 import com.ditchoom.mqtt3.controlpacket.ConnectionRequest
 import com.ditchoom.socket.TransportKind
 import com.ditchoom.socket.networkCapabilities
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.first
 import kotlin.random.Random
 import kotlin.test.Ignore
@@ -367,11 +368,12 @@ class PublicBrokerValidationTest {
      * [defaultSingleConnection] factory so tests exercise the same TCP / WebSocket code paths
      * that [MqttClient] uses — no parallel test-only transport adapter to maintain.
      */
-    private suspend fun openConnection(
+    private suspend fun CoroutineScope.openConnection(
         connectionOptions: MqttConnectionOptions,
         connectionRequest: IConnectionRequest,
     ): Connection<ControlPacket> =
         defaultSingleConnection(
+            this,
             connectionOptions,
             connectionRequest.controlPacketFactory,
             // No MqttClient here — the raw-connection test path has no TopicCodecRegistry,
@@ -383,7 +385,7 @@ class PublicBrokerValidationTest {
     /**
      * Sends CONNECT, validates CONNACK, and returns the connection.
      */
-    private suspend fun connectAndValidate(
+    private suspend fun CoroutineScope.connectAndValidate(
         connectionOptions: MqttConnectionOptions,
         connectionRequest: IConnectionRequest,
         clientId: String,
@@ -396,7 +398,7 @@ class PublicBrokerValidationTest {
         return connection
     }
 
-    private suspend fun connectPublishDisconnect(
+    private suspend fun CoroutineScope.connectPublishDisconnect(
         connectionOptions: MqttConnectionOptions,
         mqttV5: Boolean = false,
     ) {
@@ -413,7 +415,7 @@ class PublicBrokerValidationTest {
         connection.close()
     }
 
-    private suspend fun connectMultiplePublishes(
+    private suspend fun CoroutineScope.connectMultiplePublishes(
         connectionOptions: MqttConnectionOptions,
         publishCount: Int,
         mqttV5: Boolean = false,
@@ -433,7 +435,7 @@ class PublicBrokerValidationTest {
         connection.close()
     }
 
-    private suspend fun connectSubscribeReceive(
+    private suspend fun CoroutineScope.connectSubscribeReceive(
         connectionOptions: MqttConnectionOptions,
         mqttV5: Boolean = false,
     ) {

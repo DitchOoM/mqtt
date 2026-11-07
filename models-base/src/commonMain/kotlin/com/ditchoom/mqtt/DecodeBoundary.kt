@@ -1,5 +1,6 @@
 package com.ditchoom.mqtt
 
+import com.ditchoom.buffer.MalformedTextException
 import com.ditchoom.buffer.codec.DecodeException
 
 /**
@@ -12,6 +13,8 @@ import com.ditchoom.buffer.codec.DecodeException
  *
  * - [DecodeException] — the generated codecs' native "malformed wire" signal (unknown packet
  *   type, body overrun, bad length prefix).
+ * - [MalformedTextException.IllFormedBytes] — buffer's strict UTF-8 decoder rejecting an ill-formed
+ *   length-prefixed string (a topic name, client id, or property).
  * - [IllegalArgumentException] — variant `init` / `require` validation of a decoded value (e.g.
  *   an invalid reason code or flag combination). This is the widest net; it is included because
  *   at the decode boundary an IAE overwhelmingly means "the peer sent an out-of-range value,"
@@ -27,6 +30,7 @@ import com.ditchoom.buffer.codec.DecodeException
  */
 fun isMalformedWireException(e: Throwable): Boolean =
     e is DecodeException ||
+        e is MalformedTextException.IllFormedBytes ||
         e is IllegalArgumentException ||
         e::class.simpleName in malformedWireBufferExceptionNames ||
         isJsRuntimeMalformedWire(e)

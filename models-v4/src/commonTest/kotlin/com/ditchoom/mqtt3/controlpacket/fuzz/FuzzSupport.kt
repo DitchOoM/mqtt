@@ -2,6 +2,7 @@ package com.ditchoom.mqtt3.controlpacket.fuzz
 
 import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Default
+import com.ditchoom.buffer.MalformedTextException
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.codec.DecodeException
 import com.ditchoom.mqtt.MqttException
@@ -44,6 +45,8 @@ fun ByteArray.toHex(): String = joinToString("") { (it.toInt() and 0xFF).toStrin
  *   plus everything the production mirror now wraps.
  * - [DecodeException]: the generated codecs' native "malformed wire" signal (unknown packet type,
  *   body-overrun, bad length prefix) — surfaces raw from the direct-codec VBI fuzzer.
+ * - [MalformedTextException.IllFormedBytes]: buffer's strict UTF-8 decoder rejecting a malformed
+ *   length-prefixed string.
  * - IllegalArgumentException: variant `init` validation (e.g. invalid reason codes) surfaces as IAE.
  * - The name-matched set mirrors the allowlist in the KSP-generated `peekFrameSize`: truncated
  *   input hits the platform buffer's underflow class, which has no common supertype across targets.
@@ -54,6 +57,7 @@ fun ByteArray.toHex(): String = joinToString("") { (it.toInt() and 0xFF).toStrin
 fun isAcceptedDecodeFailure(e: Throwable): Boolean =
     e is MqttException ||
         e is DecodeException ||
+        e is MalformedTextException.IllFormedBytes ||
         e is IllegalArgumentException ||
         e::class.simpleName in acceptedBufferExceptionNames ||
         isAcceptedJsRuntimeDecodeFailure(e)

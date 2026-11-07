@@ -71,7 +71,7 @@ class MqttClientCodecRoutingRegressionTest {
                     scope = scope,
                     broker = broker,
                     persistence = persistence,
-                    connectSingle = { _, lookup ->
+                    connectSingle = { _, _, lookup ->
                         capturedLookup.complete(lookup)
                         fakeConn
                     },
@@ -130,7 +130,7 @@ class MqttClientCodecRoutingRegressionTest {
                     scope = scope,
                     broker = broker,
                     persistence = persistence,
-                    connectSingle = { _, _ -> fakeConn },
+                    connectSingle = { _, _, _ -> fakeConn },
                 )
             try {
                 val received = CompletableDeferred<Pair<String, OpaquePublishPayload>>()

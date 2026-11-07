@@ -51,7 +51,11 @@ internal class OutboundWindow(
         }
     }
 
-    /** Suspends until the window has adopted the session, so the writer starts on a clean [outbound]. */
+    /**
+     * Suspends until the window has adopted the session, so the writer starts on a clean [outbound].
+     * The window itself reads (resumed) or clears (fresh) the persisted session, in its own event
+     * order, so every publish it admitted before this call is part of what the session resends.
+     */
     suspend fun sessionStarted(
         receiveMaximum: Int,
         resumption: Resumption,
@@ -104,16 +108,7 @@ internal class OutboundWindow(
         suspend fun handle(event: Event) {
             when (event) {
                 is Event.Admit -> waiting.addLast(event)
-                is Event.SessionStarted -> {
-                    while (wire.tryReceive().isSuccess) Unit
-                    resendBacklog.clear()
-                    when (val resumption = event.resumption) {
-                        Resumption.Fresh -> discard { true }
-                        is Resumption.Resumed -> resume(resumption.persisted)
-                    }
-                    link = Link.Online(event.limit)
-                    event.adopted.complete(Unit)
-                }
+                is Event.SessionStarted -> adopt(event)
                 Event.SessionEnded -> link = Link.Offline
                 is Event.Written ->
                     when (val packet = event.packet) {
@@ -154,6 +149,37 @@ internal class OutboundWindow(
         fun abandonWaiting() {
             waiting.forEach { it.abandon() }
             waiting.clear()
+        }
+
+        /**
+         * Reads the persisted session here rather than taking it from the caller: an admission
+         * queued ahead of this event persists its publish before the read, so it is resent instead
+         * of discarded as absent from a snapshot taken while it was still in flight.
+         */
+        private suspend fun adopt(start: Event.SessionStarted) {
+            do {
+                val queuedForTheOldConnection = wire.tryReceive()
+            } while (queuedForTheOldConnection.isSuccess)
+            resendBacklog.clear()
+            try {
+                when (start.resumption) {
+                    Resumption.Fresh -> {
+                        persistence.clearMessages(broker)
+                        discard { true }
+                    }
+                    Resumption.Resumed -> resume(persistence.messagesToSendOnReconnect(broker).map(ControlPacket::asResend))
+                }
+            } catch (e: CancellationException) {
+                start.abandon()
+                throw e
+            } catch (
+                @Suppress("TooGenericExceptionCaught") e: Exception,
+            ) {
+                start.adopted.completeExceptionally(e)
+                return
+            }
+            link = Link.Online(start.limit)
+            start.adopted.complete(Unit)
         }
 
         private fun onWire(): Int = tracked.size - resendBacklog.size
@@ -342,11 +368,16 @@ internal sealed interface Resumption {
     /** The broker holds no session: every in-flight publish is discarded. */
     data object Fresh : Resumption
 
-    /** The broker resumed the session: [persisted] is resent in order and stays in flight. */
-    class Resumed(
-        val persisted: Collection<ControlPacket>,
-    ) : Resumption
+    /** The broker resumed the session: everything persisted for it is resent in order and stays in flight. */
+    data object Resumed : Resumption
 }
+
+/** A persisted packet as it is resent on a resumed session: PUBLISHes carry the DUP flag. */
+internal fun ControlPacket.asResend(): ControlPacket =
+    when (this) {
+        is PublishMessage -> setDupFlagNewPubMessage()
+        else -> this
+    }
 
 /** Delivery tracking for one outbound publish; the subtype is fixed by the publish's QoS. */
 internal sealed interface Tracking {

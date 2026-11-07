@@ -3,6 +3,21 @@ name: "Build & Test (Linux)"
 on:
   workflow_call:
     inputs:
+      upstream:
+        description: "auto, or central for a release (.github/actions/upstream-from-source)"
+        required: false
+        default: "auto"
+        type: string
+      socket-ref:
+        description: "DitchOoM/socket branch, tag or commit to build from source"
+        required: false
+        default: ""
+        type: string
+      websocket-ref:
+        description: "DitchOoM/websocket branch, tag or commit to build from source"
+        required: false
+        default: ""
+        type: string
       gradle-args:
         description: "Extra Gradle arguments (e.g., -PincrementMinor=true)"
         required: false
@@ -29,6 +44,15 @@ jobs:
           distribution: 'zulu'
           java-version: '21'
           cache: gradle
+
+      # socket and websocket from Maven Central, or built from source when a ref input is set or the
+      # catalog pins a version Central does not have yet (.github/actions/upstream-from-source).
+      - name: Upstream libraries
+        uses: ./.github/actions/upstream-from-source
+        with:
+          mode: ${{ inputs.upstream || 'auto' }}
+          socket-ref: ${{ inputs.socket-ref }}
+          websocket-ref: ${{ inputs.websocket-ref }}
 
       - name: Setup Chrome
         uses: browser-actions/setup-chrome@v2
@@ -57,7 +81,7 @@ jobs:
         id: version
         run: echo "version=$(./gradlew -q :mqtt-client:nextVersion ${{ inputs.gradle-args }})" >> $GITHUB_OUTPUT
 
-      # linuxX64Test added for native test-execution parity (JVM behaviour ≠ native memory/lifecycle).
+      # linuxX64Test for native test-execution parity (JVM behaviour differs from native memory/lifecycle).
       - name: Run JVM / JS / Android / Linux-native tests
         run: >-
           ./gradlew ktlintCheck
@@ -65,6 +89,11 @@ jobs:
           testDebugUnitTest
           linuxX64Test
           ${{ inputs.gradle-args }}
+
+      # A release resolves every dependency from Maven Central; this fails if one came from mavenLocal.
+      - name: Verify dependencies resolved from Maven Central only
+        if: inputs.upstream == 'central'
+        run: ./gradlew verifyCentralOnly ${{ inputs.gradle-args }}
 
       - name: Publish to Maven Local
         run: ./gradlew publishToMavenLocal --no-build-cache ${{ inputs.gradle-args }}

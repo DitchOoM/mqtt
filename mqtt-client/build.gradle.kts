@@ -9,7 +9,7 @@ plugins {
     id("com.ditchoom.module")
 }
 
-val hostOs = org.jetbrains.kotlin.konan.target.HostManager.host
+val nativeHost = com.ditchoom.gradle.NativeHost.current
 
 kotlin {
     jvmToolchain(21)
@@ -34,7 +34,7 @@ kotlin {
         }
     }
 
-    if (hostOs.family.isAppleFamily) {
+    if (nativeHost == com.ditchoom.gradle.NativeHost.Apple) {
         macosX64()
         macosArm64()
         iosArm64()
@@ -48,7 +48,7 @@ kotlin {
         watchosX64()
     }
 
-    if (hostOs == org.jetbrains.kotlin.konan.target.KonanTarget.LINUX_X64) {
+    if (nativeHost == com.ditchoom.gradle.NativeHost.LinuxX64) {
         linuxX64()
         linuxArm64()
     }
@@ -128,6 +128,12 @@ val conformanceTestPatterns =
 
 val runConformanceTests = project.hasProperty("conformanceTests")
 
+// Real-broker interop needs a broker cell described by MQTT_INTEROP_* environment variables
+// (see BrokerInteropTest and .github/workflows/interop.yaml).
+// Run with: ./gradlew :mqtt-client:jvmTest -PinteropTests --tests '*BrokerInteropTest*'
+val interopTestPatterns = listOf("com.ditchoom.mqtt.client.net.BrokerInteropTest")
+val runInteropTests = project.hasProperty("interopTests")
+
 // Filter JVM tests
 tasks.withType<Test>().configureEach {
     testLogging {
@@ -142,6 +148,11 @@ tasks.withType<Test>().configureEach {
     if (!runConformanceTests) {
         filter {
             conformanceTestPatterns.forEach { excludeTestsMatching(it) }
+        }
+    }
+    if (!runInteropTests) {
+        filter {
+            interopTestPatterns.forEach { excludeTestsMatching(it) }
         }
     }
 }

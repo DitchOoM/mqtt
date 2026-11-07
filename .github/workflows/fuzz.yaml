@@ -11,11 +11,39 @@ on:
       - '*.md'
     types: [synchronize, opened]
   workflow_dispatch:
+    inputs:
+      socket-ref:
+        description: "DitchOoM/socket branch, tag or commit to build from source"
+        required: false
+        default: ""
+        type: string
+      websocket-ref:
+        description: "DitchOoM/websocket branch, tag or commit to build from source"
+        required: false
+        default: ""
+        type: string
+  workflow_call:
+    inputs:
+      upstream:
+        description: "auto, or central for a release (.github/actions/upstream-from-source)"
+        required: false
+        default: "auto"
+        type: string
+      socket-ref:
+        description: "DitchOoM/socket branch, tag or commit to build from source"
+        required: false
+        default: ""
+        type: string
+      websocket-ref:
+        description: "DitchOoM/websocket branch, tag or commit to build from source"
+        required: false
+        default: ""
+        type: string
   schedule:
     - cron: '17 3 * * 0' # weekly, Sunday 03:17 UTC
 
 concurrency:
-  group: fuzz-${{ github.ref }}
+  group: fuzz-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -35,6 +63,15 @@ jobs:
           distribution: 'zulu'
           java-version: '21'
           cache: gradle
+
+      # socket and websocket from Maven Central, or built from source when a ref input is set or the
+      # catalog pins a version Central does not have yet (.github/actions/upstream-from-source).
+      - name: Upstream libraries
+        uses: ./.github/actions/upstream-from-source
+        with:
+          mode: ${{ inputs.upstream || 'auto' }}
+          socket-ref: ${{ inputs.socket-ref }}
+          websocket-ref: ${{ inputs.websocket-ref }}
 
       - name: Cache Konan
         uses: actions/cache@v6
@@ -83,6 +120,15 @@ jobs:
           distribution: 'zulu'
           java-version: '21'
           cache: gradle
+
+      # socket and websocket from Maven Central, or built from source when a ref input is set or the
+      # catalog pins a version Central does not have yet (.github/actions/upstream-from-source).
+      - name: Upstream libraries
+        uses: ./.github/actions/upstream-from-source
+        with:
+          mode: ${{ inputs.upstream || 'auto' }}
+          socket-ref: ${{ inputs.socket-ref }}
+          websocket-ref: ${{ inputs.websocket-ref }}
 
       - name: Cache Gradle build outputs
         uses: actions/cache@v6

@@ -13,7 +13,7 @@ socket = "4.26.0"
 # While a pinned socket or websocket version is not on Maven Central yet, CI builds it from source
 # into mavenLocal at this exact version (.github/actions/upstream-from-source; the ref is in
 # .github/upstream-refs). A release resolves only from Central and fails if it cannot.
-websocket = "2.1.0"
+websocket = "2.1.1"
 kotlinxBenchmark = "0.5.0"
 sqldelight = "2.4.1"
 androidxStartup = "1.2.0"

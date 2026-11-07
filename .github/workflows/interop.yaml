@@ -67,10 +67,10 @@ jobs:
         protocol: ["4", "5"]
         transport: [tcp, tls, ws]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
           distribution: 'zulu'
           java-version: '21'

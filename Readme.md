@@ -147,8 +147,8 @@ dependencies {
 
     // Only for the transports you use:
     implementation("com.ditchoom:websocket-tcp:2.1.0")         // WebSocket
-    implementation("com.ditchoom:socket-quic-default:4.24.0")  // QUIC (experimental)
-    implementation("com.ditchoom:socket-webtransport:4.24.0")  // WebTransport (experimental)
+    implementation("com.ditchoom:socket-quic-default:4.26.0")  // QUIC (experimental)
+    implementation("com.ditchoom:socket-webtransport:4.26.0")  // WebTransport (experimental)
 }
 ```
 
@@ -270,9 +270,6 @@ See the [transports guide][docs] for QUIC, WebTransport, fallback chains and cus
 - Open the cloned directory with [IntelliJ IDEA](https://www.jetbrains.com/idea/download) ([import as a Gradle project](https://www.jetbrains.com/help/idea/gradle.html#gradle_import_project_start)).
 
 ### Build Commands
-
-websocket 2.1.0 is not on Maven Central yet. Until it is, publish the DitchOoM/websocket 2.1.0 branch
-to `mavenLocal` as `2.1.0-SNAPSHOT` and pass `-PditchoomWebsocketVersion=2.1.0-SNAPSHOT` to Gradle.
 
 ```bash
 # Build & test all platforms

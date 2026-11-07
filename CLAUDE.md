@@ -61,9 +61,6 @@ JAZZER_FUZZ=1 ./gradlew :models-v4:jvmTest -PfuzzTests --tests '*JazzerFuzzTest'
 ./gradlew checkKotlinAbi
 ./gradlew updateKotlinAbi         # after an intentional API change; commit */api/*
 
-# Until websocket 2.1.0 is on Maven Central (see "websocket 2.1.0 placeholder" below)
-./gradlew build -PditchoomWebsocketVersion=2.1.0-SNAPSHOT
-
 # Linting
 ./gradlew ktlintCheck             # Check code style
 ./gradlew ktlintFormat            # Auto-format code
@@ -114,7 +111,7 @@ src/
 ### Dependencies
 
 - **buffer** (`com.ditchoom:buffer` **6.30.9**, + `buffer-codec` / `buffer-flow`) - Native byte buffer management. `buffer-flow` provides the `ByteSource`/`ByteSink`/`ByteStream` types with `ReadPolicy`/`WritePolicy` and `ReadResult.End`/`Reset`.
-- **socket** (`com.ditchoom:socket` **4.24.0**) - **`api`** dependency of `mqtt-client`, so consumers see `Transport`, `TcpTransport`, `FallbackTransport`, `MemoryTransport`, `TransportConfig` and `TlsConfig`. One immutable `TransportConfig` per dial; a connection **is** a `ByteStream`.
+- **socket** (`com.ditchoom:socket` **4.26.0**) - **`api`** dependency of `mqtt-client`, so consumers see `Transport`, `TcpTransport`, `FallbackTransport`, `MemoryTransport`, `TransportConfig` and `TlsConfig`. One immutable `TransportConfig` per dial; a connection **is** a `ByteStream`.
 - **Transport artifacts (not dependencies of `mqtt-client`; consumers add the ones they use):** `com.ditchoom:websocket-tcp` **2.1.0** (`WebSocketTransport`; JVM, Android, Node, Apple, linuxX64 — no browser), `com.ditchoom:socket-quic-default` (`QuicTransport`; experimental, non-standard but EMQX implements it, native only — JS/wasm have no raw UDP, no tvOS/watchOS engine), `com.ditchoom:socket-webtransport` (`WebTransportTransport`; experimental, all targets incl. browser). `websocket-tcp` is a `commonTest` dependency only.
 - **kotlinx-coroutines** - Async/coroutines support
 - **sqldelight** - SQLite persistence for models-v4 and models-v5
@@ -143,7 +140,7 @@ src/
 - **Nightly** (`nightly.yaml`, daily): `SendQuotaTest` repeated 20x on `jvmTest` and `linuxX64Test`, the interop matrix with the stress test repeated per cell (`iterations`), and `fuzz.yaml`.
 - **Downstream canary** (`canary.yaml`, daily, on dispatch, and on PRs touching it or `settings.gradle.kts`): builds buffer, socket and websocket `main` into `mavenLocal` as snapshots and builds/tests mqtt against them.
 - **Snapshot overrides** (`settings.gradle.kts`): `-PditchoomBufferVersion=`, `-PditchoomSocketVersion=`, `-PditchoomWebsocketVersion=` (or `ORG_GRADLE_PROJECT_*`) replace the catalog versions without editing `gradle/libs.versions.toml`; the buffer override also adds `mavenLocal()` to plugin resolution for the codec-schema plugin. Releases never set them.
-- **websocket 2.1.0 placeholder (temporary):** the catalog pins `websocket = "2.1.0"`, which is not on Maven Central yet. CI jobs run `.github/actions/websocket-preview` first, which builds the DitchOoM/websocket 2.1.0 branch into `mavenLocal` as `2.1.0-SNAPSHOT` and points later Gradle calls at it. Local builds do the same by hand and pass `-PditchoomWebsocketVersion=2.1.0-SNAPSHOT`. Delete the action and its `uses:` lines once 2.1.0 ships.
+- **Upstream from source:** `.github/actions/upstream-from-source` takes socket and websocket from Maven Central, unless a `socket-ref`/`websocket-ref` input is set or the catalog pins a version Central does not have yet (`.github/upstream-refs` names the ref); those are built into `mavenLocal` at the catalog version. The `Upstream from source` workflow_dispatch runs the PR gate plus broker interop with given refs. Releases run it in `central` mode and `verifyCentralOnly` fails if anything resolved from mavenLocal.
 - **Optional (non-required) PR checks**: `fuzz.yaml` (deterministic fuzzers on every PR; Jazzer coverage-guided fuzzing weekly/on-dispatch/nightly) and `conformance.yaml` (paho.mqtt.testing conformance broker + spec-statement coverage report). Neither is referenced by `review.yaml`, so they never gate merges.
 - PR merge to main triggers full build + publish to Maven Central
 - PR labels control version bumping: `major`, `minor`, or patch (default)

@@ -168,7 +168,7 @@ WebTransport or a custom `Transport`.
 
 ### QUIC
 
-Add `com.ditchoom:socket-quic-default:4.24.0`. `mqtt-client` no longer brings it.
+Add `com.ditchoom:socket-quic-default:4.26.0`. `mqtt-client` no longer brings it.
 
 Before:
 
@@ -201,7 +201,7 @@ val quic =
 
 ### WebTransport
 
-Add `com.ditchoom:socket-webtransport:4.24.0`. `mqtt-client` no longer brings it.
+Add `com.ditchoom:socket-webtransport:4.26.0`. `mqtt-client` no longer brings it.
 
 Before:
 
@@ -311,12 +311,12 @@ To route the same endpoint over several transports (for example QUIC, then WebSo
 dependencies {
     implementation("com.ditchoom:mqtt-client:3.0.0")
     implementation("com.ditchoom:websocket-tcp:2.1.0")
-    implementation("com.ditchoom:socket-quic-default:4.24.0")
-    implementation("com.ditchoom:socket-webtransport:4.24.0")
+    implementation("com.ditchoom:socket-quic-default:4.26.0")
+    implementation("com.ditchoom:socket-webtransport:4.26.0")
 }
 ```
 
-- Built with Kotlin 2.4.21, socket 4.24.0 and buffer 6.30.9.
+- Built with Kotlin 2.4.21, socket 4.26.0 and buffer 6.30.9.
 - Android `minSdk` is now **23**, and the library is compiled against SDK 37.
 
 ### Publishing and QoS changes

@@ -1,7 +1,6 @@
 package com.ditchoom.mqtt
 
 import com.ditchoom.mqtt.connection.MqttBroker
-import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.IConnectionRequest
 import com.ditchoom.mqtt.controlpacket.IPublishAcknowledgment
@@ -141,15 +140,7 @@ interface Persistence {
         unsubAck: IUnsubscribeAcknowledgment,
     )
 
-    suspend fun addBroker(
-        connectionOp: MqttConnectionOptions,
-        connectionRequest: IConnectionRequest,
-    ): MqttBroker = addBroker(listOf(connectionOp), connectionRequest)
-
-    suspend fun addBroker(
-        connectionOps: Collection<MqttConnectionOptions>,
-        connectionRequest: IConnectionRequest,
-    ): MqttBroker
+    suspend fun addBroker(connectionRequest: IConnectionRequest): MqttBroker
 
     suspend fun allBrokers(): Collection<MqttBroker>
 

@@ -1,6 +1,8 @@
 package com.ditchoom.mqtt.client
 
+import com.ditchoom.buffer.BufferFactory
 import com.ditchoom.buffer.Charset
+import com.ditchoom.buffer.Default
 import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.flow.Connection
 import com.ditchoom.buffer.toReadBuffer
@@ -10,7 +12,6 @@ import com.ditchoom.mqtt.client.net.awaitPublishComplete
 import com.ditchoom.mqtt.client.net.opaquePayloadUtf8
 import com.ditchoom.mqtt.client.net.runTestNoTimeSkipping
 import com.ditchoom.mqtt.connection.MqttBroker
-import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.ControlPacket
 import com.ditchoom.mqtt.controlpacket.PublishMessage
 import com.ditchoom.mqtt.controlpacket.QualityOfService
@@ -159,7 +160,7 @@ class SendQuotaTest {
         runTest {
             val persistence = GatedPublishWrites(InMemoryPersistence())
             val request = ConnectionRequest(clientId = "send-quota", keepAliveSeconds = 60, cleanStart = false)
-            val brokerRecord = persistence.addBroker(listOf(MqttConnectionOptions.SocketConnection("scripted", 1883)), request)
+            val brokerRecord = persistence.addBroker(request)
             val dying =
                 ManualConnection(ControlPacketV5.ConnAck(properties = ConnAckProperties(receiveMaximum = UShort.MAX_VALUE.toInt())))
             val resumed =
@@ -167,12 +168,14 @@ class SendQuotaTest {
             val connections = ArrayDeque(listOf(dying, resumed))
             val client =
                 MqttClient.start(
-                    scope = backgroundScope,
-                    broker = brokerRecord,
-                    persistence = persistence,
-                    timeSource = testScheduler.timeSource,
-                    connectSingle = { _, _, _ -> connections.removeFirst() },
-                )
+                    backgroundScope,
+                    brokerRecord,
+                    persistence,
+                    listOf(MqttEndpoint("scripted", 1883)),
+                    BufferFactory.Default,
+                    InFlightLimit.ProtocolMaximum,
+                    testScheduler.timeSource,
+                ) { _, _, _, _ -> connections.removeFirst() }
             client.publish(TOPIC, QualityOfService.AT_LEAST_ONCE, "first".toReadBuffer(Charset.UTF8))
 
             val admissionHeld = persistence.holdNextPublishWrite()
@@ -283,13 +286,12 @@ private class ScriptedBroker(
     suspend fun startClient(): MqttClient {
         val persistence = InMemoryPersistence()
         val request = ConnectionRequest(clientId = "send-quota", keepAliveSeconds = 60, cleanStart = false)
-        val brokerRecord = persistence.addBroker(listOf(MqttConnectionOptions.SocketConnection("scripted", 1883)), request)
-        return MqttClient.start(
-            scope = CoroutineScope(scope.coroutineContext + Dispatchers.Default),
-            broker = brokerRecord,
-            persistence = persistence,
-            connectSingle = { _, _, _ -> connect() },
-        )
+        val brokerRecord = persistence.addBroker(request)
+        return startScriptedClient(
+            CoroutineScope(scope.coroutineContext + Dispatchers.Default),
+            brokerRecord,
+            persistence,
+        ) { _, _, _, _ -> connect() }
     }
 
     private fun connect(): Connection<ControlPacket> {

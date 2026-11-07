@@ -28,13 +28,7 @@ buffer-codec = { module = "com.ditchoom:buffer-codec", version.ref = "buffer" }
 buffer-codec-processor = { module = "com.ditchoom:buffer-codec-processor", version.ref = "buffer" }
 buffer-flow = { module = "com.ditchoom:buffer-flow", version.ref = "buffer" }
 socket = { module = "com.ditchoom:socket", version.ref = "socket" }
-# QUIC / WebTransport transport modules (buffer-neutral byte layer, built on buffer 6).
-# Wired into the composable transport seam; QUIC/WebTransport impls are currently stubs.
-socket-quic-default = { module = "com.ditchoom:socket-quic-default", version.ref = "socket" }
-# Note: the quiche QUIC engine (socket-quic-quiche) is pulled transitively by socket-quic-default on
-# the platforms that support it; do not depend on it directly (it has no JS/wasmJs variants).
-socket-webtransport = { module = "com.ditchoom:socket-webtransport", version.ref = "socket" }
-websocket = { module = "com.ditchoom:websocket", version.ref = "websocket" }
+websocket-tcp = { module = "com.ditchoom:websocket-tcp", version.ref = "websocket" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinxCoroutines" }
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlinxCoroutines" }

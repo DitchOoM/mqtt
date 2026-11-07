@@ -4,9 +4,7 @@ import androidx.test.filters.MediumTest
 import androidx.test.runner.AndroidJUnit4
 import com.ditchoom.mqtt.InMemoryPersistence
 import com.ditchoom.mqtt.client.MqttClient
-import com.ditchoom.mqtt.client.net.defaultSingleConnection
 import com.ditchoom.mqtt.connection.MqttBroker
-import com.ditchoom.mqtt.connection.MqttConnectionOptions
 import com.ditchoom.mqtt.controlpacket.IConnectionAcknowledgment
 import com.ditchoom.mqtt3.controlpacket.ConnectionRequest
 import kotlinx.coroutines.CoroutineName
@@ -86,13 +84,8 @@ class WsConnectIsolationTest {
             assumeBrokerReachable("10.0.2.2", 1883)
             withTimeout(15.seconds) {
                 val options =
-                    MqttConnectionOptions.SocketConnection(
-                        host = "10.0.2.2",
-                        port = 1883,
-                        tlsEnabled = false,
-                        connectionTimeout = 10.seconds,
-                    )
-                val conn = defaultSingleConnection(this, options, connectionRequest.controlPacketFactory)
+                    tcpEndpoint("10.0.2.2", 1883, timeout = 10.seconds)
+                val conn = openRawConnection(options, connectionRequest.controlPacketFactory)
                 try {
                     conn.send(connectionRequest)
                     val connack = conn.receive().first()
@@ -110,15 +103,8 @@ class WsConnectIsolationTest {
             assumeBrokerReachable("10.0.2.2", 8080)
             withTimeout(15.seconds) {
                 val options =
-                    MqttConnectionOptions.WebSocketConnectionOptions(
-                        host = "10.0.2.2",
-                        port = 8080,
-                        websocketEndpoint = "/",
-                        tlsEnabled = false,
-                        protocols = listOf("mqtt"),
-                        connectionTimeout = 10.seconds,
-                    )
-                val conn = defaultSingleConnection(this, options, connectionRequest.controlPacketFactory)
+                    webSocketEndpoint("10.0.2.2", 8080, path = "/", protocols = listOf("mqtt"), timeout = 10.seconds)
+                val conn = openRawConnection(options, connectionRequest.controlPacketFactory)
                 try {
                     conn.send(connectionRequest)
                     val connack = conn.receive().first()
@@ -143,22 +129,15 @@ class WsConnectIsolationTest {
             assumeBrokerReachable("10.0.2.2", 8080)
             withTimeout(15.seconds) {
                 val options =
-                    MqttConnectionOptions.WebSocketConnectionOptions(
-                        host = "10.0.2.2",
-                        port = 8080,
-                        websocketEndpoint = "/",
-                        tlsEnabled = false,
-                        protocols = listOf("mqtt"),
-                        connectionTimeout = 10.seconds,
-                    )
-                val broker = MqttBroker(0, listOf(options), connectionRequest)
+                    webSocketEndpoint("10.0.2.2", 8080, path = "/", protocols = listOf("mqtt"), timeout = 10.seconds)
+                val broker = MqttBroker(0, connectionRequest)
                 val scope = CoroutineScope(Dispatchers.Default + CoroutineName("ws-isolation"))
                 val client =
                     MqttClient.start(
                         scope = scope,
                         broker = broker,
                         persistence = InMemoryPersistence(),
-                        connectSingle = defaultSingleConnection(broker),
+                        endpoint = options,
                     )
                 try {
                     val connack = client.awaitConnectivity()
